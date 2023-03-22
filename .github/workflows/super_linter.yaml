@@ -1,0 +1,32 @@
+---
+name: Super Linter
+
+on:  # yamllint disable-line rule:truthy
+  workflow_dispatch:
+  push:
+    branches: [main]
+  pull_request:
+    types: [assigned, opened, edited, synchronize, reopened]
+  pull_request_target:
+    types: [assigned, opened, edited, synchronize, reopened]
+
+jobs:
+  build:
+    name: Lint Code Base
+    runs-on: [ubuntu-latest]
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+
+      - name: Super-Linter
+        uses: github/super-linter/slim@v4
+        env:
+          VALIDATE_ALL_CODEBASE: true
+          DEFAULT_BRANCH: main
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          FILTER_REGEX_EXCLUDE: (dse/clib/fmi/fmi2/headers/.*|dse/clib/fmi/fmi3/headers/.*)
+          VALIDATE_CPP: true
+          VALIDATE_DOCKERFILE: true
+          # VALIDATE_MARKDOWN: true
+          VALIDATE_YAML: true
