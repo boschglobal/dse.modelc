@@ -1,0 +1,11 @@
+---
+matches:  # Disabled
+file_lists:
+  identified:
+    log_as: good
+  pending:
+    log_as: error
+  ignored:
+    log_as: info
+  failed:
+    log_as: error

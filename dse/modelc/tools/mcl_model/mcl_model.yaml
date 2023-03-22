@@ -1,0 +1,16 @@
+# Copyright 2023 Robert Bosch GmbH
+#
+# SPDX-License-Identifier: Apache-2.0
+
+---
+# Template MCL Model YAML file.
+kind: Model
+metadata:
+  name: mcl_model
+spec:
+  runtime:
+    dynlib:
+      - os: linux
+        arch: amd64
+        path: fmimcl/build/_out/lib/fmi_mcl_model.so
+        libs: []  # List all MCL instances to load here.

@@ -1,0 +1,93 @@
+// Copyright 2023 Robert Bosch GmbH
+//
+// SPDX-License-Identifier: Apache-2.0
+
+#ifndef DSE_MODELC_CONTROLLER_CONTROLLER_H_
+#define DSE_MODELC_CONTROLLER_CONTROLLER_H_
+
+
+#include <stdint.h>
+#include <stdbool.h>
+#include <dse/modelc/adapter/adapter.h>
+#include <dse/modelc/adapter/transport/endpoint.h>
+#include <dse/clib/collections/hashmap.h>
+#include <dse/modelc/model.h>
+#include <dse/platform.h>
+
+
+typedef struct ModelFunctionChannel {
+    const char*  channel_name;
+    const char** signal_names;
+    uint32_t     signal_count;
+
+    /* Signal Value storage (in Vectors) and will be directly accessed by
+       Model Functions. Only the configured type will be allocated. */
+    double*   signal_value_double;
+    void**    signal_value_binary;
+    uint32_t* signal_value_binary_size;
+    uint32_t* signal_value_binary_buffer_size;
+} ModelFunctionChannel;
+
+
+typedef struct ModelFunction {
+    const char*        name;
+    double             step_size;
+    ModelDoStepHandler do_step_handler;
+
+    HashMap
+        channels; /* Collection of ModelFunctionChannel, Key is channel_name. */
+} ModelFunction;
+
+
+typedef struct ControllerModel {
+    /* Controller specific objects (placed in Model instance). */
+    const char* model_dynlib_filename;
+    HashMap     model_functions; /* Collection of ModelFunction, Key is Model
+                                    Function name. */
+
+    ModelSetupHandler model_setup_func;
+    ModelExitHandler  model_exit_func;
+} ControllerModel;
+
+
+typedef struct Controller {
+    bool            stop_request;
+    /* Adapter/Endpoint objects. */
+    Adapter*        adapter;
+    /* Model configuration info: specific to a simulation. */
+    SimulationSpec* simulation;
+    HashMap         controller_models;  // index by model instance name.
+} Controller;
+
+
+/* controller.c */
+
+/* These initialise the controller and load the Model lib. */
+DLL_PRIVATE int controller_init(Endpoint* endpoint);
+DLL_PRIVATE int controller_init_channel(ModelInstanceSpec* model_instance,
+    const char* channel_name, const char** signal_name, uint32_t signal_count);
+DLL_PRIVATE int controller_load_models(SimulationSpec* sim);
+
+/* These are called indirectly from the Model, via model_function_register()
+   and model_configure_channel_*(). */
+DLL_PRIVATE int controller_register_model_function(
+    ModelInstanceSpec* model_instance, ModelFunction* model_function);
+DLL_PRIVATE ModelFunction* controller_get_model_function(
+    ModelInstanceSpec* model_instance, const char* model_function_name);
+
+/* These control the operation of the Model. */
+DLL_PRIVATE void controller_run(SimulationSpec* sim);
+DLL_PRIVATE void controller_bus_ready(SimulationSpec* sim);
+DLL_PRIVATE int  controller_step(SimulationSpec* sim);
+
+DLL_PRIVATE void controller_stop(void);
+DLL_PRIVATE void controller_dump_debug(void);
+DLL_PRIVATE void controller_exit(SimulationSpec* sim);
+
+DLL_PRIVATE int step_model(ModelInstanceSpec* mi, double* model_time);
+
+/* model.c */
+DLL_PUBLIC void model_function_destroy(ModelFunction* model_function);
+
+
+#endif  // DSE_MODELC_CONTROLLER_CONTROLLER_H_

@@ -1,0 +1,28 @@
+# Copyright 2023 Robert Bosch GmbH
+#
+# SPDX-License-Identifier: Apache-2.0
+
+---
+kind: Model
+metadata:
+  name: simbus
+---
+kind: Stack
+metadata:
+  name: SimBus Stack
+spec:
+  connection:
+    transport:
+      redispubsub:
+        host: localhost
+        port: 6379
+        timeout: 60
+  models:
+    - name: simbus
+      model:
+        name: simbus
+      channels:
+        - name: test
+          expectedModelCount: 1
+        - name: raw
+        - name: physical

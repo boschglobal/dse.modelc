@@ -1,0 +1,39 @@
+# Copyright 2023 Robert Bosch GmbH
+#
+# SPDX-License-Identifier: Apache-2.0
+
+---
+kind: Stack
+metadata:
+  name: binary_model_stack
+spec:
+  connection:
+    transport:
+      redispubsub:
+        uri: redis://localhost:6379
+        timeout: 60
+  models:
+    - name: simbus
+      model:
+        name: simbus
+      channels:
+        - name: network
+          expectedModelCount: 2
+    - name: binary_model_instance
+      uid: 42
+      model:
+        name: BinaryModel
+      channels:
+        - name: network
+          alias: binary_channel
+    - name: second_binary_model_instance
+      uid: 24
+      model:
+        name: BinaryModel
+      channels:
+        - name: network
+          alias: binary_channel
+---
+kind: Model
+metadata:
+  name: simbus

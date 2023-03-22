@@ -1,0 +1,21 @@
+# Copyright 2023 Robert Bosch GmbH
+#
+# SPDX-License-Identifier: Apache-2.0
+
+---
+kind: Model
+metadata:
+  name: BinaryModel
+spec:
+  runtime:
+    dynlib:
+      - os: linux
+        arch: amd64
+        path: lib/binary_model.so
+      - os: linux
+        arch: x86
+        path: lib/binary_model.so
+  channels:
+    - alias: binary_channel
+      selectors:
+        channel: network

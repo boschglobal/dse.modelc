@@ -1,0 +1,61 @@
+// Copyright 2023 Robert Bosch GmbH
+//
+// SPDX-License-Identifier: Apache-2.0
+
+#ifndef DSE_MODELC_ADAPTER_TRANSPORT_ENDPOINT_H_
+#define DSE_MODELC_ADAPTER_TRANSPORT_ENDPOINT_H_
+
+
+#include <stdint.h>
+#include <stdbool.h>
+#include <dse/clib/collections/hashmap.h>
+
+
+#define MAX_URI_LEN           2048
+#define URI_SCHEME_DELIM      "://"
+
+#define TRANSPORT_REDISPUBSUB "redispubsub"
+#define TRANSPORT_MQ          "mq"
+
+
+typedef struct Endpoint Endpoint;
+
+typedef void* (*EndpointCreateChannelFunc)(
+    Endpoint* endpoint, const char* channel_name);
+typedef int32_t (*EndpointStartFunc)(Endpoint* endpoint);
+typedef int32_t (*EndpointSendFbsFunc)(Endpoint* endpoint,
+    void* endpoint_channel, void* buffer, uint32_t buffer_length,
+    uint32_t model_uid);
+typedef int32_t (*EndpointRecvFbsFunc)(Endpoint* endpoint,
+    const char** channel_name, uint8_t** buffer, uint32_t* buffer_length);
+typedef void (*EndpointInterruptFunc)(Endpoint* endpoint);
+typedef void (*EndpointDisconnectFunc)(Endpoint* endpoint);
+
+
+struct Endpoint {
+    /* Endpoint properties. */
+    bool                      stop_request;
+    /* This UID represents the Model C and may be used as the basis for a
+       number of Models (i.e. seed for a generator function). */
+    uint32_t                  uid;
+    bool                      bus_mode;
+    /* Callbacks */
+    EndpointCreateChannelFunc create_channel;
+    EndpointStartFunc         start;
+    EndpointSendFbsFunc       send_fbs;
+    EndpointRecvFbsFunc       recv_fbs;
+    EndpointInterruptFunc     interrupt;
+    EndpointDisconnectFunc    disconnect;
+    /* Channel storage container. */
+    HashMap                   endpoint_channels;
+    /* Private object for endpoint specific data. */
+    void* private;
+};
+
+
+/* endpoint.c */
+DLL_PRIVATE Endpoint* endpoint_create(const char* transport, const char* uri,
+    uint32_t uid, bool bus_mode, double timeout);
+
+
+#endif  // DSE_MODELC_ADAPTER_TRANSPORT_ENDPOINT_H_
