@@ -1,0 +1,225 @@
+---
+name: CI
+
+on:  # yamllint disable-line rule:truthy
+  workflow_dispatch:
+  push:
+    branches: [main]
+    tags:
+      - 'v*.*.*'
+  pull_request:
+    branches: [main]
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_BASE_NAME: ${{ github.repository_owner }}/dse
+  PACKAGE_VERSION: 0.0.2
+  package_name: ModelC
+  build_dir: dse/modelc/build
+  test_make_target: null  # No C runtime unit tests (i.e. CMocka).
+
+jobs:
+  build:
+    runs-on: [ubuntu-latest]
+    strategy:
+      matrix:
+        package_arch:
+          - linux-amd64
+          - linux-x86
+    container:
+      image: ghcr.io/boschglobal/dse-gcc-builder:main
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Build package metadata
+        id: package_meta
+        uses: docker/metadata-action@v4
+        with:
+          images: dse/modelc
+          tags: |
+            type=ref,event=branch
+            type=semver,pattern={{version}}
+
+      - name: Get package version
+        if: startsWith(github.ref, 'refs/tags/')
+        id: package
+        run: |
+          echo "PACKAGE_VERSION=${{ fromJSON(steps.package_meta.outputs.json).labels['org.opencontainers.image.version'] }}" >> $GITHUB_ENV
+
+      - name: Build
+        env:
+          PACKAGE_ARCH: ${{ matrix.package_arch }}
+        run: |
+          make
+
+      - name: Test
+        if: ${{ env.test_make_target != '' }}
+        env:
+          PACKAGE_ARCH: ${{ matrix.package_arch }}
+        run: |
+          make ${{ env.test_make_target }}
+
+      - name: Package
+        env:
+          PACKAGE_ARCH: ${{ matrix.package_arch }}
+        run: |
+          make package
+          tar -czf sandbox_out.tar.gz -C . ${{ env.build_dir }}/_out
+
+      - uses: actions/upload-artifact@v3
+        with:
+          name: ${{ env.package_name }}-${{ matrix.package_arch }}-package
+          path: |
+            ${{ env.build_dir }}/_dist/${{ env.package_name }}-${{ env.PACKAGE_VERSION }}-${{ matrix.package_arch }}.tar.gz
+            ${{ env.build_dir }}/_dist/${{ env.package_name }}-${{ env.PACKAGE_VERSION }}-${{ matrix.package_arch }}.zip
+          retention-days: 1
+
+      - uses: actions/upload-artifact@v3
+        with:
+          name: ${{ env.package_name }}-${{ matrix.package_arch }}-sandbox
+          path: |
+            sandbox_out.tar.gz
+          retention-days: 1
+
+  test:
+    runs-on: [ubuntu-latest]
+    needs: [build]
+    strategy:
+      matrix:
+        package_arch:
+          - linux-amd64
+    container:
+      image: ghcr.io/boschglobal/dse-python-builder:main
+      env:
+        HOST_DOCKER_WORKSPACE: ${{ github.workspace }}
+      volumes:
+        - /var/run/docker.sock:/var/run/docker.sock
+    services:
+      redis:
+        image: redis:6.2.0
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+
+      - uses: actions/download-artifact@v3
+        with:
+          name: ${{ env.package_name }}-${{ matrix.package_arch }}-sandbox
+          path: .
+
+      - name: Sandbox
+        run: |
+          echo '${{ job.container.network }}'
+          echo "DSE_DOCKER_NETWORK=${{ job.container.network }}" >> $GITHUB_ENV
+          tar xzf sandbox_out.tar.gz
+          find ${{ env.build_dir }}/_out -type f -name '*' -exec ls -sh --color=auto {} \;
+
+      - name: Test
+        env:
+          PACKAGE_ARCH: ${{ matrix.package_arch }}
+        run: |
+          make test
+
+  publish:
+    if: startsWith(github.ref, 'refs/tags/')
+    runs-on: [ubuntu-latest]
+    needs: [build, test]
+    strategy:
+      matrix:
+        package_arch:
+          - linux-amd64
+          - linux-x86
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+
+      - name: Build package metadata
+        id: package_meta
+        uses: docker/metadata-action@v4
+        with:
+          images: dse/modelc
+          tags: |
+            type=ref,event=branch
+            type=semver,pattern={{version}}
+
+      - name: Get package version
+        if: startsWith(github.ref, 'refs/tags/')
+        id: package
+        run: |
+          echo "PACKAGE_VERSION=${{ fromJSON(steps.package_meta.outputs.json).labels['org.opencontainers.image.version'] }}" >> $GITHUB_ENV
+
+      - uses: actions/download-artifact@v3
+        with:
+          name: ${{ env.package_name }}-${{ matrix.package_arch }}-package
+          path: ${{ env.build_dir }}/_dist
+
+      - name: Publish
+        uses: softprops/action-gh-release@v1
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          files: |
+            ${{ env.build_dir }}/_dist/${{ env.package_name }}-${{ env.PACKAGE_VERSION }}-${{ matrix.package_arch }}.zip
+
+  container:
+    if: startsWith(github.ref, 'refs/tags/')
+    runs-on: [ubuntu-latest]
+    needs: [build, test]
+    strategy:
+      matrix:
+        name: [modelc]
+        arch: [linux-amd64]
+        include:
+          - name: modelc
+            arch: linux-amd64
+          - name: modelc-x86
+            arch: linux-x86
+          - name: simbus-sa
+            arch: linux-amd64
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Log in to the Container registry
+        uses: docker/login-action@v2
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
+      - name: Extract metadata (tags, labels) for Docker
+        id: meta
+        uses: docker/metadata-action@v4
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_BASE_NAME }}-${{ matrix.name }}
+
+      - name: Version
+        if: startsWith(github.ref, 'refs/tags/')
+        id: package
+        run: |
+          echo "PACKAGE_VERSION=${{ fromJSON(steps.meta.outputs.json).labels['org.opencontainers.image.version'] }}" >> $GITHUB_ENV
+
+      - uses: actions/download-artifact@v3
+        with:
+          name: ${{ env.package_name }}-${{ matrix.arch }}-sandbox
+          path: .
+
+      - name: Sandbox
+        run: |
+          tar xzf sandbox_out.tar.gz
+          find ${{ env.build_dir }}/_out -type f -name '*' -exec ls -sh --color=auto {} \;
+
+      - name: Build and push
+        uses: docker/build-push-action@v4
+        with:
+          push: true
+          context: .
+          file: ./docker/${{ matrix.name }}/Dockerfile
+          build-args: |
+             PACKAGE_VERSION=${{ env.PACKAGE_VERSION }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
