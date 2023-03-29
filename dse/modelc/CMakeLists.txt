@@ -104,14 +104,9 @@ set_target_properties(msgpackc
 set(HIREDIS_INCLUDE_DIR "$ENV{EXTERNAL_BUILD_DIR}")
 set(HIREDIS_SOURCE_DIR "$ENV{EXTERNAL_BUILD_DIR}/hiredis")
 set(HIREDIS_BINARY_DIR "$ENV{EXTERNAL_BUILD_DIR}/hiredis-build")
-if(WIN32)
-    set(libhiredis libhiredis_static.a)
-else()
-    set(libhiredis libhiredis.a)
-endif()
 find_library(HIREDIS_LIB
     NAMES
-        ${libhiredis}
+        libhiredis.a
     PATHS
         ${HIREDIS_BINARY_DIR}
     REQUIRED
