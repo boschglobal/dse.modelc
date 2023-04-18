@@ -14,6 +14,9 @@ jobs:
   build:
     name: Lint Code Base
     runs-on: [ubuntu-latest]
+    container:
+      image: debian:bullseye-slim
+      options: --user root
     steps:
       - uses: actions/checkout@v3
         with:
