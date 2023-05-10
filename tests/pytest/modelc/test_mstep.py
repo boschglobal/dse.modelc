@@ -22,10 +22,10 @@ MSTEP_EXE = MODELC_SANDBOX_DIR+'/bin/mstep'
 # Sandbox for the Dynamic Model (test basis).
 MODEL_SANDBOX_DIR = os.getenv('MODELC_SANDBOX_DIR')+'/examples/dynamic'
 DYNAMIC_MODEL_INST =    'dynamic_model_instance'
-DYNAMIC_MODEL_YAML =    'model.yaml'
+DYNAMIC_MODEL_YAML =    'data/model.yaml'
 DYNAMIC_MODEL_LIB =     'lib/dynamic_model.so'  # Not used, see model.yaml.
-SIGNAL_GROUP_YAML =     'signal_group.yaml'
-STACK_YAML =            'stack.yaml'
+SIGNAL_GROUP_YAML =     'data/signal_group.yaml'
+STACK_YAML =            'data/stack.yaml'
 
 
 async def run(dir, cmd):
@@ -79,5 +79,5 @@ if __name__ == '__main__':
     asyncio.run(main())
 
 
-def test_modelc():
+def test_mstep():
     asyncio.run(main())

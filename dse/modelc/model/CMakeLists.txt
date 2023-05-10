@@ -14,8 +14,10 @@ project(ModelC_Model_API)
 # Target - model_api (API Called from Models)
 # ------------------
 add_library(model_api OBJECT
+    gateway.c
     model.c
     schema.c
+    signal.c
 )
 target_include_directories(model_api
     PRIVATE

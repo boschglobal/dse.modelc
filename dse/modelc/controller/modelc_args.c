@@ -2,9 +2,12 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
+//#include <stddef.h>
+
 #include <stdlib.h>
 #include <getopt.h>
 #include <string.h>
+#include <dse/testing.h>
 #include <dse/logger.h>
 #include <dse/clib/util/yaml.h>
 #include <dse/modelc/model.h>
@@ -88,11 +91,19 @@ static void _args_extract_environment(ModelCArguments* args)
 {
     if (args->transport == NULL) {
         char* _env = getenv(ENV_SIMBUS_TRANSPORT);
-        if (_env) args->transport = strdup(_env);
+        if (_env) {
+            static char transport[MAX_URI_LEN];
+            strncpy(transport, _env, MAX_URI_LEN - 1);
+            args->transport = transport;
+        }
     }
     if (args->uri == NULL) {
         char* _env = getenv(ENV_SIMBUS_URI);
-        if (_env) args->uri = strdup(_env);
+        if (_env) {
+            static char uri[MAX_URI_LEN];
+            strncpy(uri, _env, MAX_URI_LEN - 1);
+            args->uri = uri;
+        }
     }
     if (!args->log_level_set_by_cli) {
         char* _env = getenv(ENV_SIMBUS_LOGLEVEL);
@@ -280,9 +291,9 @@ void modelc_parse_arguments(
 
     /* Construct a URI if provided with legacy Redis args. */
     if (args->uri == NULL) {
-        char uri[MAX_URI_LEN];
+        static char uri[MAX_URI_LEN];
         snprintf(uri, MAX_URI_LEN, "redis://%s:%d", args->host, args->port);
-        args->uri = strdup(uri);
+        args->uri = uri;
     }
 
     /* Set the logger level. */

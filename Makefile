@@ -19,7 +19,7 @@ export DSE_SCHEMA_URL ?= $(DSE_SCHEMA_REPO)/releases/download/v$(DSE_SCHEMA_VERS
 ###############
 ## DSE C Library.
 DSE_CLIB_REPO ?= https://github.com/boschglobal/dse.clib
-DSE_CLIB_VERSION ?= 1.0.1
+DSE_CLIB_VERSION ?= 1.0.4
 export DSE_CLIB_URL ?= $(DSE_CLIB_REPO)/archive/refs/tags/v$(DSE_CLIB_VERSION).zip
 
 
@@ -57,6 +57,7 @@ ifneq ($(CI), true)
 	DOCKER_BUILDER_CMD := docker run -it --rm \
 		--env CMAKE_TOOLCHAIN_FILE=/tmp/repo/extra/cmake/$(PACKAGE_ARCH).cmake \
 		--env EXTERNAL_BUILD_DIR=$(EXTERNAL_BUILD_DIR) \
+		--env GDB_CMD="$(GDB_CMD)" \
 		--env PACKAGE_ARCH=$(PACKAGE_ARCH) \
 		--env PACKAGE_VERSION=$(PACKAGE_VERSION) \
 		--volume $$(pwd):/tmp/repo \
@@ -117,14 +118,20 @@ docker: build
 	for d in $(DOCKER_DIRS) ;\
 	do \
 		docker build -f docker/$$d/Dockerfile \
-				--tag $$d:test ./docker/$$d ;\
+				--tag $$d:test . ;\
 	done;
 
-test:
+test_cmocka:
+	@${DOCKER_BUILDER_CMD} $(MAKE) do-test_cmocka-build
+	@${DOCKER_BUILDER_CMD} $(MAKE) do-test_cmocka-run
+
+test_pytest:
 	@${DOCKER_TEST_TEARDOWN_CMD}
 	@${DOCKER_TEST_SETUP_CMD}
-	@${DOCKER_TESTER_CMD} $(MAKE) do-test
+	@${DOCKER_TESTER_CMD} $(MAKE) do-test_pytest-run
 	@${DOCKER_TEST_TEARDOWN_CMD}
+
+test: test_cmocka test_pytest
 
 test-env:
 	@${DOCKER_TEST_TEARDOWN_CMD}
@@ -162,13 +169,20 @@ do-build:
 do-package:
 	@for d in $(SUBDIRS); do ($(MAKE) -C $$d package ); done
 
-do-test:
-	@-pip install -r tests/requirements.txt
+do-test_cmocka-build:
+	$(MAKE) -C tests/cmocka build
+
+do-test_cmocka-run:
+	$(MAKE) -C tests/cmocka run
+
+do-test_pytest-run:
+	@-pip install -r tests/pytest/requirements.txt
 	redis-cli -h $(REDIS_HOST) ping
-	pytest -rx --asyncio-mode=strict -W ignore::DeprecationWarning tests
+	pytest -rx --asyncio-mode=strict -W ignore::DeprecationWarning tests/pytest
 
 do-clean:
 	@for d in $(SUBDIRS); do ($(MAKE) -C $$d clean ); done
+	$(MAKE) -C tests/cmocka clean
 	rm -rf $(OSS_DIR)
 	rm -rvf *.zip
 	rm -rvf *.log

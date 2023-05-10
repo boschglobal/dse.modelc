@@ -94,6 +94,52 @@ typedef struct ChannelSpec {
 
 
 /*
+Signal Vector API Definition
+============================
+
+Object representation of Signal Vectors which encapsulate data and behaviour.
+
+Primary use in consumer APIs (i.e. Model Gateway API).
+*/
+
+typedef struct SignalVector SignalVector;
+
+typedef int (*BinarySignalAppendFunc)(
+    SignalVector* sv, uint32_t index, void* data, uint32_t len);
+typedef int (*BinarySignalResetFunc)(SignalVector* sv, uint32_t index);
+typedef int (*BinarySignalReleaseFunc)(SignalVector* sv, uint32_t index);
+typedef const char* (*SignalAnnotationGetFunc)(
+    SignalVector* sv, uint32_t index, const char* name);
+
+typedef struct SignalVector {
+    const char*  name;
+    const char*  function_name;
+    bool         is_binary;
+    /* Vector representation of Signals (each with _count_ elements). */
+    uint32_t     count;
+    const char** signal; /* Signal name. */
+    union {              /* Signal value. */
+        struct {
+            double* scalar;
+        };
+        struct {
+            void**       binary;
+            uint32_t*    length;      /* Length of binary object. */
+            uint32_t*    buffer_size; /* Size of allocated buffer. */
+            const char** mime_type;
+        };
+    };
+    /* Helper functions. */
+    BinarySignalAppendFunc  append;
+    BinarySignalResetFunc   reset;
+    BinarySignalReleaseFunc release;
+    SignalAnnotationGetFunc annotation;
+    /* Reference data. */
+    ModelInstanceSpec*      mi;
+} SignalVector;
+
+
+/*
 Model API Definition
 ====================
 
@@ -173,10 +219,19 @@ DLL_PUBLIC int model_function_register(ModelInstanceSpec* model_instance,
     ModelDoStepHandler do_step_handler);
 DLL_PUBLIC int model_configure_channel(
     ModelInstanceSpec* model_instance, ModelChannelDesc* channel_desc);
+DLL_PUBLIC ChannelSpec* model_build_channel_spec(
+    ModelInstanceSpec* model_instance, const char* channel_name);
+
+
+/* signal.c - Signal Vector Interface. */
+DLL_PUBLIC SignalVector* model_sv_create(ModelInstanceSpec* mi);
+DLL_PUBLIC void          model_sv_destroy(SignalVector* sv);
 
 
 /* modelc.c - Runtime Interface (i.e. ModelC.exe). */
 DLL_PUBLIC int  modelc_configure(ModelCArguments* args, SimulationSpec* sim);
+DLL_PUBLIC ModelInstanceSpec* modelc_get_model_instance(
+    SimulationSpec* sim, const char* name);
 DLL_PUBLIC int  modelc_run(SimulationSpec* sim, bool run_async);
 DLL_PUBLIC void modelc_exit(SimulationSpec* sim);
 DLL_PUBLIC int  modelc_sync(SimulationSpec* sim);
@@ -184,10 +239,6 @@ DLL_PUBLIC void modelc_shutdown(void);
 
 
 /* modelc_debug.c - Debug Interface. */
-DLL_PUBLIC ModelInstanceSpec* modelc_get_model_instance(
-    SimulationSpec* sim, const char* name);
-DLL_PUBLIC ModelChannelDesc* modelc_get_model_vectors(
-    ModelInstanceSpec* model_instance);
 DLL_PUBLIC int modelc_step(ModelInstanceSpec* model_instance, double step_size);
 
 

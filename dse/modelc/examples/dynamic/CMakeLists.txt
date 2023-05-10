@@ -73,7 +73,7 @@ install(
         stack.yaml
         signal_group.yaml
     DESTINATION
-        ${MODEL_PATH}
+        ${MODEL_PATH}/data
     COMPONENT
         dynamic_model
 )

@@ -7,6 +7,8 @@
 #include <assert.h>
 #include <errno.h>
 #include <unistd.h>
+#include <string.h>
+#include <dse/testing.h>
 #include <dse/logger.h>
 #include <dse/platform.h>
 #include <dse/clib/collections/hashmap.h>
@@ -17,7 +19,9 @@
 #include <dse/modelc/controller/model_private.h>
 #include <dse/modelc/model.h>
 
+
 #define UNUSED(x)     ((void)x)
+
 /* CLI related defaults. */
 #define MODEL_TIMEOUT 60
 
@@ -66,7 +70,24 @@ static void _destroy_model_instances(SimulationSpec* sim)
     }
     free(sim->instance_list);
 }
+static char* _dse_path_cat(const char* a, const char* b)
+{
+    if (a == NULL && b == NULL) return NULL;
 
+    /* Caller will free. */
+    int len = 2;  // '/' + NULL.
+    len += (a) ? strlen(a) : 0;
+    len += (b) ? strlen(b) : 0;
+    char* path = calloc(len, sizeof(char));
+
+    if (a && b) {
+        snprintf(path, len, "%s/%s", a, b);
+    } else {
+        strncpy(path, a ? a : b, len - 1);
+    }
+
+    return path;
+}
 
 int modelc_configure_model(
     ModelCArguments* args, ModelInstanceSpec* model_instance)
@@ -85,7 +106,8 @@ int modelc_configure_model(
         "spec/models", "name", model_instance->name);
     if (mi_node == NULL) {
         if (errno == 0) errno = EINVAL;
-        log_error("Model Instance not found in Stack!");
+        log_error(
+            "Model Instance (%s) not found in Stack!", model_instance->name);
         return errno;
     }
     model_instance->spec = mi_node;
@@ -110,7 +132,7 @@ int modelc_configure_model(
         model_instance->model_definition.path = node->scalar;
         /* Load and add the Model Definition to the doc list. */
         char* md_file =
-            dse_path_cat(model_instance->model_definition.path, "model.yaml");
+            _dse_path_cat(model_instance->model_definition.path, "model.yaml");
         log_notice("Load YAML File: %s", md_file);
         args->yaml_doc_list = dse_yaml_load_file(md_file, args->yaml_doc_list);
         free(md_file);
@@ -123,8 +145,8 @@ int modelc_configure_model(
     /* Model Definition. */
     const char* selector[] = { "metadata/name" };
     const char* value[] = { model_name };
-    md_doc = dse_yaml_find_doc_in_doclist(args->yaml_doc_list,
-            "Model", selector, value, 1);
+    md_doc = dse_yaml_find_doc_in_doclist(
+        args->yaml_doc_list, "Model", selector, value, 1);
     if (md_doc) {
         model_instance->model_definition.doc = md_doc;
         /* Filename (of the dynlib) */
@@ -138,6 +160,8 @@ int modelc_configure_model(
             node = dse_yaml_find_node(dl_node, "path");
             if (node && node->scalar) {
                 model_instance->model_definition.file = node->scalar;
+            } else {
+                log_fatal("Model path not found in Model Definition!");
             }
         }
     }
@@ -146,13 +170,12 @@ int modelc_configure_model(
     if (args->file) model_instance->model_definition.file = args->file;
     if (args->path) model_instance->model_definition.path = args->path;
 
-    /* Final checks. */
-    if (model_instance->model_definition.file == NULL) {
-        log_fatal("Model path not found in Model Definition!");
+    /* Final adjustments. */
+    if (model_instance->model_definition.file) {
+        model_instance->model_definition.full_path =
+            _dse_path_cat(model_instance->model_definition.path,
+                model_instance->model_definition.file);
     }
-    model_instance->model_definition.full_path =
-        dse_path_cat(model_instance->model_definition.path,
-            model_instance->model_definition.file);
 
     /* Set a reference ot the parsed YAML Doc List.  */
     model_instance->yaml_doc_list = args->yaml_doc_list;
@@ -259,6 +282,38 @@ int modelc_configure(ModelCArguments* args, SimulationSpec* sim)
     }
 
     return 0;
+}
+
+
+/**
+ *  modelc_get_model_instance
+ *
+ *  Find the ModelInstanceSpec object representing the model instance with the
+ *  given name in the referenced SimulationSpec* object.
+ *
+ *  Parameters
+ *  ----------
+ *  sim : SimulationSpec (pointer to)
+ *      Simulation specification (contains all Model Instance objects).
+ *  name : const char*
+ *      Name of the requested model instance.
+ *
+ *  Returns
+ *  -------
+ *      ModelInstanceSpec (pointer to) : First model instance, whose property
+ *  `name` is equal to the parameter `name`. NULL : No matching
+ * ModelInstanceSpec object found.
+ */
+ModelInstanceSpec* modelc_get_model_instance(
+    SimulationSpec* sim, const char* name)
+{
+    ModelInstanceSpec* _instptr = sim->instance_list;
+    while (_instptr && _instptr->name) {
+        if (strcmp(_instptr->name, name) == 0) return _instptr;
+        /* Next instance. */
+        _instptr++;
+    }
+    return NULL;
 }
 
 

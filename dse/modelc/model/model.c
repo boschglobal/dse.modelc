@@ -5,6 +5,7 @@
 #include <stdlib.h>
 #include <errno.h>
 #include <assert.h>
+#include <dse/testing.h>
 #include <dse/logger.h>
 #include <dse/clib/collections/set.h>
 #include <dse/clib/util/yaml.h>
@@ -47,8 +48,9 @@ void model_function_destroy(ModelFunction* model_function)
             if (_mfc && _mfc->signal_value_binary_buffer_size)
                 free(_mfc->signal_value_binary_buffer_size);
             if (_mfc && _mfc->signal_names) {
-                for (uint32_t _ = 0; _ < _mfc->signal_count; _++)
-                    free((void*)_mfc->signal_names[_]);
+                // fixme Unit tests suggest a double free here.
+                // for (uint32_t _ = 0; _ < _mfc->signal_count; _++)
+                //     free((void*)_mfc->signal_names[_]);
                 free(_mfc->signal_names);
             }
         }
@@ -216,7 +218,7 @@ static int _signal_group_match_handler(
 }
 
 
-ChannelSpec* _build_channel_spec(
+ChannelSpec* model_build_channel_spec(
     ModelInstanceSpec* model_instance, const char* channel_name)
 {
     log_debug("Search for channel on MI (%s) by name/alias=%s",
@@ -301,14 +303,13 @@ void _load_propagator_signals(ModelInstanceSpec* model_instance,
     /* Parse out the signals from all listed propagators. */
     uint32_t _prop_count = hashlist_length(&propagators_node->sequence);
     for (uint32_t i = 0; i < _prop_count; i++) {
-        YamlNode* prop_node = hashlist_at(&propagators_node->sequence, i);
-        YamlNode* prop_name_node = dse_yaml_find_node(prop_node, "name");
+        YamlNode*   prop_node = hashlist_at(&propagators_node->sequence, i);
+        YamlNode*   prop_name_node = dse_yaml_find_node(prop_node, "name");
         // Find the propagator.
         const char* selector[] = { "metadata/name" };
         const char* value[] = { prop_name_node->scalar };
-        YamlNode* p_doc =
-            dse_yaml_find_doc_in_doclist(model_instance->yaml_doc_list,
-                "Propagator", selector, value, 1);
+        YamlNode*   p_doc = dse_yaml_find_doc_in_doclist(
+              model_instance->yaml_doc_list, "Propagator", selector, value, 1);
         assert(p_doc);
         // Find the signals node.
         YamlNode* signals_node = dse_yaml_find_node(p_doc, "spec/signals");
@@ -364,7 +365,7 @@ int model_configure_channel(
     /* Determine the channel configuration. */
     log_notice("Configure Channel: %s", channel_desc->name);
     ChannelSpec* channel_spec =
-        _build_channel_spec(model_instance, channel_desc->name);
+        model_build_channel_spec(model_instance, channel_desc->name);
     if (channel_spec == NULL) return 1;
     log_notice("  Channel Name: %s", channel_spec->name);
     log_notice("  Channel Alias: %s", channel_spec->alias);
@@ -387,6 +388,7 @@ int model_configure_channel(
         else {
             log_error("Already configured channel did not have initialised "
                       "signal vector!");
+            free(channel_spec);
             return 1;
         }
         log_notice(

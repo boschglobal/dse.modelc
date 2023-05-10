@@ -21,9 +21,9 @@ SIMBUS_EXE = MODELC_SANDBOX_DIR+'/bin/simbus'
 MODELC_EXE = MODELC_SANDBOX_DIR+'/bin/modelc'
 
 # Sandbox for the Model (common only, specific in test cases).
-MODEL_YAML =    'model.yaml'
-SIGNAL_GROUP_YAML =     'signal_group.yaml'
-STACK_YAML =            'stack.yaml'
+MODEL_YAML =        'data/model.yaml'
+SIGNAL_GROUP_YAML = 'data/signal_group.yaml'
+STACK_YAML =        'data/stack.yaml'
 
 
 async def run(dir, cmd):

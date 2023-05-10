@@ -6,6 +6,7 @@
 #include <errno.h>
 #include <assert.h>
 #include <dlfcn.h>
+#include <dse/testing.h>
 #include <dse/platform.h>
 #include <dse/logger.h>
 #include <dse/clib/collections/hashlist.h>

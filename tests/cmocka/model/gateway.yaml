@@ -1,0 +1,66 @@
+---
+kind: Stack
+metadata:
+  name: stack
+spec:
+  connection:
+    transport:
+      redispubsub:
+        uri: redis://redis:6379
+        timeout: 60
+  models:
+    - name: gateway
+      uid: 42
+      model:
+        name: Gateway
+      channels:
+        - name: scalar
+          alias: scalar_vector
+          selectors:
+            channel: scalar
+        - name: binary
+          alias: binary_vector
+          selectors:
+            channel: binary
+---
+kind: Model
+metadata:
+  name: Gateway
+spec:
+  runtime:
+    gateway: {}
+  channels:
+    - alias: scalar_vector
+      selectors:
+        channel: scalar
+    - alias: binary_vector
+      selectors:
+        channel: binary
+---
+kind: SignalGroup
+metadata:
+  name: test_scalar_signals
+  labels:
+    channel: scalar
+spec:
+  signals:
+    - signal: scalar_foo
+    - signal: scalar_bar
+---
+kind: SignalGroup
+metadata:
+  name: test_binary_signals
+  labels:
+    channel: binary
+  annotations:
+    vector_type: binary
+    vector_name: network_vector
+spec:
+  signals:
+    - signal: binary_foo
+      annotations:
+        name: binary_foo
+    - signal: binary_bar
+      annotations:
+        name: binary_bar
+        mime_type: application/custom-stream

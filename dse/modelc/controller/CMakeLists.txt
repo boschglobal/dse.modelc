@@ -15,10 +15,13 @@ project(ModelC_Controller)
 # -------------------
 add_library(controller OBJECT
     controller.c
+    loader.c
     mcl.c
+    model_function.c
     modelc.c
     modelc_args.c
     modelc_debug.c
+    step.c
 )
 target_compile_definitions(controller
     PRIVATE

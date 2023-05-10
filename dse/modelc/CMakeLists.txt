@@ -165,6 +165,7 @@ endif()
 # Targets
 # =======
 set(DSE_MODELC_PUBLIC_HEADERS
+    gateway.h
     mcl.h
     model.h
     schema.h

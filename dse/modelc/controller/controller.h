@@ -66,7 +66,6 @@ typedef struct Controller {
 DLL_PRIVATE int controller_init(Endpoint* endpoint);
 DLL_PRIVATE int controller_init_channel(ModelInstanceSpec* model_instance,
     const char* channel_name, const char** signal_name, uint32_t signal_count);
-DLL_PRIVATE int controller_load_models(SimulationSpec* sim);
 
 /* These are called indirectly from the Model, via model_function_register()
    and model_configure_channel_*(). */
@@ -84,7 +83,15 @@ DLL_PRIVATE void controller_stop(void);
 DLL_PRIVATE void controller_dump_debug(void);
 DLL_PRIVATE void controller_exit(SimulationSpec* sim);
 
+
+/* loader.c */
+DLL_PRIVATE int controller_load_models(SimulationSpec* sim);
+
+
+/* step.c */
 DLL_PRIVATE int step_model(ModelInstanceSpec* mi, double* model_time);
+DLL_PRIVATE int sim_step_models(SimulationSpec* sim, double* model_time);
+
 
 /* model.c */
 DLL_PUBLIC void model_function_destroy(ModelFunction* model_function);

@@ -16,9 +16,9 @@
 #define STEPS     10
 
 
-static void marshal_to_signal_vectors(ModelChannelDesc* sv);
-static void marshal_from_signal_vectors(ModelChannelDesc* sv);
-static void print_signal_vectors(ModelChannelDesc* sv);
+static void marshal_to_signal_vectors(SignalVector* sv);
+static void marshal_from_signal_vectors(SignalVector* sv);
+static void print_signal_vectors(SignalVector* sv);
 
 
 /**
@@ -70,21 +70,21 @@ int main(int argc, char** argv)
     /* Call the setup function of the Model. */
     rc = model_setup_func(mi);
     if (rc) log_fatal("Call: model_setup_func failed! (rc=%d)!", rc);
-    ModelChannelDesc* signal_vectors = modelc_get_model_vectors(mi);
-    print_signal_vectors(signal_vectors);
+    SignalVector* sv = model_sv_create(mi);
+    print_signal_vectors(sv);
 
 
     /* Run the Model/Simulation. */
     log_notice("Starting Simulation (for %d steps) ...", STEPS);
     for (int i = 0; i < STEPS; i++) {
         log_notice("  step %d", i);
-        marshal_to_signal_vectors(signal_vectors);
+        marshal_to_signal_vectors(sv);
         rc = modelc_step(mi, args.step_size);
         if (rc) log_fatal("Call: modelc_step failed! (i=%d, rc=%d)!", i, rc);
-        marshal_from_signal_vectors(signal_vectors);
+        marshal_from_signal_vectors(sv);
     }
     log_notice("Simulation complete.");
-    print_signal_vectors(signal_vectors);
+    print_signal_vectors(sv);
 
 
     /* Call the exit function of the Model. */
@@ -97,7 +97,7 @@ int main(int argc, char** argv)
 }
 
 
-static void marshal_to_signal_vectors(ModelChannelDesc* sv)
+static void marshal_to_signal_vectors(SignalVector* sv)
 {
     while (sv && sv->name) {
         /* Next signal vector. */
@@ -106,7 +106,7 @@ static void marshal_to_signal_vectors(ModelChannelDesc* sv)
 }
 
 
-static void marshal_from_signal_vectors(ModelChannelDesc* sv)
+static void marshal_from_signal_vectors(SignalVector* sv)
 {
     while (sv && sv->name) {
         /* Next signal vector. */
@@ -115,26 +115,25 @@ static void marshal_from_signal_vectors(ModelChannelDesc* sv)
 }
 
 
-static void print_signal_vectors(ModelChannelDesc* sv)
+static void print_signal_vectors(SignalVector* sv)
 {
     log_notice("Signal Vectors:");
     while (sv && sv->name) {
         log_notice("  Name: %s", sv->name);
         log_notice("    Model Function: %s", sv->function_name);
-        log_notice("    Signal Count  : %d", sv->signal_count);
-        if (sv->vector_double) {
-            log_notice("    Vector Type   : double");
-            log_notice("    Signals       :");
-            for (uint32_t i = 0; i < sv->signal_count; i++) {
-                log_notice("      - name : %s", sv->signal_names[i]);
-                log_notice("        value: %g", sv->vector_double[i]);
-            }
-        }
-        if (sv->vector_binary) {
+        log_notice("    Signal Count  : %d", sv->count);
+        if (sv->is_binary) {
             log_notice("    Vector Type   : binary");
             log_notice("    Signals       :");
-            for (uint32_t i = 0; i < sv->signal_count; i++) {
-                log_notice("      - name : %s", sv->signal_names[i]);
+            for (uint32_t i = 0; i < sv->count; i++) {
+                log_notice("      - name : %s", sv->signal[i]);
+            }
+        } else {
+            log_notice("    Vector Type   : double");
+            log_notice("    Signals       :");
+            for (uint32_t i = 0; i < sv->count; i++) {
+                log_notice("      - name : %s", sv->signal[i]);
+                log_notice("        value: %g", sv->scalar[i]);
             }
         }
         /* Next signal vector. */

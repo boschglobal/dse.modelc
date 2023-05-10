@@ -7,6 +7,7 @@
 #include <errno.h>
 #include <assert.h>
 #include <dlfcn.h>
+#include <dse/testing.h>
 #include <dse/logger.h>
 #include <dse/clib/collections/hashmap.h>
 #include <dse/clib/util/strings.h>
@@ -19,9 +20,13 @@
 #define UNUSED(x) ((void)x)
 
 
-static Controller*       __controller = NULL;
-static ModelSetupHandler __model_setup_func = NULL;
-static ModelExitHandler  __model_exit_func = NULL;
+static Controller* __controller = NULL;
+
+
+DLL_PRIVATE Controller* controller_object_ref(void)
+{
+    return __controller;
+}
 
 
 void controller_destroy(void)
@@ -32,51 +37,6 @@ void controller_destroy(void)
     if (controller->adapter) adapter_destroy(controller->adapter);
 
     free(__controller);
-}
-
-
-int controller_register_model_function(
-    ModelInstanceSpec* model_instance, ModelFunction* model_function)
-{
-    assert(model_instance);
-    assert(model_function);
-
-    void* handle;
-
-    /* Check if the Model Function is already registered. */
-    handle =
-        controller_get_model_function(model_instance, model_function->name);
-    if (handle) {
-        errno = EEXIST;
-        log_error("ModelFunction already registered with Controller!");
-        return -1;
-    }
-    /* Add the Model Function to the hashmap. */
-    ModelInstancePrivate* mip = model_instance->private;
-    ControllerModel*      cm = mip->controller_model;
-    HashMap*              mf_map = &cm->model_functions;
-    handle = hashmap_set(mf_map, model_function->name, model_function);
-    if (handle == NULL) {
-        if (errno == 0) errno = EINVAL;
-        log_error("ModelFunction failed to register with Controller!");
-        return -1;
-    }
-
-    return 0;
-}
-
-
-ModelFunction* controller_get_model_function(
-    ModelInstanceSpec* model_instance, const char* model_function_name)
-{
-    assert(model_instance);
-    ModelInstancePrivate* mip = model_instance->private;
-    ControllerModel*      cm = mip->controller_model;
-    HashMap*              mf_map = &cm->model_functions;
-
-    ModelFunction* mf = hashmap_get(mf_map, model_function_name);
-    if (mf) return mf;
-    return NULL;
 }
 
 
@@ -121,107 +81,6 @@ int controller_init_channel(ModelInstanceSpec* model_instance,
     adapter_init_channel(am, channel_name, signal_name, signal_count);
 
     return 0;
-}
-
-
-int controller_load_model(ModelInstanceSpec* model_instance)
-{
-    assert(model_instance);
-    ModelInstancePrivate* mip = model_instance->private;
-    ControllerModel*      controller_model = mip->controller_model;
-    assert(controller_model);
-    ModelSetupHandler model_setup_func = NULL;
-    ModelExitHandler  model_exit_func = NULL;
-    const char* dynlib_filename = model_instance->model_definition.full_path;
-
-    errno = 0;
-
-    if (dynlib_filename) {
-        log_notice("Loading dynamic model: %s ...", dynlib_filename);
-        void* handle = dlopen(dynlib_filename, RTLD_NOW | RTLD_LOCAL);
-        if (handle == NULL) {
-            log_notice("ERROR: dlopen call: %s", dlerror());
-            goto error_dl;
-        }
-        log_notice("Loading symbol: %s ...", MODEL_SETUP_FUNC_STR);
-        model_setup_func = dlsym(handle, MODEL_SETUP_FUNC_STR);
-        if (model_setup_func == NULL) {
-            log_notice("ERROR: dlsym call: %s", dlerror());
-            goto error_dl;
-        }
-        log_notice("Loading optional symbol: %s ...", MODEL_EXIT_FUNC_STR);
-        model_exit_func = dlsym(handle, MODEL_EXIT_FUNC_STR);
-        if (model_exit_func) {
-            log_debug("... symbol loaded");
-        }
-    } else {
-        log_notice("Using registered symbol: ...");
-        model_setup_func = __model_setup_func;
-        model_exit_func = __model_exit_func;
-    }
-
-    controller_model->model_setup_func = model_setup_func;
-    controller_model->model_exit_func = model_exit_func;
-    return 0;
-
-error_dl:
-    if (errno == 0) errno = EINVAL;
-    log_error("Failed to load dynamic model!");
-    return errno;
-}
-
-
-int controller_load_models(SimulationSpec* sim)
-{
-    assert(sim);
-    assert(__controller);
-    Controller* controller = __controller;
-    int         rc = 0;
-
-    controller->simulation = sim;
-
-    Adapter* adapter = controller->adapter;
-    assert(adapter);
-
-    ModelInstanceSpec* _instptr = sim->instance_list;
-    while (_instptr && _instptr->name) {
-        ModelInstancePrivate* mip = _instptr->private;
-        AdapterModel*         am = mip->adapter_model;
-        ControllerModel*      cm = mip->controller_model;
-
-        am->adapter = adapter;
-        am->model_uid = _instptr->uid;
-        /* Set the UID based lookup for Adapter Model. */
-        char hash_key[UID_KEY_LEN];
-        snprintf(hash_key, UID_KEY_LEN - 1, "%d", _instptr->uid);
-        hashmap_set(&adapter->models, hash_key, am);
-        /* Load the Model. */
-        errno = 0;
-        rc = controller_load_model(_instptr);
-        if (rc) {
-            if (errno == 0) errno = EINVAL;
-            log_error("controller_load_model() failed!");
-            break;
-        }
-        /* Call model_setup(), inversion of control. */
-        log_notice("Call symbol: %s ...", MODEL_SETUP_FUNC_STR);
-        if (cm->model_setup_func == NULL) {
-            rc = errno = EINVAL;
-            log_error("model_setup_func() not loaded!");
-            break;
-        }
-        errno = 0;
-        rc = cm->model_setup_func(_instptr);
-        if (rc) {
-            if (errno == 0) errno = EINVAL;
-            log_error("model_setup_func() failed!");
-            break;
-        }
-        /* Next instance? */
-        _instptr++;
-    }
-
-    return rc;
 }
 
 
@@ -351,70 +210,6 @@ void controller_bus_ready(SimulationSpec* sim)
 
     /* Register the signals with the bus. */
     adapter_register(adapter, sim);
-}
-
-
-typedef struct mf_step_data {
-    ModelInstanceSpec* mi;
-    double             model_time;
-    double             stop_time;
-} mf_step_data;
-
-
-static int _do_step_func(void* _mf, void* _step_data)
-{
-    ModelFunction* mf = _mf;
-    mf_step_data*  step_data = _step_data;
-    double         model_time = step_data->model_time;
-    int            rc = mf->do_step_handler(&model_time, step_data->stop_time);
-    if (rc)
-        log_error(
-            "Model Function %s:%s (rc=%d)", step_data->mi->name, mf->name, rc);
-
-    return 0;
-}
-
-
-int step_model(ModelInstanceSpec* mi, double* model_time)
-{
-    ModelInstancePrivate* mip = mi->private;
-    ControllerModel*      cm = mip->controller_model;
-    AdapterModel*         am = mip->adapter_model;
-
-    /* Step the Model (i.e. call registered Model Functions). */
-    mf_step_data step_data = { mi, am->model_time, am->stop_time };
-    HashMap*     mf_map = &cm->model_functions;
-    int rc = hashmap_iterator(mf_map, _do_step_func, false, &step_data);
-    /* Update the Model times. */
-    am->model_time = am->stop_time;
-    *model_time = am->model_time;
-    return rc;
-}
-
-
-static int sim_step_models(SimulationSpec* sim, double* model_time)
-{
-    assert(sim);
-    int rc = 0;
-    errno = 0;
-
-    ModelInstanceSpec* _instptr = sim->instance_list;
-    while (_instptr && _instptr->name) {
-        rc = step_model(_instptr, model_time);
-        if (rc) break;
-        /* Next instance? */
-        _instptr++;
-    }
-    if (rc < 0) {
-        log_error("An error occurred while in Step Handler");
-        return 1;
-    }
-    if (rc > 0) {
-        log_error("Model requested exit");
-        return 2;
-    }
-
-    return 0;
 }
 
 

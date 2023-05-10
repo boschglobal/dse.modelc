@@ -4,16 +4,15 @@
 
 cmake_minimum_required(VERSION 3.21)
 
-project(BinaryModel
+set(VERSION "$ENV{PACKAGE_VERSION}")
+
+project(Gateway
     VERSION "$ENV{PACKAGE_VERSION}"
-    DESCRIPTION "ModelC - Example Binary Model."
+    DESCRIPTION "ModelC - Example Gateway."
     HOMEPAGE_URL "${PROJECT_URL}"
 )
+set(EXE_PATH "examples/gateway")
 
-include(FetchContent)
-
-set(MODEL_PATH "examples/binary")
-set(CMAKE_SHARED_LIBRARY_PREFIX "")
 
 set(CMAKE_C_STANDARD 99)
 set(CMAKE_C_STANDARD_REQUIRED TRUE)
@@ -29,6 +28,8 @@ list(APPEND C_CXX_WARNING_FLAGS
 )
 add_compile_options(${C_CXX_WARNING_FLAGS})
 
+
+include(FetchContent)
 
 # External Project - DSE C Lib
 # ----------------------------
@@ -47,33 +48,45 @@ set(DSE_CLIB_INCLUDE_DIR "${DSE_CLIB_SOURCE_DIR}/..")
 # Targets
 # =======
 
-# Target - Binary Model
-# ----------------------
-add_library(binary_model SHARED
-    binary_model.c
+# Gateway
+# -------
+add_executable(gateway
+    gateway.c
 )
-target_include_directories(binary_model
+set_target_properties(gateway
+    PROPERTIES
+        OUTPUT_NAME gateway
+)
+target_include_directories(gateway
     PRIVATE
         ${DSE_CLIB_INCLUDE_DIR}
         ../../../..
 )
-target_link_libraries(binary_model
+target_compile_definitions(gateway
     PRIVATE
-        $<$<BOOL:${WIN32}>:${modelc_link_lib}>
+        PLATFORM_OS="${CDEF_PLATFORM_OS}"
+        PLATFORM_ARCH="${CDEF_PLATFORM_ARCH}"
+        MODELC_VERSION="${VERSION}"
 )
-install(TARGETS binary_model
-    LIBRARY DESTINATION
-        ${MODEL_PATH}/lib
+target_link_libraries(gateway
+    PRIVATE
+        $<$<BOOL:${WIN32}>:ws2_32>
+    PUBLIC
+        -Wl,--whole-archive
+        ${modelc_link_lib}
+        -Wl,--no-whole-archive
+)
+install(TARGETS gateway RUNTIME
+    DESTINATION
+        ${EXE_PATH}/bin
     COMPONENT
-        binary_model
+        gateway_model
 )
 install(
     FILES
-        model.yaml
-        stack.yaml
-        signal_group.yaml
+        gateway.yaml
     DESTINATION
-        ${MODEL_PATH}/data
+        ${EXE_PATH}/data
     COMPONENT
-        binary_model
+        gateway_model
 )

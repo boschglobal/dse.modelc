@@ -5,15 +5,8 @@
 #include <stdint.h>
 #include <errno.h>
 #include <assert.h>
-
-#ifdef UNIT_TESTING
-#include <stdlib.h>
-#include <stdarg.h>
-#include <setjmp.h>
-#include <cmocka.h>
-#endif
-
 #include <yaml.h>
+#include <dse/testing.h>
 #include <dse/logger.h>
 #include <dse/clib/util/yaml.h>
 #include <dse/modelc/model.h>
