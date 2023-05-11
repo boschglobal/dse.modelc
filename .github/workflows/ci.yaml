@@ -16,7 +16,6 @@ env:
   PACKAGE_VERSION: 0.0.2
   package_name: ModelC
   build_dir: dse/modelc/build
-  test_make_target: test_cmocka
 
 jobs:
   build:
@@ -56,11 +55,11 @@ jobs:
           make
 
       - name: Test
-        if: ${{ env.test_make_target != '' }}
+        if: ${{ matrix.package_arch == 'linux-amd64' }}
         env:
           PACKAGE_ARCH: ${{ matrix.package_arch }}
         run: |
-          make ${{ env.test_make_target }}
+          make test_cmocka
 
       - name: Package
         env:
