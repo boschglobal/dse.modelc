@@ -5,10 +5,10 @@
 cmake_minimum_required(VERSION 3.21)
 
 project(BinaryModel
-    VERSION "$ENV{PACKAGE_VERSION}"
     DESCRIPTION "ModelC - Example Binary Model."
     HOMEPAGE_URL "${PROJECT_URL}"
 )
+set(PROJECT_VERSION ${VERSION})
 
 include(FetchContent)
 

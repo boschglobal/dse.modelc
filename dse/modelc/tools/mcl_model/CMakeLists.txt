@@ -7,10 +7,10 @@ cmake_minimum_required(VERSION 3.21)
 set(VERSION "$ENV{PACKAGE_VERSION}")
 
 project(MCL_Model
-    VERSION ${VERSION}
     DESCRIPTION "MCL Model - Model Container for MCL instances."
     HOMEPAGE_URL "${PROJECT_URL}"
 )
+set(PROJECT_VERSION ${VERSION})
 
 include(FetchContent)
 

@@ -7,11 +7,10 @@ cmake_minimum_required(VERSION 3.21)
 set(VERSION "$ENV{PACKAGE_VERSION}")
 
 project(SimBus
-    VERSION ${VERSION}
     DESCRIPTION "SimBus - Standalone SimBus."
     HOMEPAGE_URL "${PROJECT_URL}"
 )
-
+set(PROJECT_VERSION ${VERSION})
 
 
 # Targets

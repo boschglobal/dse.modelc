@@ -7,11 +7,10 @@ cmake_minimum_required(VERSION 3.21)
 set(VERSION "$ENV{PACKAGE_VERSION}")
 
 project(ModelC
-    VERSION ${VERSION}
     DESCRIPTION "ModelC - Runtime for Models."
     HOMEPAGE_URL "${PROJECT_URL}"
 )
-
+set(PROJECT_VERSION ${VERSION})
 set(CMAKE_ENABLE_EXPORTS ON)
 
 

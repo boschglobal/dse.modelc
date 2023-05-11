@@ -8,10 +8,10 @@ cmake_minimum_required(VERSION 3.21)
 set(VERSION "$ENV{PACKAGE_VERSION}")
 
 project(ModelC
-    VERSION ${VERSION}
     DESCRIPTION "DSE Model C including: SimBus and ModelC."
     HOMEPAGE_URL "${PROJECT_URL}"
 )
+set(PROJECT_VERSION ${VERSION})
 
 include(GNUInstallDirs)
 

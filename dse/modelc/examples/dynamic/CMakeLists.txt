@@ -5,10 +5,10 @@
 cmake_minimum_required(VERSION 3.21)
 
 project(DynamicModel
-    VERSION "$ENV{PACKAGE_VERSION}"
     DESCRIPTION "ModelC - Example Dynamic Model."
     HOMEPAGE_URL "${PROJECT_URL}"
 )
+set(PROJECT_VERSION ${VERSION})
 
 include(FetchContent)
 
