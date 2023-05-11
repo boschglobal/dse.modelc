@@ -68,7 +68,7 @@ static const char* _signal_annotation(ModelInstanceSpec* mi, SignalVector* sv,
     /* Look for the annotation. */
     if (__signal_match) {
         YamlNode* n = dse_yaml_find_node(__signal_match->data, "annotations");
-        dse_yaml_get_string(n, name, &value);
+        value = dse_yaml_get_scalar(n, name);
         free(__signal_match);
         __signal_match = NULL;
     }
