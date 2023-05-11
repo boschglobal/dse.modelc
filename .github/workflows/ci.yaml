@@ -16,6 +16,7 @@ env:
   PACKAGE_VERSION: 0.0.2
   package_name: ModelC
   build_dir: dse/modelc/build
+  CCACHE_SECONDARY_STORAGE: ${{ secrets.CCACHE_SECONDARY_STORAGE }}
 
 jobs:
   build:
