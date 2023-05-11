@@ -4,11 +4,11 @@ name: CI
 on:  # yamllint disable-line rule:truthy
   workflow_dispatch:
   push:
-    branches: [main]
+    branches: [main, devel]
     tags:
       - 'v*.*.*'
   pull_request:
-    branches: [main]
+    branches: [main, devel]
 
 env:
   REGISTRY: ghcr.io
