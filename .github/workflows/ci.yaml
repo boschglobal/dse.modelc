@@ -16,7 +16,7 @@ env:
   PACKAGE_VERSION: 0.0.2
   package_name: ModelC
   build_dir: dse/modelc/build
-  test_make_target: null  # No C runtime unit tests (i.e. CMocka).
+  test_make_target: test_cmocka
 
 jobs:
   build:
@@ -121,7 +121,7 @@ jobs:
         env:
           PACKAGE_ARCH: ${{ matrix.package_arch }}
         run: |
-          make test
+          make test_pytest
 
   publish:
     if: startsWith(github.ref, 'refs/tags/')
