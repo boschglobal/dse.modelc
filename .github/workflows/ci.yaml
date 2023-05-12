@@ -61,6 +61,10 @@ jobs:
           PACKAGE_ARCH: ${{ matrix.package_arch }}
         run: |
           make test_cmocka
+          
+      - name: Stats
+        run: |
+          ccache -s -v || true
 
       - name: Package
         env:
