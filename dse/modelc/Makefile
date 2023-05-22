@@ -36,6 +36,12 @@ build: external
 	@find build/_out/ -type f -name '*' -exec ls -sh --color=auto {} \;
 
 package:
+	@echo "Package parameters:"
+	@echo "-------------------"
+	@echo "NAMESPACE : $(NAMESPACE)"
+	@echo "MODULE    : $(MODULE)"
+	@echo "VERSION   : $(PACKAGE_VERSION)"
+	@echo "ARCH      : $(PACKAGE_ARCH)"
 	cd build; make package
 	@echo ""
 	@echo "Package files: - $$(pwd)/build/_dist"

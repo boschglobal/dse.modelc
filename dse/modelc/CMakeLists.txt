@@ -5,12 +5,12 @@
 cmake_minimum_required(VERSION 3.21)
 
 # set(CMAKE_VERBOSE_MAKEFILE ON)
-set(VERSION "$ENV{PACKAGE_VERSION}")
 
 project(ModelC
     DESCRIPTION "DSE Model C including: SimBus and ModelC."
     HOMEPAGE_URL "${PROJECT_URL}"
 )
+set(VERSION "$ENV{PACKAGE_VERSION}")
 set(PROJECT_VERSION ${VERSION})
 
 include(GNUInstallDirs)
@@ -307,15 +307,10 @@ add_subdirectory(examples)
 set(CPACK_SYSTEM_NAME $ENV{PACKAGE_ARCH})
 set(CPACK_PACKAGE_VENDOR "Robert Bosch GmbH")
 set(CPACK_PACKAGE_DESCRIPTION "DSE Model C including: SimBus and ModelC")
+set(CPACK_PACKAGE_VERSION $ENV{PACKAGE_VERSION})
 set(CPACK_OUTPUT_FILE_PREFIX _dist)
 set(CPACK_GENERATOR "ZIP")
 set(CPACK_PACKAGE_CHECKSUM MD5)
-
-# Note: Component install is currently disabled, in order to get a single ZIP
-#  distribution with examples included.
-# set(CPACK_ARCHIVE_COMPONENT_INSTALL ON)
-# get_cmake_property(CPACK_COMPONENTS_ALL COMPONENTS)
-set(CPACK_ARCHIVE_MODELC_FILE_NAME "ModelC-$ENV{PACKAGE_VERSION}-${CPACK_SYSTEM_NAME}")
-# set(CPACK_ARCHIVE_DYNAMIC_MODEL_FILE_NAME "DynamicModel-$ENV{PACKAGE_VERSION}-${CPACK_SYSTEM_NAME}")
+set(CPACK_PACKAGE_FILE_NAME "ModelC-${CPACK_PACKAGE_VERSION}-${CPACK_SYSTEM_NAME}")
 
 include(CPack)
