@@ -6,6 +6,7 @@
 #define DSE_MODELC_GATEWAY_H_
 
 #include <stdint.h>
+#include <errno.h>
 #include <dse/platform.h>
 #include <dse/modelc/model.h>
 
@@ -72,6 +73,9 @@
  *      model_gw_exit(&gw);
  *  }
  */
+
+#define __GATEWAY_ERROR_OFFSET (__MODELC_ERROR_OFFSET + 1000)
+#define E_GATEWAYBEHIND             (__GATEWAY_ERROR_OFFSET + 1)
 
 
 typedef struct ModelGatewayDesc {

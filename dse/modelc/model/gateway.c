@@ -3,7 +3,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
 #include <assert.h>
-#include <errno.h>
 #include <dse/testing.h>
 #include <dse/logger.h>
 #include <dse/modelc/gateway.h>
@@ -197,8 +196,8 @@ int model_gw_setup(ModelGatewayDesc* gw, const char* name,
  *  Returns
  *  -------
  *      0 : success.
- *      ETIME : the specified model_time is _behind_ the simulation time and
- *          should be advanced by the caller (and retrying this call).
+ *      E_GATEWAYBEHIND : the specified model_time is _behind_ the simulation
+ *          time and should be advanced by the caller (and retrying this call).
  *      +ve : failure, inspect errno for the failing condition.
  */
 int model_gw_sync(ModelGatewayDesc* gw, double model_time)
@@ -210,7 +209,7 @@ int model_gw_sync(ModelGatewayDesc* gw, double model_time)
      * satisfied. Its not possible to advance the model time directly to the
      * same time as the SimBus time because we cannot be sure that the gateway
      * modelling environment will support that. */
-    if (model_time < mip->adapter_model->model_time) return ETIME;
+    if (model_time < mip->adapter_model->model_time) return E_GATEWAYBEHIND;
 
     /* Advance the gateway as many times as necessary to reach the desired
      * model time. When this loop exits the gateway will be at the same time

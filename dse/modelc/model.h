@@ -18,6 +18,7 @@ Model interface of the Dynamic Simulation Environment (DSE).
 #include <dse/clib/collections/hashlist.h>
 #include <dse/clib/util/yaml.h>
 
+#define __MODELC_ERROR_OFFSET (2000)
 
 #define MODEL_SETUP_FUNC     model_setup
 #define MODEL_SETUP_FUNC_STR "model_setup"
