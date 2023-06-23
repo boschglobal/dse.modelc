@@ -211,6 +211,8 @@ typedef struct ModelCArguments {
     /* Allow detection of CLI provided arguments. */
     int          timeout_set_by_cli;
     int          log_level_set_by_cli;
+    /* MStep "hidden" arguments. */
+    uint32_t     steps;
 } ModelCArguments;
 
 

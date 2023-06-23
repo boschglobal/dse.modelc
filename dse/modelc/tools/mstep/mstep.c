@@ -43,6 +43,7 @@ int main(int argc, char** argv)
     ModelInstanceSpec* mi;
 
     modelc_set_default_args(&args, NULL, STEP_SIZE, END_TIME);
+    args.steps = STEPS;
     modelc_parse_arguments(&args, argc, argv, "Model Loader and Stepper");
     if (args.name == NULL) log_fatal("name argument not provided!");
 
@@ -75,8 +76,8 @@ int main(int argc, char** argv)
 
 
     /* Run the Model/Simulation. */
-    log_notice("Starting Simulation (for %d steps) ...", STEPS);
-    for (int i = 0; i < STEPS; i++) {
+    log_notice("Starting Simulation (for %d steps) ...", args.steps);
+    for (uint32_t i = 0; i < args.steps; i++) {
         log_notice("  step %d", i);
         marshal_to_signal_vectors(sv);
         rc = modelc_step(mi, args.step_size);

@@ -38,6 +38,7 @@ static struct option long_options[] = { { "help", no_argument, NULL, 'h' },
     { "host", required_argument, NULL, 'H' },
     { "port", required_argument, NULL, 'P' },
     { "stepsize", required_argument, NULL, 's' },
+    { "steps", required_argument, NULL, 'X' },
     { "endtime", required_argument, NULL, 'e' },
     { "uid", required_argument, NULL, 'u' },
     { "name", required_argument, NULL, 'n' },
@@ -183,6 +184,7 @@ void modelc_set_default_args(ModelCArguments* args,
     args->file = NULL;
     args->path = NULL;
     args->yaml_doc_list = NULL;
+    args->steps = 0;
 }
 
 
@@ -251,6 +253,9 @@ void modelc_parse_arguments(
             break;
         case 'p':
             args->path = optarg;
+            break;
+        case 'X':
+            args->steps = atol(optarg);
             break;
         default:
             log_error("unexpected option");
