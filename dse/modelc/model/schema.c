@@ -115,27 +115,28 @@ int schema_object_search(ModelInstanceSpec* model_instance,
             object.name = node->scalar;
         }
         /* Labels */
-        YamlNode* labels = dse_yaml_find_node(doc, "metadata/labels");
-        if (labels == NULL) continue;
-        int label_match_count = 0;
-        for (int j = 0; j < selector->labels_len; j++) {
-            if (selector->labels[j].name == NULL) continue;
-            if (selector->labels[j].value == NULL) continue;
-            node = dse_yaml_find_node(labels, selector->labels[j].name);
-            if (node == NULL || node->scalar == NULL) continue;
-            if (strcmp(node->scalar, selector->labels[j].value) != 0) {
-                log_debug("  non-match on label %s: %s (looking for %s)",
-                    selector->labels[j].name, node->scalar,
-                    selector->labels[j].value);
-                continue;
+        if (selector->labels && selector->labels_len) {
+            YamlNode* labels = dse_yaml_find_node(doc, "metadata/labels");
+            if (labels == NULL) continue;
+            int label_match_count = 0;
+            for (int j = 0; j < selector->labels_len; j++) {
+                if (selector->labels[j].name == NULL) continue;
+                if (selector->labels[j].value == NULL) continue;
+                node = dse_yaml_find_node(labels, selector->labels[j].name);
+                if (node == NULL || node->scalar == NULL) continue;
+                if (strcmp(node->scalar, selector->labels[j].value) != 0) {
+                    log_debug("  non-match on label %s: %s (looking for %s)",
+                        selector->labels[j].name, node->scalar,
+                        selector->labels[j].value);
+                    continue;
+                }
+                /* Match on labels[j]. */
+                log_debug("  match on label %s: %s", selector->labels[j].name,
+                    node->scalar);
+                label_match_count++;
             }
-            /* Match on labels[j]. */
-            log_debug("  match on label %s: %s", selector->labels[j].name,
-                node->scalar);
-            label_match_count++;
+            if (label_match_count != selector->labels_len) continue;
         }
-        if (label_match_count != selector->labels_len) continue;
-
         /* All match conditions of the selector were satisfied! */
         log_debug("  all match conditions, call match handler");
         object.doc = (void*)doc;
