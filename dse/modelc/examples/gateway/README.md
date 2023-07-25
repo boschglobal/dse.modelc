@@ -13,8 +13,8 @@ environment. There are numerous other ways to configure and run simulations.
 #### Build the Project
 
 ```bash
-$ git clone https://github.com/boschglobal/dse.clib.git
-$ cd dse.clib
+$ git clone https://github.com/boschglobal/dse.modelc.git
+$ cd dse.modelc
 $ make
 ```
 
