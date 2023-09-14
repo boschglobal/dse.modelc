@@ -181,7 +181,7 @@ void* redispubsub_create_channel(Endpoint* endpoint, const char* channel_name)
     RedisPubSubChannel* endpoint_channel =
         hashmap_get(&endpoint->endpoint_channels, channel_name);
     if (endpoint_channel) {
-        assert(endpoint_channel->channel_name == channel_name);
+        assert(strcmp(endpoint_channel->channel_name, channel_name) == 0);
         return (void*)endpoint_channel;
     }
 
