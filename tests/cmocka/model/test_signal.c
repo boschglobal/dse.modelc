@@ -123,7 +123,8 @@ void test_signal__scalar(void** state)
     }
 
     /* General properties. */
-    assert_string_equal(sv->name, "scalar"); /* Will be alias name. */
+    assert_string_equal(sv->name, "scalar");
+    assert_string_equal(sv->alias, "scalar_vector");
     assert_string_equal(sv->function_name, "NOP");
     assert_int_equal(sv->count, 2);
     assert_int_equal(sv->is_binary, false);
@@ -171,7 +172,8 @@ void test_signal__binary(void** state)
     }
 
     /* General properties. */
-    assert_string_equal(sv->name, "binary"); /* Will be alias name. */
+    assert_string_equal(sv->name, "binary");
+    assert_string_equal(sv->alias, "binary_vector");
     assert_string_equal(sv->function_name, "NOP");
     assert_int_equal(sv->count, 2);
     assert_int_equal(sv->is_binary, true);

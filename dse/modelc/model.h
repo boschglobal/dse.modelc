@@ -114,6 +114,7 @@ typedef const char* (*SignalAnnotationGetFunc)(
 
 typedef struct SignalVector {
     const char*  name;
+    const char*  alias;
     const char*  function_name;
     bool         is_binary;
     /* Vector representation of Signals (each with _count_ elements). */

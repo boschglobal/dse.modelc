@@ -303,6 +303,19 @@ SignalVector* model_sv_create(ModelInstanceSpec* mi)
         return NULL;
     }
 
+    /* Lookup channel aliases on the Model Instance. */
+    SignalVector* sv_p = sv;
+    while (sv_p && sv_p->name) {
+        const char* selector[] = { "name" };
+        const char* value[] = { sv_p->name };
+        YamlNode* ch_node = dse_yaml_find_node_in_seq(mi->spec, "channels", selector, value, 1);
+        if (ch_node) {
+            sv_p->alias = dse_yaml_get_scalar(ch_node, "alias");
+        }
+        /* Next signal vector. */
+        sv_p++;
+    }
+
     /* Return the signal vector list (NULL terminated). */
     return sv;
 }
