@@ -52,8 +52,8 @@ static void print_signal_vectors(SignalVector* sv);
   *             - D_BrakePedal_0_1_f: 0.3
  */
 typedef struct ValueObject {
-    const char* signal;
-    double      value;
+    char*  signal;
+    double value;
 } ValueObject;
 
 typedef struct SampleObject {
