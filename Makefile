@@ -199,37 +199,9 @@ super-linter:
 		--env RUN_LOCAL=true \
 		--env DEFAULT_BRANCH=main \
 		--env IGNORE_GITIGNORED_FILES=true \
-		--env VALIDATE_ANSIBLE=false \
-		--env VALIDATE_ARM=false \
-		--env VALIDATE_BASH=false \
-		--env VALIDATE_BASH_EXEC=false \
-		--env VALIDATE_CLANG_FORMAT=false \
-		--env XXX_VALIDATE_CPP=false \
-		--env VALIDATE_CSHARP=false \
-		--env VALIDATE_DOCKERFILE_HADOLINT=false \
-		--env VALIDATE_GO=false \
-		--env VALIDATE_GITHUB_ACTIONS=false \
-		--env VALIDATE_GITLEAKS=false \
-		--env VALIDATE_GOOGLE_JAVA_FORMAT=false \
-		--env VALIDATE_GROOVY=false \
-		--env VALIDATE_HTML=false \
-		--env VALIDATE_JAVA=false \
-		--env VALIDATE_JAVASCRIPT_ES=false \
-		--env VALIDATE_JAVASCRIPT_STANDARD=false \
-		--env VALIDATE_JSCPD=false \
-		--env VALIDATE_LUA=false \
-		--env VALIDATE_MARKDOWN=false \
-		--env VALIDATE_PYTHON=false \
-		--env VALIDATE_PYTHON_BLACK=false \
-		--env VALIDATE_PYTHON_FLAKE8=false \
-		--env VALIDATE_PYTHON_ISORT=false \
-		--env VALIDATE_PYTHON_MYPY=false \
-		--env VALIDATE_PYTHON_PYLINT=false \
-		--env VALIDATE_RUST_2015=false \
-		--env VALIDATE_RUST_2018=false \
-		--env VALIDATE_RUST_CLIPPY=false \
-		--env XXX_VALIDATE_YAML=false \
-		github/super-linter:slim-v4
+		--env VALIDATE_CPP=true \
+		--env VALIDATE_YAML=true \
+		github/super-linter:slim-v5
 
 
 .PHONY: build docker test package clean cleanall oss super-linter \
