@@ -150,7 +150,7 @@ center footer Dynamic Simulation Environment
 Example
 -------
 
-{{< readfile file="examples/model_signalvector.c" code="true" lang="c" >}}
+{{< readfile file="../examples/model_signalvector.c" code="true" lang="c" >}}
 
 */
 
@@ -249,7 +249,7 @@ center footer Dynamic Simulation Environment
 Example
 -------
 
-{{< readfile file="examples/model_interface.c" code="true" lang="c" >}}
+{{< readfile file="../examples/model_interface.c" code="true" lang="c" >}}
 
 */
 

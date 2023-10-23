@@ -48,7 +48,7 @@ center footer Dynamic Simulation Environment
 ### Example
 
 
-{{< readfile file="examples/gateway.c" code="true" lang="c" >}}
+{{< readfile file="../examples/gateway.c" code="true" lang="c" >}}
 
 
 

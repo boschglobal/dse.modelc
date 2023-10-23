@@ -58,7 +58,7 @@ center footer Dynamic Simulation Environment
 Example
 -------
 
-{{< readfile file="examples/gateway.c" code="true" lang="c" >}}
+{{< readfile file="../examples/gateway.c" code="true" lang="c" >}}
 
 */
 #define __GATEWAY_ERROR_OFFSET (__MODELC_ERROR_OFFSET + 1000)

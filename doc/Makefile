@@ -27,28 +27,28 @@ DOC_OUTPUT_index := doc/content/apis/modelc/_index.md
 # Module "gateway"
 DOC_INPUT_gateway := dse/modelc/gateway.h
 DOC_CDIR_gateway := dse/modelc/model/gateway.c
-DOC_OUTPUT_gateway := doc/content/apis/modelc/gateway.md
+DOC_OUTPUT_gateway := doc/content/apis/modelc/gateway/index.md
 DOC_LINKTITLE_gateway := Gateway
 DOC_TITLE_gateway := "Gateway API Reference"
 
 # Module "mcl"
 DOC_INPUT_mcl := dse/modelc/mcl.h
 DOC_CDIR_mcl := dse/modelc/controller/mcl.c
-DOC_OUTPUT_mcl := doc/content/apis/modelc/mcl.md
+DOC_OUTPUT_mcl := doc/content/apis/modelc/mcl/index.md
 DOC_LINKTITLE_mcl := MCL
 DOC_TITLE_mcl := "MCL API Reference"
 
 # Module "model"
 DOC_INPUT_model := dse/modelc/model.h
 DOC_CDIR_model := dse/modelc/model/model.c,dse/modelc/model/signal.c
-DOC_OUTPUT_model := doc/content/apis/modelc/model.md
+DOC_OUTPUT_model := doc/content/apis/modelc/model/index.md
 DOC_LINKTITLE_model := Model
 DOC_TITLE_model := "Model API Reference"
 
 # Module "schema"
 DOC_INPUT_schema := dse/modelc/schema.h
 DOC_CDIR_schema := dse/modelc/model/schema.c
-DOC_OUTPUT_schema := doc/content/apis/modelc/schema.md
+DOC_OUTPUT_schema := doc/content/apis/modelc/schema/index.md
 DOC_LINKTITLE_schema := Schema
 DOC_TITLE_schema := "Schema API Reference"
 
