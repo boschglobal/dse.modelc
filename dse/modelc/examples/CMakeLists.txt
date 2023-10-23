@@ -5,3 +5,6 @@
 add_subdirectory(dynamic)
 add_subdirectory(binary)
 add_subdirectory(gateway)
+
+# Code examples for documentation.
+add_subdirectory(apis)

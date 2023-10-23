@@ -43,14 +43,14 @@ model_gw_exit(&gw);
 
 A generalised deployment showing how a remote simulation is connected to a DSE simulation using a gateway model. Each simulation has several models, synchronisation and signal exchange are achieved via the gateway model.
 
-{{< figure src="/dse.modelc/gateway-deploy.png" caption="Gateway Model Deployment" >}}
+{{< figure src="gateway-deploy.png" caption="Gateway Model Deployment" >}}
 
 
 ### Sequence Diagram
 
 The following diagram shows how a gateway model running in a remote simulation interacts with a DSE simulation.
 
-{{< figure src="/dse.modelc/gateway-sequence.png" caption="Gateway Model Sequence Diagram" >}}
+{{< figure src="gateway-sequence.png" caption="Gateway Model Sequence Diagram" >}}
 
 
 ## References

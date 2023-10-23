@@ -16,10 +16,7 @@
 #define DEFAULT_BINARY_MIME_TYPE "application/octet-stream"
 
 
-/*
- *  Signal Annotation Functions
- *  ===========================
- */
+/* Signal Annotation Functions. */
 
 static SchemaSignalObject* __signal_match;
 static const char*         __signal_match_name;
@@ -77,10 +74,7 @@ static const char* _signal_annotation(ModelInstanceSpec* mi, SignalVector* sv,
 }
 
 
-/**
- *  Helper Functions
- *  ================
- */
+/* Helper Functions. */
 
 static int __binary_append_nop(
     SignalVector* sv, uint32_t index, void* data, uint32_t len)
@@ -145,12 +139,7 @@ static const char* __annotation_get(
 }
 
 
-/*
- *  Enumerator Functions
- *  ====================
- *
- *  For model_sv_create().
- */
+/* Enumerator Functions, for model_sv_create(). */
 
 typedef struct sv_data {
     ModelInstanceSpec* mi;
@@ -230,55 +219,28 @@ static int _count_sv(void* _mf, void* _number)
 
 
 /**
- *  model_sv_create
- *
- *  This is Model User API replacing modelc_debug.c::modelc_get_model_vectors().
- *
- *  Parameters
- *  ----------
- *  mi : ModelInstanceSpec (pointer to)
- *      The model instance, which holds references to the registered channels.
- *
- *  Returns
- *  -------
- *      SignalVector (pointer to NULL terminated list) : A list of SignalVector
- *          objects representing the signals assigned to a channel. The list
- *          is NULL terminated (sv->name == NULL). Caller to free.
- *
- *  Example
- *  -------
- *  #include <dse/modelc/model.h>
- *  #include <dse/logger.h>
- *
- *  void print_signal_vectors(ModelInstanceSpec* mi)
- *  {
- *      SignalVector* sv = model_sv_create(mi);
- *      while (sv && sv->name) {
- *          log_debug("Signal Vector : %s", sv->name);
- *
- *          for (uint32_t i = 0; i < sv->count; i++) {
- *              log_debug("  signal : %s", sv->signal[i]);
- *              if (sv->is_binary) {
- *                  log_debug("    length : %s", sv->length[i]);
- *                  log_debug("    buffer_size : %s", sv->buffer_size[i]);
- *                  log_debug("    mime_type : %s", sv->mime_type[i]);
- *
- *                  // Example use of object functions.
- *                  sv->reset(sv, i);
- *                  sv->append(sv, i, "foo", 3);
- *                  sv->release(sv, i);
- *                  const char* mime_type = sv->annotation(sv, i, "mime_type");
- *                  if (mime_type) log_debug("    annotation : %s", mime_type);
- *              } else {
- *                  log_debug("  scalar : %s", sv->scalar[i]);
- *              }
- *          }
- *
- *          // Next signal vector.
- *          sv++;
- *      }
- *  }
- */
+model_sv_create
+===============
+
+This is Model User API replacing modelc_debug.c::modelc_get_model_vectors().
+
+Parameters
+----------
+mi (ModelInstanceSpec*)
+: The model instance, which holds references to the registered channels.
+
+Returns
+-------
+SignalVector (pointer to NULL terminated list)
+: A list of SignalVector objects representing the signals assigned to a model.
+  The list is NULL terminated (sv->name == NULL). Caller to free.
+
+Example
+-------
+
+{{< readfile file="examples/model_sv_create.c" code="true" lang="c" >}}
+
+*/
 SignalVector* model_sv_create(ModelInstanceSpec* mi)
 {
     int      rc;
@@ -322,19 +284,19 @@ SignalVector* model_sv_create(ModelInstanceSpec* mi)
 
 
 /**
- *  model_sv_destroy
- *
- *  The underlying objects of a SignalVector object (e.g. from ModelC object)
- *  are not affected by calling this method.
- *
- *  Parameters
- *  ----------
- *  sv : SignalVector (pointer to NULL terminated list)
- *      List of SignalVector objects to destroy.
- *
- *  Returns
- *  -------
- */
+model_sv_destroy
+================
+
+The underlying objects of a SignalVector object (e.g. from ModelC object)
+are not affected by calling this method.
+
+Parameters
+----------
+sv (SignalVector*)
+: The SignalVector object to destroy. Should be the same object as returned
+  from the call to `model_sv_create()`.
+
+*/
 void model_sv_destroy(SignalVector* sv)
 {
     SignalVector* sv_save = sv;

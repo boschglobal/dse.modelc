@@ -13,10 +13,8 @@
 #define UNUSED(x) ((void)x)
 
 
-/**
- *  Gateway Model Functions
- *  =======================
- */
+/* Gateway Model Functions
+ * These represent the Model Interface of the Gateway. */
 
 static HashList __mcd_list; /* Storage for ModelChannelDesc objects. */
 static double   __gw_step_size;
@@ -92,41 +90,43 @@ DLL_PRIVATE int __model_gw_exit__(ModelInstanceSpec* mi)
     return 0;
 }
 
-
 /**
- *  Gateway API Functions
- *  =====================
- */
+model_gw_setup
+==============
 
-/**
- *  model_gw_setup
- *
- *
- *  Parameters
- *  ----------
- *  gw : ModelGatewayDesc (pointer to)
- *      A gateway descriptor object, holds references to various ModelC objects.
- *  name : const char (pointer to)
- *      Name of the gateway model. Used when parsing the provided YAML files to
- *      select the relevant configuration items (i.e. Model and SignalGroup
- *      schemas).
- *  yaml_files : const char* (pointer to NULL terminated list)
- *      A list of YAML files where the relevant gateway configuration objects
- *      should be found.
- *  log_level : int
- *      The log level to apply to the gateway model. Common values include;
- *      LOG_NOTICE (default), LOG_INFO, LOG_QUIET (only errors) or LOG_DEBUG.
- *      Set to a negative number to use the default log level.
- *  step_size : double
- *      Step size for interactions with the Simbus.
- *  end_time : double
- *      End time for the simulation (acts as guard against forever simulations).
- *
- *  Returns
- *  -------
- *      0 : success.
- *      +ve : failure, inspect errno for the failing condition.
- */
+Parameters
+----------
+gw (ModelGatewayDesc*)
+: A gateway descriptor object, holds references to various ModelC objects.
+
+name (const char*)
+: Name of the gateway model. Used when parsing the provided YAML files to
+  select the relevant configuration items (i.e. Model and SignalGroup schemas).
+
+yaml_files (const char*)
+: A list of YAML files where the relevant gateway configuration objects
+  should be found.
+
+log_level (int)
+: The log level to apply to the gateway model. Common values include;
+  LOG_NOTICE (default), LOG_INFO, LOG_QUIET (only errors) or LOG_DEBUG.
+  Set to a negative number to use the default log level.
+
+step_size (double)
+: Step size for interactions with the Simbus.
+
+end_time (double)
+: End time for the simulation (acts as guard against "forever" simulations).
+
+Returns
+-------
+0
+: Success.
+
++ve
+: Failure, inspect errno for the failing condition.
+
+*/
 int model_gw_setup(ModelGatewayDesc* gw, const char* name,
     const char** yaml_files, int log_level, double step_size, double end_time)
 {
@@ -182,24 +182,31 @@ int model_gw_setup(ModelGatewayDesc* gw, const char* name,
 
 
 /**
- *  model_gw_sync
- *
- *
- *  Parameters
- *  ----------
- *  gw : ModelGatewayDesc (pointer to)
- *      A gateway descriptor object, holds references to various ModelC objects.
- *  model_time : double
- *      The current simulation time of the gateway model for which the
- *      Gateway API should synchronise with.
- *
- *  Returns
- *  -------
- *      0 : success.
- *      E_GATEWAYBEHIND : the specified model_time is _behind_ the simulation
- *          time and should be advanced by the caller (and retrying this call).
- *      +ve : failure, inspect errno for the failing condition.
- */
+model_gw_sync
+=============
+
+Parameters
+----------
+gw (ModelGatewayDesc*)
+: A gateway descriptor object, holds references to various ModelC objects.
+
+model_time (double)
+: The current simulation time of the gateway model for which the
+  Gateway API should synchronise with.
+
+Returns
+-------
+0
+: Success.
+
+E_GATEWAYBEHIND
+: The specified model_time is _behind_ the simulation time. The time should be
+  advanced by the caller and then retry this call until the condition clears.
+
++ve
+: Failure, inspect errno for the failing condition.
+
+*/
 int model_gw_sync(ModelGatewayDesc* gw, double model_time)
 {
     ModelInstancePrivate* mip = gw->mi->private;
@@ -229,22 +236,27 @@ int model_gw_sync(ModelGatewayDesc* gw, double model_time)
 
 
 /**
- *  model_gw_exit
- *
- *  Terminates the Gateway Model and releases all objects referenced by the
- *  ModelGatewayDesc object. The `gw` itself is not affected and should be
- *  released by the caller (if necessary).
- *
- *  Parameters
- *  ----------
- *  gw : ModelGatewayDesc (pointer to)
- *      A gateway descriptor object, holds references to various ModelC objects.
- *
- *  Returns
- *  -------
- *      0 : success.
- *      +ve : failure, inspect errno for the failing condition.
- */
+model_gw_exit
+=============
+
+Terminates the Gateway Model and releases all objects referenced by the
+ModelGatewayDesc object. The object itself is not affected and should be
+released by the caller (if necessary).
+
+Parameters
+----------
+gw (ModelGatewayDesc*)
+: A gateway descriptor object, holds references to various ModelC objects.
+
+Returns
+-------
+0
+: Success.
+
++ve
+: Failure, inspect errno for the failing condition.
+
+*/
 int model_gw_exit(ModelGatewayDesc* gw)
 {
     if (gw == NULL) return 0;

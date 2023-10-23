@@ -5,17 +5,26 @@
 #ifndef DSE_MODELC_SCHEMA_H_
 #define DSE_MODELC_SCHEMA_H_
 
-/*
-DSE Schema
-==========
-
-A Schema API which provides methods for selecting and parsing YAML data objects.
-*/
-
 #include <stdint.h>
 #include <dse/platform.h>
 #include <dse/modelc/model.h>
 
+
+#ifndef DLL_PUBLIC
+#define DLL_PUBLIC  __attribute__((visibility("default")))
+#endif
+#ifndef DLL_PRIVATE
+#define DLL_PRIVATE __attribute__((visibility("hidden")))
+#endif
+
+
+/**
+Schema API
+==========
+
+The Schema API provides a number of functions for parsing the YAML configuration
+documents which represent (some of) the Schemas of the Model C Library.
+*/
 
 typedef struct SchemaObject {
     const char* kind;

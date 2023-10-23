@@ -5,18 +5,28 @@
 #ifndef DSE_MODELC_MODEL_H_
 #define DSE_MODELC_MODEL_H_
 
-/*
-DSE Model
-=========
-
-Model interface of the Dynamic Simulation Environment (DSE).
-*/
-
 #include <stdint.h>
 #include <stdbool.h>
 #include <dse/platform.h>
 #include <dse/clib/collections/hashlist.h>
 #include <dse/clib/util/yaml.h>
+
+
+#ifndef DLL_PUBLIC
+#define DLL_PUBLIC  __attribute__((visibility("default")))
+#endif
+#ifndef DLL_PRIVATE
+#define DLL_PRIVATE __attribute__((visibility("hidden")))
+#endif
+
+
+/**
+Model API
+=========
+
+The Model API allows model developers and integrators to interface with a
+Dynamic Simulation Environment via a connection with a Simulation Bus.
+*/
 
 #define __MODELC_ERROR_OFFSET (2000)
 
@@ -94,13 +104,54 @@ typedef struct ChannelSpec {
 } ChannelSpec;
 
 
-/*
-Signal Vector API Definition
-============================
+/**
+Signal Vector Interface
+=======================
 
-Object representation of Signal Vectors which encapsulate data and behaviour.
+Models exchange signals via the Simulation Bus using a Signal Vector. Signal
+Vectors represent a logical grouping of signals (i.e. a collection of signals
+belonging to an ECU interface or bus), they are defined by a `SignalGroup`
+schema kind, and a Signal Vector can represent either scalar or binary values.
 
-Primary use in consumer APIs (i.e. Model Gateway API).
+
+Component Diagram
+-----------------
+<div hidden>
+
+```
+@startuml model-signal-vector
+
+title Signal Vector Interface
+
+interface "SimBus" as SBif
+
+package "Model" {
+	component "ModelC Lib" as ModelC
+	interface "SignalVectorVTable" as SVvt
+	component "Model" as Mdl
+}
+
+ModelC -up-> SBif
+Mdl -up-( SVvt
+SVvt -up- ModelC
+Mdl --> ModelC :model_sv_create()
+Mdl --> ModelC :model_sv_destroy()
+
+center footer Dynamic Simulation Environment
+
+@enduml
+```
+
+</div>
+
+![](model-signal-vector.png)
+
+
+Example
+-------
+
+{{< readfile file="examples/model_signalvector.c" code="true" lang="c" >}}
+
 */
 
 typedef struct SignalVector SignalVector;
@@ -111,6 +162,13 @@ typedef int (*BinarySignalResetFunc)(SignalVector* sv, uint32_t index);
 typedef int (*BinarySignalReleaseFunc)(SignalVector* sv, uint32_t index);
 typedef const char* (*SignalAnnotationGetFunc)(
     SignalVector* sv, uint32_t index, const char* name);
+
+typedef struct SignalVectorVTable {
+    BinarySignalAppendFunc  append;
+    BinarySignalResetFunc   reset;
+    BinarySignalReleaseFunc release;
+    SignalAnnotationGetFunc annotation;
+} SignalVectorVTable;
 
 typedef struct SignalVector {
     const char*  name;
@@ -141,58 +199,74 @@ typedef struct SignalVector {
 } SignalVector;
 
 
-/*
-Model API Definition
-====================
+/**
+Model Interface
+===============
 
-This portion of the API is implemented by a Model.
+The Model Interface must be implemented by a Model. It includes the functions
+necessary for a Model to be loaded and executed in the Dynamic Simulation
+Environment.
+
+
+Component Diagram
+-----------------
+<div hidden>
+
+```
+@startuml model-interface
+
+skinparam nodesep 55
+skinparam ranksep 40
+
+title Model Interface
+
+component "Model" as m1
+component "Model" as m2
+interface "SimBus" as SBif
+m1 -left-> SBif
+m2 -right-> SBif
+
+package "Model" {
+	component "ModelC Lib" as ModelC
+	interface "ModelInterfaceVTable" as MIvt
+	component "Model" as Mdl
+}
+
+SBif <-down- ModelC
+Mdl -up- MIvt
+MIvt )-up- ModelC
+
+center footer Dynamic Simulation Environment
+
+@enduml
+```
+
+</div>
+
+![](model-interface.png)
 
 
 Example
 -------
 
-    // my_model.c
-    #include <dse/modelc/model/model.h>
+{{< readfile file="examples/model_interface.c" code="true" lang="c" >}}
 
-    static const char* signal_name[] = {
-        "foo",
-        "bar",
-    };
-    static uint32_t signal_count = 2;
-    static double* signal_value;
-
-    int do_step(double *model_time, double stop_time)
-    {
-        signal_value[0] += 1.2;
-        *model_time = stop_time;
-
-        return 0;
-    }
-
-    int model_setup(ModelInstanceSpec* model_instance)
-    {
-        ModelFunction* _mf;
-        _mf = model_function_register("Example", 0.001, do_step);
-        signal_value = model_configure_channel_double(
-                _mf, "TEST", signal_name, signal_count);
-
-        return 0;
-    }
 */
 
 typedef int (*ModelSetupHandler)(ModelInstanceSpec* model_instance);
 typedef int (*ModelDoStepHandler)(double* model_time, double stop_time);
 typedef int (*ModelExitHandler)(ModelInstanceSpec* model_instance);
 
+typedef struct ModelInterfaceVTable {
+    ModelSetupHandler  setup;
+    ModelDoStepHandler step;
+    ModelExitHandler   exit;
+} ModelInterfaceVTable;
+
 DLL_PUBLIC int MODEL_SETUP_FUNC(ModelInstanceSpec* model_instance);
 
 
-/*
-Loader/Runner API Definition
-============================
-
-This portion of the API is implemented by a Model Loader/Runner (i.e. ModelC).
-*/
+/* Loader/Runner API Definition */
 
 typedef struct ModelCArguments {
     const char*  transport;

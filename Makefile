@@ -194,6 +194,10 @@ do-cleanall: do-clean
 do-oss:
 	$(MAKE) -C extra/external oss
 
+.PHONY: generate
+generate:
+	$(MAKE) -C doc generate
+
 super-linter:
 	docker run --rm --volume $$(pwd):/tmp/lint \
 		--env RUN_LOCAL=true \
@@ -204,5 +208,5 @@ super-linter:
 		github/super-linter:slim-v5
 
 
-.PHONY: build docker test package clean cleanall oss super-linter \
+.PHONY: build docker test package clean cleanall oss generate super-linter \
 		do-build do-test do-package do-clean do-cleanall do-oss

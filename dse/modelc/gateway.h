@@ -12,68 +12,55 @@
 
 
 /**
- *  Dynamic Simulation Environment - Model C - Gateway
- *  ==================================================
- *
- *  The Model C Gateway allows a foreign model to connect to, and exchange
- *  signals with, a DSE based Simulation (i.e. SimBus).
- *
- *  Example
- *  -------
- *  #include <stddef.h>
- *  #include <dse/modelc/gateway.h>
- *
- *  extern uint8_t __log_level__;
- *
- *  void main(void)
- *  {
- *      double model_time = 0.0;
- *      double step_size = 0.05;
- *      double end_time = 0.2;
- *
- *      ModelGatewayDesc gw;
- *      SignalVector*    sv;
- *
- *      // Setup the gateway.
- *      double      gw_foo = 0.0;
- *      double      gw_bar = 42.0;
- *      const char* yaml_files[] = {
- *          "resources/model/gateway.yaml",
- *          NULL,
- *      };
- *      model_gw_setup(
- *          &gw, "gateway", yaml_files, __log_level__, step_size, end_time);
- *
- *      // Find the scalar signal vector.
- *      sv = gw.sv;
- *      while (sv && sv->name) {
- *          if (strcmp(sv->name, "scalar") == 0) break;
- *          // Next signal vector.
- *          sv++;
- *      }
- *
- *      // Run the simulation.
- *      while (model_time < end_time) {
- *          // Marshal data _to_ the signal vector.
- *          sv->scalar[0] = gw_foo;
- *          sv->scalar[1] = gw_bar;
- *          // Synchronise the gateway.
- *          model_gw_sync(&gw, model_time)
- *          // Marshal data _from_ the signal vector.
- *          gw_foo = sv->scalar[0];
- *          gw_bar = sv->scalar[1];
- *          // Model function.
- *          gw_foo += 1;
- *          gw_bar += gw_foo;
- *          // Next step.
- *          model_time += step_size;
- *      }
- *
- *      // Exit the simulation.
- *      model_gw_exit(&gw);
- *  }
- */
+Gateway Model
+=============
 
+When implemented, a Gateway Model makes it possible for a foreign Simulation
+Environment to connect with a Dynamic Simulation Environment. The two
+simulation environments can then exchange signals and maintain synchronisation.
+
+Component Diagram
+-----------------
+<div hidden>
+
+```
+@startuml gateway-model
+
+title Gateway Model
+
+node "Dynamic Simulation Environment" {
+	component "Model" as m1
+	component "Model" as m2
+	interface "SimBus" as SBif
+	m1 -left-> SBif
+	m2 -right-> SBif
+}
+package "Gateway Model" {
+	component "ModelC Lib" as ModelC
+	component "Model"
+}
+
+SBif <-down- ModelC
+Model -up-> ModelC :model_gw_setup()
+Model -up-> ModelC :model_gw_sync()
+Model -up-> ModelC :model_gw_exit()
+
+center footer Dynamic Simulation Environment
+
+@enduml
+```
+
+</div>
+
+![](gateway-model.png)
+
+
+Example
+-------
+
+{{< readfile file="examples/gateway.c" code="true" lang="c" >}}
+
+*/
 #define __GATEWAY_ERROR_OFFSET (__MODELC_ERROR_OFFSET + 1000)
 #define E_GATEWAYBEHIND             (__GATEWAY_ERROR_OFFSET + 1)
 

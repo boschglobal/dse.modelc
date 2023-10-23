@@ -63,30 +63,32 @@ void mcl_register_adapter(MclAdapterDesc* adapter_desc)
 
 
 /**
- * Loads an MCL DLL which will contain a number of Strategy and/or
- * Adapter methods. The MCL DLL will implement function `mcl_setup()`
- * which inturn calls `mcl_register_strategy` or `mcl_register_adapter()`.
- *
- * Example
- * -------
- * The YAML for defining an MCL Model is as follows.
- *
- *      ---
- *      kind: Model
- *      metadata:
- *        name: mcl_model
- *      spec:
- *        runtime:
- *          dynlib:
- *            - os: linux
- *              arch: amd64
- *              path: fmimcl/build/_out/lib/mcl_model.so
- *              libs:
- *                - fmimcl/build/_out/lib/fmi_mcl.so
- *
- * More than one MCL DLL can be listed. The MCL Model can then be referenced
- * by any number of Model Instances.
- */
+mcl_load
+========
+
+Loads an MCL Library which will contain a number of Strategy and/or Adapter
+methods. The MCL Library should implement function `mcl_setup()` which will
+be called by the MCL when the MCL Libary is loaded. The function `mcl_setup()`
+of the MCL Library should call MCL functions `mcl_register_strategy()` and/or
+`mcl_register_adapter()` to register _this_ MCL Library with the MCL.
+
+Parameters
+----------
+model_instance (ModelInstanceSpec*)
+: Model Instance object representing the Model. Contains various identifying
+  and configuration elements.
+
+Returns
+-------
+0
+: The MCL library way successfully loaded.
+
+Exceptions
+----------
+exit(errno)
+: Any error in loading an MCL represents a fatal configuration error and
+  `exit()` is called to terminate execution.
+*/
 int mcl_load(ModelInstanceSpec* model_instance)
 {
     if (__mcl_dll_handle == NULL) _allocate_mcl();
@@ -154,58 +156,30 @@ int mcl_load(ModelInstanceSpec* model_instance)
 
 
 /**
- * Creates all MCL supported Models (i.e. an FMU) listed for the Model Instance.
- * This function will load the Model DLL (i.e. the FMU) and associate the
- * specified MCL Strategy and Adapter with the Model Instance.
- *
- * Note: Model Annotation `mcl_fmi_version` is used as the Adapter Selector.
- *
- * Example: (FMU)
- * --------------
- *
- *      ---
- *      kind: Model
- *      metadata:
- *        name: foo_bar_fmu
- *        annotations:
- *          mcl_adapter: fmi_2.0.3
- *      spec:
- *        runtime:
- *          mcl:
- *            - os: linux
- *              arch: amd64
- *              path: examples/foo_bar_fmu/build/_out/lib/foo_bar_fmu.so
- *        channels:
- *          - signals:
- *              - signal: foo
- *                annotations:
- *                  mcl_fmi_variable_id: 0
- *                  mcl_fmi_variable_name: fmi_foo_in
- *                  mcl_fmi_variable_type: Real
- *                  mcl_fmi_variable_start: 42.0
- *      ---
- *      kind: Stack
- *      metadata:
- *        name: stack
- *      spec:
- *      models:
- *        - name: mcl_model_instance
- *          uid: 42
- *          model:
- *            name: mcl_model
- *            mcl:
- *              strategy: fmi_cosim
- *              models:
- *                - name: foo_bar_fmu
- *          channels:
- *            - name: mcl_channel
- *              signals:
- *                - signal: foo
- *                  annotations:
- *                    mcl_model: foo_bar_fmu
- *                    mcl_signal: foo
- *
- */
+mcl_create
+==========
+
+Creates an instance of an MCL Model. All configured Model Libraries (of the
+MCL Model) are first associated with an MCL Adapter and MCL Strategy (provided
+by an MCL Library) and then loaded via the MCL Adapter `load_func()`.
+
+Parameters
+----------
+model_instance (ModelInstanceSpec*)
+: Model Instance object representing the Model. Contains various identifying
+  and configuration elements.
+
+Returns
+-------
+0
+: The MCL library way successfully loaded.
+
+Exceptions
+----------
+exit(errno)
+: Any error in creating an MCL Model instance represents a fatal configuration
+  error and `exit()` is called to terminate execution.
+*/
 int mcl_create(ModelInstanceSpec* model_instance)
 {
     assert(__mcl_strategy);
@@ -363,6 +337,19 @@ int mcl_create(ModelInstanceSpec* model_instance)
 }
 
 
+/**
+mcl_destroy
+===========
+
+Destroy an instance of an MCL Model, releasing any allocated memory or other
+resources allocated to the MCL Model instance.
+
+Parameters
+----------
+model_instance (ModelInstanceSpec*)
+: Model Instance object representing the Model. Contains various identifying
+  and configuration elements.
+*/
 void mcl_destroy(ModelInstanceSpec* model_instance)
 {
     if (model_instance && model_instance->private) {
@@ -381,3 +368,33 @@ void mcl_destroy(ModelInstanceSpec* model_instance)
         }
     }
 }
+
+
+/**
+mcl_register_strategy
+=====================
+
+An MCL Library calls this function to register a particular MCL Strategy with
+the MCL.
+
+Parameters
+----------
+strategy (MclStrategyDesc*)
+: MCL Strategy object representing a strategy capability of the MCL Library.
+*/
+extern void mcl_register_strategy(MclStrategyDesc* strategy);
+
+
+/**
+mcl_register_adapter
+====================
+
+An MCL Library calls this function to register a particular MCL Adapter with
+the MCL.
+
+Parameters
+----------
+adapter (MclAdapterDesc*)
+: MCL Strategy object representing a strategy capability of the MCL Library.
+*/
+extern void mcl_register_adapter(MclAdapterDesc* adapter);

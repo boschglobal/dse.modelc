@@ -5,17 +5,60 @@
 #ifndef DSE_MODELC_MCL_H_
 #define DSE_MODELC_MCL_H_
 
-/*
-DSE Model Compatibility Layer (MCL)
-===================================
-
-The Model Compatibility Layer can be used to implement support for models which
-were written according to different modeling interface.
-*/
-
 #include <dse/modelc/model.h>
 #include <dse/platform.h>
 #include <dse/clib/collections/hashlist.h>
+
+
+/**
+Model Compatibility Layer
+=========================
+
+The Model Compatibility Layer (MCL) can be used to implement support for models
+which were written according to different a modeling interface. This is done
+by combining a Strategy and Adapter pattern to build an MCL which can load,
+execute and exchange data with a the foreign model.
+
+
+Component Diagram
+-----------------
+<div hidden>
+
+```
+@startuml mcl-component
+
+title Compatibility Layer
+
+component "ModelC" {
+	component "MCL Model" as MCLmodel
+}
+component "MCL Lib" {
+  interface "Strategy" as Sif
+  interface "Adapter" as Aif
+  component "MCL" as MCL
+}
+interface "Model Interface" as Mif
+component "Model" as Model
+
+MCLmodel --( Sif
+MCLmodel --( Aif
+Sif -- MCL
+Aif -- MCL
+MCL -( Mif
+Mif - Model
+
+
+center footer Dynamic Simulation Environment
+
+@enduml
+```
+
+</div>
+
+![](mcl-component.png)
+
+
+*/
 
 
 #define MCL_SETUP_FUNC     mcl_setup

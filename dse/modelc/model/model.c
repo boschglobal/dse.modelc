@@ -63,6 +63,38 @@ void model_function_destroy(ModelFunction* model_function)
 }
 
 
+/**
+model_function_register
+=======================
+
+Register a Model Function. A Model may register one or more Model Functions
+with repeated calls to this function.
+
+Parameters
+----------
+model_instance (ModelInstanceSpec*)
+: The Model Instance object (provided via the `model_setup()` function of the
+  Model API).
+
+name (const char*)
+: The name of the Model Function.
+
+step_size (double)
+: The step size of the Model Function.
+
+do_step_handler (ModelDoStepHandler)
+: The "do step" function of the Model Function.
+
+Returns
+-------
+0
+: The model function was registered.
+
+(errno)
+: An error occurred during registration of the model function. The return
+  value is the `errno` which may indicate the reason for the failure.
+
+*/
 int model_function_register(ModelInstanceSpec* model_instance, const char* name,
     double step_size, ModelDoStepHandler do_step_handler)
 {
@@ -87,7 +119,7 @@ int model_function_register(ModelInstanceSpec* model_instance, const char* name,
     /* Register the object with the Controller. */
     rc = controller_register_model_function(model_instance, mf);
     if (rc && (errno != EEXIST)) goto error_clean_up;
-    return rc;
+    return 0;
 
 error_clean_up:
     model_function_destroy(mf);
@@ -356,6 +388,33 @@ void _load_signals_legacy(ModelInstanceSpec* model_instance,
 }
 
 
+/**
+model_configure_channel
+=======================
+
+Configure a connection from this Model to a Channel on the Simulation Bus. The
+Channel can then be represented by a Signal Vector making access to individual
+Signals and their configuration (annotations) easy.
+
+Parameters
+----------
+model_instance (ModelInstanceSpec*)
+: The Model Instance object (provided via the `model_setup()` function of the
+  Model API).
+
+channel_desc (ModelChannelDesc*)
+: A channel descriptor object which defines the Channel and Model Function names
+  which should be configured.
+
+Returns
+-------
+0
+: The Channel was configured.
+
++VE
+: An error occurred during the registration of the Channel.
+
+*/
 int model_configure_channel(
     ModelInstanceSpec* model_instance, ModelChannelDesc* channel_desc)
 {
