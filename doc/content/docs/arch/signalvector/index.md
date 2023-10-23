@@ -1,13 +1,13 @@
 ---
 title: "Signal Vectors"
-linkTitle: "Signal Vectors"
+linkTitle: "Signals"
 weight: 1020
 tags:
   - ModelC
   - Architecture
 github_repo: "https://github.com/boschglobal/dse.modelc"
-github_subdir: "doc/content/architecture"
-path_base_for_github_subdir: "content/reference/architecture/"
+github_subdir: "doc/content/docs/arch/signalvector"
+path_base_for_github_subdir: "content/docs/arch/signalvector/"
 ---
 
 ## Synopsis

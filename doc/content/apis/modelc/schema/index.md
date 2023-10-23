@@ -137,7 +137,7 @@ searched in the order they were parsed (i.e. listed order at the CLI).
 #### Example
 
 
-{{< readfile file="examples/schema_object_search.c" code="true" lang="c" >}}
+{{< readfile file="../examples/schema_object_search.c" code="true" lang="c" >}}
 
 #### Parameters
 

@@ -1,13 +1,13 @@
 ---
-title: "Gateway Model"
-linkTitle: "Gateway Model"
+title: "Gateway Models"
+linkTitle: "Gateway"
 weight: 1040
 tags:
   - ModelC
   - Architecture
 github_repo: "https://github.com/boschglobal/dse.modelc"
-github_subdir: "doc/content/architecture"
-path_base_for_github_subdir: "content/reference/architecture/"
+github_subdir: "doc/content/docs/arch/gateway"
+path_base_for_github_subdir: "content/docs/arch/gateway/"
 ---
 
 ## Synopsis

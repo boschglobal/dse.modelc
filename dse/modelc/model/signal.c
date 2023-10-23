@@ -238,7 +238,7 @@ SignalVector (pointer to NULL terminated list)
 Example
 -------
 
-{{< readfile file="examples/model_sv_create.c" code="true" lang="c" >}}
+{{< readfile file="../examples/model_sv_create.c" code="true" lang="c" >}}
 
 */
 SignalVector* model_sv_create(ModelInstanceSpec* mi)
