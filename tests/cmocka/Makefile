@@ -2,6 +2,8 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
+GDB_CMD ?= valgrind -q --leak-check=yes
+# GDB_CMD ?= gdb -q -ex='set confirm on' -ex=run -ex=quit
 
 default: build
 

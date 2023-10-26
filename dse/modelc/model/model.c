@@ -39,8 +39,10 @@ void model_function_destroy(ModelFunction* model_function)
             if (_mfc && _mfc->signal_value_double)
                 free(_mfc->signal_value_double);
             if (_mfc && _mfc->signal_value_binary) {
-                for (uint32_t _ = 0; _ < _mfc->signal_count; _++)
-                    free((void*)_mfc->signal_value_binary[_]);
+                for (uint32_t _ = 0; _ < _mfc->signal_count; _++) {
+                    if ((void*)_mfc->signal_value_binary[_])
+                        free((void*)_mfc->signal_value_binary[_]);
+                }
                 free(_mfc->signal_value_binary);
             }
             if (_mfc && _mfc->signal_value_binary_size)

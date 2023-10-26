@@ -55,6 +55,26 @@ set(DSE_CLIB_SOURCE_FILES
 set(DSE_CLIB_INCLUDE_DIR "${DSE_CLIB_SOURCE_DIR}/..")
 
 
+# External Project - DSE Network Codec
+# ------------------------------------
+set(DSE_NCODEC_SOURCE_DIR "$ENV{EXTERNAL_BUILD_DIR}/dse_ncodec")
+set(DSE_NCODEC_BINARY_DIR "$ENV{EXTERNAL_BUILD_DIR}/dse_ncodec")
+find_library(DSE_NCODEC_LIB
+    NAMES
+        libautomotive-bus-codec.a
+    PATHS
+        ${DSE_NCODEC_BINARY_DIR}
+    REQUIRED
+    NO_DEFAULT_PATH
+)
+add_library(dse_ncodec STATIC IMPORTED GLOBAL)
+set_target_properties(dse_ncodec
+    PROPERTIES
+        IMPORTED_LOCATION "${DSE_NCODEC_LIB}"
+        INTERFACE_INCLUDE_DIRECTORIES "${DSE_NCODEC_SOURCE_DIR}"
+)
+set(DSE_NCODEC_INCLUDE_DIR "${DSE_NCODEC_SOURCE_DIR}")
+
 
 # External Projects (targets common to sub projects)
 # =================
@@ -273,6 +293,14 @@ install(
         PATTERN "*.h"
         PATTERN "*fmi*" EXCLUDE
         PATTERN "*process*" EXCLUDE
+)
+install(
+    FILES
+        ${DSE_NCODEC_SOURCE_DIR}/dse/ncodec/codec.h
+    DESTINATION
+        ${CMAKE_INSTALL_INCLUDEDIR}/dse/ncodec
+    COMPONENT
+        modelc
 )
 install(
     FILES

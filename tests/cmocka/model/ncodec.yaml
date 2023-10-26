@@ -1,0 +1,54 @@
+---
+kind: Stack
+metadata:
+  name: stack
+spec:
+  connection:
+    transport:
+      redispubsub:
+        uri: redis://redis:6379
+        timeout: 60
+  models:
+    - name: signal
+      uid: 42
+      model:
+        name: Signal
+      channels:
+        - name: binary
+          alias: binary_vector
+---
+kind: Model
+metadata:
+  name: Signal
+spec:
+  runtime:
+    dynlib:
+      - os: linux
+        arch: amd64
+        path: lib/model.so
+  channels:
+    - alias: binary_vector
+      selectors:
+        channel: binary
+---
+kind: SignalGroup
+metadata:
+  name: test_binary_signals
+  labels:
+    channel: binary
+  annotations:
+    vector_type: binary
+    vector_name: network_vector
+spec:
+  signals:
+    - signal: no_mime
+      annotations:
+        name: no_mime
+    - signal: no_stream
+      annotations:
+        name: no_stream
+        mime_type: application/custom-stream
+    - signal: stream
+      annotations:
+        name: stream
+        mime_type: application/x-automotive-bus; interface=stream; type=frame; bus=can; schema=fbs; bus_id=1; node_id=2; interface_id=3

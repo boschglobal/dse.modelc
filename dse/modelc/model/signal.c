@@ -7,6 +7,7 @@
 #include <dse/testing.h>
 #include <dse/logger.h>
 #include <dse/clib/util/strings.h>
+#include <dse/ncodec/codec.h>
 #include <dse/modelc/model.h>
 #include <dse/modelc/schema.h>
 #include <dse/modelc/controller/model_private.h>
@@ -14,6 +15,11 @@
 
 #define UNUSED(x)                ((void)x)
 #define DEFAULT_BINARY_MIME_TYPE "application/octet-stream"
+
+
+/* Private interface from ncodec.c */
+extern void* _create_stream(SignalVector* sv, uint32_t idx);
+extern void  _free_stream(void* stream);
 
 
 /* Signal Annotation Functions. */
@@ -103,6 +109,14 @@ static int __binary_release_nop(SignalVector* sv, uint32_t index)
     return 0;
 }
 
+static void* __binary_codec_nop(SignalVector* sv, uint32_t index)
+{
+    UNUSED(sv);
+    UNUSED(index);
+
+    return 0;
+}
+
 static int __binary_append(
     SignalVector* sv, uint32_t index, void* data, uint32_t len)
 {
@@ -116,14 +130,20 @@ static int __binary_reset(SignalVector* sv, uint32_t index)
 {
     sv->length[index] = 0;
 
+    NCodecInstance* nc = sv->ncodec[index];
+    if (nc && nc->stream && nc->stream->seek) {
+        nc->stream->seek((NCODEC*)nc, 0, NCODEC_SEEK_RESET);
+    }
+
     return 0;
 }
 
 static int __binary_release(SignalVector* sv, uint32_t index)
 {
+    __binary_reset(sv, index);
+
     free(sv->binary[index]);
     sv->binary[index] = NULL;
-    sv->length[index] = 0;
     sv->buffer_size[index] = 0;
 
     return 0;
@@ -136,6 +156,15 @@ static const char* __annotation_get(
     assert(sv->mi);
 
     return _signal_annotation(sv->mi, sv, sv->signal[index], name);
+}
+
+static void* __binary_codec(SignalVector* sv, uint32_t index)
+{
+    assert(sv);
+    assert(sv->mi);
+    assert(index < sv->count);
+
+    return sv->ncodec[index];
 }
 
 
@@ -176,6 +205,7 @@ static int _add_sv(void* _mfc, void* _sv_data)
         current_sv->append = __binary_append;
         current_sv->reset = __binary_reset;
         current_sv->release = __binary_release;
+        current_sv->codec = __binary_codec;
         /* Mime Type. */
         current_sv->mime_type = calloc(current_sv->count, sizeof(char*));
         for (uint32_t i = 0; i < current_sv->count; i++) {
@@ -184,12 +214,24 @@ static int _add_sv(void* _mfc, void* _sv_data)
             mt = current_sv->annotation(current_sv, i, "mime_type");
             if (mt) current_sv->mime_type[i] = mt;
         }
+        /* NCodec. */
+        current_sv->ncodec = calloc(current_sv->count, sizeof(NCODEC*));
+        for (uint32_t i = 0; i < current_sv->count; i++) {
+            void*   stream = _create_stream(current_sv, i);
+            NCODEC* nc = ncodec_open(current_sv->mime_type[i], stream);
+            if (nc) {
+                current_sv->ncodec[i] = nc;
+            } else {
+                _free_stream(stream);
+            }
+        }
     } else {
         current_sv->is_binary = false;
         current_sv->scalar = mfc->signal_value_double;
         current_sv->append = __binary_append_nop;
         current_sv->reset = __binary_reset_nop;
         current_sv->release = __binary_release_nop;
+        current_sv->codec = __binary_codec_nop;
     }
 
     /* Progress the data object to the next item (for next call). */
@@ -270,7 +312,8 @@ SignalVector* model_sv_create(ModelInstanceSpec* mi)
     while (sv_p && sv_p->name) {
         const char* selector[] = { "name" };
         const char* value[] = { sv_p->name };
-        YamlNode* ch_node = dse_yaml_find_node_in_seq(mi->spec, "channels", selector, value, 1);
+        YamlNode*   ch_node =
+            dse_yaml_find_node_in_seq(mi->spec, "channels", selector, value, 1);
         if (ch_node) {
             sv_p->alias = dse_yaml_get_scalar(ch_node, "alias");
         }
@@ -303,6 +346,19 @@ void model_sv_destroy(SignalVector* sv)
 
     while (sv && sv->name) {
         if (sv->mime_type) free(sv->mime_type);
+        if (sv->is_binary) {
+            /* NCodec. */
+            for (uint32_t i = 0; i < sv->count; i++) {
+                NCodecInstance* nc = sv->ncodec[i];
+                if (nc) {
+                    _free_stream(nc->stream);
+                    ncodec_close((NCODEC*)nc);
+                    sv->ncodec[i] = NULL;
+                }
+            }
+            free(sv->ncodec);
+        }
+
         /* Next signal vector. */
         sv++;
     }

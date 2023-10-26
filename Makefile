@@ -203,6 +203,7 @@ super-linter:
 		--env RUN_LOCAL=true \
 		--env DEFAULT_BRANCH=main \
 		--env IGNORE_GITIGNORED_FILES=true \
+		--env FILTER_REGEX_EXCLUDE="(dse/modelc/examples/apis/.*|doc/content/apis/modelc/examples/.*)" \
 		--env VALIDATE_CPP=true \
 		--env VALIDATE_YAML=true \
 		github/super-linter:slim-v5

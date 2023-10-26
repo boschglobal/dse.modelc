@@ -46,7 +46,7 @@ static int _sv_nop(double* model_time, double stop_time)
 }
 
 
-int test_signal_setup(void** state)
+static int test_setup(void** state)
 {
     ModelCMock* mock = calloc(1, sizeof(ModelCMock));
     assert_non_null(mock);
@@ -91,7 +91,7 @@ int test_signal_setup(void** state)
 }
 
 
-int test_signal_teardown(void** state)
+static int test_teardown(void** state)
 {
     ModelCMock* mock = *state;
 
@@ -264,4 +264,19 @@ void test_signal__annotations(void** state)
     assert_string_equal(value, "application/custom-stream");
 
     model_sv_destroy(sv_save);
+}
+
+
+int run_signal_tests(void)
+{
+    void* s = test_setup;
+    void* t = test_teardown;
+
+    const struct CMUnitTest tests[] = {
+        cmocka_unit_test_setup_teardown(test_signal__scalar, s, t),
+        cmocka_unit_test_setup_teardown(test_signal__binary, s, t),
+        cmocka_unit_test_setup_teardown(test_signal__annotations, s, t),
+    };
+
+    return cmocka_run_group_tests_name("NCODEC", tests, NULL, NULL);
 }

@@ -16,17 +16,21 @@ project(ModelC_Model_API)
 add_library(model_api OBJECT
     gateway.c
     model.c
+    ncodec.c
     schema.c
     signal.c
+    ${DSE_NCODEC_SOURCE_DIR}/dse/ncodec/codec.c
 )
 target_include_directories(model_api
     PRIVATE
         ${DSE_CLIB_INCLUDE_DIR}
+        ${DSE_NCODEC_INCLUDE_DIR}
         ${YAML_SOURCE_DIR}/include
         ../../..
 )
 target_link_libraries(model_api
     PRIVATE
+        dse_ncodec
         yaml
         m
         $<$<BOOL:${WIN32}>:ws2_32>

@@ -7,6 +7,7 @@
 # OSS Projects can be listed here, even if they are not used by the
 # External Projects, to maintain an accurate inventory of OSS Projects.
 
+set(ExternalProject__DSE_NCODEC__URL  https://github.com/boschglobal/dse.standards/archive/refs/tags/v1.0.2.tar.gz)
 set(ExternalProject__EVENT__URL       https://github.com/libevent/libevent/archive/refs/tags/release-2.1.12-stable.tar.gz)
 set(ExternalProject__YAML__URL        https://github.com/yaml/libyaml/archive/0.2.5.tar.gz)
 set(ExternalProject__MSGPACK__URL     https://github.com/msgpack/msgpack-c/archive/refs/tags/cpp-3.3.0.tar.gz)

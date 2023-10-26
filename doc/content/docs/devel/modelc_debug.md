@@ -1,14 +1,14 @@
 ---
 title: "Model C Debug Techniques"
-linkTitle: "Debug"
+linkTitle: "ModelC Debug"
 draft: false
 tags:
 - Developer
 - ModelC
 - GDB
 github_repo: "https://github.com/boschglobal/dse.modelc"
-github_subdir: "doc/content/developer"
-path_base_for_github_subdir: "content/docs/developer/"
+github_subdir: "doc"
+path_base_for_github_subdir: "content/docs/devel/"
 ---
 
 ## GDB

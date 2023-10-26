@@ -29,6 +29,21 @@ set_property(DIRECTORY PROPERTY EP_STEP_TARGETS download)
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fPIC")
 
 
+# DSE Network Codec
+# -----------------
+ExternalProject_Add(dse_ncodec
+    URL                 ${ExternalProject__DSE_NCODEC__URL}
+    HTTP_USERNAME       ${ExternalProject__DSE_NCODEC__USERNAME}
+    HTTP_PASSWORD       ${ExternalProject__DSE_NCODEC__PASSWORD}
+    SOURCE_DIR          "$ENV{EXTERNAL_BUILD_DIR}/dse_ncodec"
+    SOURCE_SUBDIR       "dse/ncodec/libs/automotive-bus"
+    BINARY_DIR          "$ENV{EXTERNAL_BUILD_DIR}/dse_ncodec"
+    CMAKE_ARGS
+        -DCMAKE_C_FLAGS=${CMAKE_C_FLAGS}
+    INSTALL_COMMAND     ""
+)
+
+
 # Lib Event
 # ---------
 ExternalProject_Add(event
@@ -125,6 +140,7 @@ ExternalProject_Add(dlfcnwin32
 # ==========
 add_custom_target(oss)
 add_dependencies(oss
+    dse_ncodec-download
     event-download
     yaml-download
     msgpackc-download

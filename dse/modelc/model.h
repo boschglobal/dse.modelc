@@ -160,6 +160,7 @@ typedef int (*BinarySignalAppendFunc)(
     SignalVector* sv, uint32_t index, void* data, uint32_t len);
 typedef int (*BinarySignalResetFunc)(SignalVector* sv, uint32_t index);
 typedef int (*BinarySignalReleaseFunc)(SignalVector* sv, uint32_t index);
+typedef void* (*BinarySignalCodecFunc)(SignalVector* sv, uint32_t index);
 typedef const char* (*SignalAnnotationGetFunc)(
     SignalVector* sv, uint32_t index, const char* name);
 
@@ -168,6 +169,7 @@ typedef struct SignalVectorVTable {
     BinarySignalResetFunc   reset;
     BinarySignalReleaseFunc release;
     SignalAnnotationGetFunc annotation;
+    BinarySignalCodecFunc   codec;
 } SignalVectorVTable;
 
 typedef struct SignalVector {
@@ -187,6 +189,7 @@ typedef struct SignalVector {
             uint32_t*    length;      /* Length of binary object. */
             uint32_t*    buffer_size; /* Size of allocated buffer. */
             const char** mime_type;
+            void**       ncodec;      /* Network Codec objects. */
         };
     };
     /* Helper functions. */
@@ -194,6 +197,7 @@ typedef struct SignalVector {
     BinarySignalResetFunc   reset;
     BinarySignalReleaseFunc release;
     SignalAnnotationGetFunc annotation;
+    BinarySignalCodecFunc   codec;
     /* Reference data. */
     ModelInstanceSpec*      mi;
 } SignalVector;

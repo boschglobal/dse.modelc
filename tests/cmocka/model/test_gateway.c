@@ -29,7 +29,7 @@ void stub_setup_objects(Controller* c, Endpoint* e);
 void stub_release_objects(Controller* c, Endpoint* e);
 
 
-int test_gateway_setup(void** state)
+static int test_setup(void** state)
 {
     ModelCMock* mock = calloc(1, sizeof(ModelCMock));
     assert_non_null(mock);
@@ -45,7 +45,7 @@ int test_gateway_setup(void** state)
 }
 
 
-int test_gateway_teardown(void** state)
+static int test_teardown(void** state)
 {
     ModelCMock* mock = *state;
 
@@ -118,4 +118,17 @@ void test_gateway__scalar_sv(void** state)
 
     /* Exit the simulation. */
     model_gw_exit(&gw);
+}
+
+
+int run_gateway_tests(void)
+{
+    void* s = test_setup;
+    void* t = test_teardown;
+
+    const struct CMUnitTest tests[] = {
+        cmocka_unit_test_setup_teardown(test_gateway__scalar_sv, s, t),
+    };
+
+    return cmocka_run_group_tests_name("GATEWAY", tests, NULL, NULL);
 }
