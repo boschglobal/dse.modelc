@@ -6,8 +6,7 @@ tags:
   - ModelC
   - Architecture
 github_repo: "https://github.com/boschglobal/dse.modelc"
-github_subdir: "doc/content/docs/arch/gateway"
-path_base_for_github_subdir: "content/docs/arch/gateway/"
+github_subdir: "doc"
 ---
 
 ## Synopsis

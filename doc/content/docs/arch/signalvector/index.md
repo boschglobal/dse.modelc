@@ -6,8 +6,7 @@ tags:
   - ModelC
   - Architecture
 github_repo: "https://github.com/boschglobal/dse.modelc"
-github_subdir: "doc/content/docs/arch/signalvector"
-path_base_for_github_subdir: "content/docs/arch/signalvector/"
+github_subdir: "doc"
 ---
 
 ## Synopsis

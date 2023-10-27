@@ -5,6 +5,8 @@ draft: false
 tags:
 - ModelC
 - CLI
+github_repo: "https://github.com/boschglobal/dse.modelc"
+github_subdir: "doc"
 ---
 
 ## modelc

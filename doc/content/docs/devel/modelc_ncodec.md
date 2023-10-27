@@ -7,7 +7,6 @@ tags:
 - ModelC
 github_repo: "https://github.com/boschglobal/dse.modelc"
 github_subdir: "doc"
-path_base_for_github_subdir: "content/docs/devel/"
 ---
 
 ## Network Codec
