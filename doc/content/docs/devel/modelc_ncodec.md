@@ -169,11 +169,11 @@ filtering of that codec, as the following example illustrates.
 #include <dse/ncodec/codec.h>
 
 
-const char* get_ncodec_node_id(NCODEC* nc)
+char* get_ncodec_node_id(NCODEC* nc)
 {
     assert_non_null(nc);
     int index = 0;
-    const char* node_id = NULL;
+    char* node_id = NULL;
     while (index >= 0) {
         NCodecConfigItem ci = ncodec_stat(nc, &index);
         if (strcmp(ci.name, "node_id") == 0) {
@@ -182,10 +182,11 @@ const char* get_ncodec_node_id(NCODEC* nc)
         }
         index++;
     }
-    return node_id;
+    if (node_id) return strdup(node_id);
+    return NULL;
 }
 
-void set_ncodec_node_id(NCODEC* nc, const char* node_id)
+void set_ncodec_node_id(NCODEC* nc, char* node_id)
 {
     assert_non_null(nc);
     ncodec_config(nc, (struct NCodecConfigItem){
@@ -202,7 +203,7 @@ void test_message_sequence(void** state)
     // ...
 
     // Modify the node_id.
-    const char* node_id_save = get_ncodec_node_id(nc);
+    char* node_id_save = get_ncodec_node_id(nc);
     set_ncodec_node_id(nc, "42");
     // Send a message (which will not be filtered).
     ncodec_write(nc, &(struct NCodecMessage){
@@ -213,6 +214,7 @@ void test_message_sequence(void** state)
     ncodec_flush(nc);
     // Restore the existing node_id.
     set_ncodec_node_id(nc, node_id_save);
+    free(node_id_save);
 
     // ...
 }
