@@ -96,7 +96,7 @@ Valgrind memory checks can be enabled within the build environments by setting
 the environment variable `GDB_CMD` before running a test target.
 
 ```bash
-$ export GDB_CMD="valgrind -q --leak-check=yes"
+$ export GDB_CMD="valgrind -q --leak-check=full --track-origins=yes --error-exitcode=808"
 $ make test
 ...
 ```
