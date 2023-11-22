@@ -5,6 +5,7 @@
 add_subdirectory(dynamic)
 add_subdirectory(binary)
 add_subdirectory(gateway)
+add_subdirectory(stacked)
 
 # Code examples for documentation.
 if(UNIX)

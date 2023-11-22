@@ -1,0 +1,50 @@
+# Copyright 2023 Robert Bosch GmbH
+#
+# SPDX-License-Identifier: Apache-2.0
+
+---
+kind: Model
+metadata:
+  name: StackedModelOne
+spec:
+  runtime:
+    dynlib:
+      - os: linux
+        arch: amd64
+        path: lib/stacked_one.so
+      - os: linux
+        arch: x86
+        path: lib/stacked_one.so
+      - os: windows
+        arch: x64
+        path: bin/stacked_one.dll
+      - os: windows
+        arch: x86
+        path: bin/stacked_one.dll
+  channels:
+    - alias: model_channel
+      selectors:
+        channel: test
+---
+kind: Model
+metadata:
+  name: StackedModelTwo
+spec:
+  runtime:
+    dynlib:
+      - os: linux
+        arch: amd64
+        path: lib/stacked_two.so
+      - os: linux
+        arch: x86
+        path: lib/stacked_two.so
+      - os: windows
+        arch: x64
+        path: bin/stacked_two.dll
+      - os: windows
+        arch: x86
+        path: bin/stacked_two.dll
+  channels:
+    - alias: model_channel
+      selectors:
+        channel: test
