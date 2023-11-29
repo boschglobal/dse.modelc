@@ -117,7 +117,7 @@ package:
 docker: build
 	for d in $(DOCKER_DIRS) ;\
 	do \
-		docker build -f docker/$$d/Dockerfile \
+		docker build -f extra/docker/$$d/Dockerfile \
 				--tag $$d:test . ;\
 	done;
 

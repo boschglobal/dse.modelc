@@ -54,7 +54,7 @@ RUN apt-get -y update; \
 # =========================================
 COPY dse/modelc/build/_out/bin/modelc /usr/local/bin/modelc
 COPY dse/modelc/build/_out/lib/mcl_model.so /usr/local/lib/mcl_model.so
-COPY docker/modelc/modelc_runner.sh /modelc_runner.sh
+COPY extra/docker/modelc/modelc_runner.sh /modelc_runner.sh
 RUN chmod +x /modelc_runner.sh
 
 

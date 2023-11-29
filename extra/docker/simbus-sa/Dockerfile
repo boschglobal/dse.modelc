@@ -50,7 +50,7 @@ RUN apt-get -y update; \
 # Install the SimBus and Runner
 # =============================
 COPY dse/modelc/build/_out/bin/simbus /usr/local/bin/simbus
-COPY docker/simbus-sa/simbus_runner.sh /simbus_runner.sh
+COPY extra/docker/simbus-sa/simbus_runner.sh /simbus_runner.sh
 RUN chmod +x /simbus_runner.sh
 
 
