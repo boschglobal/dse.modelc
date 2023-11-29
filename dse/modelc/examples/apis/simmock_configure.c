@@ -1,5 +1,5 @@
 #include <dse/testing.h>
-#include <dse/modelc/mocks/simmock.h>
+#include <dse/mocks/simmock.h>
 
 int test_setup(void** state)
 {

@@ -2,8 +2,8 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-#ifndef DSE_MODELC_MOCKS_SIMMOCK_H_
-#define DSE_MODELC_MOCKS_SIMMOCK_H_
+#ifndef DSE_MOCKS_SIMMOCK_H_
+#define DSE_MOCKS_SIMMOCK_H_
 
 #include <stdbool.h>
 #include <dse/logger.h>
@@ -175,4 +175,4 @@ void simmock_print_scalar_signals(SimMock* mock, int level);
 void simmock_print_network_frames(SimMock* mock, int level);
 
 
-#endif  // DSE_MODELC_MOCKS_SIMMOCK_H_
+#endif  // DSE_MOCKS_SIMMOCK_H_

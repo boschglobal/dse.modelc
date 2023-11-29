@@ -24,5 +24,5 @@ target_include_directories(mocks
     PRIVATE
         ${DSE_CLIB_INCLUDE_DIR}
         ${DSE_NCODEC_INCLUDE_DIR}
-        ../../..
+        ../..
 )

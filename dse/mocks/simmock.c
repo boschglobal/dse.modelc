@@ -8,7 +8,7 @@
 #include <string.h>
 #include <dse/testing.h>
 #include <dse/ncodec/codec.h>
-#include <dse/modelc/mocks/simmock.h>
+#include <dse/mocks/simmock.h>
 
 
 /* Private interface from ncodec.c */

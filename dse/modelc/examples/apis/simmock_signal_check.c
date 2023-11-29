@@ -1,5 +1,5 @@
 #include <dse/testing.h>
-#include <dse/modelc/mocks/simmock.h>
+#include <dse/mocks/simmock.h>
 
 #define SIG_task_init_done  1
 #define SIG_task_5_active   2

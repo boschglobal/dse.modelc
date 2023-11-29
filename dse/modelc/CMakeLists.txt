@@ -184,6 +184,7 @@ endif()
 
 # Targets
 # =======
+set(DSE_MOCK_DIR ${CMAKE_SOURCE_DIR}/../mocks)
 set(DSE_MODELC_PUBLIC_HEADERS
     gateway.h
     mcl.h
@@ -194,7 +195,7 @@ add_subdirectory(adapter)
 add_subdirectory(controller)
 add_subdirectory(model)
 if(UNIX)
-add_subdirectory(mocks)
+add_subdirectory(${DSE_MOCK_DIR} ${CMAKE_CURRENT_BINARY_DIR}/mocks)
 endif()
 
 # Model C (static)
@@ -325,8 +326,15 @@ install(
 if(UNIX)
 install(
     FILES
-        mocks/simmock.c
-        mocks/simmock.h
+        ${DSE_MOCK_DIR}/simmock.h
+    DESTINATION
+        ${CMAKE_INSTALL_INCLUDEDIR}/dse/mocks
+    COMPONENT
+        modelc
+)
+install(
+    FILES
+        ${DSE_MOCK_DIR}/simmock.c
     DESTINATION
         mocks
     COMPONENT
