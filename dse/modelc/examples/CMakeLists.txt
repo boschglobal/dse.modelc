@@ -7,4 +7,6 @@ add_subdirectory(binary)
 add_subdirectory(gateway)
 
 # Code examples for documentation.
+if(UNIX)
 add_subdirectory(apis)
+endif()

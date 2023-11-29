@@ -1,3 +1,4 @@
+// Copyright 2023 Robert Bosch GmbH
 
 #include <dse/testing.h>
 

@@ -193,6 +193,9 @@ set(DSE_MODELC_PUBLIC_HEADERS
 add_subdirectory(adapter)
 add_subdirectory(controller)
 add_subdirectory(model)
+if(UNIX)
+add_subdirectory(mocks)
+endif()
 
 # Model C (static)
 # -------
@@ -319,7 +322,17 @@ install(
     COMPONENT
         modelc
 )
-
+if(UNIX)
+install(
+    FILES
+        mocks/simmock.c
+        mocks/simmock.h
+    DESTINATION
+        mocks
+    COMPONENT
+        modelc
+)
+endif()
 
 # Sub Projects
 # ============

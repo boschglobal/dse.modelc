@@ -217,6 +217,7 @@ typedef struct SignalVector {
     BinarySignalResetFunc reset;
     BinarySignalReleaseFunc release;
     SignalAnnotationGetFunc annotation;
+    BinarySignalCodecFunc codec;
     ModelInstanceSpec * mi;
 }
 ```
@@ -229,6 +230,7 @@ typedef struct SignalVectorVTable {
     BinarySignalResetFunc reset;
     BinarySignalReleaseFunc release;
     SignalAnnotationGetFunc annotation;
+    BinarySignalCodecFunc codec;
 }
 ```
 

@@ -49,9 +49,16 @@ add_library(apis OBJECT
     model_signalvector.c
     model_sv_create.c
     schema_object_search.c
+    simmock_configure.c
+    simmock_frame_check.c
+    simmock_signal_check.c
 )
 target_include_directories(apis
     PRIVATE
         ${DSE_CLIB_INCLUDE_DIR}
         ../../../..
+)
+target_compile_definitions(apis
+    PUBLIC
+        CMOCKA_TESTING
 )

@@ -1,3 +1,5 @@
+// Copyright 2023 Robert Bosch GmbH
+
 #include <dse/testing.h>
 
 #define UNUSED(x) ((void)x)

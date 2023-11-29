@@ -52,9 +52,16 @@ DOC_OUTPUT_schema := doc/content/apis/modelc/schema/index.md
 DOC_LINKTITLE_schema := Schema
 DOC_TITLE_schema := "Schema API Reference"
 
+# Module "simmock"
+DOC_INPUT_simmock := dse/modelc/mocks/simmock.h
+DOC_CDIR_simmock := dse/modelc/mocks/simmock.c
+DOC_OUTPUT_simmock := doc/content/apis/modelc/simmock/index.md
+DOC_LINKTITLE_simmock := SimMock
+DOC_TITLE_simmock := "SimMock API Reference"
+
 
 # Targets
-DOC_C_MODULES := gateway mcl model schema
+DOC_C_MODULES := gateway mcl model schema simmock
 #DOC_C_MODULES :=  model
 
 .PHONY: examples
