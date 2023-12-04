@@ -2,6 +2,9 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
+export EXTERNAL_BUILD_DIR ?= /dev/null
+
+
 default: build
 
 setup:

@@ -17,11 +17,6 @@
 #define DEFAULT_BINARY_MIME_TYPE "application/octet-stream"
 
 
-/* Private interface from ncodec.c */
-extern void* _create_stream(SignalVector* sv, uint32_t idx);
-extern void  _free_stream(void* stream);
-
-
 /* Signal Annotation Functions. */
 
 static SchemaSignalObject* __signal_match;
@@ -217,12 +212,12 @@ static int _add_sv(void* _mfc, void* _sv_data)
         /* NCodec. */
         current_sv->ncodec = calloc(current_sv->count, sizeof(NCODEC*));
         for (uint32_t i = 0; i < current_sv->count; i++) {
-            void*   stream = _create_stream(current_sv, i);
+            void*   stream = model_sv_stream_create(current_sv, i);
             NCODEC* nc = ncodec_open(current_sv->mime_type[i], stream);
             if (nc) {
                 current_sv->ncodec[i] = nc;
             } else {
-                _free_stream(stream);
+                model_sv_stream_destroy(stream);
             }
         }
     } else {
@@ -351,7 +346,7 @@ void model_sv_destroy(SignalVector* sv)
             for (uint32_t i = 0; i < sv->count; i++) {
                 NCodecInstance* nc = sv->ncodec[i];
                 if (nc) {
-                    _free_stream(nc->stream);
+                    model_sv_stream_destroy(nc->stream);
                     ncodec_close((NCODEC*)nc);
                     sv->ncodec[i] = NULL;
                 }

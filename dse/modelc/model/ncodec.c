@@ -134,7 +134,7 @@ static int stream_close(NCODEC* nc)
 
 /* Private stream interface. */
 
-void* _create_stream(SignalVector* sv, uint32_t idx)
+void* model_sv_stream_create(SignalVector* sv, uint32_t idx)
 {
     if (sv->is_binary != true) {
         errno = EINVAL;
@@ -156,7 +156,7 @@ void* _create_stream(SignalVector* sv, uint32_t idx)
     return stream;
 }
 
-void _free_stream(void* stream)
+void model_sv_stream_destroy(void* stream)
 {
     if (stream) free(stream);
 }

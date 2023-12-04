@@ -309,6 +309,10 @@ DLL_PUBLIC ChannelSpec* model_build_channel_spec(
 DLL_PUBLIC SignalVector* model_sv_create(ModelInstanceSpec* mi);
 DLL_PUBLIC void          model_sv_destroy(SignalVector* sv);
 
+/* ncodec.c - Stream Interface (for NCodec). */
+DLL_PRIVATE void* model_sv_stream_create(SignalVector* sv, uint32_t idx);
+DLL_PRIVATE void model_sv_stream_destroy(void* stream);
+
 
 /* modelc.c - Runtime Interface (i.e. ModelC.exe). */
 DLL_PUBLIC int  modelc_configure(ModelCArguments* args, SimulationSpec* sim);
