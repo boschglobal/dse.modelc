@@ -96,7 +96,7 @@ ifneq ($(CI), true)
 
 	DOCKER_TEST_SETUP_CMD :=  \
 		docker network create dse; \
-		docker run -d --rm --name redis --net dse -p 6379:6379 redis; \
+		docker run -d --rm --name redis --net dse  redis; \
 		true
 
 	DOCKER_TEST_TEARDOWN_CMD :=  \

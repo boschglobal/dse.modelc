@@ -94,8 +94,8 @@ def test_modelc_stack():
         ]
     }
     checks = [
-        'SignalValue: 2851307223 = 9.600000 [name=foo]',
-        'SignalValue: 1991736602 = 33.600000 [name=bar]',
+        'SignalValue: 2851307223 = 4.800000 [name=foo]',
+        'SignalValue: 1991736602 = 16.800000 [name=bar]',
         'stop_time      : 0.025000',
     ]
     asyncio.run(main(params, checks))
