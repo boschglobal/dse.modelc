@@ -12,9 +12,6 @@
 
 #define UNUSED(x) ((void)x)
 
-#undef ns
-#define ns(x) FLATBUFFERS_WRAP_NAMESPACE(dse_schemas_fbs_channel, x)
-
 
 static uint32_t _process_signal_lookup(Channel* ch, const char* signal_name)
 {
@@ -387,6 +384,107 @@ static void process_model_ready_message(Adapter* adapter, Channel* channel,
 }
 
 
+static void sv_delta_to_msgpack(Channel* channel, msgpack_packer* pk)
+{
+    log_simbus("SignalValue+", channel->name);
+
+    /* First(root) Object, array, 2 elements. */
+    msgpack_pack_array(pk, 2);
+    uint32_t changed_signal_count = 0;
+    for (uint32_t i = 0; i < channel->signal_values_length; i++) {
+        SignalValue* sv = channel->signal_values_map[i].signal;
+        if (sv->uid == 0) continue;
+        if ((sv->val != sv->final_val) || (sv->bin && sv->bin_size)) {
+            changed_signal_count++;
+        }
+    }
+    /* 1st Object in root Array, list of UID's. */
+    msgpack_pack_array(pk, changed_signal_count);
+    for (uint32_t i = 0; i < channel->signal_values_length; i++) {
+        SignalValue* sv = channel->signal_values_map[i].signal;
+        if (sv->uid == 0) continue;
+        if ((sv->val != sv->final_val) || (sv->bin && sv->bin_size)) {
+            msgpack_pack_uint32(pk, sv->uid);
+        }
+    }
+    /* 2st Object in root Array, list of Values. */
+    msgpack_pack_array(pk, changed_signal_count);
+    for (uint32_t i = 0; i < channel->signal_values_length; i++) {
+        SignalValue* sv = channel->signal_values_map[i].signal;
+        if (sv->uid == 0) continue;
+        if (sv->bin && sv->bin_size) {
+            msgpack_pack_bin_with_body(pk, sv->bin, sv->bin_size);
+            log_simbus("    SignalValue: %u = <binary> (len=%u) [name=%s]",
+                sv->uid, sv->bin_size, sv->name);
+        } else if (sv->val != sv->final_val) {
+            msgpack_pack_double(pk, sv->final_val);
+            log_simbus("    SignalValue: %u = %f [name=%s]", sv->uid,
+                sv->final_val, sv->name);
+        }
+    }
+}
+
+
+static void resolve_channel(Channel* channel)
+{
+    for (uint32_t i = 0; i < channel->signal_values_length; i++) {
+        SignalValue* sv = channel->signal_values_map[i].signal;
+        sv->val = sv->final_val;
+        sv->bin_size = 0;
+    }
+}
+
+
+static void resolve_and_notify(
+    Adapter* adapter, double model_time, double schedule_time)
+{
+    AdapterModel*     am = adapter->bus_adapter_model;
+    AdapterPrivate*   ap = (AdapterPrivate*)(adapter->private);
+    flatcc_builder_t* builder = &(ap->builder);
+    msgpack_sbuffer   sbuf;
+    msgpack_packer    pk;
+
+    flatcc_builder_reset(builder);
+    msgpack_sbuffer_init(&sbuf);
+    msgpack_packer_init(&pk, &sbuf, msgpack_sbuffer_write);
+
+    log_simbus("Notify/ModelStart --> [...]");
+    log_simbus("    model_time=%f", model_time);
+    log_simbus("    schedule_time=%f", schedule_time);
+
+    /* SignalVector vector. */
+    notify(SignalVector_vec_start(builder));
+    for (uint32_t i = 0; i < am->channels_length; i++) {
+        Channel* ch = _get_channel_byindex(am, i);
+
+        msgpack_sbuffer_clear(&sbuf);
+        sv_delta_to_msgpack(ch, &pk);
+        resolve_channel(ch);
+
+        flatbuffers_string_ref_t sv_name =
+            flatbuffers_string_create_str(builder, ch->name);
+        flatbuffers_uint8_vec_ref_t sv_msgpack_data =
+            flatbuffers_uint8_vec_create(
+                builder, (uint8_t*)sbuf.data, sbuf.size);
+        notify(SignalVector_ref_t) sv =
+            notify(SignalVector_create(builder, sv_name, sv_msgpack_data));
+        notify(SignalVector_vec_push(builder, sv));
+        log_simbus("    data payload: %lu bytes", sbuf.size);
+    }
+    notify(SignalVector_vec_ref_t) signals =
+        notify(SignalVector_vec_end(builder));
+
+    /* NotifyMessage message. */
+    notify(NotifyMessage_start(builder));
+    notify(NotifyMessage_signals_add(builder, signals));
+    notify(NotifyMessage_model_time_add(builder, model_time));
+    notify(NotifyMessage_schedule_time_add(builder, schedule_time));
+    notify(NotifyMessage_ref_t) message = notify(NotifyMessage_end(builder));
+    send_notify_message(adapter, message);
+    msgpack_sbuffer_destroy(&sbuf);
+}
+
+
 static void resolve_channel_and_model_start(
     Adapter* adapter, Channel* channel, double model_time, double stop_time)
 {
@@ -579,11 +677,15 @@ void simbus_handle_message(Adapter* adapter, const char* channel_name,
 
             double model_time = adapter->bus_time;
             double stop_time = model_time + adapter->bus_step_size;
-            for (uint32_t i = 0; i < am->channels_length; i++) {
-                Channel* ch = _get_channel_byindex(am, i);
-                resolve_channel_and_model_start(
-                    adapter, ch, model_time, stop_time);
+            if (0) {
+                for (uint32_t i = 0; i < am->channels_length; i++) {
+                    Channel* ch = _get_channel_byindex(am, i);
+                    resolve_channel_and_model_start(
+                        adapter, ch, model_time, stop_time);
+                }
             }
+
+            resolve_and_notify(adapter, model_time, stop_time);
             simbus_models_to_start(am);
         }
     }

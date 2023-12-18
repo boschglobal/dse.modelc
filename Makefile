@@ -12,7 +12,7 @@ DOCKER_DIRS = simbus-sa modelc modelc-x86
 ################
 ## DSE C Schemas.
 DSE_SCHEMA_REPO ?= https://github.com/boschglobal/dse.schemas
-DSE_SCHEMA_VERSION ?= 1.0.0
+DSE_SCHEMA_VERSION ?= 1.2.0
 export DSE_SCHEMA_URL ?= $(DSE_SCHEMA_REPO)/releases/download/v$(DSE_SCHEMA_VERSION)/dse-schemas.tar.gz
 
 

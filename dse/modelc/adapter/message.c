@@ -4,17 +4,13 @@
 
 #include <stdlib.h>
 #include <stdbool.h>
+#include <stdint.h>
 #include <dse/logger.h>
 #include <dse/modelc/adapter/adapter.h>
 #include <dse/modelc/adapter/adapter_private.h>
 #include <dse/modelc/adapter/message.h>
 #include <dse/modelc/adapter/transport/endpoint.h>
 #include <dse_schemas/flatbuffers/simbus_channel_builder.h>
-
-
-
-#undef ns
-#define ns(x) FLATBUFFERS_WRAP_NAMESPACE(dse_schemas_fbs_channel, x)
 
 
 /**
@@ -45,13 +41,83 @@ static int32_t get_token(void)
 }
 
 
-static bool process_message_stream(Adapter* adapter, const char* channel_name,
-    uint8_t* buffer, size_t length, ns(MessageType_union_type_t) message_type,
-    int32_t token)
+static bool process_sbch_message(Adapter* adapter, uint8_t* msg_ptr,
+    const char* channel_name, ns(MessageType_union_type_t) message_type,
+    int32_t     token)
 {
     AdapterPrivate* _ap = (AdapterPrivate*)(adapter->private);
     bool            ack_found = false;
     bool            msg_type_found = false;
+
+    /* Extract the Channel Message and Token. */
+    ns(ChannelMessage_table_t) channel_message;
+    int32_t  message_token = 0;
+    uint32_t message_model_uid = 0;
+    channel_message = ns(ChannelMessage_as_root(msg_ptr));
+    if (ns(ChannelMessage_token_is_present(channel_message)))
+        message_token = ns(ChannelMessage_token(channel_message));
+    if (ns(ChannelMessage_model_uid_is_present(channel_message)))
+        message_model_uid = ns(ChannelMessage_model_uid(channel_message));
+    char message_model_uid_key[UID_KEY_LEN];
+    snprintf(message_model_uid_key, UID_KEY_LEN - 1, "%d", message_model_uid);
+    bool uid_match = false;
+    if (hashmap_get(&adapter->models, message_model_uid_key)) {
+        uid_match = true;
+    }
+
+    /* Is this the wait ACK Message? */
+    if (uid_match && token) {
+        log_trace("    token = %d (waiting for %d)", message_token, token);
+        if (token == message_token) {
+            ack_found = true;
+            log_trace("    msg ack (token=%d)", message_token);
+        }
+    }
+    /* Call the Message Handler. */
+    if (adapter->bus_mode || (uid_match && !ack_found)) {
+        ns(MessageType_union_type_t) _msg_type;
+        _msg_type = ns(ChannelMessage_message_type(channel_message));
+        if (_msg_type != ns(MessageType_NONE)) {
+            /* If the caller is a Bus Adapter,
+               message_type==ns(MessageType_NONE) and the handler_message()
+               _should_ be called (as expected).
+             */
+            if (_msg_type == message_type) {
+                msg_type_found = true;
+            }
+            _ap->handle_message(
+                adapter, channel_name, channel_message, message_token);
+        }
+    }
+
+    return (ack_found | msg_type_found);
+}
+
+
+static void process_sbno_message(Adapter* adapter, uint8_t* msg_ptr)
+{
+    AdapterPrivate* _ap = (AdapterPrivate*)(adapter->private);
+
+    if (adapter->bus_mode) {
+        /* Only expected by Model code. */
+        // FIXME consider for Model -> SimBus direction.
+        return;
+    }
+    if (_ap->handle_notify_message == NULL) {
+        log_fatal("No notify message handler for adapter!");
+        return;
+    }
+    notify(NotifyMessage_table_t) notify_message;
+    notify_message = notify(NotifyMessage_as_root(msg_ptr));
+    _ap->handle_notify_message(adapter, notify_message);
+}
+
+
+static bool process_message_stream(Adapter* adapter, const char* channel_name,
+    uint8_t* buffer, size_t length, ns(MessageType_union_type_t) message_type,
+    int32_t token)
+{
+    bool            found = false;
     size_t          msg_len = 0;
     uint8_t*        msg_ptr = buffer;
 
@@ -59,55 +125,23 @@ static bool process_message_stream(Adapter* adapter, const char* channel_name,
     while (((msg_ptr - buffer) + msg_len) < (uint32_t)length) {
         msg_ptr = flatbuffers_read_size_prefix(msg_ptr, &msg_len);
         if (msg_len == 0) break;
-        if (!flatbuffers_has_identifier(msg_ptr, "SBCH")) break;
-
-        /* Extract the Channel Message and Token. */
-        ns(ChannelMessage_table_t) channel_message;
-        int32_t  message_token = 0;
-        uint32_t message_model_uid = 0;
-        channel_message = ns(ChannelMessage_as_root(msg_ptr));
-        if (ns(ChannelMessage_token_is_present(channel_message)))
-            message_token = ns(ChannelMessage_token(channel_message));
-        if (ns(ChannelMessage_model_uid_is_present(channel_message)))
-            message_model_uid = ns(ChannelMessage_model_uid(channel_message));
-        char message_model_uid_key[UID_KEY_LEN];
-        snprintf(
-            message_model_uid_key, UID_KEY_LEN - 1, "%d", message_model_uid);
-        bool uid_match = false;
-        if (hashmap_get(&adapter->models, message_model_uid_key)) {
-            uid_match = true;
-        }
-
-        /* Is this the wait ACK Message? */
-        if (uid_match && token) {
-            log_trace("    token = %d (waiting for %d)", message_token, token);
-            if (token == message_token) {
-                ack_found = true;
-                log_trace("    msg ack (token=%d)", message_token);
+        if (flatbuffers_has_identifier(msg_ptr, "SBCH")) {
+            found |= process_sbch_message(
+                adapter, msg_ptr, channel_name, message_type, token);
+        } else if (flatbuffers_has_identifier(msg_ptr, "SBNO")) {
+            process_sbno_message(adapter, msg_ptr);
+            if (channel_name == NULL && message_type == 0) {
+                found |= true;
             }
-        }
-        /* Call the Message Handler. */
-        if (adapter->bus_mode || (uid_match && !ack_found)) {
-            ns(MessageType_union_type_t) _msg_type;
-            _msg_type = ns(ChannelMessage_message_type(channel_message));
-            if (_msg_type != ns(MessageType_NONE)) {
-                /* If the caller is a Bus Adapter,
-                   message_type==ns(MessageType_NONE) and the handler_message()
-                   _should_ be called (as expected).
-                 */
-                if (_msg_type == message_type) {
-                    msg_type_found = true;
-                }
-                _ap->handle_message(
-                    adapter, channel_name, channel_message, message_token);
-            }
+        } else {
+            break;
         }
 
         /* Next. */
         msg_ptr += msg_len;
     }
 
-    return (ack_found | msg_type_found);
+    return found;
 }
 
 
@@ -159,7 +193,7 @@ int32_t wait_message(Adapter* adapter, const char**    channel_name,
             adapter, msg_channel_name, *buffer, length, message_type, token);
         /* Condition: found (message_type or token). */
         if (*found) {
-            *channel_name = msg_channel_name;
+            if (channel_name) *channel_name = msg_channel_name;
             break;
         }
     }
@@ -203,7 +237,7 @@ int32_t send_message(Adapter* adapter, void* endpoint_channel,
     ns(ChannelMessage_message_add_type)(builder, message.type);
     channel_message = ns(ChannelMessage_end)(builder);
     /* Construct the buffer. */
-    flatcc_builder_create_buffer(builder, flatbuffers_identifier,
+    flatcc_builder_create_buffer(builder, flatbuffers_channel_identifier,
         builder->block_align, channel_message, builder->min_align,
         builder->buffer_flags);
     buf = flatcc_builder_finalize_buffer(
@@ -290,7 +324,7 @@ int32_t send_message_ack(Adapter* adapter, void* endpoint_channel,
     }
     channel_message = ns(ChannelMessage_end)(builder);
     /* Construct the buffer. */
-    flatcc_builder_create_buffer(builder, flatbuffers_identifier,
+    flatcc_builder_create_buffer(builder, flatbuffers_channel_identifier,
         builder->block_align, channel_message, builder->min_align,
         builder->buffer_flags);
     buf = flatcc_builder_finalize_buffer(
@@ -312,6 +346,26 @@ int32_t send_message_ack(Adapter* adapter, void* endpoint_channel,
     }
 
 error_clean_up:
+    FLATCC_BUILDER_FREE(buf);
+    return 0;
+}
+
+
+int32_t send_notify_message(
+    Adapter* adapter, notify(NotifyMessage_ref_t) message)
+{
+    Endpoint*         endpoint = adapter->endpoint;
+    AdapterPrivate*   ap = (AdapterPrivate*)(adapter->private);
+    flatcc_builder_t* builder = &(ap->builder);
+
+    flatcc_builder_create_buffer(builder, flatbuffers_notify_identifier,
+        builder->block_align, message, builder->min_align,
+        builder->buffer_flags);
+    size_t   size = 0;
+    uint8_t* buf = flatcc_builder_finalize_buffer(builder, &size);
+
+    /* Send the Channel Message with the configured Transport. */
+    endpoint->send_fbs(endpoint, NULL, buf, (uint32_t)size, 0);
     FLATCC_BUILDER_FREE(buf);
     return 0;
 }

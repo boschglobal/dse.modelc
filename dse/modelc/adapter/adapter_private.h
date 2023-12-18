@@ -18,6 +18,7 @@ typedef struct AdapterPrivate {
 
     /* Message handling. */
     HandleChannelMessageFunc handle_message;
+    HandleNotifyMessageFunc  handle_notify_message;
 
     /* Transport Interface. */
     uint8_t* ep_buffer;

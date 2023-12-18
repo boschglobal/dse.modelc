@@ -10,7 +10,7 @@ spec:
   connection:
     transport:
       redispubsub:
-        uri: redis://redis:6379
+        uri: redis://localhost:6379
         timeout: 60
   models:
     - name: simbus

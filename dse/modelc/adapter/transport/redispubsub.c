@@ -21,6 +21,8 @@
 #define MAX_KEY_SIZE             64
 #define ARRAY_SIZE(x)            (sizeof(x) / sizeof(x[0]))
 #define UNUSED(x)                ((void)x)
+#define NOTIFY_MODEL_KEY         "bus.notify.model"
+#define NOTIFY_SIMBUS_KEY        "bus.notify.simbus"
 
 
 void redispubsub_on_message(
@@ -35,6 +37,7 @@ static void redis_endpoint_destroy(Endpoint* endpoint)
         if (redis_ep->sub_ctx) redisAsyncFree(redis_ep->sub_ctx);
         if (redis_ep->sub__argv) {
             if (redis_ep->sub__argv[0]) free(redis_ep->sub__argv[0]);
+            if (redis_ep->sub__argv[1]) free(redis_ep->sub__argv[1]);
             free(redis_ep->sub__argv);
         }
         if (redis_ep->sub_event_timeout)
@@ -270,14 +273,17 @@ int32_t redispubsub_start(Endpoint* endpoint)
     char**   keys = hashmap_keys(&endpoint->endpoint_channels);
     uint32_t count = hashmap_number_keys(endpoint->endpoint_channels);
     log_trace("Endpoint channel keys : %u", count);
-    redis_ep->sub__argc = count + 1;
+    redis_ep->sub__argc = count + 1 + 1;  // + cmd + notify
     redis_ep->sub__argv = calloc(redis_ep->sub__argc, sizeof(char*));
     redis_ep->sub__argv[0] = calloc(1, MAX_KEY_SIZE);
     snprintf(redis_ep->sub__argv[0], MAX_KEY_SIZE - 1, "SUBSCRIBE");
+    redis_ep->sub__argv[1] = calloc(1, MAX_KEY_SIZE);
+    snprintf(redis_ep->sub__argv[1], MAX_KEY_SIZE - 1,
+        endpoint->bus_mode ? NOTIFY_SIMBUS_KEY : NOTIFY_MODEL_KEY);
     for (uint32_t i = 0; i < count; i++) {
         RedisPubSubChannel* ch =
             hashmap_get(&endpoint->endpoint_channels, keys[i]);
-        redis_ep->sub__argv[i + 1] = ch->sub_key;
+        redis_ep->sub__argv[i + 1 + 1] = ch->sub_key;
     }
     for (uint32_t _ = 0; _ < count; _++)
         free(keys[_]);
@@ -336,40 +342,56 @@ int32_t redispubsub_send_fbs(Endpoint* endpoint, void* endpoint_channel,
     UNUSED(model_uid);
     assert(endpoint);
     assert(endpoint->private);
-    assert(endpoint_channel);
 
     RedisPubSubEndpoint* redis_ep = (RedisPubSubEndpoint*)endpoint->private;
     assert(redis_ep->ctx);
-    RedisPubSubChannel* ch = (RedisPubSubChannel*)endpoint_channel;
 
-    /** Models first connecting to a SimBus may send messages before the
-     *  SimBus has started. As a result, messages are lost. This is a
-     *  condition we only expect at startup of Models - in that case a
-     *  retry is attempted (according to the general receive timeout).
-     */
-    int retry_count = endpoint->bus_mode ? 1 : (int)redis_ep->recv_timeout;
-    while (retry_count--) {
+
+    if (endpoint_channel) {
+        /* Sending a Channel Message. */
+        RedisPubSubChannel* ch = (RedisPubSubChannel*)endpoint_channel;
+
+        /** Models first connecting to a SimBus may send messages before the
+         *  SimBus has started. As a result, messages are lost. This is a
+         *  condition we only expect at startup of Models - in that case a
+         *  retry is attempted (according to the general receive timeout).
+         */
+        int retry_count = endpoint->bus_mode ? 1 : (int)redis_ep->recv_timeout;
+        while (retry_count--) {
+            redisReply* reply;
+            reply = redisCommand(redis_ep->ctx, "PUBLISH %s %b", ch->pub_key,
+                buffer, (size_t)buffer_length);
+            log_trace("redispubsub_send_fbs: message sent");
+            log_trace("redispubsub_send_fbs:     channel=%s", ch->pub_key);
+            log_trace("redispubsub_send_fbs:     clients=%lld", reply->integer);
+            if (reply->integer == 0) {
+                log_notice("redispubsub_send_fbs: no clients received message!"
+                           " channel=%s",
+                    ch->pub_key);
+                freeReplyObject(reply);
+
+                if (endpoint->stop_request) {
+                    errno = ECANCELED;
+                    return -1;
+                }
+                sleep(1);
+            } else {
+                freeReplyObject(reply);
+                break;
+            }
+        }
+    } else {
+        /* Sending a Notify Message. */
         redisReply* reply;
-        reply = redisCommand(redis_ep->ctx, "PUBLISH %s %b", ch->pub_key,
-            buffer, (size_t)buffer_length);
+        reply = redisCommand(redis_ep->ctx, "PUBLISH %s %b",
+            endpoint->bus_mode ? NOTIFY_MODEL_KEY : NOTIFY_SIMBUS_KEY, buffer,
+            (size_t)buffer_length);
         log_trace("redispubsub_send_fbs: message sent");
-        log_trace("redispubsub_send_fbs:     channel=%s", ch->pub_key);
         log_trace("redispubsub_send_fbs:     clients=%lld", reply->integer);
         if (reply->integer == 0) {
-            log_notice("redispubsub_send_fbs: no clients received message!"
-                       " channel=%s",
-                ch->pub_key);
-            freeReplyObject(reply);
-
-            if (endpoint->stop_request) {
-                errno = ECANCELED;
-                return -1;
-            }
-            sleep(1);
-        } else {
-            freeReplyObject(reply);
-            break;
+            log_notice("redispubsub_send_fbs: no clients received message!");
         }
+        freeReplyObject(reply);
     }
 
     return 0;
@@ -433,7 +455,12 @@ int32_t redispubsub_recv_fbs(Endpoint* endpoint, const char** channel_name,
     }
     memset(*buffer, 0, *buffer_length);
     memcpy(*buffer, msg->buffer, msg->length);
-    *channel_name = msg->endpoint_channel->channel_name;
+    if (msg->endpoint_channel) {
+        *channel_name = msg->endpoint_channel->channel_name;
+    } else {
+        /* Likely a Notify message. */
+        *channel_name = NULL;
+    }
     int32_t rc = (uint32_t)msg->length;
     free(msg->buffer);
     free(msg);

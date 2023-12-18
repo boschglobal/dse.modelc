@@ -18,13 +18,11 @@
 
 #define UNUSED(x) ((void)x)
 
-#undef ns
-#define ns(x) FLATBUFFERS_WRAP_NAMESPACE(dse_schemas_fbs_channel, x)
-
 
 static void handle_channel_message(Adapter* adapter, const char* channel_name,
     ns(ChannelMessage_table_t) channel_message, int32_t          token);
-
+static void handle_notify_message(
+    Adapter* adapter, notify(NotifyMessage_table_t) notify_message);
 
 static void _update_channels_keys(AdapterModel* am)
 {
@@ -136,6 +134,7 @@ Adapter* adapter_create(void* endpoint)
     adapter->endpoint = endpoint;
     AdapterPrivate* _ap = (AdapterPrivate*)(adapter->private);
     _ap->handle_message = handle_channel_message;
+    _ap->handle_notify_message = handle_notify_message;
 
     flatcc_builder_t* builder = &(_ap->builder);
     flatcc_builder_init(builder);
@@ -515,24 +514,40 @@ static int _adapter_model_ready(AdapterModel* am)
 
 static int _adapter_model_start(AdapterModel* am)
 {
-    Adapter*          adapter = am->adapter;
+    Adapter* adapter = am->adapter;
 
-    /* Wait on ModelStart from all channels (and handle SignalValue,
-     * ParameterValue) */
-    uint32_t start_counter = 0;
-    log_debug("adapter_ready: wait on ModelStart ...");
-    while (start_counter < am->channels_length) {
-        const char* msg_channel_name = NULL;
-        bool        found = false;
-        int         rc = wait_message(
-                    adapter, &msg_channel_name, ns(MessageType_ModelStart), 0, &found);
-        if (rc != 0) {
-            log_error("wait_message returned %d", rc);
+    /* Wait on Notify. Notify will contain all channel/signal values.
+     * Indicated by parameters channel_name and message_type being NULL/0. */
+    log_debug("adapter_ready: wait on Notify ...");
+    bool found = false;
+    int  rc = 0;
 
-            /* Handle specific error conditions. */
-            if (rc == ETIME) return rc; /* TIMEOUT */
+    rc = wait_message(adapter, NULL, 0, 0, &found);
+    if (rc != 0) {
+        log_error("wait_message returned %d", rc);
+
+        /* Handle specific error conditions. */
+        if (rc == ETIME) return rc; /* TIMEOUT */
+    }
+
+    if (0) {
+        /* Wait on ModelStart from all channels (and handle SignalValue,
+         * ParameterValue) */
+        uint32_t start_counter = 0;
+        log_debug("adapter_ready: wait on ModelStart ...");
+        while (start_counter < am->channels_length) {
+            const char* msg_channel_name = NULL;
+            bool        found = false;
+            int         rc = wait_message(adapter, &msg_channel_name,
+                        ns(MessageType_ModelStart), 0, &found);
+            if (rc != 0) {
+                log_error("wait_message returned %d", rc);
+
+                /* Handle specific error conditions. */
+                if (rc == ETIME) return rc; /* TIMEOUT */
+            }
+            if (found) start_counter++;
         }
-        if (found) start_counter++;
     }
 
     return 0;
@@ -557,14 +572,28 @@ int adapter_ready(Adapter* adapter, SimulationSpec* sim)
         _instptr++;
     }
 
-    /* Wait for all ModelStart messages. */
+    /* Wait for Notify message.
+
+       Currently only a single Notify message will be received, and that
+       will update all model instances.
+    */
     _instptr = sim->instance_list;
-    while (_instptr && _instptr->name) {
+    if (_instptr && _instptr->name) {
         ModelInstancePrivate* mip = _instptr->private;
         AdapterModel*         am = mip->adapter_model;
         rc |= _adapter_model_start(am);
-        /* Next instance? */
-        _instptr++;
+    }
+
+    if (0) {
+        /* Wait for all ModelStart messages. */
+        _instptr = sim->instance_list;
+        while (_instptr && _instptr->name) {
+            ModelInstancePrivate* mip = _instptr->private;
+            AdapterModel*         am = mip->adapter_model;
+            rc |= _adapter_model_start(am);
+            /* Next instance? */
+            _instptr++;
+        }
     }
 
     return rc;
@@ -687,25 +716,9 @@ SignalValue* _find_signal_by_uid(Channel* channel, uint32_t uid)
 }
 
 
-static void process_signal_value_message(
-    Channel* channel, ns(SignalValue_table_t) signal_value_table)
+static void process_signal_value_data(
+    Channel* channel, flatbuffers_uint8_vec_t data_vector, size_t length)
 {
-    if (!ns(SignalValue_data_is_present(signal_value_table))) {
-        log_simbus("WARNING: no data in SignalValue message!");
-        return;
-    }
-
-    /* Decode the MsgPack payload: data:[ubyte] = [[UID:0..N],[Value:0..N]] */
-    flatbuffers_uint8_vec_t data_vector =
-        ns(SignalValue_data(signal_value_table));
-    size_t length = flatbuffers_uint8_vec_len(data_vector);
-    if (data_vector == NULL) {
-        log_simbus(
-            "WARNING: data vector could not be obtained SignalValue message!");
-        return;
-    }
-    log_simbus("    data payload: %lu bytes", length);
-
     /* Unpack. */
     bool             result;
     msgpack_unpacker unpacker;
@@ -824,6 +837,29 @@ error_clean_up:
 }
 
 
+static void process_signal_value_message(
+    Channel* channel, ns(SignalValue_table_t) signal_value_table)
+{
+    if (!ns(SignalValue_data_is_present(signal_value_table))) {
+        log_simbus("WARNING: no data in SignalValue message!");
+        return;
+    }
+
+    /* Decode the MsgPack payload: data:[ubyte] = [[UID:0..N],[Value:0..N]] */
+    flatbuffers_uint8_vec_t data_vector =
+        ns(SignalValue_data(signal_value_table));
+    size_t length = flatbuffers_uint8_vec_len(data_vector);
+    if (data_vector == NULL) {
+        log_simbus(
+            "WARNING: data vector could not be obtained SignalValue message!");
+        return;
+    }
+    log_simbus("    data payload: %lu bytes", length);
+
+    process_signal_value_data(channel, data_vector, length);
+}
+
+
 static void process_signal_index_message(
     Channel* channel, ns(SignalIndex_table_t) signal_index_table)
 {
@@ -876,7 +912,7 @@ static void process_model_start_message(AdapterModel* am, Channel* channel,
 
 
 static void handle_channel_message(Adapter* adapter, const char* channel_name,
-    ns(ChannelMessage_table_t) channel_message, int32_t token)
+    ns(ChannelMessage_table_t) channel_message, int32_t          token)
 {
     UNUSED(token);
     assert(adapter);
@@ -927,6 +963,70 @@ static void handle_channel_message(Adapter* adapter, const char* channel_name,
         log_simbus("UNEXPECTED <-- [%s]", channel->name);
         log_simbus("    message_type (%d)", msg_type);
     }
+}
+
+
+typedef struct notify_spec_t {
+    Adapter* adapter;
+    notify(NotifyMessage_table_t) message;
+} notify_spec_t;
+
+static int notify_model(void* value, void* data)
+{
+    AdapterModel*  am = value;
+    notify_spec_t* notify_data = data;
+    notify(NotifyMessage_table_t) message = notify_data->message;
+    log_simbus("Notify <-- [%u]", am->model_uid);
+    am->model_time = notify(NotifyMessage_model_time(message));
+    am->stop_time = notify(NotifyMessage_schedule_time(message));
+    if (am->stop_time <= am->model_time) {
+        log_error("WARNING:stop_time is NOT greater than model_time!");
+    }
+    log_simbus("    model_uid=%u", am->model_uid);
+    log_simbus("    model_time=%f", am->model_time);
+    log_simbus("    stop_time=%f", am->stop_time);
+
+    /* Handle embedded SignalVector tables. */
+    notify(SignalVector_vec_t) vector = notify(NotifyMessage_signals(message));
+    size_t vector_len = notify(SignalVector_vec_len(vector));
+    for (uint32_t _vi = 0; _vi < vector_len; _vi++) {
+        /* Check the Lookup data is complete. */
+        notify(SignalVector_table_t) signal_vector =
+            notify(SignalVector_vec_at(vector, _vi));
+        if (!notify(SignalVector_name_is_present(signal_vector))) {
+            log_simbus("WARNING: signal vector name not provided!");
+            continue;
+        }
+        const char* channel_name = notify(SignalVector_name(signal_vector));
+
+        flatbuffers_uint8_vec_t data_vector =
+            notify(SignalVector_data(signal_vector));
+        size_t data_length = flatbuffers_uint8_vec_len(data_vector);
+        if (data_vector == NULL) {
+            log_simbus("WARNING: signal vector data not provided!");
+            continue;
+        }
+        log_simbus("    data payload: %lu bytes", data_length);
+
+        /* Process the Signal Vector*/
+        Channel* channel = hashmap_get(&am->channels, channel_name);
+        if (channel == NULL) continue;
+        log_simbus("SignalVector <-- [%s]", channel->name);
+        process_signal_value_data(channel, data_vector, data_length);
+    }
+
+    return 0;
+}
+
+static void handle_notify_message(
+    Adapter* adapter, notify(NotifyMessage_table_t) notify_message)
+{
+    /* Notify is currently broadcast to all models at the same model time. */
+    notify_spec_t notify_data = {
+        .adapter = adapter,
+        .message = notify_message,
+    };
+    hashmap_iterator(&adapter->models, notify_model, true, &notify_data);
 }
 
 
