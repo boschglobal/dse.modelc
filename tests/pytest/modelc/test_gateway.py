@@ -22,10 +22,10 @@ MODELC_EXE = MODELC_SANDBOX_DIR+'/bin/modelc'
 
 # Sandbox for the Gateway Model (test basis).
 GATEWAY_SANDBOX_DIR = os.getenv('MODELC_SANDBOX_DIR')+'/examples/gateway'
-GATEWAY_YAML =    'data/gateway.yaml'
-GATEWAY_EXE =    'bin/gateway'
+GATEWAY_YAML = 'data/gateway.yaml'
+GATEWAY_EXE = 'bin/gateway'
 GATEWAY_INST = 'gateway'
-STACK_YAML =    'data/gateway.yaml'
+STACK_YAML = 'data/gateway.yaml'
 
 
 async def run(dir, cmd):
@@ -54,12 +54,7 @@ async def main(params, checks):
     for m in params['models']:
         run_list.append(asyncio.wait_for(run(
             params['MODEL_SANDBOX_DIR'],
-            f'{MODELC_EXE} --logger 2 '+                                    \
-                f'--name {m["MODEL_INST"]} '+                               \
-                f'{m["MODEL_YAML_FILES"]} '+                                \
-                ''),
-        timeout=TIMEOUT)
-    )
+            f'{MODELC_EXE} --logger 2 ' + f'--name {m["MODEL_INST"]} ' + f'{m["MODEL_YAML_FILES"]} ' + ''), timeout=TIMEOUT))
     # Gateway
     run_list.append(asyncio.wait_for(run(
             f'{GATEWAY_SANDBOX_DIR}',

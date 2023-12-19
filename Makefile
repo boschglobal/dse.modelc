@@ -183,6 +183,7 @@ do-test_pytest-run:
 do-clean:
 	@for d in $(SUBDIRS); do ($(MAKE) -C $$d clean ); done
 	$(MAKE) -C tests/cmocka clean
+	$(MAKE) -C tests/pytest/benchmark clean
 	rm -rf $(OSS_DIR)
 	rm -rvf *.zip
 	rm -rvf *.log
@@ -206,6 +207,8 @@ super-linter:
 		--env FILTER_REGEX_EXCLUDE="(dse/modelc/examples/apis/.*|doc/content/apis/modelc/examples/.*)" \
 		--env VALIDATE_CPP=true \
 		--env VALIDATE_YAML=true \
+		--env VALIDATE_PYTHON_PYLINT=true \
+		--env VALIDATE_PYTHON_FLAKE8=true \
 		github/super-linter:slim-v5
 
 

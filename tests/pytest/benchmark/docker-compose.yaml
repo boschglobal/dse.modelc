@@ -1,0 +1,43 @@
+version: "3.3"
+services:
+
+  redis:
+    image: redis
+    command: redis-server --unixsocket /tmp/redis/redis.sock --unixsocketperm 777
+    environment:
+      - ALLOW_EMPTY_PASSWORD=yes
+    networks:
+      - dse
+    volumes:
+      - redis-socket:/tmp/redis
+    container_name: "redis"
+
+  benchmark:
+    image: ghcr.io/boschglobal/dse-python-builder:main
+    networks:
+      - dse
+    volumes:
+      - redis-socket:/tmp/redis
+      - ../../../:/tmp/dse.modelc
+    container_name: "dse-python-builder"
+    working_dir: /tmp/dse.modelc/
+    env_file:
+      - .env
+    command:
+      - bash
+      - -c
+      - |
+        pip install -r tests/pytest/benchmark/requirements.txt
+        python tests/pytest/benchmark/benchmark.py
+    depends_on:
+      - redis
+
+networks:
+  dse:
+    external: true
+
+volumes:
+  redis-socket:
+    driver_opts:
+      type: tmpfs
+      device: tmpfs

@@ -19,9 +19,10 @@ SIMBUS_EXE = MODELC_SANDBOX_DIR+'/bin/simbus'
 MODELC_EXE = MODELC_SANDBOX_DIR+'/bin/modelc'
 
 # Sandbox for the Model (common only, specific in test cases).
-MODEL_YAML =        'data/model.yaml'
+MODEL_YAML = 'data/model.yaml'
 SIGNAL_GROUP_YAML = 'data/signal_group.yaml'
-STACK_YAML =        'data/stack.yaml'
+STACK_YAML = 'data/stack.yaml'
+
 
 async def run(dir, cmd):
     _cmd = f'cd {dir}; {VALGRIND_CMD if USE_VALGRIND else ""} {cmd}'
@@ -36,6 +37,7 @@ async def run(dir, cmd):
     stdout, stderr = await p.communicate()
     return { 'dir': dir, 'cmd': _cmd, 'rc': p.returncode, 'stdout': stdout.decode(), 'stderr': stderr.decode() }
 
+
 async def main(params, checks):
     run_list = []
     # SimBus
@@ -48,12 +50,7 @@ async def main(params, checks):
     for m in params['models']:
         run_list.append(asyncio.wait_for(run(
             params['MODEL_SANDBOX_DIR'],
-            f'{MODELC_EXE} --logger 2 '+                                \
-                f'--name {m["MODEL_INST"]} '+                      \
-                f'{m["MODEL_YAML_FILES"]} '+                       \
-                ''),
-        timeout=TIMEOUT)
-    )
+            f'{MODELC_EXE} --logger 2 ' + f'--name {m["MODEL_INST"]} ' + f'{m["MODEL_YAML_FILES"]} '), timeout = TIMEOUT))
     # Gather results.
     result_list = await asyncio.gather(*run_list)
     for result in result_list:
@@ -79,6 +76,7 @@ async def main(params, checks):
                 found = True
         assert found, check
 
+
 def test_modelc_stack():
     # Two models executed by the same instance of ModelC.
     params = {
@@ -86,10 +84,7 @@ def test_modelc_stack():
         'models': [
             {
                 'MODEL_INST': '"stacked_one;stacked_two"',
-                'MODEL_YAML_FILES':                                         \
-                    f'{MODEL_YAML} '+                                       \
-                    f'{STACK_YAML} '+                                       \
-                    f'{SIGNAL_GROUP_YAML}',
+                'MODEL_YAML_FILES' : f'{MODEL_YAML} ' + f'{STACK_YAML} ' + f'{SIGNAL_GROUP_YAML}',
             },
         ]
     }

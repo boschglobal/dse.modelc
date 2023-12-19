@@ -1,0 +1,27 @@
+# Copyright 2023 Robert Bosch GmbH
+#
+# SPDX-License-Identifier: Apache-2.0
+
+---
+kind: Model
+metadata:
+  name: BenchmarkModel
+spec:
+  runtime:
+    dynlib:
+      - os: linux
+        arch: amd64
+        path: lib/benchmark_model.so
+      - os: linux
+        arch: x86
+        path: lib/benchmark_model.so
+      - os: windows
+        arch: x64
+        path: bin/benchmark_model.dll
+      - os: windows
+        arch: x86
+        path: bin/benchmark_model.dll
+  channels:
+    - alias: model_channel
+      selectors:
+        channel: test

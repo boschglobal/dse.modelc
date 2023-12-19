@@ -21,11 +21,11 @@ MSTEP_EXE = MODELC_SANDBOX_DIR+'/bin/mstep'
 
 # Sandbox for the Dynamic Model (test basis).
 MODEL_SANDBOX_DIR = os.getenv('MODELC_SANDBOX_DIR')+'/examples/dynamic'
-DYNAMIC_MODEL_INST =    'dynamic_model_instance'
-DYNAMIC_MODEL_YAML =    'data/model.yaml'
-DYNAMIC_MODEL_LIB =     'lib/dynamic_model.so'  # Not used, see model.yaml.
-SIGNAL_GROUP_YAML =     'data/signal_group.yaml'
-STACK_YAML =            'data/stack.yaml'
+DYNAMIC_MODEL_INST = 'dynamic_model_instance'
+DYNAMIC_MODEL_YAML = 'data/model.yaml'
+DYNAMIC_MODEL_LIB = 'lib/dynamic_model.so'  # Not used, see model.yaml.
+SIGNAL_GROUP_YAML = 'data/signal_group.yaml'
+STACK_YAML = 'data/stack.yaml'
 
 
 async def run(dir, cmd):
@@ -45,13 +45,9 @@ async def run(dir, cmd):
 async def main():
     result_list = await asyncio.gather(
         asyncio.wait_for(
-            run(MODEL_SANDBOX_DIR,
-                    f'{MSTEP_EXE} --logger 2 --name {DYNAMIC_MODEL_INST} '+  \
-                        f'{DYNAMIC_MODEL_YAML} '+                             \
-                        f'{STACK_YAML} '+                                     \
-                        f'{SIGNAL_GROUP_YAML} '+                              \
-                    ''), timeout=TIMEOUT),
-    )
+            run(
+                MODEL_SANDBOX_DIR, f'{MSTEP_EXE} --logger 2 --name {DYNAMIC_MODEL_INST} ' + f'{DYNAMIC_MODEL_YAML} ' + f'{STACK_YAML} ' + f'{SIGNAL_GROUP_YAML} ' + ''), timeout=TIMEOUT),
+                )
     for result in result_list:
         print('************************************************************')
         print('************************************************************')
