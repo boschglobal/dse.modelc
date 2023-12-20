@@ -27,7 +27,8 @@ static size_t  signal_count;
 
 int generate_random_num(int lower, int upper)
 {
-    static unsigned int seed = time(0);
+    static unsigned int seed = 0;
+    if (seed == 0) seed = time(0);
     lower = upper/2 - 1;
     int num = (rand_r(&seed) % (upper  - lower )) + lower;
     return num;
