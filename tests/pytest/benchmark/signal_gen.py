@@ -32,13 +32,13 @@ def generate_signal_group_yaml(CWD, sample_count):
     model_function_do_step = "int MODEL_FUNCTION_DO_STEP(double* model_time, double stop_time){\n" + "assert(signal_value);\n" + model_function_do_step + "*model_time = stop_time;\n" + "return 0; \n} "
 
     # Generating signal_group yaml file
-    with open(CWD + 'tests/pytest/benchmark/signal_group.yaml', 'w') as file:
+    with open(CWD + 'tests/pytest/benchmark/_working/signal_group.yaml', 'w') as file:
         yaml.dump(signal_group_dict, file)
-    with open(CWD + 'tests/pytest/benchmark/signal_group.yaml', 'r') as fp:
+    with open(CWD + 'tests/pytest/benchmark/_working/signal_group.yaml', 'r') as fp:
         data = fp.read()
         typos = re.sub(r'\- ', '', data, count=8)
         typos = re.sub(r'\'', '', typos)
-    with open(CWD + 'tests/pytest/benchmark/signal_group.yaml', 'w') as fp:
+    with open(CWD + 'tests/pytest/benchmark/_working/signal_group.yaml', 'w') as fp:
         fp.write(typos)
 
 

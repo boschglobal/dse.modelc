@@ -17,11 +17,12 @@ CWD = os.getcwd() + "/"
 MODELC_SANDBOX_DIR = CWD + 'dse/modelc/build/_out'
 SIMBUS_EXE = MODELC_SANDBOX_DIR+'/bin/simbus'
 MODELC_EXE = MODELC_SANDBOX_DIR+'/bin/modelc'
+WORKING_DIR = CWD + 'tests/pytest/benchmark/_working/'
 
 # MODEL_YAML = 'data/model.yaml'
-MODEL_YAML = CWD + 'tests/pytest/benchmark/model.yaml'
+MODEL_YAML = WORKING_DIR + 'model.yaml'
 # signal_gen.generate_signal_group_yaml(CWD,2)
-SIGNAL_GROUP_YAML = CWD + 'tests/pytest/benchmark/signal_group.yaml' # 'data/signal_group.yaml'
+SIGNAL_GROUP_YAML = WORKING_DIR + 'signal_group.yaml' # 'data/signal_group.yaml'
 # SIGNAL_GROUP_YAML = 'data/signal_group.yaml'
 
 BENCHMARK_RESULT = {}
@@ -40,7 +41,7 @@ STEP_SIZE = args.stepsize
 END_TIME = args.endtime
 OUT_FILE = args.outfile
 NUM_OF_MODELS = args.num_of_models
-STACK_YAML = CWD + "tests/pytest/benchmark/stack.yaml" # Default stack yaml
+STACK_YAML = WORKING_DIR + "stack.yaml" # Default stack yaml
 SIGNAL_COUNT = os.getenv('SIGNAL_COUNT', 1)
 MODEL_INSTANCE_NAMES = os.getenv('MODEL_INSTANCE_NAMES', 'dynamic_model_instance_1;dynamic_model_instance_2')
 
@@ -192,6 +193,6 @@ def test_stacked_model_instance():
 
 
 if __name__ == "__main__":
-    test_stacked_model_instance()
+    # test_stacked_model_instance()
     test_individual_model_instance()
     display_benchmark_result()

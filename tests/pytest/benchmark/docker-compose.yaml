@@ -22,12 +22,12 @@ services:
     container_name: "dse-python-builder"
     working_dir: /tmp/dse.modelc/
     env_file:
-      - .env
+      - ./_working/.env
     command:
       - bash
       - -c
       - |
-        pip install -r tests/pytest/benchmark/requirements.txt
+        pip install -r tests/pytest/benchmark/data/requirements.txt
         python tests/pytest/benchmark/benchmark.py
     depends_on:
       - redis

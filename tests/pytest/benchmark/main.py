@@ -66,14 +66,14 @@ def update_model_file(model_instance_names):
     for model in model_instance_names.split(';'):
         model_obj = {'kind': 'Model', 'metadata': {'name': model}, 'spec': {'runtime': {'dynlib': [{'os': 'linux', 'arch': 'amd64', 'path': 'lib/'+model+'.so'}, {'os': 'linux', 'arch': 'x86', 'path': 'lib/'+model+'.so'}, {'os': 'windows', 'arch': 'x64', 'path': 'bin/'+model+'.dll'}, {'os': 'windows', 'arch': 'x86', 'path': 'bin/'+model+'.dll'}]}, 'channels': [{'alias': 'model_channel', 'selectors': {'channel': 'test'}}]}}
         docs.append(model_obj)
-    with open("model.yaml", "w") as stream:
+    with open("_working/model.yaml", "w") as stream:
         yaml.dump_all(docs, stream)
 
 
 def update_stack_file(model_instance_names, num_of_models):
     ''' function to update the stack.yaml file with dynamically generated model instance names data'''
     updated_docs = []
-    with open("stack.yaml") as file:
+    with open("data/stack.yaml") as file:
         docs = yaml.load_all(file)
         model_instance_names = model_instance_names.split(';')
         for doc in docs:
@@ -90,7 +90,7 @@ def update_stack_file(model_instance_names, num_of_models):
             except Exception as _:
                 pass
             updated_docs.append(doc)
-    with open("stack.yaml", "w") as stream:
+    with open("_working/stack.yaml", "w") as stream:
         yaml.dump_all(updated_docs, stream)
 
 
@@ -157,7 +157,7 @@ def run_benchmark(input_data):
         update_cmakelist(model_instance_names)
         update_model_file(model_instance_names)
         # creates .env file to set the env variables for docker-compose.yaml
-        with open('.env', 'w') as file:
+        with open('_working/.env', 'w') as file:
             content = [
                 f'SIMBUS_URI={simbus_uri}\n',
                 f'NUM_OF_MODELS={num_of_models}\n',

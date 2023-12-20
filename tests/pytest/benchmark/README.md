@@ -23,15 +23,14 @@ $ git clone https://github.com/boschglobal/dse.modelc.git
 # Build the framework and models.
 $ cd dse.modelc
 $ make
-$ cd -
 
 # Run the benchmark.
-$ cd dse.modelc/tests/pytest/benchmark
-$ python main.py
-$ cd -
+$ cd tests/pytest/benchmark
+$ cp scenario/redis_6_400.csv input.csv
+$ make
 
 # Results
-$ ls -al dse.modelc/tests/pytest/benchmark/_out
+$ ls -al tests/pytest/benchmark/_out
 ```
 
 

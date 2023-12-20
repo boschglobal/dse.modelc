@@ -63,8 +63,5 @@ dkms.conf
 
 # Benchmark output files
 tests/pytest/benchmark/_out/
-
-# Generated files from main.py
-tests/pytest/benchmark/signal_group.yaml
-tests/pytest/benchmark/model.yaml
-tests/pytest/benchmark/stack.yaml
+tests/pytest/benchmark/_working/
+tests/pytest/benchmark/input.csv

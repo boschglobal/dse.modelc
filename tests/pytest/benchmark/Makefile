@@ -5,6 +5,18 @@
 REPO_DIR := ../../../
 BENCH_DIR := tests/pytest/benchmark
 
+
+default: main
+
+.PHONY: setup
+setup:
+	rm -rf _working
+	mkdir _working
+
+.PHONY: main
+main: setup
+	python3 main.py
+
 .PHONY: benchmark
 benchmark:
 	@cd $(REPO_DIR); \
