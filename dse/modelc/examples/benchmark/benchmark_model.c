@@ -2,10 +2,10 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-#include <stdint.h>
 #include <stdlib.h>
-#include <time.h>
+#include <stdint.h>
 #include <assert.h>
+#include <time.h>
 #include <dse/modelc/model.h>
 #include <dse/logger.h>
 
@@ -27,10 +27,10 @@ static size_t  signal_count;
 
 int generate_random_num(int lower, int upper)
 {
-    static unsigned int seed = 0;
-    if (seed == 0) seed = time(0);
     lower = upper/2 - 1;
-    int num = (rand_r(&seed) % (upper  - lower )) + lower;
+    srand(time(0));
+    int num = (rand() % (upper  - lower )) + lower;  // NOLINT
+    // Alternative rand_r() not available in mingw.
     return num;
 }
 

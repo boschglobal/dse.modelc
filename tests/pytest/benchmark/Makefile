@@ -33,3 +33,4 @@ benchmark:
 .PHONY: clean
 clean:
 	rm -rf _out
+	rm -rf _working
