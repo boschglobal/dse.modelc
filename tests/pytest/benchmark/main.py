@@ -87,7 +87,7 @@ def update_stack_file(model_instance_names, num_of_models):
                         'channels': [{'name': 'test', 'alias': 'model_channel'}]}
                     uid += 1
                     doc['spec']['models'].append(instance)
-            except Exception as _:
+            except Exception:
                 pass
             updated_docs.append(doc)
     with open("_working/stack.yaml", "w") as stream:
