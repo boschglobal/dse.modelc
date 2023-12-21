@@ -19,9 +19,9 @@ Model C Library of the Dynamic Simulation Environment (DSE) Core Platform.
 ### Project Structure
 
 ```
-L- docker       Containerised tools.
 L- dse/modelc   Model C Library source code.
 L- extra        Build infrastructure.
+  L- docker     Containerised tools.
 L- licenses     Third Party Licenses.
 L- tests        Unit and integration tests.
 ```
