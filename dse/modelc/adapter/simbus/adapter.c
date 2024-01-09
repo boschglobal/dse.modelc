@@ -1,4 +1,4 @@
-// Copyright 2023 Robert Bosch GmbH
+// Copyright 2023, 2024 Robert Bosch GmbH
 //
 // SPDX-License-Identifier: Apache-2.0
 
@@ -34,6 +34,7 @@ Adapter* simbus_adapter_create(void* endpoint, double bus_step_size)
         0.0 - bus_step_size;  // Will be set to 0.0 on first Sync.
     adapter->bus_step_size = bus_step_size;
     _ap->handle_message = simbus_handle_message;
+    _ap->handle_notify_message = simbus_handle_notify_message;
 
     /* Create the Adapter Model object. */
     adapter->bus_adapter_model = calloc(1, sizeof(AdapterModel));

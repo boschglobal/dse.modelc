@@ -98,11 +98,6 @@ static void process_sbno_message(Adapter* adapter, uint8_t* msg_ptr)
 {
     AdapterPrivate* _ap = (AdapterPrivate*)(adapter->private);
 
-    if (adapter->bus_mode) {
-        /* Only expected by Model code. */
-        // FIXME consider for Model -> SimBus direction.
-        return;
-    }
     if (_ap->handle_notify_message == NULL) {
         log_fatal("No notify message handler for adapter!");
         return;
@@ -117,9 +112,9 @@ static bool process_message_stream(Adapter* adapter, const char* channel_name,
     uint8_t* buffer, size_t length, ns(MessageType_union_type_t) message_type,
     int32_t token)
 {
-    bool            found = false;
-    size_t          msg_len = 0;
-    uint8_t*        msg_ptr = buffer;
+    bool     found = false;
+    size_t   msg_len = 0;
+    uint8_t* msg_ptr = buffer;
 
     /* Messages are in a stream, each with a size prefix. */
     while (((msg_ptr - buffer) + msg_len) < (uint32_t)length) {

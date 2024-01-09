@@ -1,4 +1,4 @@
-// Copyright 2023 Robert Bosch GmbH
+// Copyright 2023, 2024 Robert Bosch GmbH
 //
 // SPDX-License-Identifier: Apache-2.0
 
@@ -229,26 +229,16 @@ error_clean_up:
 }
 
 
-static void process_signal_write_message(Adapter* adapter, Channel* channel,
-    uint32_t model_uid, ns(SignalWrite_table_t) signal_write_table)
+static void process_signalvector(
+    Channel* channel, flatbuffers_uint8_vec_t data_vector)
 {
-    UNUSED(adapter);
-    UNUSED(model_uid);
-
-    if (!ns(SignalWrite_data_is_present(signal_write_table))) {
-        log_simbus("WARNING: no data in SignalWrite message!");
-        return;
-    }
-
     /* Decode the MsgPack payload: data:[ubyte] = [[UID:0..N],[Value:0..N]] */
-    flatbuffers_uint8_vec_t data_vector =
-        ns(SignalWrite_data(signal_write_table));
-    size_t length = flatbuffers_uint8_vec_len(data_vector);
     if (data_vector == NULL) {
         log_simbus(
             "WARNING: data vector could not be obtained SignalWrite message!");
         return;
     }
+    size_t           length = flatbuffers_uint8_vec_len(data_vector);
     /* Unpack. */
     bool             result;
     msgpack_unpacker unpacker;
@@ -365,6 +355,29 @@ error_clean_up:
 }
 
 
+static void process_signal_write_message(Adapter* adapter, Channel* channel,
+    uint32_t model_uid, ns(SignalWrite_table_t) signal_write_table)
+{
+    UNUSED(adapter);
+    UNUSED(model_uid);
+
+    if (!ns(SignalWrite_data_is_present(signal_write_table))) {
+        log_simbus("WARNING: no data in SignalWrite message!");
+        return;
+    }
+
+    /* Decode the MsgPack payload: data:[ubyte] = [[UID:0..N],[Value:0..N]] */
+    flatbuffers_uint8_vec_t data_vector =
+        ns(SignalWrite_data(signal_write_table));
+    if (data_vector == NULL) {
+        log_simbus(
+            "WARNING: data vector could not be obtained SignalWrite message!");
+        return;
+    }
+    process_signalvector(channel, data_vector);
+}
+
+
 static void process_model_ready_message(Adapter* adapter, Channel* channel,
     uint32_t model_uid, ns(ModelReady_table_t) model_ready_table)
 {
@@ -384,9 +397,33 @@ static void process_model_ready_message(Adapter* adapter, Channel* channel,
 }
 
 
+static void process_notify_signalvector(Adapter* adapter, Channel* channel,
+    uint32_t model_uid, notify(SignalVector_table_t) signal_vector)
+{
+    UNUSED(adapter);
+    UNUSED(model_uid);
+
+    /* Handle SignalVector. */
+    if (!notify(SignalVector_data_is_present(signal_vector))) {
+        log_simbus("WARNING: no data in SignalWrite message!");
+        return;
+    }
+
+    /* Decode the MsgPack payload: data:[ubyte] = [[UID:0..N],[Value:0..N]] */
+    flatbuffers_uint8_vec_t data_vector =
+        notify(SignalVector_data(signal_vector));
+    if (data_vector == NULL) {
+        log_simbus(
+            "WARNING: data vector could not be obtained SignalVector table!");
+        return;
+    }
+    process_signalvector(channel, data_vector);
+}
+
+
 static void sv_delta_to_msgpack(Channel* channel, msgpack_packer* pk)
 {
-    log_simbus("SignalValue+", channel->name);
+    log_simbus("SignalVector --> [%s]", channel->name);
 
     /* First(root) Object, array, 2 elements. */
     msgpack_pack_array(pk, 2);
@@ -467,7 +504,7 @@ static void resolve_and_notify(
             flatbuffers_uint8_vec_create(
                 builder, (uint8_t*)sbuf.data, sbuf.size);
         notify(SignalVector_ref_t) sv =
-            notify(SignalVector_create(builder, sv_name, sv_msgpack_data));
+            notify(SignalVector_create(builder, sv_name, 0, sv_msgpack_data));
         notify(SignalVector_vec_push(builder, sv));
         log_simbus("    data payload: %lu bytes", sbuf.size);
     }
@@ -570,6 +607,65 @@ static void resolve_channel_and_model_start(
             resp__model_start_message, false);
     }
     msgpack_sbuffer_destroy(&sbuf);
+}
+
+
+void simbus_handle_notify_message(
+    Adapter* adapter, notify(NotifyMessage_table_t) notify_message)
+{
+    AdapterModel* am = adapter->bus_adapter_model;
+
+    /* Notify meta information. */
+    double model_time = notify(NotifyMessage_model_time(notify_message));
+    log_simbus("Notify/ModelReady <--");
+    log_simbus("    model_time=%f", model_time);
+
+    /* Handle embedded SignalVector tables. */
+    notify(SignalVector_vec_t) vector =
+        notify(NotifyMessage_signals(notify_message));
+    size_t vector_len = notify(SignalVector_vec_len(vector));
+    for (uint32_t _vi = 0; _vi < vector_len; _vi++) {
+        /* Check the Lookup data is complete. */
+        notify(SignalVector_table_t) signal_vector =
+            notify(SignalVector_vec_at(vector, _vi));
+        if (!notify(SignalVector_name_is_present(signal_vector))) {
+            log_error("WARNING: signal vector name not provided!");
+            continue;
+        }
+        if (!notify(SignalVector_model_uid_is_present(signal_vector))) {
+            log_error("WARNING: signal vector model_uid not provided!");
+            continue;
+        }
+        const char* channel_name = notify(SignalVector_name(signal_vector));
+        uint32_t    model_uid = notify(SignalVector_model_uid(signal_vector));
+        log_simbus("SignalVector <-- [%s:%u]", channel_name, model_uid);
+
+        Channel* channel = hashmap_get(&am->channels, channel_name);
+        process_notify_signalvector(adapter, channel, model_uid, signal_vector);
+        simbus_model_at_ready(am, channel, model_uid);
+    }
+
+    /* Resolve the Bus. */
+    if (simbus_network_ready(am) && simbus_models_ready(am)) {
+        /**
+        This condition will exist when the last model on the last channel
+        sends its ModelReady message. When that happens, resolve the bus.
+
+        Time on the Bus is progressed according to Bus Cycle Time.
+
+        Increment the bus time via Kahan summation.
+        */
+        double y = adapter->bus_step_size - adapter->bus_time_correction;
+        double t = adapter->bus_time + y;
+        adapter->bus_time_correction = (t - adapter->bus_time) - y;
+        adapter->bus_time = t;
+
+        double model_time = adapter->bus_time;
+        double stop_time = model_time + adapter->bus_step_size;
+
+        resolve_and_notify(adapter, model_time, stop_time);
+        simbus_models_to_start(am);
+    }
 }
 
 

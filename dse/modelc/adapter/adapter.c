@@ -1,4 +1,4 @@
-// Copyright 2023 Robert Bosch GmbH
+// Copyright 2023, 2024 Robert Bosch GmbH
 //
 // SPDX-License-Identifier: Apache-2.0
 
@@ -17,6 +17,13 @@
 
 
 #define UNUSED(x) ((void)x)
+
+
+typedef struct notify_spec_t {
+    Adapter* adapter;
+    notify(NotifyMessage_table_t) message;
+    flatcc_builder_t* builder;
+} notify_spec_t;
 
 
 static void handle_channel_message(Adapter* adapter, const char* channel_name,
@@ -431,82 +438,129 @@ void adapter_register(Adapter* adapter, SimulationSpec* sim)
 }
 
 
+static void sv_delta_to_msgpack(Channel* channel, msgpack_packer* pk)
+{
+    /* First(root) Object, array, 2 elements. */
+    msgpack_pack_array(pk, 2);
+    uint32_t changed_signal_count = 0;
+    for (uint32_t i = 0; i < channel->signal_values_length; i++) {
+        SignalValue* sv = channel->signal_values_map[i].signal;
+        if (sv->uid == 0) continue;
+        if ((sv->val != sv->final_val) || (sv->bin && sv->bin_size)) {
+            changed_signal_count++;
+        }
+    }
+    /* 1st Object in root Array, list of UID's. */
+    msgpack_pack_array(pk, changed_signal_count);
+    for (uint32_t i = 0; i < channel->signal_values_length; i++) {
+        SignalValue* sv = channel->signal_values_map[i].signal;
+        if (sv->uid == 0) continue;
+        if ((sv->val != sv->final_val) || (sv->bin && sv->bin_size)) {
+            msgpack_pack_uint32(pk, sv->uid);
+        }
+    }
+    /* 2st Object in root Array, list of Values. */
+    msgpack_pack_array(pk, changed_signal_count);
+    for (uint32_t i = 0; i < channel->signal_values_length; i++) {
+        SignalValue* sv = channel->signal_values_map[i].signal;
+        if (sv->uid == 0) continue;
+        if (sv->bin && sv->bin_size) {
+            msgpack_pack_bin_with_body(pk, sv->bin, sv->bin_size);
+            log_simbus("    SignalWrite: %u = <binary> (len=%u) [name=%s]",
+                sv->uid, sv->bin_size, sv->name);
+            /* Indicate the binary object was consumed. */
+            sv->bin_size = 0;
+        } else if (sv->val != sv->final_val) {
+            msgpack_pack_double(pk, sv->final_val);
+            log_simbus("    SignalWrite: %u = %f [name=%s]", sv->uid,
+                sv->final_val, sv->name);
+        }
+    }
+}
+
+static int notify_encode_sv(void* value, void* data)
+{
+    AdapterModel*     am = value;
+    notify_spec_t*    notify_data = data;
+    flatcc_builder_t* builder = notify_data->builder;
+    assert(builder);
+
+    msgpack_sbuffer sbuf;
+    msgpack_packer  pk;
+    msgpack_sbuffer_init(&sbuf);
+    msgpack_packer_init(&pk, &sbuf, msgpack_sbuffer_write);
+
+    /* Called for each model, emit SV to builder vector (already started). */
+    for (uint32_t i = 0; i < am->channels_length; i++) {
+        Channel* ch = _get_channel_byindex(am, i);
+        assert(ch);
+        assert(ch->signal_values_map);
+        log_simbus("SignalVector --> [%s:%u]", ch->name, am->model_uid);
+
+        msgpack_sbuffer_clear(&sbuf);
+        sv_delta_to_msgpack(ch, &pk);
+
+        flatbuffers_string_ref_t sv_name =
+            flatbuffers_string_create_str(builder, ch->name);
+        flatbuffers_uint8_vec_ref_t sv_msgpack_data =
+            flatbuffers_uint8_vec_create(
+                builder, (uint8_t*)sbuf.data, sbuf.size);
+        notify(SignalVector_ref_t) sv = notify(SignalVector_create(
+            builder, sv_name, am->model_uid, sv_msgpack_data));
+        notify(SignalVector_vec_push(builder, sv));
+        log_simbus("    data payload: %lu bytes", sbuf.size);
+    }
+
+    msgpack_sbuffer_destroy(&sbuf);
+    return 0;
+}
+
+static int notify_encode_model(void* value, void* data)
+{
+    AdapterModel*     am = value;
+    notify_spec_t*    notify_data = data;
+    flatcc_builder_t* builder = notify_data->builder;
+    assert(builder);
+
+    flatbuffers_uint32_vec_push(builder, &am->model_uid);
+
+    return 0;
+}
+
 static int _adapter_model_ready(AdapterModel* am)
 {
     Adapter*          adapter = am->adapter;
     AdapterPrivate*   _ap = (AdapterPrivate*)(adapter->private);
     flatcc_builder_t* builder = &(_ap->builder);
+    notify_spec_t     notify_data = {
+            .adapter = adapter,
+            .builder = builder,
+    };
 
-    /* ModelReady on all channels. */
-    for (uint32_t channel_index = 0; channel_index < am->channels_length;
-         channel_index++) {
-        Channel* ch = _get_channel_byindex(am, channel_index);
-        assert(ch);
-        assert(ch->signal_values_map);
+    flatcc_builder_reset(builder);
 
-        /* ModelReady with SignalWrite */
-        log_simbus("ModelReady --> [%s]", ch->name);
-        flatcc_builder_reset(builder);
+    log_simbus("Notify/ModelReady --> [...]");
+    log_simbus("    model_time=%f", am->model_time);
 
-        /* Encode SignalWrite MsgPack payload: data:[ubyte] = [[UID],[Value]] */
-        msgpack_sbuffer sbuf;
-        msgpack_packer  pk;
-        msgpack_sbuffer_init(&sbuf);
-        msgpack_packer_init(&pk, &sbuf, msgpack_sbuffer_write);
-        /* First(root) Object, array, 2 elements. */
-        msgpack_pack_array(&pk, 2);
-        /* Count changed signals. */
-        uint32_t changed_signal_count = 0;
-        for (uint32_t i = 0; i < ch->signal_values_length; i++) {
-            SignalValue* sv = ch->signal_values_map[i].signal;
-            if (sv->uid == 0) continue;
-            if ((sv->val != sv->final_val) || (sv->bin && sv->bin_size)) {
-                changed_signal_count++;
-            }
-        }
-        /* 1st Object in root Array, list of UID's. */
-        msgpack_pack_array(&pk, changed_signal_count);
-        for (uint32_t i = 0; i < ch->signal_values_length; i++) {
-            SignalValue* sv = ch->signal_values_map[i].signal;
-            if (sv->uid == 0) continue;
-            if ((sv->val != sv->final_val) || (sv->bin && sv->bin_size)) {
-                msgpack_pack_uint32(&pk, sv->uid);
-            }
-        }
-        /* 2st Object in root Array, list of Values. */
-        msgpack_pack_array(&pk, changed_signal_count);
-        for (uint32_t i = 0; i < ch->signal_values_length; i++) {
-            SignalValue* sv = ch->signal_values_map[i].signal;
-            if (sv->uid == 0) continue;
-            if (sv->bin && sv->bin_size) {
-                msgpack_pack_bin_with_body(&pk, sv->bin, sv->bin_size);
-                log_simbus("    SignalWrite: %u = <binary> (len=%u) [name=%s]",
-                    sv->uid, sv->bin_size, sv->name);
-                /* Indicate the binary object was consumed. */
-                sv->bin_size = 0;
-            } else if (sv->val != sv->final_val) {
-                msgpack_pack_double(&pk, sv->final_val);
-                log_simbus("    SignalWrite: %u = %f [name=%s]", sv->uid,
-                    sv->final_val, sv->name);
-            }
-        }
+    /* SignalVector vector. */
+    notify(SignalVector_vec_start(builder));
+    hashmap_iterator(&adapter->models, notify_encode_sv, true, &notify_data);
+    notify(SignalVector_vec_ref_t) signals =
+        notify(SignalVector_vec_end(builder));
 
-        /* SignalWrite */
-        ns(SignalWrite_ref_t) signal_write_message;
-        flatbuffers_uint8_vec_ref_t data_vector;
-        data_vector = flatbuffers_uint8_vec_create(
-            builder, (uint8_t*)sbuf.data, sbuf.size);
-        signal_write_message = ns(SignalWrite_create(builder, data_vector));
+    /* Notify model_uid vector. */
+    flatbuffers_uint32_vec_start(builder);
+    hashmap_iterator(&adapter->models, notify_encode_model, true, &notify_data);
+    flatbuffers_uint32_vec_ref_t model_uids =
+        flatbuffers_uint32_vec_end(builder);
 
-        /* ModelReady */
-        ns(MessageType_union_ref_t) model_ready_message;
-        model_ready_message = ns(MessageType_as_ModelReady(ns(
-            ModelReady_create(builder, am->model_time, signal_write_message))));
-        log_simbus("    model_time=%f", am->model_time);
-        send_message(adapter, ch->endpoint_channel, am->model_uid,
-            model_ready_message, false);
-        msgpack_sbuffer_destroy(&sbuf);
-    }
+    /* NotifyMessage message. */
+    notify(NotifyMessage_start(builder));
+    notify(NotifyMessage_signals_add(builder, signals));
+    notify(NotifyMessage_model_uid_add(builder, model_uids));
+    notify(NotifyMessage_model_time_add(builder, am->model_time));
+    notify(NotifyMessage_ref_t) message = notify(NotifyMessage_end(builder));
+    send_notify_message(adapter, message);
 
     return 0;
 }
@@ -560,19 +614,31 @@ int adapter_ready(Adapter* adapter, SimulationSpec* sim)
     ModelInstanceSpec* _instptr;
     int                rc = 0;
 
-    /* Sequential according to the Model Instances. */
+    /* Send Notify message (ModelReady).
 
-    /* Send all ModelReady messages. */
+       A single Notify message will be constructed with all SV's from all
+       Models included.
+    */
     _instptr = sim->instance_list;
-    while (_instptr && _instptr->name) {
+    if (_instptr && _instptr->name) {
         ModelInstancePrivate* mip = _instptr->private;
         AdapterModel*         am = mip->adapter_model;
         rc |= _adapter_model_ready(am);
-        /* Next instance? */
-        _instptr++;
     }
 
-    /* Wait for Notify message.
+    if (0) {
+        /* Send all ModelReady messages. */
+        _instptr = sim->instance_list;
+        while (_instptr && _instptr->name) {
+            ModelInstancePrivate* mip = _instptr->private;
+            AdapterModel*         am = mip->adapter_model;
+            rc |= _adapter_model_ready(am);
+            /* Next instance? */
+            _instptr++;
+        }
+    }
+
+    /* Wait for Notify message (ModelStart).
 
        Currently only a single Notify message will be received, and that
        will update all model instances.
@@ -966,17 +1032,12 @@ static void handle_channel_message(Adapter* adapter, const char* channel_name,
 }
 
 
-typedef struct notify_spec_t {
-    Adapter* adapter;
-    notify(NotifyMessage_table_t) message;
-} notify_spec_t;
-
 static int notify_model(void* value, void* data)
 {
     AdapterModel*  am = value;
     notify_spec_t* notify_data = data;
     notify(NotifyMessage_table_t) message = notify_data->message;
-    log_simbus("Notify <-- [%u]", am->model_uid);
+    log_simbus("Notify/ModelStart <-- [%u]", am->model_uid);
     am->model_time = notify(NotifyMessage_model_time(message));
     am->stop_time = notify(NotifyMessage_schedule_time(message));
     if (am->stop_time <= am->model_time) {
