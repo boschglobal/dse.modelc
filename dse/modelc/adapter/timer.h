@@ -8,12 +8,13 @@
 
 #include <time.h>
 #include <stdint.h>
+#include <dse/platform.h>
 
 
 inline struct timespec get_timespec_now(void)
 {
     struct timespec ts = {};
-    clock_gettime(CLOCK_MONOTONIC_RAW, &ts);
+    clock_gettime(CLOCK_SOURCE, &ts);
     return ts;
 }
 
