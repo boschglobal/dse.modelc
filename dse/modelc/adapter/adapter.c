@@ -11,6 +11,7 @@
 #include <dse/clib/collections/hashmap.h>
 #include <dse/clib/util/strings.h>
 #include <dse/modelc/adapter/adapter.h>
+#include <dse/modelc/adapter/timer.h>
 #include <dse/modelc/adapter/adapter_private.h>
 #include <dse/modelc/adapter/message.h>
 #include <dse/modelc/controller/model_private.h>
@@ -23,6 +24,7 @@ typedef struct notify_spec_t {
     Adapter* adapter;
     notify(NotifyMessage_table_t) message;
     flatcc_builder_t* builder;
+    struct timespec   notifyrecv_ts;
 } notify_spec_t;
 
 
@@ -559,6 +561,10 @@ static int _adapter_model_ready(AdapterModel* am)
     notify(NotifyMessage_signals_add(builder, signals));
     notify(NotifyMessage_model_uid_add(builder, model_uids));
     notify(NotifyMessage_model_time_add(builder, am->model_time));
+    notify(
+        NotifyMessage_bench_model_time_ns_add(builder, am->bench_steptime_ns));
+    notify(NotifyMessage_bench_notify_time_ns_add(builder,
+        get_elapsedtime_ns(am->bench_notifyrecv_ts) - am->bench_steptime_ns));
     notify(NotifyMessage_ref_t) message = notify(NotifyMessage_end(builder));
     send_notify_message(adapter, message);
 
@@ -1036,6 +1042,7 @@ static int notify_model(void* value, void* data)
 {
     AdapterModel*  am = value;
     notify_spec_t* notify_data = data;
+    am->bench_notifyrecv_ts = notify_data->notifyrecv_ts;
     notify(NotifyMessage_table_t) message = notify_data->message;
     log_simbus("Notify/ModelStart <-- [%u]", am->model_uid);
     am->model_time = notify(NotifyMessage_model_time(message));
@@ -1086,6 +1093,7 @@ static void handle_notify_message(
     notify_spec_t notify_data = {
         .adapter = adapter,
         .message = notify_message,
+        .notifyrecv_ts = get_timespec_now(),
     };
     hashmap_iterator(&adapter->models, notify_model, true, &notify_data);
 }

@@ -8,6 +8,7 @@
 
 #include <stdint.h>
 #include <stdbool.h>
+#include <time.h>
 #include <dse/clib/collections/set.h>
 #include <dse/clib/collections/hashmap.h>
 #include <dse/modelc/adapter/transport/endpoint.h>
@@ -64,16 +65,19 @@ typedef struct Adapter Adapter;
 
 typedef struct AdapterModel {
     /* Model properties. */
-    uint32_t model_uid;
-    double   model_time;
-    double   stop_time;
+    uint32_t        model_uid;
+    double          model_time;
+    double          stop_time;
     /* Channel properties. */
-    HashMap  channels;       // Collection of Channel, key is name.
-    char**   channels_keys;  // Cached result of hashmap_keys, update on
-                             // hashmap_set/remove.
-    uint32_t channels_length;
-
-    Adapter* adapter;  // back reference ?? Model Instance ??
+    HashMap         channels;       // Collection of Channel, key is name.
+    char**          channels_keys;  // Cached result of hashmap_keys, update on
+                                    // hashmap_set/remove.
+    uint32_t        channels_length;
+    /* Reference objects. */
+    Adapter*        adapter;
+    /* Benchmarking/Profiling. */
+    struct timespec bench_notifyrecv_ts;
+    uint64_t        bench_steptime_ns;
 } AdapterModel;
 
 
@@ -89,6 +93,10 @@ typedef struct Adapter {
 
     /* Endpoint container. */
     Endpoint* endpoint;
+
+    /* Benchmarking/Profiling. */
+    struct timespec bench_notifysend_ts;
+
     /* Private object supporting the operation of the Adapter.*/
     void* private;
 } Adapter;

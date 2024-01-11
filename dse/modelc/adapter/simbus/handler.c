@@ -7,6 +7,7 @@
 #include <dse/clib/util/strings.h>
 #include <dse/modelc/adapter/simbus/simbus_private.h>
 #include <dse/modelc/adapter/adapter_private.h>
+#include <dse/modelc/adapter/timer.h>
 #include <dse/modelc/adapter/message.h>
 
 
@@ -620,6 +621,26 @@ void simbus_handle_notify_message(
     log_simbus("Notify/ModelReady <--");
     log_simbus("    model_time=%f", model_time);
 
+    /* Benchmarking/Profiling. */
+    if (adapter->bus_time > 0.0) {
+        struct timespec ref_ts = get_timespec_now();
+        uint64_t model_exec_time =
+            notify(NotifyMessage_bench_model_time_ns(notify_message));
+        uint64_t model_proc_time =
+            notify(NotifyMessage_bench_notify_time_ns(notify_message));
+        uint64_t network_time_ns =
+            get_deltatime_ns(adapter->bench_notifysend_ts, ref_ts) -
+            (model_proc_time + model_exec_time);
+        flatbuffers_uint32_vec_t vector =
+            notify(NotifyMessage_model_uid(notify_message));
+        size_t vector_len = flatbuffers_uint32_vec_len(vector);
+        for (uint32_t _vi = 0; _vi < vector_len; _vi++) {
+            uint32_t model_uid = flatbuffers_uint32_vec_at(vector, _vi);
+            simbus_profile_accumulate_model_part(model_uid, model_exec_time,
+                model_proc_time, network_time_ns, ref_ts);
+        }
+    }
+
     /* Handle embedded SignalVector tables. */
     notify(SignalVector_vec_t) vector =
         notify(NotifyMessage_signals(notify_message));
@@ -663,6 +684,17 @@ void simbus_handle_notify_message(
         double model_time = adapter->bus_time;
         double stop_time = model_time + adapter->bus_step_size;
 
+        /* Benchmarking/Profiling. */
+        if (adapter->bus_time > 0.0) {
+            struct timespec ref_ts = get_timespec_now();
+            uint64_t        simbus_cycle_total_ns =
+                get_deltatime_ns(adapter->bench_notifysend_ts, ref_ts);
+            simbus_profile_accumulate_cycle_total(
+                simbus_cycle_total_ns, ref_ts);
+        }
+        adapter->bench_notifysend_ts = get_timespec_now();
+
+        /* Notify/ModelStart. */
         resolve_and_notify(adapter, model_time, stop_time);
         simbus_models_to_start(am);
     }

@@ -46,6 +46,9 @@ Adapter* simbus_adapter_create(void* endpoint, double bus_step_size)
     adapter->bus_adapter_model->adapter = adapter;
     adapter->bus_adapter_model->model_uid = adapter->endpoint->uid;
 
+    /* Benchmarking/Profiling. */
+    simbus_profile_init(bus_step_size);
+
     return adapter;
 }
 
@@ -112,4 +115,8 @@ void simbus_adapter_run(Adapter* adapter)
     }
 
     log_simbus("exit run loop");
+
+    /* Benchmarking/Profiling. */
+    simbus_profile_print_benchmarks();
+    simbus_profile_destroy();
 }

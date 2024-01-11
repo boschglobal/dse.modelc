@@ -19,7 +19,7 @@ export DSE_SCHEMA_URL ?= $(DSE_SCHEMA_REPO)/releases/download/v$(DSE_SCHEMA_VERS
 ###############
 ## DSE C Library.
 DSE_CLIB_REPO ?= https://github.com/boschglobal/dse.clib
-DSE_CLIB_VERSION ?= 1.0.5
+DSE_CLIB_VERSION ?= 1.0.6
 export DSE_CLIB_URL ?= $(DSE_CLIB_REPO)/archive/refs/tags/v$(DSE_CLIB_VERSION).zip
 
 
@@ -178,7 +178,7 @@ do-test_cmocka-run:
 do-test_pytest-run:
 	@-pip install -r tests/pytest/requirements.txt
 	redis-cli -h $(REDIS_HOST) ping
-	pytest -rx --asyncio-mode=strict -W ignore::DeprecationWarning tests/pytest
+	pytest -rx -x --asyncio-mode=strict -W ignore::DeprecationWarning tests/pytest
 
 do-clean:
 	@for d in $(SUBDIRS); do ($(MAKE) -C $$d clean ); done

@@ -8,6 +8,7 @@
 
 #include <stdbool.h>
 #include <stdint.h>
+#include <time.h>
 #include <dse_schemas/flatbuffers/simbus_channel_builder.h>
 #include <dse_schemas/flatbuffers/simbus_notify_builder.h>
 #include <dse/platform.h>
@@ -33,6 +34,16 @@ DLL_PRIVATE void simbus_handle_message(Adapter* adapter,
     int32_t     token);
 DLL_PRIVATE void simbus_handle_notify_message(
     Adapter* adapter, notify(NotifyMessage_table_t) notify_message);
+
+
+/* profile.c */
+DLL_PRIVATE void simbus_profile_init(double bus_step_size);
+DLL_PRIVATE void simbus_profile_accumulate_model_part(uint32_t model_uid,
+    uint64_t me, uint64_t mp, uint64_t net, struct timespec ref_ts);
+DLL_PRIVATE void simbus_profile_accumulate_cycle_total(
+    uint64_t simbus_cycle_total_ns, struct timespec ref_ts);
+DLL_PRIVATE void simbus_profile_print_benchmarks(void);
+DLL_PRIVATE void simbus_profile_destroy(void);
 
 
 /* states.c */

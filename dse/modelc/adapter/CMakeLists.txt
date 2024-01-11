@@ -32,6 +32,7 @@ add_library(adapter OBJECT
     message.c
     simbus/adapter.c
     simbus/handler.c
+    simbus/profile.c
     simbus/states.c
     transport/endpoint.c
 #    transport/mq.c

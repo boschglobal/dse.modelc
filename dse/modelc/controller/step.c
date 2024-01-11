@@ -8,6 +8,7 @@
 #include <dse/logger.h>
 #include <dse/clib/collections/hashmap.h>
 #include <dse/modelc/adapter/adapter.h>
+#include <dse/modelc/adapter/timer.h>
 #include <dse/modelc/controller/controller.h>
 #include <dse/modelc/controller/model_private.h>
 
@@ -43,9 +44,12 @@ int step_model(ModelInstanceSpec* mi, double* model_time)
     AdapterModel*         am = mip->adapter_model;
 
     /* Step the Model (i.e. call registered Model Functions). */
-    mf_step_data step_data = { mi, am->model_time, am->stop_time };
-    HashMap*     mf_map = &cm->model_functions;
+    mf_step_data    step_data = { mi, am->model_time, am->stop_time };
+    HashMap*        mf_map = &cm->model_functions;
+    struct timespec stepcall_ts = get_timespec_now();
     int rc = hashmap_iterator(mf_map, _do_step_func, false, &step_data);
+    am->bench_steptime_ns = get_elapsedtime_ns(stepcall_ts);
+
     /* Update the Model times. */
     am->model_time = am->stop_time;
     *model_time = am->model_time;
