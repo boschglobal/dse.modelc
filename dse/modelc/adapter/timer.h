@@ -5,7 +5,7 @@
 #ifndef DSE_MODELC_ADAPTER_TIMER_H_
 #define DSE_MODELC_ADAPTER_TIMER_H_
 
-
+#define _POSIX_C_SOURCE 199309L
 #include <time.h>
 #include <stdint.h>
 #include <dse/platform.h>
