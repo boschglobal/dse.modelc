@@ -1,18 +1,17 @@
-// Copyright 2023 Robert Bosch GmbH
+// Copyright 2024 Robert Bosch GmbH
 //
 // SPDX-License-Identifier: Apache-2.0
 
 #include <assert.h>
 #include <time.h>
 #include <fcntl.h>
+#include <mqueue.h>
 #include <sys/stat.h>
 #include <dse/logger.h>
 #include <dse/modelc/adapter/transport/mq.h>
 
-#define UNUSED(x) ((void)x)
 
-#ifndef _WIN32
-#include <mqueue.h>
+#define UNUSED(x)           ((void)x)
 
 
 /**
@@ -25,27 +24,22 @@
  * Linux "/proc" Interfaces
  * ------------------------
  * Before using this transport ensure that the following /proc settings are at
- * least as large as the defines in this file.
+ * least as large as required for the simulation.
  *
- * mq_maxmsg : (MQ_POSIX_MAXMSG)
- *      /proc/sys/fs/mqueue/msg_max (default 10)
- *
- * mq_msgsize : (MQ_POSIX_MSGSIZE)
- *      /proc/sys/fs/mqueue/msgsize_max (default 8192)
+ *      /proc/sys/fs/mqueue/msg_default (default 10)
+ *      /proc/sys/fs/mqueue/msgsize_default (default 8192)
  */
 
 
-#define MQ_POSIX_OFLAG_PUSH    (O_CREAT | O_RDWR | O_NONBLOCK)
-#define MQ_POSIX_OFLAG_PULL    (O_CREAT | O_RDWR)
-#define MQ_POSIX_MASK          0644
-#define MQ_POSIX_PRIO          8
-#define MQ_POSIX_MAXMSG_SIMBUS 50
-#define MQ_POSIX_MAXMSG_MODEL  4
-#define MQ_POSIX_MSGSIZE       MQ_MAX_MSGSIZE
-#define MQ_POSIX_ATTR_SIMBUS                                                   \
-    ((struct mq_attr){ 0, MQ_POSIX_MAXMSG_SIMBUS, MQ_POSIX_MSGSIZE, 0, { 0 } })
-#define MQ_POSIX_ATTR_MODEL                                                    \
-    ((struct mq_attr){ 0, MQ_POSIX_MAXMSG_MODEL, MQ_POSIX_MSGSIZE, 0, { 0 } })
+#define MQ_POSIX_OFLAG_PUSH (O_CREAT | O_RDWR | O_NONBLOCK)
+#define MQ_POSIX_OFLAG_PULL (O_CREAT | O_RDWR)
+#define MQ_POSIX_MASK       0644
+#define MQ_POSIX_PRIO       8
+
+
+typedef struct MqHandle {
+    mqd_t mqd;
+} MqHandle;
 
 
 static int __stop_request = 0;
@@ -53,16 +47,19 @@ static int __stop_request = 0;
 
 DLL_PRIVATE void mq_posix_open(MqDesc* mq_desc, MqKind kind, MqMode mode)
 {
+    UNUSED(kind);
     assert(mq_desc);
-    struct mq_attr _attr =
-        (kind == MQ_KIND_MODEL) ? MQ_POSIX_ATTR_MODEL : MQ_POSIX_ATTR_SIMBUS;
+    if (mq_desc->data == NULL) {
+        mq_desc->data = calloc(1, sizeof(MqHandle));
+    }
+    MqHandle* handle = mq_desc->data;
+    if (handle->mqd > 0) return;
+
     mode_t _mode =
         (mode == MQ_MODE_PULL) ? MQ_POSIX_OFLAG_PULL : MQ_POSIX_OFLAG_PUSH;
-
-    if (mq_desc->mqd > 0) return;
-
-    mq_desc->mqd = mq_open(mq_desc->endpoint, _mode, MQ_POSIX_MASK, &_attr);
-    if (mq_desc->mqd == -1) {
+    handle->mqd = mq_open(mq_desc->endpoint, _mode, MQ_POSIX_MASK, NULL);
+    if (handle->mqd == -1) {
+        log_error("Could not open endpoint, check configuration: sysctl fs.mqueue and ulimit -a !");
         log_fatal("Could not open endpoint: %s", mq_desc->endpoint);
     }
 }
@@ -71,9 +68,11 @@ DLL_PRIVATE void mq_posix_open(MqDesc* mq_desc, MqKind kind, MqMode mode)
 DLL_PRIVATE int mq_posix_send(MqDesc* mq_desc, char* buffer, size_t len)
 {
     assert(mq_desc);
-    assert(mq_desc->mqd);
+    assert(mq_desc->data);
+    MqHandle* handle = mq_desc->data;
+    assert(handle->mqd);
 
-    return mq_send(mq_desc->mqd, buffer, len, MQ_POSIX_PRIO);
+    return mq_send(handle->mqd, buffer, len, MQ_POSIX_PRIO);
 }
 
 
@@ -81,9 +80,11 @@ DLL_PRIVATE int mq_posix_recv(
     MqDesc* mq_desc, char* buffer, size_t len, struct timespec* tm)
 {
     assert(mq_desc);
-    assert(mq_desc->mqd);
+    assert(mq_desc->data);
+    MqHandle* handle = mq_desc->data;
+    assert(handle->mqd);
 
-    return mq_timedreceive(mq_desc->mqd, buffer, len, NULL, tm);
+    return mq_timedreceive(handle->mqd, buffer, len, NULL, tm);
 }
 
 
@@ -103,8 +104,11 @@ DLL_PRIVATE void mq_posix_unlink(MqDesc* mq_desc)
 DLL_PRIVATE void mq_posix_close(MqDesc* mq_desc)
 {
     assert(mq_desc);
-    if (mq_desc->mqd > 0) mq_close(mq_desc->mqd);
-    mq_desc->mqd = 0;
+    if (mq_desc->data == NULL) return;
+
+    MqHandle* handle = mq_desc->data;
+    if (handle->mqd > 0) mq_close(handle->mqd);
+    handle->mqd = 0;
 }
 
 
@@ -121,13 +125,3 @@ void mq_posix_configure(Endpoint* endpoint)
     mq_ep->mq_unlink = mq_posix_unlink;
     mq_ep->mq_close = mq_posix_close;
 }
-#endif  // #ifndef _WIN32
-
-#ifdef _WIN32
-void mq_posix_configure(Endpoint* endpoint)
-{
-    UNUSED(endpoint);
-    log_fatal("Posix MQ not supported on this platform (%s-%s)", PLATFORM_OS,
-        PLATFORM_ARCH);
-}
-#endif

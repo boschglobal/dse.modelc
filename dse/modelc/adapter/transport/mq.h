@@ -34,13 +34,9 @@
 #include <dse/clib/collections/hashmap.h>
 #include <dse/platform.h>
 
-#ifndef _WIN32
-#include <mqueue.h>
-#endif
 
-
-#define MQ_MAX_EP_LEN  100
-#define MQ_MAX_MSGSIZE 65536
+#define MQ_MAX_EP_LEN  200
+#define MQ_MAX_MSGSIZE (1024 * 1024)
 
 
 typedef enum MqScheme {
@@ -65,24 +61,13 @@ typedef enum MqKind {
 } MqKind;
 
 typedef struct MqChannel {
-    const char* name;
     /* Reference to the Adapter Channel linked to this Endpoint. */
-    void*       adapter_channel;
+    const char* channel_name;
 } MqChannel;
 
 typedef struct MqDesc {
-    char endpoint[MQ_MAX_EP_LEN];
-/* Posix MQ. */
-#ifndef _WIN32
-    mqd_t mqd;
-#endif
-/* Windows Namedpipe . */
-#ifdef _WIN32
-    HANDLE     hPipe;
-    OVERLAPPED oOverlap;
-    BOOL       fPendingIO;
-    DWORD      dwState;
-#endif
+    char  endpoint[MQ_MAX_EP_LEN];
+    void* data;
 } MqDesc;
 
 typedef void (*MqOpenFunc)(MqDesc* mq_desc, MqKind kind, MqMode mode);
@@ -119,23 +104,22 @@ DLL_PRIVATE Endpoint*   mq_connect(
 DLL_PRIVATE MqDesc* mq_model_push_desc(Endpoint* endpoint, uint32_t model_uid);
 DLL_PRIVATE void    mq_endpoint_destroy(Endpoint* endpoint);
 DLL_PRIVATE void*   mq_create_channel(
-      Endpoint* endpoint, const char* channel_name, void* adapter_channel);
+      Endpoint* endpoint, const char* channel_name);
 DLL_PRIVATE int32_t mq_start(Endpoint* endpoint);
 DLL_PRIVATE void    mq_interrupt(Endpoint* endpoint);
 DLL_PRIVATE void    mq_disconnect(Endpoint* endpoint);
 DLL_PRIVATE int32_t mq_send_fbs(Endpoint* endpoint, void* endpoint_channel,
     void* buffer, uint32_t buffer_length, uint32_t model_uid);
-DLL_PRIVATE int32_t mq_recv_fbs(Endpoint* endpoint, void** adapter_channel,
+DLL_PRIVATE int32_t mq_recv_fbs(Endpoint* endpoint, const char** channel_name,
     uint8_t** buffer, uint32_t* buffer_length);
 
 
-#ifndef _WIN32
 /* mq_posix.c */
 DLL_PUBLIC void mq_posix_configure(Endpoint* endpoint);
-#else
+
+
 /* mq_namedpipe.c */
 DLL_PUBLIC void mq_namedpipe_configure(Endpoint* endpoint);
-#endif
 
 
 #endif  // DSE_MODELC_ADAPTER_TRANSPORT_MQ_H_

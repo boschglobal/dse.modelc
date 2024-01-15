@@ -6,13 +6,12 @@
 #include <time.h>
 #include <fcntl.h>
 #include <sys/stat.h>
-#include <libmodelcapi/common/logger.h>
-#include <libmodelcapi/adapter/transport/mq.h>
+#include <dse/logger.h>
+#include <dse/modelc/adapter/transport/mq.h>
+
 
 #define UNUSED(x) ((void)x)
 
-
-#ifdef _WIN32
 
 /**
  * MQ namedpipe Integration for Windows
@@ -26,6 +25,15 @@
 #define CONNECTING_STATE 0
 #define READING_STATE    1
 #define WRITING_STATE    2
+
+
+typedef struct MqHandle {
+    HANDLE     hPipe;
+    OVERLAPPED oOverlap;
+    BOOL       fPendingIO;
+    DWORD      dwState;
+} MqHandle;
+
 
 static int __stop_request = 0;
 
@@ -442,13 +450,3 @@ void mq_namedpipe_configure(Endpoint* endpoint)
     mq_ep->mq_close = mq_namedpipe_close;
     log_notice("MQ_NAMEDPIPE: end mq_namedpipe_configure(endpoint)");
 }
-#endif  // #ifndef _WIN32
-
-#ifndef _WIN32
-void mq_namedpipe_configure(Endpoint* endpoint)
-{
-    UNUSED(endpoint);
-    log_fatal("Posix MQ not supported on this platform (%s-%s)", PLATFORM_OS,
-        PLATFORM_ARCH);
-}
-#endif

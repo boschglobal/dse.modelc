@@ -9,7 +9,7 @@
 #include <dse/logger.h>
 #include <dse/modelc/adapter/transport/endpoint.h>
 #include <dse/modelc/adapter/transport/redispubsub.h>
-// #include <dse/modelc/adapter/transport/mq.h>
+#include <dse/modelc/adapter/transport/mq.h>
 
 
 #define REDIS_PORT       6379
@@ -88,11 +88,11 @@ Endpoint* endpoint_create(const char* transport, const char* uri, uint32_t uid,
             return NULL;
         }
 
-        /* Message Queue. */
-        //    } else if (strcmp(transport, TRANSPORT_MQ) == 0) {
-        //        endpoint = mq_connect(uri, uid, bus_mode, timeout);
-        //
-        /* Unknown transport. */
+    /* Message Queue. */
+    } else if (strcmp(transport, TRANSPORT_MQ) == 0) {
+        endpoint = mq_connect(uri, uid, bus_mode, timeout);
+
+    /* Unknown transport. */
     } else {
         if (errno == 0) errno = EINVAL;
         log_error("ERROR: unknown transport! ($s)", transport);

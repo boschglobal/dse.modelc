@@ -58,19 +58,17 @@ spec:
 
 
 
-## Redis
-
-> Note: Not currently available.
-
-
-
-## Message Queue - POSIX
+## Message Queue POSIX
 
 The POSIX based Message Queue can be selected as a transport with the `mq`
 transport selector and a `posix` URI. This can be specified at the CLI or in
 a Stack YAML file (examples follow).
 
 > Note: Linux only.
+
+> Note: Model stacks not supported. Single model instances of ModelC only.
+
+> Note: Model UID should be configured in either stack.yaml or the ModelC CLI.
 
 
 ### Host System Settings
@@ -80,8 +78,10 @@ Configure the Message Queue subsystem with the following commands/configuration.
 ```bash
 # Edit the sysctl configuration, adding the following items.
 $ sudo nano /etc/sysctl.conf
-fs.mqueue.msg_max = 50
-fs.mqueue.msgsize_max = 65536
+fs.mqueue.msg_default = 100
+fs.mqueue.msg_max = 100
+fs.mqueue.msgsize_max = 1048576
+fs.mqueue.msgsize_default = 1048576
 fs.mqueue.queues_max = 256
 
 # Edit the limits configuration, adjust/append the following items.
@@ -91,33 +91,31 @@ $ sudo nano /etc/security/limits.conf
 
 # Restart the system, then check the parameters.
 $ sysctl fs.mqueue
-fs.mqueue.msg_default = 10
-fs.mqueue.msg_max = 50
-fs.mqueue.msgsize_default = 8192
-fs.mqueue.msgsize_max = 65536
+fs.mqueue.msg_default = 100
+fs.mqueue.msg_max = 100
+fs.mqueue.msgsize_default = 1048576
+fs.mqueue.msgsize_max = 1048576
 fs.mqueue.queues_max = 256
 
-$ ulimit -a
-core file size          (blocks, -c) 0
-data seg size           (kbytes, -d) unlimited
-scheduling priority             (-e) 0
-file size               (blocks, -f) unlimited
-pending signals                 (-i) 15675
-max locked memory       (kbytes, -l) 65536
-max memory size         (kbytes, -m) unlimited
-open files                      (-n) 1024
-pipe size            (512 bytes, -p) 8
+$ ulimit -q
 POSIX message queues     (bytes, -q) unlimited
-real-time priority              (-r) 0
-stack size              (kbytes, -s) 8192
-cpu time               (seconds, -t) unlimited
-max user processes              (-u) 15675
-virtual memory          (kbytes, -v) unlimited
-file locks                      (-x) unlimited
+
+# Alternative, useful for debugging.
+$ ulimit -Hq 100000
+$ ulimit -Sq 100000
 ```
 
 
+#### More Info
+
+* https://stackoverflow.com/questions/60275031/how-to-set-posix-message-queues-limit-to-unlimited-in-docker-container-using-u
+* https://man7.org/linux/man-pages/man7/mq_overview.7.html
+
+
 ### Usage
+
+The `stem` part of the URI should be unique to the running simulation.
+
 
 #### CLI
 
@@ -139,35 +137,4 @@ spec:
     transport:
       mq:
         uri: posix:///stem
-```
-
-
-## Message Queue - Named Pipe
-
-
-> Note: Windows only (currently).
-
-
-### Usage
-
-#### CLI
-
-```bash
-$ simbus stack.yaml --transport mq --uri namedpipe:///stem
-$ modelc --name instance model.yaml --transport mq --uri namedpipe:///stem
-```
-
-
-#### Stack (YAML)
-
-```yaml
----
-kind: Stack
-metadata:
-  name: stack
-spec:
-  connection:
-    transport:
-      mq:
-        uri: namedpipe:///stem
 ```

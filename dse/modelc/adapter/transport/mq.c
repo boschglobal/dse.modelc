@@ -1,4 +1,4 @@
-// Copyright 2023 Robert Bosch GmbH
+// Copyright 2024 Robert Bosch GmbH
 //
 // SPDX-License-Identifier: Apache-2.0
 
@@ -86,7 +86,7 @@ Endpoint* mq_connect(
         goto error_clean_up;
     }
     endpoint->bus_mode = bus_mode;
-    endpoint->model_uid = model_uid;
+    endpoint->uid = model_uid;
 
     /* MQ Endpoint. */
     MqEndpoint* mq_ep = calloc(1, sizeof(MqEndpoint));
@@ -124,8 +124,7 @@ Endpoint* mq_connect(
         log_fatal("Bad stem in URI");
     }
     /* Set the MQ Endpoint stem (which is used elsewhere). */
-    mq_ep->stem = calloc(strlen(uri_stem) + 1, sizeof(char));
-    strncpy(mq_ep->stem, uri_stem, strlen(uri_stem));
+    mq_ep->stem = strdup(uri_stem);
     log_trace("uri_stem: : %s :", mq_ep->stem);
 
     /* Configure the Endpoint. */
@@ -135,17 +134,17 @@ Endpoint* mq_connect(
             mq_ep->pull.endpoint, MQ_MAX_EP_LEN, "%s.dse.simbus", mq_ep->stem);
         /* Log the Endpoint information. */
         log_notice("  Endpoint: ");
-        log_notice("    Model UID: %i", endpoint->model_uid);
+        log_notice("    Model UID: %i", endpoint->uid);
         log_notice("    Pull Endpoint: %s", mq_ep->pull.endpoint);
     } else {
         /* Model. */
         snprintf(
             mq_ep->push.endpoint, MQ_MAX_EP_LEN, "%s.dse.simbus", mq_ep->stem);
         snprintf(mq_ep->pull.endpoint, MQ_MAX_EP_LEN, "%s.dse.model.%d",
-            mq_ep->stem, endpoint->model_uid);
+            mq_ep->stem, endpoint->uid);
         /* Log the Endpoint information. */
         log_notice("  Endpoint: ");
-        log_notice("    Model UID: %i", endpoint->model_uid);
+        log_notice("    Model UID: %i", endpoint->uid);
         log_notice("    Push Endpoint: %s", mq_ep->push.endpoint);
         log_notice("    Pull Endpoint: %s", mq_ep->pull.endpoint);
     }
@@ -155,20 +154,22 @@ Endpoint* mq_connect(
     endpoint->recv_fbs = mq_recv_fbs;
     endpoint->interrupt = mq_interrupt;
     endpoint->disconnect = mq_disconnect;
+#ifdef _WIN32
+    if (strcmp(uri_transport, mq_scheme(MQ_SCHEME_NAMEDPIPE)) == 0) {
+        /* Setup a Named Pipe MQ  Endpoint. */
+        log_fatal("Endpoint not implemented");
+        mq_ep->scheme = mq_scheme(MQ_SCHEME_NAMEDPIPE);
+        // mq_namedpipe_configure(endpoint);
+        return endpoint;
+    }
+#else
     if (strcmp(uri_transport, mq_scheme(MQ_SCHEME_POSIX)) == 0) {
         /* Setup a POSIX MQ  Endpoint. */
         mq_ep->scheme = mq_scheme(MQ_SCHEME_POSIX);
         mq_posix_configure(endpoint);
-
         return endpoint;
     }
-    if (strcmp(uri_transport, mq_scheme(MQ_SCHEME_NAMEDPIPE)) == 0) {
-        /* Setup a Named Pipe MQ  Endpoint. */
-        mq_ep->scheme = mq_scheme(MQ_SCHEME_NAMEDPIPE);
-        mq_namedpipe_configure(endpoint);
-
-        return endpoint;
-    }
+#endif
 
     log_error("Endpoint scheme unknown (%s)!", uri);
 
@@ -196,24 +197,32 @@ MqDesc* mq_model_push_desc(Endpoint* endpoint, uint32_t model_uid)
     /* Create a new entry (will be a Model Push). */
     push_desc = calloc(1, sizeof(MqDesc));
     assert(push_desc);
-    snprintf(push_desc->endpoint, MQ_MAX_EP_LEN, "/%s.dse.model.%d",
-        mq_ep->stem, endpoint->model_uid);
+    snprintf(push_desc->endpoint, MQ_MAX_EP_LEN, "%s.dse.model.%d", mq_ep->stem,
+        model_uid);
+    if (mq_ep->mq_open) mq_ep->mq_open(push_desc, MQ_KIND_MODEL, MQ_MODE_PUSH);
     hashmap_set(&mq_ep->push_hash, hash_key, push_desc);
+
     return push_desc;
 }
 
 
-void* mq_create_channel(
-    Endpoint* endpoint, const char* channel_name, void* adapter_channel)
+void* mq_create_channel(Endpoint* endpoint, const char* channel_name)
 {
     assert(endpoint);
     assert(endpoint->private);
 
+    /* Check if the endpoint channel already exists. */
+    MqChannel* endpoint_channel =
+        hashmap_get(&endpoint->endpoint_channels, channel_name);
+    if (endpoint_channel) {
+        assert(strcmp(endpoint_channel->channel_name, channel_name) == 0);
+        return (void*)endpoint_channel;
+    }
+
     /* Create the MqChannel object. */
-    MqChannel* endpoint_channel = calloc(1, sizeof(MqChannel));
+    endpoint_channel = calloc(1, sizeof(MqChannel));
     assert(endpoint_channel);
-    endpoint_channel->name = channel_name;
-    endpoint_channel->adapter_channel = adapter_channel;
+    endpoint_channel->channel_name = channel_name;
 
     /* Add to Endpoint->endpoint_channels. */
     if (hashmap_set(&endpoint->endpoint_channels, channel_name,
@@ -221,7 +230,7 @@ void* mq_create_channel(
         assert(0);
     }
 
-    printf("    Endpoint Channel : %s\n", endpoint_channel->name);
+    log_notice("    Endpoint Channel : %s\n", endpoint_channel->channel_name);
 
     /* Return the created object, to the caller (which will be an Adapter). */
     return (void*)endpoint_channel;
@@ -247,12 +256,9 @@ static MqDesc* _get_push_mq(Endpoint* endpoint, uint32_t model_uid)
 {
     assert(endpoint);
     assert(endpoint->private);
-    MqEndpoint* mq_ep = (MqEndpoint*)endpoint->private;
 
     MqDesc* mq_desc = mq_model_push_desc(endpoint, model_uid);
     assert(mq_desc);
-    if (mq_ep->mq_open) mq_ep->mq_open(mq_desc, MQ_KIND_MODEL, MQ_MODE_PUSH);
-
     return mq_desc;
 }
 
@@ -327,28 +333,36 @@ int32_t mq_send_fbs(Endpoint* endpoint, void* endpoint_channel, void* buffer,
 {
     assert(endpoint);
     assert(endpoint->private);
-    assert(endpoint_channel);
     MqEndpoint* mq_ep = (MqEndpoint*)endpoint->private;
-    MqChannel*  ch = (MqChannel*)endpoint_channel;
     int         rc = 0;
 
     if (mq_ep->mq_send == NULL) log_fatal("MQ not configured");
 
-    MqDesc* push_desc = _get_push_mq(endpoint, model_uid);
-    assert(push_desc);
-
     /**
      * Encode as a MsgPack datagram:
-     *      MSG:Object[0]: channel name (string)
-     *      MSG:Object[1]: buffer (FBS) (bin)
+     *      MSG:Object[0]: message indicator (SBNO or SBCH) (string)
+     *      MSG:Object[1]: channel name (string)
+     *      MSG:Object[2]: buffer (FBS) (bin)
      */
     msgpack_sbuffer sbuf;
     msgpack_packer  pk;
-    int             _ch_name_len = strlen(ch->name);
     msgpack_sbuffer_init(&sbuf);
     msgpack_packer_init(&pk, &sbuf, msgpack_sbuffer_write);
-    msgpack_pack_str(&pk, _ch_name_len);
-    msgpack_pack_str_body(&pk, ch->name, _ch_name_len);
+    if (endpoint_channel) {
+        /* Sending a Channel Message. */
+        MqChannel* ch = (MqChannel*)endpoint_channel;
+        int        _ch_name_len = strlen(ch->channel_name);
+        msgpack_pack_str(&pk, 4);
+        msgpack_pack_str_body(&pk, "SBCH", 4);
+        msgpack_pack_str(&pk, _ch_name_len);
+        msgpack_pack_str_body(&pk, ch->channel_name, _ch_name_len);
+    } else {
+        /* Sending a Notify Message. */
+        msgpack_pack_str(&pk, 4);
+        msgpack_pack_str_body(&pk, "SBNO", 4);
+        msgpack_pack_str(&pk, 0);
+        msgpack_pack_str_body(&pk, "", 0);
+    }
     msgpack_pack_bin(&pk, buffer_length);
     msgpack_pack_bin_body(&pk, (uint8_t*)buffer, buffer_length);
     if (sbuf.size > MQ_MAX_MSGSIZE) {
@@ -357,25 +371,61 @@ int32_t mq_send_fbs(Endpoint* endpoint, void* endpoint_channel, void* buffer,
     }
 
     /* Send the message/datagram. */
-    log_trace(
-        "MQ send: endpoint:%s, length: %d", push_desc->endpoint, sbuf.size);
-    rc = mq_ep->mq_send(push_desc, (char*)sbuf.data, (size_t)sbuf.size);
-    if (rc != 0) {
-        if (errno == 0) errno = ENODATA;
-        log_error("mq_send failed!");
+    if (endpoint_channel) {
+        /* Sending a Channel Message. */
+        MqDesc* push_desc = _get_push_mq(endpoint, model_uid);
+        assert(push_desc);
+        log_trace(
+            "MQ send: endpoint:%s, length: %d", push_desc->endpoint, sbuf.size);
+        rc = mq_ep->mq_send(push_desc, (char*)sbuf.data, (size_t)sbuf.size);
+        if (rc != 0) {
+            if (errno == 0) errno = ENODATA;
+            log_error("mq_send failed!");
+        }
+    } else {
+        if (!endpoint->bus_mode) {
+            MqDesc* push_desc = _get_push_mq(endpoint, model_uid);
+            assert(push_desc);
+            log_trace("MQ send: endpoint:%s, length: %d", push_desc->endpoint,
+                sbuf.size);
+            rc = mq_ep->mq_send(push_desc, (char*)sbuf.data, (size_t)sbuf.size);
+            if (rc != 0) {
+                if (errno == 0) errno = ENODATA;
+                log_error("mq_send failed!");
+            }
+
+        } else {
+            /* Sending a Notify Message to each model. */
+            char**   keys = hashmap_keys(&mq_ep->push_hash);
+            uint32_t count = hashmap_number_keys(mq_ep->push_hash);
+            for (uint32_t i = 0; i < count; i++) {
+                MqDesc* push_desc = hashmap_get(&mq_ep->push_hash, keys[i]);
+                rc = mq_ep->mq_send(
+                    push_desc, (char*)sbuf.data, (size_t)sbuf.size);
+                if (rc != 0) {
+                    if (errno == 0) errno = ENODATA;
+                    log_error("mq_send failed!");
+                }
+            }
+            for (uint32_t _ = 0; _ < count; _++)
+                free(keys[_]);
+            free(keys);
+        }
     }
+
+    /* Release the encoded datagram. */
     msgpack_sbuffer_destroy(&sbuf);
 
     return rc;
 }
 
 
-int32_t mq_recv_fbs(Endpoint* endpoint, void** adapter_channel,
+int32_t mq_recv_fbs(Endpoint* endpoint, const char** channel_name,
     uint8_t** buffer, uint32_t* buffer_length)
 {
     assert(endpoint);
     assert(endpoint->private);
-    assert(adapter_channel);
+    assert(channel_name);
     MqEndpoint* mq_ep = (MqEndpoint*)endpoint->private;
 
     if (mq_ep->mq_recv == NULL) log_fatal("MQ not configured");
@@ -386,10 +436,11 @@ int32_t mq_recv_fbs(Endpoint* endpoint, void** adapter_channel,
     struct timespec tm;
     int             timeout_counter = (int32_t)mq_ep->recv_timeout + 1;
 
+    *channel_name = NULL; /* Set the default return condition. */
+
     while (--timeout_counter) {
         if (__stop_request) {
             /* Request to exit. */
-            *adapter_channel = NULL;
             return 0;
         }
         /* Timed receive for 1 second (at a time). Normally no performance hit
@@ -418,14 +469,14 @@ int32_t mq_recv_fbs(Endpoint* endpoint, void** adapter_channel,
     }
     if (msg_len <= 0) {
         /* No message, queue is empty. */
-        *adapter_channel = NULL;
         return 0; /* Indicate that no message was received. */
     }
 
     /**
      * Decode as a MsgPack datagram:
-     *      MSG:Object[0]: channel name (string)
-     *      MSG:Object[1]: buffer (FBS) (bin)
+     *      MSG:Object[0]: message indicator (SBNO or SBCH) (string)
+     *      MSG:Object[1]: channel name (string)
+     *      MSG:Object[2]: buffer (FBS) (bin)
      */
     bool             result;
     msgpack_unpacker unpacker;
@@ -446,7 +497,7 @@ int32_t mq_recv_fbs(Endpoint* endpoint, void** adapter_channel,
     msgpack_unpack_return ret;
     msgpack_unpacked_init(&unpacked);
     msgpack_object obj;
-    /* Object[0]: channel name (string) */
+    /* Object[0]: message indicator (string) */
     ret = msgpack_unpacker_next(&unpacker, &unpacked);
     if (ret != MSGPACK_UNPACK_SUCCESS) {
         log_simbus("WARNING: data vector unpacked with unexpected return code! "
@@ -457,14 +508,34 @@ int32_t mq_recv_fbs(Endpoint* endpoint, void** adapter_channel,
     }
     obj = unpacked.data;
     assert(obj.type == MSGPACK_OBJECT_STR);
-    static char ch_name[100];
-    assert(obj.via.str.size < 100);
-    strncpy(ch_name, obj.via.str.ptr, obj.via.str.size);
-    ch_name[obj.via.str.size + 1] = '\0';
-    MqChannel* endpoint_channel =
-        hashmap_get(&endpoint->endpoint_channels, ch_name);
-    assert(endpoint_channel);
-    /* Object[1]: buffer (FBS) (bin) */
+    static char msg_ind[10];
+    assert(obj.via.str.size < 10);
+    strncpy(msg_ind, obj.via.str.ptr, obj.via.str.size);
+    msg_ind[obj.via.str.size + 1] = '\0';
+    /* Object[1]: channel name (string) */
+    ret = msgpack_unpacker_next(&unpacker, &unpacked);
+    if (ret != MSGPACK_UNPACK_SUCCESS) {
+        log_simbus("WARNING: data vector unpacked with unexpected return code! "
+                   "(ret=%d)",
+            ret);
+        log_error("MsgPack msgpack_unpacker_next failed!");
+        goto error_clean_up;
+    }
+    if (strcmp(msg_ind, "SBCH") == 0) {
+        obj = unpacked.data;
+        assert(obj.type == MSGPACK_OBJECT_STR);
+        static char ch_name[100];
+        assert(obj.via.str.size < 100);
+        strncpy(ch_name, obj.via.str.ptr, obj.via.str.size);
+        ch_name[obj.via.str.size + 1] = '\0';
+        MqChannel* endpoint_channel =
+            hashmap_get(&endpoint->endpoint_channels, ch_name);
+        assert(endpoint_channel);
+        *channel_name = endpoint_channel->channel_name;
+    } else {
+        /* Potential Notify message. */
+    }
+    /* Object[2]: buffer (FBS) (bin) */
     ret = msgpack_unpacker_next(&unpacker, &unpacked);
     if (ret != MSGPACK_UNPACK_SUCCESS) {
         log_simbus("WARNING: data vector unpacked with unexpected return code! "
@@ -488,7 +559,6 @@ int32_t mq_recv_fbs(Endpoint* endpoint, void** adapter_channel,
     }
     memset(*buffer, 0, *buffer_length);
     memcpy(*buffer, bin_ptr, bin_size);
-    *adapter_channel = endpoint_channel->adapter_channel;
     return_len = bin_size;
 
     /* Release any allocated objects. */
