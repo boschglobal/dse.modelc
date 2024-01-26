@@ -96,7 +96,7 @@ center footer Dynamic Simulation Environment
 ```c
 typedef struct BinaryCheck {
     int index;
-    int * buffer;
+    int* buffer;
     int len;
 }
 ```
@@ -116,11 +116,11 @@ typedef struct FrameCheck {
 
 ```c
 typedef struct ModelMock {
-    const char * name;
-    int * mi;
-    int * sv_signal;
-    int * sv_network;
-    int * sv_save;
+    const char* name;
+    int* mi;
+    int* sv_signal;
+    int* sv_network;
+    int* sv_save;
     int vtable;
 }
 ```
@@ -140,12 +140,12 @@ typedef struct SignalCheck {
 typedef struct SimMock {
     int sim;
     double step_size;
-    ModelMock * model;
-    void * doc_list;
+    ModelMock* model;
+    void* doc_list;
     double model_time;
-    int * sv_signal;
-    int * sv_network_rx;
-    int * sv_network_tx;
+    int* sv_signal;
+    int* sv_network_rx;
+    int* sv_network_tx;
 }
 ```
 

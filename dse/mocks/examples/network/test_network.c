@@ -1,11 +1,6 @@
-// Copyright 2023 Robert Bosch GmbH
-
 #include <dse/testing.h>
 #include <dse/logger.h>
-#include <fsil/runnable/runnable.h>
-#include <dse/ncodec/codec.h>
-#include <mocks/simmock.h>
-
+#include <dse/mocks/simmock.h>
 
 static int test_setup(void** state)
 {
@@ -25,14 +20,13 @@ static int test_setup(void** state)
     };
     SimMock* mock = simmock_alloc(inst_names, ARRAY_SIZE(inst_names));
     simmock_configure(mock, argv, ARRAY_SIZE(argv), ARRAY_SIZE(inst_names));
-    simmock_load(mock, true);
+    simmock_load(mock);
     simmock_setup(mock, "signal", "network");
 
     /* Return the mock. */
     *state = mock;
     return 0;
 }
-
 
 static int test_teardown(void** state)
 {
@@ -41,7 +35,6 @@ static int test_teardown(void** state)
     simmock_free(mock);
     return 0;
 }
-
 
 #define SIG_reset_counters  0
 #define SIG_task_init_done  1
@@ -54,10 +47,9 @@ static int test_teardown(void** state)
 #define SIG_task_20_counter 8
 #define SIG_task_40_counter 9
 
-
 void test_network__network2target2network(void** state)
 {
-    SimMock* mock = *state;
+    SimMock*   mock = *state;
     ModelMock* network_model = &mock->model[1];
     assert_non_null(network_model);
 
@@ -75,8 +67,10 @@ void test_network__network2target2network(void** state)
             { .index = SIG_task_20_active, .value = 0.0 },
             { .index = SIG_task_20_counter, .value = 0.0 },
         };
-        simmock_signal_check(mock, "target_inst", s_checks, ARRAY_SIZE(s_checks), NULL);
-        simmock_signal_check(mock, "network_inst", s_checks, ARRAY_SIZE(s_checks), NULL);
+        simmock_signal_check(
+            mock, "target_inst", s_checks, ARRAY_SIZE(s_checks), NULL);
+        simmock_signal_check(
+            mock, "network_inst", s_checks, ARRAY_SIZE(s_checks), NULL);
     }
     /* Inject a message carrying the reset_counters signal. */
     uint8_t buffer[8] = { 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
@@ -106,18 +100,20 @@ void test_network__network2target2network(void** state)
         simmock_print_scalar_signals(mock, LOG_DEBUG);
         simmock_print_network_frames(mock, LOG_DEBUG);
         assert_int_equal(network_model->sv_network->length[0] > 0, true);
-        simmock_signal_check(mock, "network_inst", s_checks, ARRAY_SIZE(s_checks), NULL);
-        simmock_frame_check(mock, "network_inst", "can_bus", f_checks, ARRAY_SIZE(f_checks));
+        simmock_signal_check(
+            mock, "network_inst", s_checks, ARRAY_SIZE(s_checks), NULL);
+        simmock_frame_check(
+            mock, "network_inst", "can_bus", f_checks, ARRAY_SIZE(f_checks));
     }
 }
 
-
 int run_network_tests(void)
 {
-    void* s = test_setup;
-    void* t = test_teardown;
+    void*                   s = test_setup;
+    void*                   t = test_teardown;
     const struct CMUnitTest tests[] = {
-        cmocka_unit_test_setup_teardown(test_network__network2target2network, s, t),
+        cmocka_unit_test_setup_teardown(
+            test_network__network2target2network, s, t),
     };
     return cmocka_run_group_tests_name("NETWORK", tests, NULL, NULL);
 }

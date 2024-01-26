@@ -14,5 +14,5 @@ add_subdirectory(gateway)
 
 # Code examples for documentation.
 if(UNIX)
-add_subdirectory(apis)
+add_subdirectory(doc)
 endif()

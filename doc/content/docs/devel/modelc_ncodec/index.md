@@ -94,66 +94,17 @@ spec:
 
 Additional configuration information is available [here](https://github.com/boschglobal/dse.standards/blob/main/dse/ncodec/libs/automotive-bus/README.md). Especially the behaviour of `bus_id`,`node_id`and `interface_id` configuration items are described.
 
-
 Configuration items can also be set at runtime with the `ncodec_config()` API as the following example shows:
 
-```c
-#include <dse/modelc/model.h>
-#include <dse/ncodec/codec.h>
+{{< readfile file="../../examples/modelc/ncodec/ncodec_config.c" code="true" lang="c" >}}
 
-
-static void _setup_node_id(SignalVector* sv, uint32_t idx)
-{
-    const char* v = sv->annotation(sv, idx, "node_id");
-    if (v) {
-        NCODEC* nc = sv->codec(sv, idx);
-        ncodec_config(nc, (struct NCodecConfigItem){
-            .name = "node_id",
-            .value = v,
-        });
-    }
-}
-```
 
 ### Usage in Model Code
 
 The Network Codec integration is fairly easy to use. The general approach is as follows:
 
-```c
-#include <dse/modelc/model.h>
-#include <dse/ncodec/codec.h>
+{{< readfile file="../../examples/modelc/ncodec/ncodec_model.c" code="true" lang="c" >}}
 
-
-void do_bus_rx(SignalVector* sv, uint32_t idx)
-{
-    NCODEC* nc = sv->codec(sv, idx);
-
-    while (1) {
-        NCodecMessage msg = {};
-        len = ncodec_read(nc, &msg);
-        if (len < 0) break;
-        put_rx_frame_to_queue(msg.frame_id, msg.buffer, msg.len);
-    }
-}
-
-void do_bus_tx(SignalVector* sv, uint32_t idx)
-{
-    uint32_t id;
-    uint8_t* msg;
-    size_t len;
-    NCODEC* nc = sv->codec(sv, idx);
-
-    while (get_tx_frame_from_queue(&id, &msg, &len)) {
-        ncodec_write(nc, &(struct NCodecMessage){
-            .frame_id = id,
-            .buffer = msg,
-            .len = len,
-        });
-    }
-    ncodec_flush(nc);
-}
-
-```
 
 ### Usage in Test Cases
 
@@ -163,60 +114,4 @@ particularly useful for testing messaging behaviour of a model under specific
 circumstances. When doing this its necessary to circumvent the `node_id`
 filtering of that codec, as the following example illustrates.
 
-```c
-#include <dse/testing.h>
-#include <dse/modelc/model.h>
-#include <dse/ncodec/codec.h>
-
-
-char* get_ncodec_node_id(NCODEC* nc)
-{
-    assert_non_null(nc);
-    int index = 0;
-    char* node_id = NULL;
-    while (index >= 0) {
-        NCodecConfigItem ci = ncodec_stat(nc, &index);
-        if (strcmp(ci.name, "node_id") == 0) {
-            node_id = ci.value;
-            break;
-        }
-        index++;
-    }
-    if (node_id) return strdup(node_id);
-    return NULL;
-}
-
-void set_ncodec_node_id(NCODEC* nc, char* node_id)
-{
-    assert_non_null(nc);
-    ncodec_config(nc, (struct NCodecConfigItem){
-        .name = "node_id",
-        .value = node_id,
-    });
-}
-
-void test_message_sequence(void** state)
-{
-    ModelCMock* mock = *state;
-    NCODEC*     nc = sv->codec(sv, idx);
-
-    // ...
-
-    // Modify the node_id.
-    char* node_id_save = get_ncodec_node_id(nc);
-    set_ncodec_node_id(nc, "42");
-    // Send a message (which will not be filtered).
-    ncodec_write(nc, &(struct NCodecMessage){
-        .frame_id = frame_id,
-        .buffer = data,
-        .len = len,
-    });
-    ncodec_flush(nc);
-    // Restore the existing node_id.
-    set_ncodec_node_id(nc, node_id_save);
-    free(node_id_save);
-
-    // ...
-}
-
-```
+{{< readfile file="../../examples/modelc/ncodec/ncodec_test.c" code="true" lang="c" >}}

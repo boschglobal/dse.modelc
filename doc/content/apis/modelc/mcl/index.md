@@ -58,7 +58,7 @@ center footer Dynamic Simulation Environment
 
 ```c
 typedef struct MclAdapterDesc {
-    const char * name;
+    const char* name;
     MclLoadHandler load_func;
     MclInitHandler init_func;
     MclStepHandler step_func;
@@ -70,9 +70,9 @@ typedef struct MclAdapterDesc {
 
 ```c
 typedef struct MclInstanceDesc {
-    int * model_instance;
-    int * mcl_channel_sv;
-    MclStrategyDesc * strategy;
+    int* model_instance;
+    int* mcl_channel_sv;
+    MclStrategyDesc* strategy;
     int models;
 }
 ```
@@ -81,17 +81,17 @@ typedef struct MclInstanceDesc {
 
 ```c
 typedef struct MclModelDesc {
-    const char * name;
-    int * model_doc;
-    char * path;
-    void * handle;
-    double * vector_double;
-    void ** vector_binary;
+    const char* name;
+    int* model_doc;
+    char* path;
+    void* handle;
+    double* vector_double;
+    void** vector_binary;
     double model_time;
     double model_time_correction;
     double step_size;
-    MclAdapterDesc * adapter;
-    void * private;
+    MclAdapterDesc* adapter;
+    void* private;
 }
 ```
 
@@ -99,14 +99,14 @@ typedef struct MclModelDesc {
 
 ```c
 typedef struct MclStrategyDesc {
-    const char * name;
+    const char* name;
     double model_time;
     double stop_time;
     MclExecuteMethod execute;
     MclExecuteHandler execute_func;
     MclMarshallOutHandler marshall_out_func;
     MclMarshallInHandler marshall_in_func;
-    MclInstanceDesc * mcl_instance;
+    MclInstanceDesc* mcl_instance;
 }
 ```
 

@@ -204,7 +204,7 @@ super-linter:
 		--env RUN_LOCAL=true \
 		--env DEFAULT_BRANCH=main \
 		--env IGNORE_GITIGNORED_FILES=true \
-		--env FILTER_REGEX_EXCLUDE="(dse/modelc/examples/apis/.*|doc/content/apis/modelc/examples/.*)" \
+		--env FILTER_REGEX_EXCLUDE="(dse/mocks/examples/.*|dse/modelc/examples/doc/.*|doc/content/apis/modelc/examples/.*|doc/content/docs/examples/modelc/.*)" \
 		--env VALIDATE_CPP=true \
 		--env VALIDATE_YAML=true \
 		--env VALIDATE_PYTHON_PYLINT=true \

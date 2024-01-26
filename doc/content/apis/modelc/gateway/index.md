@@ -59,11 +59,11 @@ center footer Dynamic Simulation Environment
 
 ```c
 typedef struct ModelGatewayDesc {
-    int * sim;
-    int * mi;
-    int * sv;
-    const char ** argv;
-    char * name_arg;
+    int* sim;
+    int* mi;
+    int* sv;
+    const char** argv;
+    char* name_arg;
 }
 ```
 

@@ -73,9 +73,14 @@ DOC_C_MODULES := gateway mcl model runtime schema simmock
 
 .PHONY: examples
 examples:
+# API Examples
 	cd ..;mkdir -p doc/content/apis/modelc/examples
 	cd ..;cp dse/modelc/examples/gateway/gateway.c doc/content/apis/modelc/examples/gateway.c
-	cd ..;cp dse/modelc/examples/apis/*.c doc/content/apis/modelc/examples
+	cd ..;cp dse/modelc/examples/doc/apis/*.c doc/content/apis/modelc/examples
+# DOC Examples
+	cd ..;mkdir -p doc/content/docs/examples/modelc/mocks
+	cd ..;find dse/mocks/examples/* -type d | xargs -I % cp -r % doc/content/docs/examples/modelc/mocks
+	cd ..;find dse/modelc/examples/doc/docs/* -type d | xargs -I % cp -r % doc/content/docs/examples/modelc
 
 .PHONY: index
 index:

@@ -26,9 +26,9 @@ Model Developer is able to easily develop CMocka Testcases which:
 ### Example Test Files
 
 <details>
-<summary>tests/cmocka/network/test_network.c</summary>
+<summary>network/test_network.c</summary>
 
-{{< readfile file="examples/tests/cmocka/network/test_network.c" code="true" lang="c" >}}
+{{< readfile file="../../examples/modelc/mocks/network/test_network.c" code="true" lang="c" >}}
 
 </details>
 

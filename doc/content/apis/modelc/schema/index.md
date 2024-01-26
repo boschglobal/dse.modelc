@@ -16,8 +16,8 @@ documents which represent (some of) the Schemas of the Model C Library.
 
 ```c
 typedef struct SchemaLabel {
-    const char * name;
-    const char * value;
+    const char* name;
+    const char* value;
 }
 ```
 
@@ -25,10 +25,10 @@ typedef struct SchemaLabel {
 
 ```c
 typedef struct SchemaObject {
-    const char * kind;
-    const char * name;
-    void * doc;
-    void * data;
+    const char* kind;
+    const char* name;
+    void* doc;
+    void* data;
 }
 ```
 
@@ -36,11 +36,11 @@ typedef struct SchemaObject {
 
 ```c
 typedef struct SchemaObjectSelector {
-    const char * kind;
-    const char * name;
-    SchemaLabel * labels;
+    const char* kind;
+    const char* name;
+    SchemaLabel* labels;
     int labels_len;
-    void * data;
+    void* data;
 }
 ```
 
@@ -48,8 +48,8 @@ typedef struct SchemaObjectSelector {
 
 ```c
 typedef struct SchemaSignalObject {
-    const char * signal;
-    void * data;
+    const char* signal;
+    void* data;
 }
 ```
 

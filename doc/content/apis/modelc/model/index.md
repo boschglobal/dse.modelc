@@ -100,9 +100,9 @@ center footer Dynamic Simulation Environment
 typedef struct ModelDesc {
     ModelVTable vtable;
     ModelIndex index;
-    SimulationSpec * sim;
-    ModelInstanceSpec * mi;
-    SignalVector * sv;
+    SimulationSpec* sim;
+    ModelInstanceSpec* mi;
+    SignalVector* sv;
 }
 ```
 
@@ -110,9 +110,9 @@ typedef struct ModelDesc {
 
 ```c
 typedef struct ModelSignalIndex {
-    SignalVector * sv;
-    double * scalar;
-    void ** binary;
+    SignalVector* sv;
+    double* scalar;
+    void** binary;
     uint32_t vector;
     uint32_t signal;
 }
@@ -133,18 +133,18 @@ typedef struct ModelVTable {
 
 ```c
 typedef struct SignalVector {
-    const char * name;
-    const char * alias;
-    const char * function_name;
+    const char* name;
+    const char* alias;
+    const char* function_name;
     _Bool is_binary;
     uint32_t count;
-    const char ** signal;
+    const char** signal;
     BinarySignalAppendFunc append;
     BinarySignalResetFunc reset;
     BinarySignalReleaseFunc release;
     SignalAnnotationGetFunc annotation;
     BinarySignalCodecFunc codec;
-    ModelInstanceSpec * mi;
+    ModelInstanceSpec* mi;
 }
 ```
 

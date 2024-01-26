@@ -1,7 +1,6 @@
 // Copyright 2024 Robert Bosch GmbH
 //
 // SPDX-License-Identifier: Apache-2.0
-// SPDX-License-Identifier: BIOS-4.0
 
 #include <unistd.h>
 #include <stdbool.h>

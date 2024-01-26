@@ -17,9 +17,9 @@ which can be used to load, configure and execute a model.
 
 ```c
 typedef struct ChannelSpec {
-    const char * name;
-    const char * alias;
-    void * private;
+    const char* name;
+    const char* alias;
+    void* private;
 }
 ```
 
@@ -27,19 +27,19 @@ typedef struct ChannelSpec {
 
 ```c
 typedef struct ModelCArguments {
-    const char * transport;
-    char * uri;
-    const char * host;
+    const char* transport;
+    char* uri;
+    const char* host;
     int port;
     double timeout;
     int log_level;
     double step_size;
     double end_time;
     int uid;
-    const char * name;
-    const char * file;
-    const char * path;
-    void * yaml_doc_list;
+    const char* name;
+    const char* file;
+    const char* path;
+    void* yaml_doc_list;
     int timeout_set_by_cli;
     int log_level_set_by_cli;
     int steps;
@@ -50,16 +50,16 @@ typedef struct ModelCArguments {
 
 ```c
 typedef struct ModelChannelDesc {
-    const char * name;
-    const char * function_name;
-    const char ** signal_names;
+    const char* name;
+    const char* function_name;
+    const char** signal_names;
     int signal_count;
     int propagator_source_channel;
     int propagator_target_channel;
-    double * vector_double;
-    void ** vector_binary;
-    int * vector_binary_size;
-    int * vector_binary_buffer_size;
+    double* vector_double;
+    void** vector_binary;
+    int* vector_binary_size;
+    int* vector_binary_buffer_size;
 }
 ```
 
@@ -67,12 +67,12 @@ typedef struct ModelChannelDesc {
 
 ```c
 typedef struct ModelDefinitionSpec {
-    const char * name;
-    const char * path;
-    const char * file;
-    char * full_path;
-    void * doc;
-    void * channels;
+    const char* name;
+    const char* path;
+    const char* file;
+    char* full_path;
+    void* doc;
+    void* channels;
 }
 ```
 
@@ -81,12 +81,12 @@ typedef struct ModelDefinitionSpec {
 ```c
 typedef struct ModelInstanceSpec {
     int uid;
-    char * name;
-    int * model_desc;
+    char* name;
+    int* model_desc;
     ModelDefinitionSpec model_definition;
-    void * spec;
-    void * yaml_doc_list;
-    void * private;
+    void* spec;
+    void* yaml_doc_list;
+    void* private;
 }
 ```
 
@@ -94,13 +94,13 @@ typedef struct ModelInstanceSpec {
 
 ```c
 typedef struct SimulationSpec {
-    const char * transport;
-    char * uri;
+    const char* transport;
+    char* uri;
     int uid;
     double timeout;
     double step_size;
     double end_time;
-    ModelInstanceSpec * instance_list;
+    ModelInstanceSpec* instance_list;
 }
 ```
 

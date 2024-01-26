@@ -26,3 +26,9 @@ target_include_directories(mocks
         ${DSE_NCODEC_INCLUDE_DIR}
         ../..
 )
+
+
+# Code examples for documentation.
+if(UNIX)
+add_subdirectory(examples)
+endif()
