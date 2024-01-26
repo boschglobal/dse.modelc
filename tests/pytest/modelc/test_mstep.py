@@ -19,13 +19,12 @@ USE_VALGRIND = True
 MODELC_SANDBOX_DIR = os.getenv('MODELC_SANDBOX_DIR')
 MSTEP_EXE = MODELC_SANDBOX_DIR+'/bin/mstep'
 
-# Sandbox for the Dynamic Model (test basis).
-MODEL_SANDBOX_DIR = os.getenv('MODELC_SANDBOX_DIR')+'/examples/dynamic'
-DYNAMIC_MODEL_INST = 'dynamic_model_instance'
+# Sandbox for the Minimal Model (test basis).
+MODEL_SANDBOX_DIR = os.getenv('MODELC_SANDBOX_DIR')+'/examples/minimal'
+DYNAMIC_MODEL_INST = 'minimal_inst'
 DYNAMIC_MODEL_YAML = 'data/model.yaml'
-DYNAMIC_MODEL_LIB = 'lib/dynamic_model.so'  # Not used, see model.yaml.
-SIGNAL_GROUP_YAML = 'data/signal_group.yaml'
-STACK_YAML = 'data/stack.yaml'
+DYNAMIC_MODEL_LIB = 'lib/libminimal.so'  # Not used, see model.yaml.
+STACK_YAML = 'data/simulation.yaml'
 
 
 async def run(dir, cmd):
@@ -46,7 +45,7 @@ async def main():
     result_list = await asyncio.gather(
         asyncio.wait_for(
             run(
-                MODEL_SANDBOX_DIR, f'{MSTEP_EXE} --logger 2 --name {DYNAMIC_MODEL_INST} ' + f'{DYNAMIC_MODEL_YAML} ' + f'{STACK_YAML} ' + f'{SIGNAL_GROUP_YAML} ' + ''), timeout=TIMEOUT),
+                MODEL_SANDBOX_DIR, f'{MSTEP_EXE} --logger 2 --name {DYNAMIC_MODEL_INST} ' + f'{DYNAMIC_MODEL_YAML} ' + f'{STACK_YAML} ' + ''), timeout=TIMEOUT),
                 )
     for result in result_list:
         print('************************************************************')
@@ -64,11 +63,9 @@ async def main():
 
     for result in result_list:
         assert result['rc'] == 0
-        assert 'value: 12' in result['stdout']
-        assert 'value: 42' in result['stdout']
+        assert 'value: 10' in result['stdout']
         assert 'Starting Simulation (for 10 steps) ...' in result['stdout']
-        assert 'Model Function: example' in result['stdout']
-        assert 'Model function model_exit called' in result['stdout']
+        assert 'Model Function: model_step' in result['stdout']
 
 
 if __name__ == '__main__':

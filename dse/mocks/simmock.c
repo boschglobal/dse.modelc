@@ -7,13 +7,14 @@
 #include <stdbool.h>
 #include <string.h>
 #include <dse/testing.h>
+#include <dse/clib/util/yaml.h>
 #include <dse/ncodec/codec.h>
 #include <dse/mocks/simmock.h>
 
 
 /* Private interface from ncodec.c */
-extern void* _create_stream(SignalVector* sv, uint32_t idx);
-extern void  _free_stream(void* stream);
+extern void* model_sv_stream_create(SignalVector* sv, uint32_t idx);
+extern void  model_sv_stream_destroy(void* stream);
 
 /* Private interface from dse/modelc/controller/step.c */
 extern int step_model(ModelInstanceSpec* mi, double* model_time);
@@ -85,7 +86,7 @@ static void __free_stub_sv(SignalVector* sv)
         if (sv->binary[i]) free(sv->binary[i]);
         NCodecInstance* nc = sv->ncodec[i];
         if (nc) {
-            if (nc->stream) _free_stream(nc->stream);
+            if (nc->stream) model_sv_stream_destroy(nc->stream);
             ncodec_close((NCODEC*)nc);
         }
     }
@@ -183,10 +184,8 @@ Parameters
 mock (SimMock*)
 : A SimMock object.
 
-expect_exit_function (bool)
-: Indicate that model libraries should contain a `model_exit` function.
 */
-void simmock_load(SimMock* mock, bool expect_exit_func)
+void simmock_load(SimMock* mock)
 {
     assert_non_null(mock);
 
@@ -197,11 +196,11 @@ void simmock_load(SimMock* mock, bool expect_exit_func)
 
         void* handle = dlopen(
             model->mi->model_definition.full_path, RTLD_NOW | RTLD_LOCAL);
+        if (handle == NULL) log_notice("ERROR: dlopen call: %s", dlerror());
         assert_non_null(handle);
-        model->model_setup_func = dlsym(handle, MODEL_SETUP_FUNC_STR);
-        model->model_exit_func = dlsym(handle, MODEL_EXIT_FUNC_STR);
-        assert_non_null(model->model_setup_func);
-        if (expect_exit_func) assert_non_null(model->model_exit_func);
+        model->vtable.create = dlsym(handle, MODEL_CREATE_FUNC_NAME);
+        model->vtable.step = dlsym(handle, MODEL_STEP_FUNC_NAME);
+        model->vtable.destroy = dlsym(handle, MODEL_DESTROY_FUNC_NAME);
     }
 
     /* Save a doc_list reference for simmock_free(). */
@@ -209,8 +208,43 @@ void simmock_load(SimMock* mock, bool expect_exit_func)
 }
 
 
+/**
+simmock_load_model_check
+========================
+
+Check the condition/state of a loaded model.
+
+Parameters
+----------
+mock (SimMock*)
+: A SimMock object.
+
+expect_create_func (bool)
+: Indicate that model libraries should contain a `model_create` function.
+
+expect_step_func (bool)
+: Indicate that model libraries should contain a `model_step` function.
+
+expect_destroy_func (bool)
+: Indicate that model libraries should contain a `model_destroy` function.
+*/
+void simmock_load_model_check(ModelMock* model, bool expect_create_func,
+    bool expect_step_func, bool expect_destroy_func)
+{
+    assert_non_null(model);
+
+    log_debug("Load model check: %s", model->name);
+    assert_non_null(model->mi);
+
+    if (expect_create_func) assert_non_null(model->vtable.create);
+    if (expect_step_func) assert_non_null(model->vtable.step);
+    if (expect_destroy_func) assert_non_null(model->vtable.destroy);
+}
+
+
 static SignalVector* __stub_sv(SignalVector* sv)
 {
+    if (sv == NULL) return NULL;
     SignalVector* stub_sv = calloc(1, sizeof(SignalVector));
 
     stub_sv->mi = sv->mi;
@@ -232,12 +266,12 @@ static SignalVector* __stub_sv(SignalVector* sv)
     for (uint32_t i = 0; i < stub_sv->count; i++) {
         stub_sv->signal[i] = sv->signal[i];
         stub_sv->mime_type[i] = sv->mime_type[i];
-        void*   stream = _create_stream(stub_sv, i);
+        void*   stream = model_sv_stream_create(stub_sv, i);
         NCODEC* nc = ncodec_open(stub_sv->mime_type[i], stream);
         if (nc) {
             stub_sv->ncodec[i] = nc;
         } else {
-            _free_stream(stream);
+            model_sv_stream_destroy(stream);
         }
     }
 
@@ -266,13 +300,25 @@ sig_name (const char*)
 void simmock_setup(SimMock* mock, const char* sig_name, const char* net_name)
 {
     assert_non_null(mock);
+    SignalVector* sv = NULL;
 
     for (ModelMock* model = mock->model; model->name; model++) {
-        log_debug("Call model_setup(): %s", model->name);
-        int rc = model->model_setup_func(model->mi);
+        log_debug("Setup the Model: %s", model->name);
+        log_debug("Call modelc_model_create(): %s", model->name);
+        int rc = modelc_model_create(&mock->sim, model->mi, &model->vtable);
         assert_int_equal(rc, 0);
-        SignalVector* sv = model_sv_create(model->mi);
-        model->sv_save = sv;
+
+        assert_non_null(model->mi->model_desc);
+        assert_ptr_equal(&mock->sim, model->mi->model_desc->sim);
+        assert_ptr_equal(model->mi, model->mi->model_desc->mi);
+        assert_ptr_equal(
+            model->vtable.create, model->mi->model_desc->vtable.create);
+        assert_ptr_equal(
+            model->vtable.step, model->mi->model_desc->vtable.step);
+        assert_ptr_equal(
+            model->vtable.destroy, model->mi->model_desc->vtable.destroy);
+        assert_non_null(model->mi->model_desc->sv);
+        model->sv_save = sv = model->mi->model_desc->sv;
 
         /* Locate the vectors ... */
         while (sv && sv->name) {
@@ -286,14 +332,18 @@ void simmock_setup(SimMock* mock, const char* sig_name, const char* net_name)
     }
 
     /* Setup the mocked signal exchange. */
-    mock->sv_signal = calloc(1, sizeof(SignalVector));
-    mock->sv_signal->count = mock->model->sv_signal->count;
-    mock->sv_signal->scalar = calloc(mock->sv_signal->count, sizeof(double));
-    memcpy(mock->sv_signal->scalar, mock->model->sv_signal->scalar,
-        (mock->sv_signal->count * sizeof(double)));
-
-    mock->sv_network_rx = __stub_sv(mock->model->sv_network);
-    mock->sv_network_tx = __stub_sv(mock->model->sv_network);
+    if (mock->model->sv_signal) {
+        mock->sv_signal = calloc(1, sizeof(SignalVector));
+        mock->sv_signal->count = mock->model->sv_signal->count;
+        mock->sv_signal->scalar =
+            calloc(mock->sv_signal->count, sizeof(double));
+        memcpy(mock->sv_signal->scalar, mock->model->sv_signal->scalar,
+            (mock->sv_signal->count * sizeof(double)));
+    }
+    if (mock->model->sv_network) {
+        mock->sv_network_rx = __stub_sv(mock->model->sv_network);
+        mock->sv_network_tx = __stub_sv(mock->model->sv_network);
+    }
 }
 
 
@@ -323,11 +373,13 @@ int simmock_step(SimMock* mock, bool assert_rc)
     assert_non_null(mock);
 
     /* Copy simmock->binary_tx to simmock->binary_rx */
-    for (uint32_t i = 0; i < mock->sv_network_tx->count; i++) {
-        mock->sv_network_rx->reset(mock->sv_network_rx, i);
-        mock->sv_network_rx->append(mock->sv_network_rx, i,
-            mock->sv_network_tx->binary[i], mock->sv_network_tx->length[i]);
-        mock->sv_network_tx->reset(mock->sv_network_tx, i);
+    if (mock->sv_network_rx && mock->sv_network_tx) {
+        for (uint32_t i = 0; i < mock->sv_network_tx->count; i++) {
+            mock->sv_network_rx->reset(mock->sv_network_rx, i);
+            mock->sv_network_rx->append(mock->sv_network_rx, i,
+                mock->sv_network_tx->binary[i], mock->sv_network_tx->length[i]);
+            mock->sv_network_tx->reset(mock->sv_network_tx, i);
+        }
     }
 
     int rc = 0;
@@ -337,24 +389,31 @@ int simmock_step(SimMock* mock, bool assert_rc)
             model->sv_signal->scalar[i] = mock->sv_signal->scalar[i];
         }
         /* Copy binary from simmock->binary_rx. */
-        for (uint32_t i = 0; i < mock->sv_network_tx->count; i++) {
-            model->sv_network->reset(model->sv_network, i);
-            model->sv_network->append(model->sv_network, i,
-                mock->sv_network_rx->binary[i], mock->sv_network_rx->length[i]);
+        if (mock->sv_network_rx && mock->sv_network_tx) {
+            for (uint32_t i = 0; i < mock->sv_network_tx->count; i++) {
+                model->sv_network->reset(model->sv_network, i);
+                model->sv_network->append(model->sv_network, i,
+                    mock->sv_network_rx->binary[i],
+                    mock->sv_network_rx->length[i]);
+            }
         }
         rc |= modelc_step(model->mi, mock->step_size);
-        for (uint32_t i = 0; i < model->sv_network->count; i++) {
-            mock->sv_network_tx->append(mock->sv_network_tx, i,
-                model->sv_network->binary[i], model->sv_network->length[i]);
+        if (mock->sv_network_rx && mock->sv_network_tx) {
+            for (uint32_t i = 0; i < model->sv_network->count; i++) {
+                mock->sv_network_tx->append(mock->sv_network_tx, i,
+                    model->sv_network->binary[i], model->sv_network->length[i]);
+            }
         }
         /* Copy scalars to simmock->scalars. */
         for (uint32_t i = 0; i < mock->sv_signal->count; i++) {
             mock->sv_signal->scalar[i] = model->sv_signal->scalar[i];
         }
         /* Copy binary to simmock->binary_tx. */
-        for (uint32_t i = 0; i < mock->sv_network_tx->count; i++) {
-            mock->sv_network_tx->append(mock->sv_network_tx, i,
-                model->sv_network->binary[i], model->sv_network->length[i]);
+        if (mock->sv_network_rx && mock->sv_network_tx) {
+            for (uint32_t i = 0; i < mock->sv_network_tx->count; i++) {
+                mock->sv_network_tx->append(mock->sv_network_tx, i,
+                    model->sv_network->binary[i], model->sv_network->length[i]);
+            }
         }
         if (assert_rc) assert_int_equal(rc, 0);
     }
@@ -377,15 +436,6 @@ mock (SimMock*)
 void simmock_exit(SimMock* mock)
 {
     assert_non_null(mock);
-
-    for (ModelMock* model = mock->model; model->name; model++) {
-        log_debug("Call model_exit(): %s", model->name);
-        if (model->model_exit_func) {
-            int rc = model->model_exit_func(model->mi);
-            assert_int_equal(rc, 0);
-        }
-        if (model->sv_save) model_sv_destroy(model->sv_save);
-    }
     modelc_exit(&mock->sim);
 }
 
@@ -463,6 +513,53 @@ void simmock_signal_check(SimMock* mock, const char* model_name,
             assert_true(checks[i].index < check_model->sv_signal->count);
             assert_double_equal(check_model->sv_signal->scalar[checks[i].index],
                 checks[i].value, 0.0);
+        }
+    }
+}
+
+
+/**
+simmock_binary_check
+====================
+
+Check the content of a binary signal.
+
+Parameters
+----------
+mock (SimMock*)
+: A SimMock object.
+
+model_name (const char*)
+: The name of the model to check.
+
+checks (BinaryCheck*)
+: Array of BinaryCheck objects.
+
+count (size_t)
+: The number elements in the checks array.
+
+func (BinaryCheckFunc)
+: Optional function pointer for performing the binary check.
+*/
+void simmock_binary_check(SimMock* mock, const char* model_name,
+    BinaryCheck* checks, size_t count, BinaryCheckFunc func)
+{
+    assert_non_null(mock);
+    ModelMock* check_model = simmock_find_model(mock, model_name);
+    assert_non_null(check_model);
+
+    SignalVector* sv = check_model->sv_network;
+    for (size_t i = 0; i < count; i++) {
+        if (func) {
+            int rc = func(&checks[i], sv);
+            assert_int_equal(rc, 0);
+        } else {
+            assert_true(checks[i].index < sv->count);
+            assert_int_equal(sv->length[checks[i].index], checks[i].len);
+            if (sv->binary[checks[i].index]) {
+                assert_memory_equal(sv->binary[checks[i].index],
+                    checks[i].buffer, checks[i].len);
+            }
         }
     }
 }
@@ -687,6 +784,47 @@ void simmock_print_scalar_signals(SimMock* mock, int level)
         for (uint32_t i = 0; i < model->sv_signal->count; i++) {
             log_at(level, "  [%d] %s = %f", i, model->sv_signal->signal[i],
                 model->sv_signal->scalar[i]);
+        }
+    }
+}
+
+
+/**
+simmock_print_binary_signals
+============================
+
+Print the binary signals contained in each network vector of each model.
+
+Parameters
+----------
+mock (SimMock*)
+: A SimMock object.
+
+level (int)
+: The log level to print at.
+*/
+void simmock_print_binary_signals(SimMock* mock, int level)
+{
+    assert_non_null(mock);
+
+    log_at(level, "SignalVector (Network) at %f:", mock->model_time);
+    for (ModelMock* model = mock->model; model->name; model++) {
+        log_at(level, " Model Instance: %s", model->name);
+        SignalVector* sv = model->sv_network;
+        for (uint32_t idx = 0; idx < sv->count; idx++) {
+            log_at(level, "  Network Signal: %s (%d)", sv->signal[idx],
+                sv->length[idx]);
+            uint8_t* b = sv->binary[idx];
+            for (uint32_t i = 0; i < sv->length[idx]; i += 8) {
+                char buffer[100] = {};
+                for (uint32_t j = i; j < i + 8; j++) {
+                    if (j < sv->length[idx]) {
+                        snprintf(buffer + strlen(buffer),
+                            sizeof(buffer + strlen(buffer)), "%02x ", b[j]);
+                    }
+                }
+                log_at(level, "%s", buffer);
+            }
         }
     }
 }

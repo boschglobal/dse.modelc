@@ -91,6 +91,16 @@ center footer Dynamic Simulation Environment
 
 ## Typedefs
 
+### BinaryCheck
+
+```c
+typedef struct BinaryCheck {
+    int index;
+    int * buffer;
+    int len;
+}
+```
+
 ### FrameCheck
 
 ```c
@@ -98,6 +108,7 @@ typedef struct FrameCheck {
     int frame_id;
     int offset;
     int value;
+    bool not_present;
 }
 ```
 
@@ -110,8 +121,7 @@ typedef struct ModelMock {
     int * sv_signal;
     int * sv_network;
     int * sv_save;
-    int model_setup_func;
-    int model_exit_func;
+    int vtable;
 }
 ```
 
@@ -158,6 +168,29 @@ count (size_t)
 
 SimMock*
 : The allocated SimMock object. Caller should free by calling `simmock_free()`.
+
+
+
+### simmock_binary_check
+
+Check the content of a binary signal.
+
+#### Parameters
+
+mock (SimMock*)
+: A SimMock object.
+
+model_name (const char*)
+: The name of the model to check.
+
+checks (BinaryCheck*)
+: Array of BinaryCheck objects.
+
+count (size_t)
+: The number elements in the checks array.
+
+func (BinaryCheckFunc)
+: Optional function pointer for performing the binary check.
 
 
 
@@ -270,8 +303,40 @@ Load all of the models referenced by a SimMock object.
 mock (SimMock*)
 : A SimMock object.
 
-expect_exit_function (bool)
-: Indicate that model libraries should contain a `model_exit` function.
+
+
+
+### simmock_load_model_check
+
+Check the condition/state of a loaded model.
+
+#### Parameters
+
+mock (SimMock*)
+: A SimMock object.
+
+expect_create_func (bool)
+: Indicate that model libraries should contain a `model_create` function.
+
+expect_step_func (bool)
+: Indicate that model libraries should contain a `model_step` function.
+
+expect_destroy_func (bool)
+: Indicate that model libraries should contain a `model_destroy` function.
+
+
+
+### simmock_print_binary_signals
+
+Print the binary signals contained in each network vector of each model.
+
+#### Parameters
+
+mock (SimMock*)
+: A SimMock object.
+
+level (int)
+: The log level to print at.
 
 
 

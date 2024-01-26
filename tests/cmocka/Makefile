@@ -24,6 +24,7 @@ build:
 
 run:
 	cd build/_out; $(GDB_CMD) bin/test_model
+	cd build/_out; $(GDB_CMD) bin/test_model_interface
 
 clean:
 	rm -rf build

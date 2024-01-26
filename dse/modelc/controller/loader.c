@@ -10,15 +10,15 @@
 #include <dse/logger.h>
 #include <dse/modelc/controller/controller.h>
 #include <dse/modelc/controller/model_private.h>
+#include <dse/modelc/model.h>
 
 
 extern Controller* controller_object_ref(void);
 
-static ModelSetupHandler __model_setup_func = NULL;
-static ModelExitHandler  __model_exit_func = NULL;
 
-extern int __model_gw_setup__(ModelInstanceSpec* mi);
-extern int __model_gw_exit__(ModelInstanceSpec* mi);
+extern ModelDesc* __model_gw_create__(ModelDesc* m);
+extern int __model_gw_step__(ModelDesc* m, double* model_time, double stop_time);
+extern void __model_gw_destroy__(ModelDesc* m);
 
 
 int controller_load_model(ModelInstanceSpec* model_instance)
@@ -27,8 +27,6 @@ int controller_load_model(ModelInstanceSpec* model_instance)
     ModelInstancePrivate* mip = model_instance->private;
     ControllerModel*      controller_model = mip->controller_model;
     assert(controller_model);
-    ModelSetupHandler model_setup_func = NULL;
-    ModelExitHandler  model_exit_func = NULL;
     const char* dynlib_filename = model_instance->model_definition.full_path;
 
     errno = 0;
@@ -40,32 +38,28 @@ int controller_load_model(ModelInstanceSpec* model_instance)
             log_notice("ERROR: dlopen call: %s", dlerror());
             goto error_dl;
         }
-        log_notice("Loading symbol: %s ...", MODEL_SETUP_FUNC_STR);
-        model_setup_func = dlsym(handle, MODEL_SETUP_FUNC_STR);
-        if (model_setup_func == NULL) {
-            log_notice("ERROR: dlsym call: %s", dlerror());
-            goto error_dl;
-        }
-        log_notice("Loading optional symbol: %s ...", MODEL_EXIT_FUNC_STR);
-        model_exit_func = dlsym(handle, MODEL_EXIT_FUNC_STR);
-        if (model_exit_func) {
-            log_debug("... symbol loaded");
-        }
+        /* Load the model interface.*/
+        controller_model->vtable.create = dlsym(handle, MODEL_CREATE_FUNC_NAME);
+        log_notice("Loading symbol: %s ... %s", MODEL_CREATE_FUNC_NAME,
+            controller_model->vtable.create ? "ok" : "not found");
+        controller_model->vtable.step = dlsym(handle, MODEL_STEP_FUNC_NAME);
+        log_notice("Loading symbol: %s ... %s", MODEL_STEP_FUNC_NAME,
+            controller_model->vtable.step ? "ok" : "not found");
+        controller_model->vtable.destroy =
+            dlsym(handle, MODEL_DESTROY_FUNC_NAME);
+        log_notice("Loading symbol: %s ... %s", MODEL_DESTROY_FUNC_NAME,
+            controller_model->vtable.destroy ? "ok" : "not found");
+
     } else {
         if (dse_yaml_find_node(
                 model_instance->model_definition.doc, "spec/runtime/gateway")) {
             log_notice("Using gateway symbols: ...");
-            model_setup_func = __model_gw_setup__;
-            model_exit_func = __model_gw_exit__;
-        } else {
-            log_notice("Using linked/registered symbols: ...");
-            model_setup_func = __model_setup_func;
-            model_exit_func = __model_exit_func;
+            controller_model->vtable.create = __model_gw_create__;
+            controller_model->vtable.step = __model_gw_step__;
+            controller_model->vtable.destroy = __model_gw_destroy__;
         }
     }
 
-    controller_model->model_setup_func = model_setup_func;
-    controller_model->model_exit_func = model_exit_func;
     return 0;
 
 error_dl:
@@ -106,18 +100,18 @@ int controller_load_models(SimulationSpec* sim)
             log_error("controller_load_model() failed!");
             break;
         }
-        /* Call model_setup(), inversion of control. */
-        log_notice("Call symbol: %s ...", MODEL_SETUP_FUNC_STR);
-        if (cm->model_setup_func == NULL) {
-            rc = errno = EINVAL;
-            log_error("model_setup_func() not loaded!");
+        /* Create/Setup the model. */
+        if (cm->vtable.create == NULL && cm->vtable.step == NULL) {
+            log_error("Model interface not complete!");
+            log_error("  %s (%p)", MODEL_CREATE_FUNC_NAME, cm->vtable.create);
+            log_error("  %s (%p)", MODEL_STEP_FUNC_NAME, cm->vtable.step);
+            log_error("  %s (%p)", MODEL_DESTROY_FUNC_NAME, cm->vtable.destroy);
             break;
         }
-        errno = 0;
-        rc = cm->model_setup_func(_instptr);
+        rc = modelc_model_create(sim, _instptr, &cm->vtable);
         if (rc) {
             if (errno == 0) errno = EINVAL;
-            log_error("model_setup_func() failed!");
+            log_error("modelc_model_create() failed!");
             break;
         }
         /* Next instance? */

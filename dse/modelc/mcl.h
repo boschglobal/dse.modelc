@@ -5,9 +5,10 @@
 #ifndef DSE_MODELC_MCL_H_
 #define DSE_MODELC_MCL_H_
 
-#include <dse/modelc/model.h>
 #include <dse/platform.h>
+#include <dse/clib/util/yaml.h>
 #include <dse/clib/collections/hashlist.h>
+#include <dse/modelc/runtime.h>
 
 
 /**
@@ -84,7 +85,7 @@ typedef struct MclModelDesc    MclModelDesc;
 
 
 /* MCL Strategy methods (generic model provided). */
-typedef int (*MclExecuteMethod)(MclStrategyAction action);
+typedef int (*MclExecuteMethod)(ModelDesc* model, MclStrategyAction action);
 
 
 /* MCL Strategy handler functions. */
@@ -154,13 +155,10 @@ typedef struct MclModelDesc {
 typedef struct MclInstanceDesc {
     ModelInstanceSpec* model_instance;
     /* Instance Properties. */
-    ModelChannelDesc*  channel;
+    SignalVector*      mcl_channel_sv;
     MclStrategyDesc*   strategy;
     HashList           models; /* MclModelDesc */
 } MclInstanceDesc;
-
-/* This portion of the API is implemented by an MCL. */
-DLL_PUBLIC int MCL_SETUP_FUNC(void);
 
 
 /* mcl.c - Model Compatibility Library (MCL) interface.*/

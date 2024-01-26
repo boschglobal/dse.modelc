@@ -4,8 +4,8 @@
 
 cmake_minimum_required(VERSION 3.21)
 
-project(Binary)
-set(MODEL_PATH "examples/binary")
+project(Extended)
+set(MODEL_PATH "examples/extended")
 
 include(FetchContent)
 FetchContent_Declare(dse_clib
@@ -16,23 +16,23 @@ FetchContent_Declare(dse_clib
 FetchContent_MakeAvailable(dse_clib)
 set(DSE_CLIB_INCLUDE_DIR ${dse_clib_SOURCE_DIR})
 
-add_library(binary SHARED
+add_library(extended SHARED
     model.c
 )
-target_include_directories(binary
+target_include_directories(extended
     PRIVATE
         ${DSE_CLIB_INCLUDE_DIR}
         ../../../..
 )
-target_link_libraries(binary
+target_link_libraries(extended
     PRIVATE
         $<$<BOOL:${WIN32}>:${modelc_link_lib}>
 )
-install(TARGETS binary
+install(TARGETS extended
     LIBRARY DESTINATION
         ${MODEL_PATH}/lib
     COMPONENT
-        binary
+        extended
 )
 install(
     FILES
@@ -41,5 +41,5 @@ install(
     DESTINATION
         ${MODEL_PATH}/data
     COMPONENT
-        binary
+        extended
 )

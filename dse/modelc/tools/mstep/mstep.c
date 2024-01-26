@@ -10,11 +10,11 @@
 #include <dse/clib/collections/hashmap.h>
 #include <dse/clib/util/yaml.h>
 #include <dse/modelc/schema.h>
-#include <dse/modelc/model.h>
+#include <dse/modelc/runtime.h>
 #include <dse/logger.h>
 
 
-#define STEP_SIZE     0.005
+#define STEP_SIZE     MODEL_DEFAULT_STEP_SIZE
 #define END_TIME      3600
 #define STEPS         10
 
@@ -46,10 +46,11 @@ static void print_signal_vectors(SignalVector* sv);
  *          - sample: 0.0005
  *            values:
  *              - D_BrakePedal_0_1_f: 0.0  # 0..1
- *              - D_ActMode_1_3_f: 3  # 1 = MC Press, 2 = Pedal Force, 3 = Rod Stroke
+ *              - D_ActMode_1_3_f: 3  # 1 = MC Press, 2 = Pedal Force, 3 = Rod
+ * Stroke
  *          - sample: 0.0010
  *            values:
-  *             - D_BrakePedal_0_1_f: 0.3
+ *             - D_BrakePedal_0_1_f: 0.3
  */
 typedef struct ValueObject {
     char*  signal;
@@ -119,20 +120,25 @@ int main(int argc, char** argv)
         log_error("ERROR: dlopen call failed: %s", dlerror());
         log_fatal("Model library not loaded!");
     }
-    ModelSetupHandler model_setup_func = dlsym(handle, MODEL_SETUP_FUNC_STR);
-    ModelExitHandler  model_exit_func = dlsym(handle, MODEL_EXIT_FUNC_STR);
-    if (model_setup_func == NULL) log_fatal("model_setup_func not found!");
+    ModelVTable vtable;
+    vtable.create = dlsym(handle, MODEL_CREATE_FUNC_NAME);
+    vtable.step = dlsym(handle, MODEL_STEP_FUNC_NAME);
+    vtable.destroy = dlsym(handle, MODEL_DESTROY_FUNC_NAME);
+    if (vtable.create == NULL && vtable.step == NULL) {
+        log_fatal("vtable not complete!");
+    }
 
-
-    /* Call the setup function of the Model. */
-    rc = model_setup_func(mi);
-    if (rc) log_fatal("Call: model_setup_func failed! (rc=%d)!", rc);
-    SignalVector* sv = model_sv_create(mi);
+    /* Call the create function of the Model. */
+    rc = modelc_model_create(&sim, mi, &vtable);
+    if (rc) {
+        log_fatal("Call: model_setup_func failed! (rc=%d)!", rc);
+    }
+    memcpy(&vtable, &mi->model_desc->vtable, sizeof(ModelVTable));
+    SignalVector* sv = mi->model_desc->sv;
     print_signal_vectors(sv);
 
-
     /* Load any input data. */
-    Enumerator  samples = { .sv = sv };
+    Enumerator           samples = { .sv = sv };
     SchemaObjectSelector selector = {
         .kind = "Input",
         .name = args.name,
@@ -192,9 +198,8 @@ int main(int argc, char** argv)
 
 
     /* Call the exit function of the Model. */
-    if (model_exit_func) {
-        rc = model_exit_func(mi);
-        if (rc) log_fatal("Executing model exit failed! (rc=%d)!", rc);
+    if (vtable.destroy) {
+        vtable.destroy(mi->model_desc);
     }
 
     exit(0);
@@ -252,15 +257,16 @@ static void* value_object_generator(ModelInstanceSpec* mi, void* data)
 
     YamlNode* node = data;
 
-    int       len = hashmap_number_keys(node->mapping);
+    int len = hashmap_number_keys(node->mapping);
     if (len == 0) return NULL;
 
-    char**    keys = hashmap_keys(&node->mapping);
+    char**       keys = hashmap_keys(&node->mapping);
     ValueObject* vo = calloc(1, sizeof(ValueObject));
     vo->signal = keys[0];
     dse_yaml_get_double(node, keys[0], &vo->value);
     /* Free the keys, except for the first entry ... which is returned. */
-    for (int i = 1; i < len; i++) free(keys[i]);
+    for (int i = 1; i < len; i++)
+        free(keys[i]);
     free(keys);
 
     return vo; /* Caller to free, also vo->signal. */

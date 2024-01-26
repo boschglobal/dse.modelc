@@ -10,7 +10,7 @@
 #include <dse/testing.h>
 #include <dse/logger.h>
 #include <dse/clib/util/yaml.h>
-#include <dse/modelc/model.h>
+#include <dse/modelc/runtime.h>
 #include <dse/modelc/adapter/transport/endpoint.h>
 
 
@@ -69,7 +69,7 @@ static void print_usage(const char* doc_string)
 }
 
 
-/**
+/*
  *  _args_extract_environment
  *
  *  Extract arguments from environment variables.

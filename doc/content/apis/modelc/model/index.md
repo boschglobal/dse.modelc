@@ -5,67 +5,39 @@ linkTitle: Model
 ## Model API
 
 
-The Model API allows model developers and integrators to interface with a
-Dynamic Simulation Environment via a connection with a Simulation Bus.
+The Model API allows model developers and integrators to implement models which
+can be connected to a Simulation Bus.
+Models are able to exchange signals with other models via this connection to
+a Simulation Bus.
+A runtime environment, such as the ModelC Runtime/Importer, will load the
+model and also manages the connection with the Simulation Bus.
+
+The Model API provides two simple interfaces which facilitate the development
+of models; the Model Interface which is concerned with the model lifecycle; and
+the Signal Interface which facilitates signal exchange.
 
 
+### Model Interface
 
-## Signal Vector Interface
+
+The Model Interface provides the necessary types, methods and objects required
+for implementing a model. Such a model can easily participate in a simulation
+by being connecting to a Simulation Bus (using the ModelC Importer) and then
+exchanging signals with other models in that simulation by using the
+provided SignalVector objects (which represent those signals).
+
+Additionally, model implementers may extend or modify the Model Interface
+to support more complex integrations.
+
+
+### Signal Vector Interface
 
 
 Models exchange signals via the Simulation Bus using a Signal Vector. Signal
-Vectors represent a logical grouping of signals (i.e. a collection of signals
-belonging to an ECU interface or bus), they are defined by a `SignalGroup`
-schema kind, and a Signal Vector can represent either scalar or binary values.
-
-
-### Component Diagram
-
-<div hidden>
-
-```
-@startuml model-signal-vector
-
-title Signal Vector Interface
-
-interface "SimBus" as SBif
-
-package "Model" {
-	component "ModelC Lib" as ModelC
-	interface "SignalVectorVTable" as SVvt
-	component "Model" as Mdl
-}
-
-ModelC -up-> SBif
-Mdl -up-( SVvt
-SVvt -up- ModelC
-Mdl --> ModelC :model_sv_create()
-Mdl --> ModelC :model_sv_destroy()
-
-center footer Dynamic Simulation Environment
-
-@enduml
-```
-
-</div>
-
-![](model-signal-vector.png)
-
-
-### Example
-
-
-{{< readfile file="../examples/model_signalvector.c" code="true" lang="c" >}}
-
-
-
-
-## Model Interface
-
-
-The Model Interface must be implemented by a Model. It includes the functions
-necessary for a Model to be loaded and executed in the Dynamic Simulation
-Environment.
+Vectors represent a logical grouping of signals (e.g. a collection of signals
+belonging to an ECU interface or bus). They are defined by a `SignalGroup`
+schema kind and may be configured to represent either either scalar
+(double, int, bool) or binary values.
 
 
 ### Component Diagram
@@ -87,14 +59,14 @@ m1 -left-> SBif
 m2 -right-> SBif
 
 package "Model" {
-	component "ModelC Lib" as ModelC
-	interface "ModelInterfaceVTable" as MIvt
-	component "Model" as Mdl
+        component "Runtime" as ModelC
+        interface "ModelVTable" as Mvt
+        component "Model" as Mdl
 }
 
 SBif <-down- ModelC
-Mdl -up- MIvt
-MIvt )-up- ModelC
+Mdl -up- Mvt
+Mvt )-up- ModelC
 
 center footer Dynamic Simulation Environment
 
@@ -106,100 +78,54 @@ center footer Dynamic Simulation Environment
 ![](model-interface.png)
 
 
-### Example
+### Example (Model Interface)
 
 
 {{< readfile file="../examples/model_interface.c" code="true" lang="c" >}}
+
+
+### Example (Signal Vector Interface)
+
+
+{{< readfile file="../examples/signalvector_interface.c" code="true" lang="c" >}}
 
 
 
 
 ## Typedefs
 
-### ChannelSpec
+### ModelDesc
 
 ```c
-typedef struct ChannelSpec {
-    const char * name;
-    const char * alias;
-    void * private;
+typedef struct ModelDesc {
+    ModelVTable vtable;
+    ModelIndex index;
+    SimulationSpec * sim;
+    ModelInstanceSpec * mi;
+    SignalVector * sv;
 }
 ```
 
-### ModelCArguments
+### ModelSignalIndex
 
 ```c
-typedef struct ModelCArguments {
-    const char * transport;
-    char * uri;
-    const char * host;
-    uint32_t port;
-    double timeout;
-    uint8_t log_level;
-    double step_size;
-    double end_time;
-    uint32_t uid;
-    const char * name;
-    const char * file;
-    const char * path;
-    int * yaml_doc_list;
-    int timeout_set_by_cli;
-    int log_level_set_by_cli;
-    uint32_t steps;
+typedef struct ModelSignalIndex {
+    SignalVector * sv;
+    double * scalar;
+    void ** binary;
+    uint32_t vector;
+    uint32_t signal;
 }
 ```
 
-### ModelChannelDesc
+### ModelVTable
 
 ```c
-typedef struct ModelChannelDesc {
-    const char * name;
-    const char * function_name;
-    const char ** signal_names;
-    uint32_t signal_count;
-    bool propagator_source_channel;
-    bool propagator_target_channel;
-    double * vector_double;
-    void ** vector_binary;
-    uint32_t * vector_binary_size;
-    uint32_t * vector_binary_buffer_size;
-}
-```
-
-### ModelDefinitionSpec
-
-```c
-typedef struct ModelDefinitionSpec {
-    const char * name;
-    const char * path;
-    const char * file;
-    char * full_path;
-    int * doc;
-    int * channels;
-}
-```
-
-### ModelInstanceSpec
-
-```c
-typedef struct ModelInstanceSpec {
-    uint32_t uid;
-    char * name;
-    ModelDefinitionSpec model_definition;
-    int * spec;
-    int * propagators;
-    int * yaml_doc_list;
-    void * private;
-}
-```
-
-### ModelInterfaceVTable
-
-```c
-typedef struct ModelInterfaceVTable {
-    ModelSetupHandler setup;
-    ModelDoStepHandler step;
-    ModelExitHandler exit;
+typedef struct ModelVTable {
+    ModelCreate create;
+    ModelStep step;
+    ModelDestroy destroy;
+    ModelIndex index;
 }
 ```
 
@@ -210,7 +136,7 @@ typedef struct SignalVector {
     const char * name;
     const char * alias;
     const char * function_name;
-    bool is_binary;
+    _Bool is_binary;
     uint32_t count;
     const char ** signal;
     BinarySignalAppendFunc append;
@@ -234,115 +160,294 @@ typedef struct SignalVectorVTable {
 }
 ```
 
-### SimulationSpec
-
-```c
-typedef struct SimulationSpec {
-    const char * transport;
-    char * uri;
-    uint32_t uid;
-    double timeout;
-    double step_size;
-    double end_time;
-    ModelInstanceSpec * instance_list;
-}
-```
-
 ## Functions
 
-### model_configure_channel
+### model_create
 
-Configure a connection from this Model to a Channel on the Simulation Bus. The
-Channel can then be represented by a Signal Vector making access to individual
-Signals and their configuration (annotations) easy.
+> Optional method of `ModelVTable` interface.
+
+Called by the Model Runtime to create a new instance of this model.
+
+The `model_create()` method may extend or mutilate the provided Model
+Descriptor. When extending the Model Descriptor _and_ allocating additional
+resources then the `model_destroy()` method should also be implemented.
+
+Fault conditions can be communicated to the caller by setting variable
+`errno` to a non-zero value. Additionally, `log_fatal()` can be used to
+immediately halt execution of a model.
 
 #### Parameters
 
-model_instance (ModelInstanceSpec*)
-: The Model Instance object (provided via the `model_setup()` function of the
-  Model API).
-
-channel_desc (ModelChannelDesc*)
-: A channel descriptor object which defines the Channel and Model Function names
-  which should be configured.
+model (ModelDesc*)
+: The Model Descriptor object representing an instance of this model.
 
 #### Returns
 
-0
+NULL
 : The Channel was configured.
 
-+VE
-: An error occurred during the registration of the Channel.
+(ModelDesc*)
+: Pointer to a new, or mutilated, version of the Model Descriptor object. The
+  original Model Descriptor object will be released by the Model Runtime (i.e.
+  don't call `free()`).
 
-
-
-
-### model_function_register
-
-Register a Model Function. A Model may register one or more Model Functions
-with repeated calls to this function.
-
-#### Parameters
-
-model_instance (ModelInstanceSpec*)
-: The Model Instance object (provided via the `model_setup()` function of the
-  Model API).
-
-name (const char*)
-: The name of the Model Function.
-
-step_size (double)
-: The step size of the Model Function.
-
-do_step_handler (ModelDoStepHandler)
-: The "do step" function of the Model Function.
-
-#### Returns
-
-0
-: The model function was registered.
-
-(errno)
-: An error occurred during registration of the model function. The return
-  value is the `errno` which may indicate the reason for the failure.
-
-
-
-
-### model_sv_create
-
-This is Model User API replacing modelc_debug.c::modelc_get_model_vectors().
-
-#### Parameters
-
-mi (ModelInstanceSpec*)
-: The model instance, which holds references to the registered channels.
-
-#### Returns
-
-SignalVector (pointer to NULL terminated list)
-: A list of SignalVector objects representing the signals assigned to a model.
-  The list is NULL terminated (sv->name == NULL). Caller to free.
+errno <> 0 (indirect)
+: Indicates an error condition.
 
 #### Example
 
 
-{{< readfile file="../examples/model_sv_create.c" code="true" lang="c" >}}
+{{< readfile file="../examples/model_create.c" code="true" lang="c" >}}
 
 
 
 
-### model_sv_destroy
 
-The underlying objects of a SignalVector object (e.g. from ModelC object)
-are not affected by calling this method.
+### model_destroy
+
+> Optional method of `ModelVTable` interface.
+
+Called by the Model Runtime at the end of a simulation, the `model_destroy()`
+function may be implemented by a Model Integrator to perform any custom
+cleanup operations (e.g. releasing instance related resources, such as open
+files or allocated memory).
+
+#### Parameters
+
+model (ModelDesc*)
+: The Model Descriptor object representing an instance of this model.
+
+
+
+
+### model_index_
+
+> Provided method (by the Runtime). Model implementers may specify
+  a different index method by mutilating the Model Descriptor in the
+  `model_create()` method, or even at runtime.
+
+A model may use this method to index a signal that is contained within the
+Signal Vectors of the Model Descriptor.
+
+#### Parameters
+
+model (ModelDesc*)
+: The Model Descriptor object representing an instance of this model.
+
+vname (const char*)
+: The name (alias) of the Signal Vector.
+
+sname (const char*)
+: The name of the signal within the Signal Vector.
+
+#### Returns
+
+ModelSignalIndex
+: An index. When valid, either the `scalar` or `binary` fields will be set to
+  a valid pointer (i.e. not NULL).
+
+
+
+
+### model_step
+
+> Mandatory method of `ModelVTable` interface. Alternatively, Model implementers
+  may specify the `ModelVTable.step` method dynamically by mutilating the
+  Model Descriptor in the `model_create()` method, or even at runtime.
+
+Called by the Model Runtime to step the model for a time interval.
+
+#### Parameters
+
+model (ModelDesc*)
+: The Model Descriptor object representing an instance of this model.
+
+model_time (double*)
+: (in/out) Specifies the model time for this step of the model.
+
+stop_time (double)
+: Specifies the stop time for this step of the model. The model step should not
+  exceed this time.
+
+#### Returns
+
+0
+: The step completed without error.
+
+<>0
+: An error occurred at some point during the step execution.
+
+model_time (via parameter)
+: The final model time reached for this step. This value may be less than
+  `stop_time` if a step decides to return early.
+
+
+
+### signal_annotation
+
+Get an annotation from a signal definition.
 
 #### Parameters
 
 sv (SignalVector*)
-: The SignalVector object to destroy. Should be the same object as returned
-  from the call to `model_sv_create()`.
+: The Signal Vector object containing the signal.
 
+index (uint32_t)
+: Index of the signal in the Signal Vector object.
+
+name (const char*)
+: The name of the annotation.
+
+#### Returns
+
+const char*
+: The annotation value.
+
+#### Example (Annotation Specification)
+
+
+```yaml
+kind: SignalGroup
+metadata:
+  name: data
+spec:
+  signals:
+    - signal: counter
+      annotations:
+        initial_value: 10
+```
+
+#### Example (Code Usage)
+
+
+{{< readfile file="../examples/signalvector_annotation.c" code="true" lang="c" >}}
+
+
+NULL
+: The requested annotation was not found.
+
+
+
+### signal_append
+
+Append data to the end of the specified binary signal. The append method will
+resize the buffers of the binary signal as required.
+
+#### Parameters
+
+sv (SignalVector*)
+: The Signal Vector object containing the signal.
+
+index (uint32_t)
+: Index of the signal in the Signal Vector object.
+
+data (void*)
+: Address/pointer to the data which should be appended to the binary signal.
+
+len (uint32_t)
+: Length of the provided data buffer being appended.
+
+#### Returns
+
+0
+: The operation completed without error.
+
+<>0
+: Indicates an error condition. Inspect `errno` for additional information.
+
+
+
+### signal_codec
+
+Return a pointer to the Codec object associated with a binary signal.
+
+Codec objects are created when a binary signal is specified with a `mime_type`
+annotation.
+
+#### Parameters
+
+sv (SignalVector*)
+: The Signal Vector object containing the signal.
+
+index (uint32_t)
+: Index of the signal in the Signal Vector object.
+
+#### Returns
+
+void*
+: The Codec object associated with the binary signal.
+
+NULL
+: The binary signal does not have an associated Codec object.
+
+#### Example (Codec Specification)
+
+
+```yaml
+kind: SignalGroup
+metadata:
+  name: network
+  labels:
+    channel: network_vector
+  annotations:
+    vector_type: binary
+spec:
+  signals:
+    - signal: can_bus
+      annotations:
+        mime_type: application/x-automotive-bus; interface=stream; type=frame; bus=can; schema=fbs; bus_id=1; node_id=2; interface_id=3
+```
+
+#### Reference
+
+
+[Network Codec API](https://github.com/boschglobal/dse.standards/tree/main/dse/ncodec)
+
+
+
+
+### signal_release
+
+Release the resources allocated to a binary signal (e.g. free the buffer).
+
+#### Parameters
+
+sv (SignalVector*)
+: The Signal Vector object containing the signal.
+
+index (uint32_t)
+: Index of the signal in the Signal Vector object.
+
+#### Returns
+
+0
+: The operation completed without error.
+
+<>0
+: Indicates an error condition. Inspect `errno` for additional information.
+
+
+
+### signal_reset
+
+Reset a binary signal (e.g. sets its buffer length to 0). The buffers of the
+binary signal are not released (see `signal_release()`).
+
+#### Parameters
+
+sv (SignalVector*)
+: The Signal Vector object containing the signal.
+
+index (uint32_t)
+: Index of the signal in the Signal Vector object.
+
+#### Returns
+
+0
+: The operation completed without error.
+
+<>0
+: Indicates an error condition. Inspect `errno` for additional information.
 
 
 

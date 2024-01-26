@@ -310,16 +310,13 @@ void controller_exit(SimulationSpec* sim)
 
     ModelInstanceSpec* _instptr = sim->instance_list;
     while (_instptr && _instptr->name) {
-        ModelInstancePrivate* mip = _instptr->private;
-        ControllerModel*      cm = mip->controller_model;
-        if (cm->model_exit_func == NULL) goto exit_next;
+        if (_instptr->model_desc) {
+            if (_instptr->model_desc->vtable.destroy == NULL) goto exit_next;
 
-        log_notice("Call symbol: %s ...", MODEL_EXIT_FUNC_STR);
-        errno = 0;
-        int rc = cm->model_exit_func(_instptr);
-        if (rc) {
-            if (errno == 0) errno = rc;
-            log_error("model_exit_func() failed");
+            log_notice("Call symbol: %s ...", MODEL_DESTROY_FUNC_NAME);
+            errno = 0;
+            _instptr->model_desc->vtable.destroy(_instptr->model_desc);
+            if (errno) log_error(MODEL_DESTROY_FUNC_NAME "() failed");
         }
     exit_next:
         /* Next instance? */

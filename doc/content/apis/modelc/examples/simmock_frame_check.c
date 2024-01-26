@@ -1,5 +1,5 @@
 #include <dse/testing.h>
-#include <dse/modelc/mocks/simmock.h>
+#include <dse/mocks/simmock.h>
 
 void test_network__frame_check(void** state)
 {

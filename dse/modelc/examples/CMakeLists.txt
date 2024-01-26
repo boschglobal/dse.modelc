@@ -2,11 +2,15 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-add_subdirectory(dynamic)
+
+# Example Models.
+add_subdirectory(minimal)
+add_subdirectory(extended)
 add_subdirectory(binary)
+# TODO add_subdirectory(ncodec)
+
 add_subdirectory(gateway)
-add_subdirectory(stacked)
-add_subdirectory(benchmark)
+#add_subdirectory(benchmark)
 
 # Code examples for documentation.
 if(UNIX)

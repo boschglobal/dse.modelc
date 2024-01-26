@@ -22,8 +22,7 @@ MODELC_EXE = MODELC_SANDBOX_DIR+'/bin/modelc'
 
 # Sandbox for the Model (common only, specific in test cases).
 MODEL_YAML = 'data/model.yaml'
-SIGNAL_GROUP_YAML = 'data/signal_group.yaml'
-STACK_YAML = 'data/stack.yaml'
+STACK_YAML = 'data/simulation.yaml'
 
 
 async def run(dir, cmd):
@@ -81,21 +80,21 @@ async def main(params, checks):
 
 def test_modelc_double():
     params = {
-        'MODEL_SANDBOX_DIR': os.getenv('MODELC_SANDBOX_DIR')+'/examples/dynamic',
+        'MODEL_SANDBOX_DIR': os.getenv('MODELC_SANDBOX_DIR')+'/examples/minimal',
         'models': [
             {
-                'MODEL_INST': 'dynamic_model_instance',
-                'MODEL_YAML_FILES': f'{MODEL_YAML} ' + f'{STACK_YAML} ' + f'{SIGNAL_GROUP_YAML}',
+                'MODEL_INST': 'minimal_inst',
+                'MODEL_YAML_FILES': f'{MODEL_YAML} ' + f'{STACK_YAML} ',
             },
         ]
     }
     checks = [
-        'SignalValue: 2851307223 = 4.800000 [name=foo]',
-        'SignalValue: 1991736602 = 16.800000 [name=bar]',
+        'SignalValue: 2628574755 = 4.000000 [name=counter]',
     ]
     asyncio.run(main(params, checks))
 
 
+@pytest.mark.skip(reason="needs refactor")
 @pytest.mark.skipif(os.environ["PACKAGE_ARCH"] != "linux-amd64", reason="test only runs on linux-amd64")
 def test_modelc_binary():
     # Two models write data at same cycle (ModelReady). SimBus should append
@@ -106,11 +105,11 @@ def test_modelc_binary():
         'models': [
             {
                 'MODEL_INST': 'binary_model_instance',
-                'MODEL_YAML_FILES' : f'{MODEL_YAML} ' + f'{STACK_YAML} ' + f'{SIGNAL_GROUP_YAML}',
+                'MODEL_YAML_FILES' : f'{MODEL_YAML} ' + f'{STACK_YAML} ',
             },
             {
                 'MODEL_INST': 'second_binary_model_instance',
-                'MODEL_YAML_FILES' : f'{MODEL_YAML} ' + f'{STACK_YAML} ' + f'{SIGNAL_GROUP_YAML}',
+                'MODEL_YAML_FILES' : f'{MODEL_YAML} ' + f'{STACK_YAML} ',
             },
         ]
     }

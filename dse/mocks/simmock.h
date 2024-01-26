@@ -8,6 +8,7 @@
 #include <stdbool.h>
 #include <dse/logger.h>
 #include <dse/modelc/model.h>
+#include <dse/modelc/runtime.h>
 
 
 #define UNUSED(x)     ((void)x)
@@ -115,8 +116,7 @@ typedef struct ModelMock {
     SignalVector*      sv_signal;
     SignalVector*      sv_network;
     SignalVector*      sv_save;
-    ModelSetupHandler  model_setup_func;
-    ModelExitHandler   model_exit_func;
+    ModelVTable        vtable;
 } ModelMock;
 
 typedef struct SimMock {
@@ -137,7 +137,9 @@ typedef struct SimMock {
 void* simmock_alloc(const char* inst_names[], size_t count);
 void  simmock_configure(
      SimMock* mock, char** argv, size_t argc, size_t expect_model_count);
-void simmock_load(SimMock* mock, bool expect_exit_func);
+void simmock_load(SimMock* mock);
+void simmock_load_model_check(ModelMock* model, bool expect_create_func,
+    bool expect_step_func, bool expect_destroy_func);
 void simmock_setup(SimMock* mock, const char* sig_name, const char* net_name);
 int  simmock_step(SimMock* mock, bool assert_rc);
 void simmock_exit(SimMock* mock);
@@ -155,6 +157,12 @@ typedef struct SignalCheck {
     double   value;
 } SignalCheck;
 
+typedef struct BinaryCheck {
+    uint32_t index;
+    uint8_t* buffer;
+    uint32_t len;
+} BinaryCheck;
+
 typedef struct FrameCheck {
     uint32_t frame_id;
     uint8_t  offset;
@@ -163,15 +171,19 @@ typedef struct FrameCheck {
 } FrameCheck;
 
 typedef int (*SignalCheckFunc)(SignalCheck* check, SignalVector* sv);
+typedef int (*BinaryCheckFunc)(BinaryCheck* check, SignalVector* sv);
 
 void simmock_signal_check(SimMock* mock, const char* model_name,
     SignalCheck* checks, size_t count, SignalCheckFunc func);
+void simmock_binary_check(SimMock* mock, const char* model_name,
+    BinaryCheck* checks, size_t count, BinaryCheckFunc func);
 void simmock_frame_check(SimMock* mock, const char* model_name,
     const char* sig_name, FrameCheck* checks, size_t count);
 
 
 /* Information API. */
 void simmock_print_scalar_signals(SimMock* mock, int level);
+void simmock_print_binary_signals(SimMock* mock, int level);
 void simmock_print_network_frames(SimMock* mock, int level);
 
 

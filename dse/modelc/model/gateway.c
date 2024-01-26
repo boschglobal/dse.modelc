@@ -5,6 +5,7 @@
 #include <assert.h>
 #include <dse/testing.h>
 #include <dse/logger.h>
+#include <dse/clib/util/yaml.h>
 #include <dse/modelc/gateway.h>
 #include <dse/modelc/schema.h>
 #include <dse/modelc/controller/model_private.h>
@@ -15,80 +16,25 @@
 
 /* Gateway Model Functions
  * These represent the Model Interface of the Gateway. */
-
-static HashList __mcd_list; /* Storage for ModelChannelDesc objects. */
-static double   __gw_step_size;
-
-
-static void* channel_spec_generator(ModelInstanceSpec* mi, void* data)
+DLL_PRIVATE int __model_gw_step__(ModelDesc* model, double* model_time, double stop_time)
 {
-    UNUSED(mi);
-
-    const char* name = dse_yaml_get_scalar((YamlNode*)data, "name");
-    const char* alias = dse_yaml_get_scalar((YamlNode*)data, "alias");
-    if (name || alias) {
-        ChannelSpec* cs = calloc(1, sizeof(ChannelSpec));
-        cs->name = name;
-        cs->alias = alias;
-        return cs; /* Caller to free. */
-    }
-    return NULL;
-}
-
-
-DLL_PRIVATE int __model_gw_step__(double* model_time, double stop_time)
-{
+    UNUSED(model);
     *model_time = stop_time;
-
     return 0;
 }
 
 
-DLL_PRIVATE int __model_gw_setup__(ModelInstanceSpec* mi)
+DLL_PRIVATE ModelDesc* __model_gw_create__(ModelDesc* model)
 {
-    int rc;
-
-    hashlist_init(&__mcd_list, 10);
-    rc = model_function_register(
-        mi, mi->name, __gw_step_size, __model_gw_step__);
-    if (rc) log_fatal("Model registration failed!");
-
-    uint32_t index = 0;
-    do {
-        /* Enumerate over all channels of the Model Instance (not the Model). */
-        SchemaObject object = { .doc = mi->spec };
-        ChannelSpec* cs = schema_object_enumerator(
-            mi, &object, "channels", &index, channel_spec_generator);
-        if (cs == NULL) break;
-
-        /* Register this channel. Priority to 'alias' over 'name' (for channel)
-         * as alias (if used) would match against a SignalGroup. Selector is
-         * defined on the Model Instance and will match to a Label on the
-         * signal group. */
-        ModelChannelDesc* mcd = calloc(1, sizeof(ModelChannelDesc));
-        mcd->name = cs->alias ? cs->alias : cs->name;
-        mcd->function_name = mi->name;
-        rc = model_configure_channel(mi, mcd);
-        hashlist_append(&__mcd_list, mcd); /* Keep the mcd object. */
-        free(cs);
-    } while (1);
-
-    return 0;
+    return model;
 }
 
 
-DLL_PRIVATE int __model_gw_exit__(ModelInstanceSpec* mi)
+DLL_PRIVATE void __model_gw_destroy__(ModelDesc* model)
 {
-    UNUSED(mi);
-
-    for (uint32_t i = 0; i < hashlist_length(&__mcd_list); i++) {
-        void* o = hashlist_at(&__mcd_list, i);
-        free(o);
-    }
-    hashlist_destroy(&__mcd_list);
-
-    return 0;
+    UNUSED(model);
 }
+
 
 /**
 model_gw_setup
@@ -170,7 +116,6 @@ int model_gw_setup(ModelGatewayDesc* gw, const char* name,
     if (rc) log_fatal("Unable to configure Model C!");
 
     /* Start the GW. */
-    __gw_step_size = gw->sim->step_size;
     modelc_run(gw->sim, true); /* Calls __model_gw_setup__(). */
 
     /* Complete the Gateway descriptor. */

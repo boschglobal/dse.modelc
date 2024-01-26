@@ -11,7 +11,7 @@
 #include <dse/modelc/adapter/adapter.h>
 #include <dse/modelc/adapter/simbus/simbus.h>
 #include <dse/modelc/adapter/transport/endpoint.h>
-#include <dse/modelc/model.h>
+#include <dse/modelc/runtime.h>
 #include <dse/logger.h>
 
 

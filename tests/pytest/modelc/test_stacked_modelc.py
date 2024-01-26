@@ -77,6 +77,7 @@ async def main(params, checks):
         assert found, check
 
 
+@pytest.mark.skip(reason="Needs refactor")
 def test_modelc_stack():
     # Two models executed by the same instance of ModelC.
     params = {

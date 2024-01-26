@@ -71,7 +71,7 @@ typedef struct MclAdapterDesc {
 ```c
 typedef struct MclInstanceDesc {
     int * model_instance;
-    int * channel;
+    int * mcl_channel_sv;
     MclStrategyDesc * strategy;
     int models;
 }

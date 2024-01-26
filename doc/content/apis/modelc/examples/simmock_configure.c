@@ -1,5 +1,5 @@
 #include <dse/testing.h>
-#include <dse/modelc/mocks/simmock.h>
+#include <dse/mocks/simmock.h>
 
 int test_setup(void** state)
 {
@@ -19,7 +19,7 @@ int test_setup(void** state)
     };
     SimMock* mock = simmock_alloc(inst_names, ARRAY_SIZE(inst_names));
     simmock_configure(mock, argv, ARRAY_SIZE(argv), ARRAY_SIZE(inst_names));
-    simmock_load(mock, true);
+    simmock_load(mock);
     simmock_setup(mock, "signal", "network");
 
     /* Return the mock. */

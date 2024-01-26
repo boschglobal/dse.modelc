@@ -189,6 +189,7 @@ set(DSE_MODELC_PUBLIC_HEADERS
     gateway.h
     mcl.h
     model.h
+    runtime.h
     schema.h
 )
 add_subdirectory(adapter)

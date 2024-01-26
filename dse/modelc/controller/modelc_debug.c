@@ -12,7 +12,7 @@
 #include <dse/modelc/model.h>
 
 
-/**
+/*
  *  The ModelC Debug API
  *  ====================
  */

@@ -7,7 +7,7 @@
 
 #include <stdint.h>
 #include <dse/platform.h>
-#include <dse/modelc/model.h>
+#include <dse/modelc/runtime.h>
 
 
 #ifndef DLL_PUBLIC

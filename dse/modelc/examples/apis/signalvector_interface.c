@@ -1,9 +1,12 @@
+#include <string.h>
 #include <dse/modelc/model.h>
 #include <dse/logger.h>
 
-void print_signal_vectors(ModelInstanceSpec* mi)
+#define UNUSED(x) ((void)x)
+
+int model_step(ModelDesc* m, double* model_time, double stop_time)
 {
-    SignalVector* sv = model_sv_create(mi);
+    SignalVector* sv = m->sv;
     while (sv && sv->name) {
         log_debug("Signal Vector : %s", sv->name);
 
@@ -30,4 +33,7 @@ void print_signal_vectors(ModelInstanceSpec* mi)
         // Next signal vector.
         sv++;
     }
+
+    *model_time = stop_time;
+    return 0;
 }

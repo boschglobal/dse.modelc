@@ -93,6 +93,7 @@ set(DSE_NCODEC_INCLUDE_DIR "${DSE_NCODEC_SOURCE_DIR}")
 # Set the project paths
 # =====================
 set(DSE_MODELC_SOURCE_DIR ../../dse/modelc)
+set(DSE_MOCKS_SOURCE_DIR ../../dse/mocks)
 set(DSE_MODELC_SOURCE_FILES
     ${DSE_MODELC_SOURCE_DIR}/model/gateway.c
     ${DSE_MODELC_SOURCE_DIR}/model/model.c
@@ -103,9 +104,11 @@ set(DSE_MODELC_SOURCE_FILES
     ${DSE_MODELC_SOURCE_DIR}/controller/loader.c
     ${DSE_MODELC_SOURCE_DIR}/controller/model_function.c
     ${DSE_MODELC_SOURCE_DIR}/controller/modelc.c
+    ${DSE_MODELC_SOURCE_DIR}/controller/modelc_debug.c
     ${DSE_MODELC_SOURCE_DIR}/controller/modelc_args.c
     ${DSE_MODELC_SOURCE_DIR}/controller/step.c
 
+    ${DSE_MOCKS_SOURCE_DIR}/simmock.c
 )
 set(DSE_MODELC_INCLUDE_DIR "${DSE_MODELC_SOURCE_DIR}/../..")
 
@@ -138,7 +141,7 @@ target_include_directories(test_model
 )
 target_compile_definitions(test_model
     PUBLIC
-#        UNIT_TESTING   # Using valgrind instead.
+        CMOCKA_TESTING
     PRIVATE
         PLATFORM_OS="${CDEF_PLATFORM_OS}"
         PLATFORM_ARCH="${CDEF_PLATFORM_ARCH}"
@@ -161,3 +164,40 @@ install(
     DESTINATION
         resources/model
 )
+
+
+# Target - Model Interface
+# ------------------------
+add_executable(test_model_interface
+    model/interface/__test__.c
+    model/interface/test_model_interface.c
+    model/stub_controller.c
+    ${DSE_MODELC_SOURCE_FILES}
+    ${DSE_NCODEC_SOURCE_FILES}
+    ${DSE_CLIB_SOURCE_FILES}
+)
+target_include_directories(test_model_interface
+    PRIVATE
+        ${DSE_MODELC_INCLUDE_DIR}
+        ${DSE_NCODEC_INCLUDE_DIR}
+        ${DSE_CLIB_INCLUDE_DIR}
+        ${YAML_SOURCE_DIR}/include
+        ./
+)
+target_compile_definitions(test_model_interface
+    PUBLIC
+        CMOCKA_TESTING
+    PRIVATE
+        PLATFORM_OS="${CDEF_PLATFORM_OS}"
+        PLATFORM_ARCH="${CDEF_PLATFORM_ARCH}"
+)
+target_link_libraries(test_model_interface
+    PRIVATE
+        dse_ncodec
+        cmocka
+        yaml
+        dl
+        m
+        # -Wl,--wrap=strdup # Wrapping strdup does not work with libyaml.
+)
+install(TARGETS test_model_interface)

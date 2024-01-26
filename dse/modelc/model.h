@@ -1,4 +1,4 @@
-// Copyright 2023 Robert Bosch GmbH
+// Copyright 2024 Robert Bosch GmbH
 //
 // SPDX-License-Identifier: Apache-2.0
 
@@ -7,111 +7,79 @@
 
 #include <stdint.h>
 #include <stdbool.h>
-#include <dse/platform.h>
-#include <dse/clib/collections/hashlist.h>
-#include <dse/clib/util/yaml.h>
 
 
 #ifndef DLL_PUBLIC
-#define DLL_PUBLIC  __attribute__((visibility("default")))
+#if defined _WIN32 || defined __CYGWIN__
+#ifdef DLL_BUILD
+#define DLL_PUBLIC __declspec(dllexport)
+#else
+#define DLL_PUBLIC __declspec(dllimport)
+#endif
+#else
+#define DLL_PUBLIC __attribute__((visibility("default")))
+#endif
 #endif
 #ifndef DLL_PRIVATE
+#if defined _WIN32 || defined __CYGWIN__
+#define DLL_PRIVATE
+#else
 #define DLL_PRIVATE __attribute__((visibility("hidden")))
 #endif
+#endif
+
+
+#define __MODELC_ERROR_OFFSET   (2000)
+#define MODEL_DEFAULT_STEP_SIZE 0.0005
+#define MODEL_CREATE_FUNC_NAME  "model_create"
+#define MODEL_STEP_FUNC_NAME    "model_step"
+#define MODEL_DESTROY_FUNC_NAME "model_destroy"
+
+
+typedef struct SimulationSpec    SimulationSpec;
+typedef struct ModelInstanceSpec ModelInstanceSpec;
+typedef struct SignalVector      SignalVector;
+typedef struct ModelDesc         ModelDesc;
+typedef struct ModelSignalIndex  ModelSignalIndex;
 
 
 /**
 Model API
 =========
 
-The Model API allows model developers and integrators to interface with a
-Dynamic Simulation Environment via a connection with a Simulation Bus.
-*/
+The Model API allows model developers and integrators to implement models which
+can be connected to a Simulation Bus.
+Models are able to exchange signals with other models via this connection to
+a Simulation Bus.
+A runtime environment, such as the ModelC Runtime/Importer, will load the
+model and also manages the connection with the Simulation Bus.
 
-#define __MODELC_ERROR_OFFSET (2000)
-
-#define MODEL_SETUP_FUNC     model_setup
-#define MODEL_SETUP_FUNC_STR "model_setup"
-
-#define MODEL_EXIT_FUNC      model_exit
-#define MODEL_EXIT_FUNC_STR  "model_exit"
-
-
-typedef struct ModelDefinitionSpec {
-    const char* name;
-    /* Path to the Model Package (i.e. where model.yaml is found). */
-    const char* path;
-    /* Path to the Model Lib, relative to path (above). */
-    const char* file;
-    /* Combined path and file for the Model Lib. */
-    char*       full_path;
-    /* Reference to parsed YAML Documents. */
-    YamlNode*   doc;
-    YamlNode*   channels;
-} ModelDefinitionSpec;
+The Model API provides two simple interfaces which facilitate the development
+of models; the Model Interface which is concerned with the model lifecycle; and
+the Signal Interface which facilitates signal exchange.
 
 
-typedef struct ModelInstanceSpec {
-    uint32_t            uid;
-    char*               name;
-    ModelDefinitionSpec model_definition;
-    /* Reference to parsed YAML Documents. */
-    YamlNode*           spec;
-    YamlNode*           propagators;
-    YamlDocList*        yaml_doc_list;
-    /* Private data of the specific Model Instance. */
-    void* private;
-} ModelInstanceSpec;
+Model Interface
+---------------
+
+The Model Interface provides the necessary types, methods and objects required
+for implementing a model. Such a model can easily participate in a simulation
+by being connecting to a Simulation Bus (using the ModelC Importer) and then
+exchanging signals with other models in that simulation by using the
+provided SignalVector objects (which represent those signals).
+
+Additionally, model implementers may extend or modify the Model Interface
+to support more complex integrations.
 
 
-typedef struct SimulationSpec {
-    /* Transport. */
-    const char*        transport;
-    char*              uri;
-    uint32_t           uid;
-    double             timeout;
-    /* Simulation. */
-    double             step_size;
-    double             end_time;
-    /* Model Instances, list, last entry all values set NULL (EOL detect). */
-    ModelInstanceSpec* instance_list;
-} SimulationSpec;
-
-
-typedef struct ModelChannelDesc {
-    const char*  name;
-    const char*  function_name;
-    /* Reference to the parsed signal names. */
-    const char** signal_names;
-    uint32_t     signal_count;
-    /* Indicate if this Channel is connected to a Propagator Model. */
-    bool         propagator_source_channel;
-    bool         propagator_target_channel;
-    /* Allocated vector table (one only depending on type). */
-    double*      vector_double;
-    void**       vector_binary;
-    /* Additional vector tables supporting vector_binary. */
-    uint32_t*    vector_binary_size;        /* Size of binary object. */
-    uint32_t*    vector_binary_buffer_size; /* Size of allocated buffer. */
-} ModelChannelDesc;
-
-
-typedef struct ChannelSpec {
-    const char* name;
-    const char* alias;
-    /* Private data. */
-    void* private;
-} ChannelSpec;
-
-
-/**
 Signal Vector Interface
-=======================
+-----------------------
 
 Models exchange signals via the Simulation Bus using a Signal Vector. Signal
-Vectors represent a logical grouping of signals (i.e. a collection of signals
-belonging to an ECU interface or bus), they are defined by a `SignalGroup`
-schema kind, and a Signal Vector can represent either scalar or binary values.
+Vectors represent a logical grouping of signals (e.g. a collection of signals
+belonging to an ECU interface or bus). They are defined by a `SignalGroup`
+schema kind and may be configured to represent either either scalar
+(double, int, bool) or binary values.
 
 
 Component Diagram
@@ -119,23 +87,28 @@ Component Diagram
 <div hidden>
 
 ```
-@startuml model-signal-vector
+@startuml model-interface
 
-title Signal Vector Interface
+skinparam nodesep 55
+skinparam ranksep 40
 
+title Model Interface
+
+component "Model" as m1
+component "Model" as m2
 interface "SimBus" as SBif
+m1 -left-> SBif
+m2 -right-> SBif
 
 package "Model" {
-	component "ModelC Lib" as ModelC
-	interface "SignalVectorVTable" as SVvt
-	component "Model" as Mdl
+        component "Runtime" as ModelC
+        interface "ModelVTable" as Mvt
+        component "Model" as Mdl
 }
 
-ModelC -up-> SBif
-Mdl -up-( SVvt
-SVvt -up- ModelC
-Mdl --> ModelC :model_sv_create()
-Mdl --> ModelC :model_sv_destroy()
+SBif <-down- ModelC
+Mdl -up- Mvt
+Mvt )-up- ModelC
 
 center footer Dynamic Simulation Environment
 
@@ -144,17 +117,72 @@ center footer Dynamic Simulation Environment
 
 </div>
 
-![](model-signal-vector.png)
+![](model-interface.png)
 
 
-Example
+Example (Model Interface)
 -------
 
-{{< readfile file="../examples/model_signalvector.c" code="true" lang="c" >}}
+{{< readfile file="../examples/model_interface.c" code="true" lang="c" >}}
+
+
+Example (Signal Vector Interface)
+-------
+
+{{< readfile file="../examples/signalvector_interface.c" code="true" lang="c" >}}
 
 */
 
-typedef struct SignalVector SignalVector;
+
+/* Model Interface. */
+
+typedef ModelDesc* (*ModelCreate)(ModelDesc* m);
+typedef int (*ModelStep)(ModelDesc* m, double* model_time, double stop_time);
+typedef void (*ModelDestroy)(ModelDesc* m);
+typedef ModelSignalIndex (*ModelIndex)(ModelDesc* m, const char* vname,
+    const char* sname);
+
+
+typedef struct ModelVTable {
+    ModelCreate  create;
+    ModelStep    step;
+    ModelDestroy destroy;
+    ModelIndex   index;
+} ModelVTable;
+
+
+typedef struct ModelDesc {
+    ModelVTable        vtable;
+    ModelIndex         index;
+    SimulationSpec*    sim;
+    ModelInstanceSpec* mi;
+    SignalVector*      sv;
+} ModelDesc;
+
+
+typedef struct ModelSignalIndex {
+    /* References, only set if index is valid. */
+    SignalVector* sv;
+    double*       scalar;
+    void**        binary;
+    /* Indexes to the SignalVector object. */
+    uint32_t      vector;
+    uint32_t      signal;
+} ModelSignalIndex;
+
+
+/* Implemented by Model. */
+DLL_PUBLIC ModelDesc* model_create(ModelDesc* m);
+DLL_PUBLIC int model_step(ModelDesc* m, double* model_time, double stop_time);
+DLL_PUBLIC void model_destroy(ModelDesc* m);
+
+
+/* Provided by ModelC (via ModelIndex in ModelDesc and also ModelVTable). */
+DLL_PUBLIC ModelSignalIndex model_index_(
+    ModelDesc* model, const char* vname, const char* sname);
+
+
+/* Signal Interface. */
 
 typedef int (*BinarySignalAppendFunc)(
     SignalVector* sv, uint32_t index, void* data, uint32_t len);
@@ -164,6 +192,7 @@ typedef void* (*BinarySignalCodecFunc)(SignalVector* sv, uint32_t index);
 typedef const char* (*SignalAnnotationGetFunc)(
     SignalVector* sv, uint32_t index, const char* name);
 
+
 typedef struct SignalVectorVTable {
     BinarySignalAppendFunc  append;
     BinarySignalResetFunc   reset;
@@ -171,6 +200,7 @@ typedef struct SignalVectorVTable {
     SignalAnnotationGetFunc annotation;
     BinarySignalCodecFunc   codec;
 } SignalVectorVTable;
+
 
 typedef struct SignalVector {
     const char*  name;
@@ -203,136 +233,14 @@ typedef struct SignalVector {
 } SignalVector;
 
 
-/**
-Model Interface
-===============
-
-The Model Interface must be implemented by a Model. It includes the functions
-necessary for a Model to be loaded and executed in the Dynamic Simulation
-Environment.
-
-
-Component Diagram
------------------
-<div hidden>
-
-```
-@startuml model-interface
-
-skinparam nodesep 55
-skinparam ranksep 40
-
-title Model Interface
-
-component "Model" as m1
-component "Model" as m2
-interface "SimBus" as SBif
-m1 -left-> SBif
-m2 -right-> SBif
-
-package "Model" {
-	component "ModelC Lib" as ModelC
-	interface "ModelInterfaceVTable" as MIvt
-	component "Model" as Mdl
-}
-
-SBif <-down- ModelC
-Mdl -up- MIvt
-MIvt )-up- ModelC
-
-center footer Dynamic Simulation Environment
-
-@enduml
-```
-
-</div>
-
-![](model-interface.png)
-
-
-Example
--------
-
-{{< readfile file="../examples/model_interface.c" code="true" lang="c" >}}
-
-*/
-
-typedef int (*ModelSetupHandler)(ModelInstanceSpec* model_instance);
-typedef int (*ModelDoStepHandler)(double* model_time, double stop_time);
-typedef int (*ModelExitHandler)(ModelInstanceSpec* model_instance);
-
-typedef struct ModelInterfaceVTable {
-    ModelSetupHandler  setup;
-    ModelDoStepHandler step;
-    ModelExitHandler   exit;
-} ModelInterfaceVTable;
-
-DLL_PUBLIC int MODEL_SETUP_FUNC(ModelInstanceSpec* model_instance);
-
-
-/* Loader/Runner API Definition */
-
-typedef struct ModelCArguments {
-    const char*  transport;
-    char*        uri;
-    const char*  host;
-    uint32_t     port;
-    double       timeout;
-    uint8_t      log_level;
-    double       step_size;
-    double       end_time;
-    uint32_t     uid;
-    const char*  name;
-    const char*  file;
-    const char*  path;
-    /* Parsed YAML Files. */
-    YamlDocList* yaml_doc_list;
-    /* Allow detection of CLI provided arguments. */
-    int          timeout_set_by_cli;
-    int          log_level_set_by_cli;
-    /* MStep "hidden" arguments. */
-    uint32_t     steps;
-} ModelCArguments;
-
-
-/* model.c - Model Interface. */
-DLL_PUBLIC int model_function_register(ModelInstanceSpec* model_instance,
-    const char* model_function_name, double step_size,
-    ModelDoStepHandler do_step_handler);
-DLL_PUBLIC int model_configure_channel(
-    ModelInstanceSpec* model_instance, ModelChannelDesc* channel_desc);
-DLL_PUBLIC ChannelSpec* model_build_channel_spec(
-    ModelInstanceSpec* model_instance, const char* channel_name);
-
-
-/* signal.c - Signal Vector Interface. */
-DLL_PUBLIC SignalVector* model_sv_create(ModelInstanceSpec* mi);
-DLL_PUBLIC void          model_sv_destroy(SignalVector* sv);
-
-/* ncodec.c - Stream Interface (for NCodec). */
-DLL_PRIVATE void* model_sv_stream_create(SignalVector* sv, uint32_t idx);
-DLL_PRIVATE void model_sv_stream_destroy(void* stream);
-
-
-/* modelc.c - Runtime Interface (i.e. ModelC.exe). */
-DLL_PUBLIC int  modelc_configure(ModelCArguments* args, SimulationSpec* sim);
-DLL_PUBLIC ModelInstanceSpec* modelc_get_model_instance(
-    SimulationSpec* sim, const char* name);
-DLL_PUBLIC int  modelc_run(SimulationSpec* sim, bool run_async);
-DLL_PUBLIC void modelc_exit(SimulationSpec* sim);
-DLL_PUBLIC int  modelc_sync(SimulationSpec* sim);
-DLL_PUBLIC void modelc_shutdown(void);
-
-
-/* modelc_debug.c - Debug Interface. */
-DLL_PUBLIC int modelc_step(ModelInstanceSpec* model_instance, double step_size);
-
-
-/* modelc_args.c - CLI argument parsing routines. */
-DLL_PUBLIC void modelc_set_default_args(ModelCArguments* args,
-    const char* model_instance_name, double step_size, double end_time);
-DLL_PUBLIC void modelc_parse_arguments(
-    ModelCArguments* args, int argc, char** argv, const char* doc_string);
+/* Provided by ModelC (virtual methods of SignalVectorVTable). */
+DLL_PUBLIC int signal_append(SignalVector* sv, uint32_t index,
+    void* data, uint32_t len);
+DLL_PUBLIC int signal_reset(SignalVector* sv, uint32_t index);
+DLL_PUBLIC int signal_release(SignalVector* sv, uint32_t index);
+DLL_PUBLIC void* signal_codec(SignalVector* sv, uint32_t index);
+DLL_PUBLIC const char* signal_annotation(SignalVector* sv, uint32_t index,
+    const char* name);
 
 
 #endif  // DSE_MODELC_MODEL_H_

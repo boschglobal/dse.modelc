@@ -1,11 +1,11 @@
-# Copyright 2023 Robert Bosch GmbH
+# Copyright 2024 Robert Bosch GmbH
 #
 # SPDX-License-Identifier: Apache-2.0
 
 ---
 kind: Stack
 metadata:
-  name: dynamic_model_stack
+  name: minimal_stack
 spec:
   connection:
     transport:
@@ -17,16 +17,25 @@ spec:
       model:
         name: simbus
       channels:
-        - name: test
+        - name: data_channel
           expectedModelCount: 1
-    - name: dynamic_model_instance
+    - name: minimal_inst
       uid: 42
       model:
-        name: DynamicModel
+        name: Minimal
       channels:
-        - name: test
-          alias: model_channel
+        - name: data_channel
+          alias: data
 ---
 kind: Model
 metadata:
   name: simbus
+---
+kind: SignalGroup
+metadata:
+  name: data
+  labels:
+    side: data
+spec:
+  signals:
+    - signal: counter

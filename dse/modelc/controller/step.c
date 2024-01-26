@@ -27,8 +27,9 @@ static int _do_step_func(void* _mf, void* _step_data)
 {
     ModelFunction* mf = _mf;
     mf_step_data*  step_data = _step_data;
+    ModelDesc*     md = step_data->mi->model_desc;
     double         model_time = step_data->model_time;
-    int            rc = mf->do_step_handler(&model_time, step_data->stop_time);
+    int            rc = md->vtable.step(md, &model_time, step_data->stop_time);
     if (rc)
         log_error(
             "Model Function %s:%s (rc=%d)", step_data->mi->name, mf->name, rc);

@@ -28,6 +28,9 @@
 
 static double __stop_request = 0; /* Very private, indicate stop request. */
 
+extern ModelSignalIndex __model_index__(ModelDesc* m, const char* vname,
+    const char* sname);
+
 
 static int _destroy_model_function(void* mf, void* additional_data)
 {
@@ -46,6 +49,11 @@ static void _destroy_model_instances(SimulationSpec* sim)
         ModelInstancePrivate* mip = _instptr->private;
         free(_instptr->name);
         free(_instptr->model_definition.full_path);
+        if (_instptr->model_desc) {
+            if (_instptr->model_desc->sv)
+                model_sv_destroy(_instptr->model_desc->sv);
+            free(_instptr->model_desc);
+        }
         /* ControllerModel */
         ControllerModel* cm = mip->controller_model;
         if (cm) {
@@ -137,11 +145,6 @@ int modelc_configure_model(
         args->yaml_doc_list = dse_yaml_load_file(md_file, args->yaml_doc_list);
         free(md_file);
     }
-
-    /* Propagators list. */
-    model_instance->propagators =
-        dse_yaml_find_node(model_instance->spec, "propagators");
-
     /* Model Definition. */
     const char* selector[] = { "metadata/name" };
     const char* value[] = { model_name };
@@ -281,6 +284,139 @@ int modelc_configure(ModelCArguments* args, SimulationSpec* sim)
         free(model_names);
     }
 
+    return 0;
+}
+
+
+static int _configure_model_channel(YamlNode* ch_node, ModelInstanceSpec* mi)
+{
+    const char* name;
+
+    /* Locate the channel by alias name. */
+    dse_yaml_get_string(ch_node, "alias", &name);
+    if (name == NULL) {
+        /* Fallback to name. */
+        dse_yaml_get_string(ch_node, "name", &name);
+        if (name == NULL) {
+            errno = EINVAL;
+            log_error("Could not find channel alias or name!");
+            return -EINVAL;
+        }
+    }
+
+    /* Configure the channel. */
+    ModelChannelDesc channel_desc = {
+        .name = name,
+        .function_name = MODEL_STEP_FUNC_NAME,
+    };
+    int rc = model_configure_channel(mi, &channel_desc);
+    if (rc != 0) {
+        if (errno == 0) errno = rc;
+        log_error("Channel could not be configured! Check stack alias.");
+        return -EINVAL;
+    }
+
+    return 0;
+}
+
+
+static int _model_function_register(
+    ModelInstanceSpec* model_instance, const char* name, double step_size)
+{
+    int rc;
+    errno = 0;
+
+    /* Create the Model Function object. */
+    ModelFunction* mf = calloc(1, sizeof(ModelFunction));
+    if (mf == NULL) {
+        log_error("ModelFunction malloc failed!");
+        goto error_clean_up;
+    }
+    mf->name = name;
+    mf->step_size = step_size;
+    rc = hashmap_init(&mf->channels);
+    if (rc) {
+        log_error("Hashmap init failed for channels!");
+        if (errno == 0) errno = rc;
+        goto error_clean_up;
+    }
+    /* Register the object with the Controller. */
+    rc = controller_register_model_function(model_instance, mf);
+    if (rc && (errno != EEXIST)) goto error_clean_up;
+    return 0;
+
+error_clean_up:
+    model_function_destroy(mf);
+    return errno;
+}
+
+int modelc_model_create(
+    SimulationSpec* sim, ModelInstanceSpec* mi, ModelVTable* model_vtable)
+{
+    /* Create the Model Function (to represent model_step). */
+    if (model_vtable->step == NULL) {
+        errno = EINVAL;
+        log_error("Model has no " MODEL_STEP_FUNC_NAME "() function");
+        return -errno;
+    }
+    int rc = _model_function_register(mi, MODEL_STEP_FUNC_NAME, sim->step_size);
+    if (rc != 0) {
+        if (errno == 0) errno = rc;
+        log_error("Model function registration failed!");
+        return rc;
+    }
+
+    /* Setup the channels and signal vector. */
+    YamlNode* c_node;
+    if (dse_yaml_find_node(mi->model_definition.doc, "spec/runtime/gateway")) {
+        log_debug("Select channels based on Model Instance (Gateway)");
+        c_node = dse_yaml_find_node(mi->spec, "channels");
+    } else {
+        c_node = dse_yaml_find_node(mi->model_definition.doc, "spec/channels");
+    }
+    if (c_node) {
+        for (uint32_t i = 0; i < hashlist_length(&c_node->sequence); i++) {
+            YamlNode* ch_node = hashlist_at(&c_node->sequence, i);
+            int       rc = _configure_model_channel(ch_node, mi);
+            if (rc) {
+                if (errno == 0) errno = EINVAL;
+                log_error("Model has no " MODEL_STEP_FUNC_NAME "() function");
+                return -errno;
+            }
+        }
+    }
+    SignalVector* sv = model_sv_create(mi);
+
+    /* Setup the initial ModelDesc object. */
+    ModelDesc* model_desc = calloc(1, sizeof(ModelDesc));
+    memcpy(&model_desc->vtable, model_vtable, sizeof(ModelVTable));
+    model_desc->index = model_desc->vtable.index = __model_index__;
+    model_desc->sim = sim;
+    model_desc->mi = mi;
+    model_desc->sv = sv;
+
+    /* Call create (if it exists). */
+    if (model_desc->vtable.create) {
+        errno = 0;
+        ModelDesc* extended_model_desc = model_desc->vtable.create(model_desc);
+        if (errno) {
+            log_error("Error condition while calling " MODEL_CREATE_FUNC_NAME);
+        }
+        if (extended_model_desc) {
+            if (extended_model_desc != model_desc) {
+                /* The model returned an extended (new) ModelDesc object. */
+                free(model_desc);
+                model_desc = extended_model_desc;
+            }
+        }
+        /* Reset some elements of the ModelDesc (don't trust the model). */
+        model_desc->sim = sim;
+        model_desc->mi = mi;
+        model_desc->sv = sv;
+    }
+
+    /* Finalise the ModelDesc object. */
+    mi->model_desc = model_desc;
     return 0;
 }
 

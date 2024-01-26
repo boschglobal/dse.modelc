@@ -30,23 +30,23 @@ typedef struct ModelFunctionChannel {
 
 
 typedef struct ModelFunction {
-    const char*        name;
-    double             step_size;
-    ModelDoStepHandler do_step_handler;
+    const char* name;
+    double      step_size;
 
-    HashMap
-        channels; /* Collection of ModelFunctionChannel, Key is channel_name. */
+    /* Collection of ModelFunctionChannel, Key is channel_name. */
+    HashMap channels;
 } ModelFunction;
 
 
 typedef struct ControllerModel {
     /* Controller specific objects (placed in Model instance). */
     const char* model_dynlib_filename;
-    HashMap     model_functions; /* Collection of ModelFunction, Key is Model
-                                    Function name. */
 
-    ModelSetupHandler model_setup_func;
-    ModelExitHandler  model_exit_func;
+    /* Collection of ModelFunction, Key is Model Function name. */
+    HashMap model_functions;
+
+    /* Model interface vTable. */
+    ModelVTable vtable;
 } ControllerModel;
 
 
@@ -67,7 +67,7 @@ DLL_PRIVATE int controller_init(Endpoint* endpoint);
 DLL_PRIVATE int controller_init_channel(ModelInstanceSpec* model_instance,
     const char* channel_name, const char** signal_name, uint32_t signal_count);
 
-/* These are called indirectly from the Model, via model_function_register()
+/* These are called indirectly from the Model, via _model_function_register()
    and model_configure_channel_*(). */
 DLL_PRIVATE int controller_register_model_function(
     ModelInstanceSpec* model_instance, ModelFunction* model_function);

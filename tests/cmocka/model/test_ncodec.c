@@ -2,16 +2,12 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-#include <stdarg.h>
-#include <stddef.h>
-#include <stdlib.h>
-#include <stdint.h>
-#include <float.h>
-#include <setjmp.h>
-#include <cmocka.h>
+#include <string.h>
 #include <dse/testing.h>
 #include <dse/logger.h>
+#include <dse/clib/util/yaml.h>
 #include <dse/modelc/model.h>
+#include <dse/modelc/runtime.h>
 #include <dse/ncodec/codec.h>
 
 
@@ -39,8 +35,9 @@ static uint _sv_count(SignalVector* sv)
 }
 
 
-static int _sv_nop(double* model_time, double stop_time)
+static int _sv_nop(ModelDesc* model, double* model_time, double stop_time)
 {
+    UNUSED(model);
     UNUSED(model_time);
     UNUSED(stop_time);
     return 0;
@@ -67,15 +64,8 @@ static int test_setup(void** state)
     assert_int_equal(rc, 0);
     mock->mi = modelc_get_model_instance(&mock->sim, args.name);
     assert_non_null(mock->mi);
-    rc = model_function_register(mock->mi, "NOP", 0.005, _sv_nop);
-    assert_int_equal(rc, 0);
-
-    /* Binary channel. */
-    static ModelChannelDesc binary_channel_desc = {
-        .name = "binary_vector",
-        .function_name = "NOP",
-    };
-    rc = model_configure_channel(mock->mi, &binary_channel_desc);
+    ModelVTable vtable = { .step = _sv_nop };
+    rc = modelc_model_create(&mock->sim, mock->mi, &vtable);
     assert_int_equal(rc, 0);
 
     /* Return the mock. */
@@ -104,7 +94,7 @@ void test_ncodec__ncodec_open(void** state)
 {
     ModelCMock* mock = *state;
 
-    SignalVector* sv_save = model_sv_create(mock->mi);
+    SignalVector* sv_save = mock->mi->model_desc->sv;
     assert_int_equal(_sv_count(sv_save), 1);
 
     /* Use the "binary" signal vector. */
@@ -123,8 +113,6 @@ void test_ncodec__ncodec_open(void** state)
     assert_null(sv->ncodec[1]);
     assert_non_null(sv->ncodec[2]);
     assert_ptr_equal(sv->codec(sv, 2), sv->ncodec[2]);
-
-    model_sv_destroy(sv_save);
 }
 
 
@@ -135,7 +123,7 @@ void test_ncodec__read_empty(void** state)
     NCodecMessage msg;
 
     /* Use the "binary" signal vector. */
-    SignalVector* sv_save = model_sv_create(mock->mi);
+    SignalVector* sv_save = mock->mi->model_desc->sv;
     assert_int_equal(_sv_count(sv_save), 1);
     SignalVector* sv = sv_save;
     while (sv && sv->name) {
@@ -168,8 +156,6 @@ void test_ncodec__read_empty(void** state)
     assert_int_equal(len, -ENOMSG);
     assert_int_equal(msg.len, 0);
     assert_null(msg.buffer);
-
-    model_sv_destroy(sv_save);
 }
 
 
@@ -179,7 +165,7 @@ void test_ncodec__network_stream(void** state)
     int         rc;
 
     /* Use the "binary" signal vector. */
-    SignalVector* sv_save = model_sv_create(mock->mi);
+    SignalVector* sv_save = mock->mi->model_desc->sv;
     assert_int_equal(_sv_count(sv_save), 1);
     SignalVector* sv = sv_save;
     while (sv && sv->name) {
@@ -223,8 +209,6 @@ void test_ncodec__network_stream(void** state)
     assert_int_equal(msg.len, strlen(greeting));
     assert_non_null(msg.buffer);
     assert_memory_equal(msg.buffer, greeting, strlen(greeting));
-
-    model_sv_destroy(sv_save);
 }
 
 
@@ -233,7 +217,7 @@ void test_ncodec__config(void** state)
     ModelCMock* mock = *state;
 
     /* Use the "binary" signal vector. */
-    SignalVector* sv_save = model_sv_create(mock->mi);
+    SignalVector* sv_save = mock->mi->model_desc->sv;
     assert_int_equal(_sv_count(sv_save), 1);
     SignalVector* sv = sv_save;
     while (sv && sv->name) {
@@ -259,8 +243,6 @@ void test_ncodec__config(void** state)
     assert_int_equal(len, 0x66);
     assert_int_equal(len, sv->length[2]);
     assert_int_equal(((uint8_t*)(sv->binary[2]))[54], 8);
-
-    model_sv_destroy(sv_save);
 }
 
 

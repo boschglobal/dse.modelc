@@ -5,26 +5,23 @@
 ---
 kind: Model
 metadata:
-  name: Binary
+  name: Extended
 spec:
   runtime:
     dynlib:
       - os: linux
         arch: amd64
-        path: lib/libbinary.so
+        path: lib/libextended.so
       - os: linux
         arch: x86
-        path: lib/libbinary.so
+        path: lib/libextended.so
       - os: windows
         arch: x64
-        path: bin/binary.dll
+        path: bin/extended.dll
       - os: windows
         arch: x86
-        path: bin/binary.dll
+        path: bin/extended.dll
   channels:
-    - alias: scalar
+    - alias: data
       selectors:
-        channel: scalar_channel
-    - alias: binary
-      selectors:
-        channel: binary_channel
+        side: data

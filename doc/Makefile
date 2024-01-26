@@ -45,6 +45,13 @@ DOC_OUTPUT_model := doc/content/apis/modelc/model/index.md
 DOC_LINKTITLE_model := Model
 DOC_TITLE_model := "Model API Reference"
 
+# Module "runtime"
+DOC_INPUT_runtime := dse/modelc/runtime.h
+DOC_CDIR_runtime := dse/modelc/controller/modelc.c,dse/modelc/controller/modelc_args.c,dse/modelc/controller/modelc_debug.c,
+DOC_OUTPUT_runtime := doc/content/apis/modelc/runtime/index.md
+DOC_LINKTITLE_runtime := Runtime
+DOC_TITLE_runtime := "Runtime API Reference"
+
 # Module "schema"
 DOC_INPUT_schema := dse/modelc/schema.h
 DOC_CDIR_schema := dse/modelc/model/schema.c
@@ -53,15 +60,15 @@ DOC_LINKTITLE_schema := Schema
 DOC_TITLE_schema := "Schema API Reference"
 
 # Module "simmock"
-DOC_INPUT_simmock := dse/modelc/mocks/simmock.h
-DOC_CDIR_simmock := dse/modelc/mocks/simmock.c
+DOC_INPUT_simmock := dse/mocks/simmock.h
+DOC_CDIR_simmock := dse/mocks/simmock.c
 DOC_OUTPUT_simmock := doc/content/apis/modelc/simmock/index.md
 DOC_LINKTITLE_simmock := SimMock
 DOC_TITLE_simmock := "SimMock API Reference"
 
 
 # Targets
-DOC_C_MODULES := gateway mcl model schema simmock
+DOC_C_MODULES := gateway mcl model runtime schema simmock
 #DOC_C_MODULES :=  model
 
 .PHONY: examples

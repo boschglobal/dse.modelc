@@ -2,16 +2,12 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-#include <stdarg.h>
-#include <stddef.h>
-#include <stdlib.h>
-#include <stdint.h>
-#include <float.h>
-#include <setjmp.h>
-#include <cmocka.h>
+#include <string.h>
 #include <dse/testing.h>
 #include <dse/logger.h>
+#include <dse/clib/util/yaml.h>
 #include <dse/modelc/model.h>
+#include <dse/modelc/runtime.h>
 
 
 #define UNUSED(x)     ((void)x)
@@ -38,8 +34,9 @@ static uint _sv_count(SignalVector* sv)
 }
 
 
-static int _sv_nop(double* model_time, double stop_time)
+static int _sv_nop(ModelDesc* model, double* model_time, double stop_time)
 {
+    UNUSED(model);
     UNUSED(model_time);
     UNUSED(stop_time);
     return 0;
@@ -66,23 +63,8 @@ static int test_setup(void** state)
     assert_int_equal(rc, 0);
     mock->mi = modelc_get_model_instance(&mock->sim, args.name);
     assert_non_null(mock->mi);
-    rc = model_function_register(mock->mi, "NOP", 0.005, _sv_nop);
-    assert_int_equal(rc, 0);
-
-    /* Scalar channel. */
-    static ModelChannelDesc scalar_channel_desc = {
-        .name = "scalar_vector",
-        .function_name = "NOP",
-    };
-    rc = model_configure_channel(mock->mi, &scalar_channel_desc);
-    assert_int_equal(rc, 0);
-
-    /* Binary channel. */
-    static ModelChannelDesc binary_channel_desc = {
-        .name = "binary_vector",
-        .function_name = "NOP",
-    };
-    rc = model_configure_channel(mock->mi, &binary_channel_desc);
+    ModelVTable vtable = { .step = _sv_nop };
+    rc = modelc_model_create(&mock->sim, mock->mi, &vtable);
     assert_int_equal(rc, 0);
 
     /* Return the mock. */
@@ -111,7 +93,7 @@ void test_signal__scalar(void** state)
 {
     ModelCMock* mock = *state;
 
-    SignalVector* sv_save = model_sv_create(mock->mi);
+    SignalVector* sv_save = mock->mi->model_desc->sv;
     assert_int_equal(_sv_count(sv_save), 2);
 
     /* Use the "scalar" signal vector. */
@@ -125,7 +107,7 @@ void test_signal__scalar(void** state)
     /* General properties. */
     assert_string_equal(sv->name, "scalar");
     assert_string_equal(sv->alias, "scalar_vector");
-    assert_string_equal(sv->function_name, "NOP");
+    assert_string_equal(sv->function_name, "model_step");
     assert_int_equal(sv->count, 2);
     assert_int_equal(sv->is_binary, false);
     assert_non_null(sv->signal);
@@ -151,8 +133,6 @@ void test_signal__scalar(void** state)
         sv->append(sv, i, (void*)"1234", 4); /* NOP */
         assert_double_equal(sv->scalar[i], test_val, DBL_EPSILON);
     }
-
-    model_sv_destroy(sv_save);
 }
 
 
@@ -160,7 +140,7 @@ void test_signal__binary(void** state)
 {
     ModelCMock* mock = *state;
 
-    SignalVector* sv_save = model_sv_create(mock->mi);
+    SignalVector* sv_save = mock->mi->model_desc->sv;
     assert_int_equal(_sv_count(sv_save), 2);
 
     /* Use the "binary" signal vector. */
@@ -174,7 +154,7 @@ void test_signal__binary(void** state)
     /* General properties. */
     assert_string_equal(sv->name, "binary");
     assert_string_equal(sv->alias, "binary_vector");
-    assert_string_equal(sv->function_name, "NOP");
+    assert_string_equal(sv->function_name, "model_step");
     assert_int_equal(sv->count, 2);
     assert_int_equal(sv->is_binary, true);
     assert_non_null(sv->signal);
@@ -230,8 +210,6 @@ void test_signal__binary(void** state)
         /* Cleanup. */
         free(test_val);
     }
-
-    model_sv_destroy(sv_save);
 }
 
 
@@ -239,7 +217,7 @@ void test_signal__annotations(void** state)
 {
     ModelCMock* mock = *state;
 
-    SignalVector* sv_save = model_sv_create(mock->mi);
+    SignalVector* sv_save = mock->mi->model_desc->sv;
     assert_int_equal(_sv_count(sv_save), 2);
 
     /* Use the "binary" signal vector. */
@@ -262,8 +240,6 @@ void test_signal__annotations(void** state)
     assert_string_equal(value, "binary_bar");
     value = sv->annotation(sv, 1, "mime_type");
     assert_string_equal(value, "application/custom-stream");
-
-    model_sv_destroy(sv_save);
 }
 
 
@@ -278,5 +254,5 @@ int run_signal_tests(void)
         cmocka_unit_test_setup_teardown(test_signal__annotations, s, t),
     };
 
-    return cmocka_run_group_tests_name("NCODEC", tests, NULL, NULL);
+    return cmocka_run_group_tests_name("SIGNAL", tests, NULL, NULL);
 }

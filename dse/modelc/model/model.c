@@ -65,70 +65,6 @@ void model_function_destroy(ModelFunction* model_function)
 }
 
 
-/**
-model_function_register
-=======================
-
-Register a Model Function. A Model may register one or more Model Functions
-with repeated calls to this function.
-
-Parameters
-----------
-model_instance (ModelInstanceSpec*)
-: The Model Instance object (provided via the `model_setup()` function of the
-  Model API).
-
-name (const char*)
-: The name of the Model Function.
-
-step_size (double)
-: The step size of the Model Function.
-
-do_step_handler (ModelDoStepHandler)
-: The "do step" function of the Model Function.
-
-Returns
--------
-0
-: The model function was registered.
-
-(errno)
-: An error occurred during registration of the model function. The return
-  value is the `errno` which may indicate the reason for the failure.
-
-*/
-int model_function_register(ModelInstanceSpec* model_instance, const char* name,
-    double step_size, ModelDoStepHandler do_step_handler)
-{
-    int rc;
-    errno = 0;
-
-    /* Create the Model Function object. */
-    ModelFunction* mf = calloc(1, sizeof(ModelFunction));
-    if (mf == NULL) {
-        log_error("ModelFunction malloc failed!");
-        goto error_clean_up;
-    }
-    mf->name = name;
-    mf->step_size = step_size;
-    mf->do_step_handler = do_step_handler;
-    rc = hashmap_init(&mf->channels);
-    if (rc) {
-        log_error("Hashmap init failed for channels!");
-        if (errno == 0) errno = rc;
-        goto error_clean_up;
-    }
-    /* Register the object with the Controller. */
-    rc = controller_register_model_function(model_instance, mf);
-    if (rc && (errno != EEXIST)) goto error_clean_up;
-    return 0;
-
-error_clean_up:
-    model_function_destroy(mf);
-    return errno;
-}
-
-
 static ModelFunctionChannel* _get_mfc(ModelInstanceSpec* model_instance,
     const char* model_function_name, const char* channel_name)
 {
@@ -152,68 +88,6 @@ static ModelFunctionChannel* _get_mfc(ModelInstanceSpec* model_instance,
     hashmap_set_alt(&mf->channels, channel_name, mfc);
 
     return mfc;
-}
-
-
-static void _load_propagator_signal_names(
-    SimpleSet* set, YamlNode* signals_node, bool target_channel)
-{
-    if (signals_node == NULL) return;
-
-    uint32_t _sig_count = hashlist_length(&signals_node->sequence);
-    for (uint32_t i = 0; i < _sig_count; i++) {
-        YamlNode* sig_node = hashlist_at(&signals_node->sequence, i);
-        YamlNode* n_node = NULL;
-        if (target_channel) {
-            n_node = dse_yaml_find_node(sig_node, "target");
-        } else {
-            n_node = dse_yaml_find_node(sig_node, "source");
-        }
-        /* Fallback the the common "signal" specifier. */
-        if (n_node == NULL) {
-            n_node = dse_yaml_find_node(sig_node, "signal");
-        }
-        set_add(set, n_node->scalar);
-    }
-}
-
-
-static void _find_signals_node_legacy(ModelInstanceSpec* model_instance,
-    const char* channel_name, YamlNode** channels_node, YamlNode** signals_node)
-{
-    *channels_node = NULL;
-    *signals_node = NULL;
-    const char* selectors[] = { "name" };
-    const char* values[] = { channel_name };
-
-    /* Search in the Model definition. */
-    if (model_instance->model_definition.doc) {
-        YamlNode* c_node =
-            dse_yaml_find_node_in_seq(model_instance->model_definition.doc,
-                "spec/channels", selectors, values, 1);
-        YamlNode* s_node = dse_yaml_find_node(c_node, "signals");
-        if (c_node && s_node) {
-            log_info("Signals for channel[%s] selected from Model Definition.",
-                channel_name);
-            *channels_node = c_node;
-            *signals_node = s_node;
-            return;
-        }
-    }
-
-    /* Search in the Model Instance. */
-    if (model_instance->spec) {
-        YamlNode* c_node = dse_yaml_find_node_in_seq(
-            model_instance->spec, "channels", selectors, values, 1);
-        YamlNode* s_node = dse_yaml_find_node(c_node, "signals");
-        if (c_node && s_node) {
-            log_info("Signals for channel[%s] selected from Model Instance.",
-                channel_name);
-            *channels_node = c_node;
-            *signals_node = s_node;
-            return;
-        }
-    }
 }
 
 
@@ -319,78 +193,7 @@ void _load_signals(ModelInstanceSpec* model_instance, ChannelSpec* channel_spec,
 }
 
 
-void _load_propagator_signals(ModelInstanceSpec* model_instance,
-    ModelChannelDesc* channel_desc, __signal_list_t* signal_list)
-{
-    YamlNode* propagators_node = model_instance->propagators;
-    /* Propagators are loaded dynamically from one or more YAML Docs
-    which means duplicate signal name might exist. Therefore parse the
-    signal names into a Set to avoid duplicates.
-
-    NOTE: The order of signals for a propagator does not matter as the
-    propagator model will dynamically load the related configuration direct
-    from the YAML Documents. Therefore a Set is viable intermediate storage
-    container.
-    */
-    SimpleSet signal_name_set;
-    set_init(&signal_name_set);
-    /* Parse out the signals from all listed propagators. */
-    uint32_t _prop_count = hashlist_length(&propagators_node->sequence);
-    for (uint32_t i = 0; i < _prop_count; i++) {
-        YamlNode*   prop_node = hashlist_at(&propagators_node->sequence, i);
-        YamlNode*   prop_name_node = dse_yaml_find_node(prop_node, "name");
-        // Find the propagator.
-        const char* selector[] = { "metadata/name" };
-        const char* value[] = { prop_name_node->scalar };
-        YamlNode*   p_doc = dse_yaml_find_doc_in_doclist(
-              model_instance->yaml_doc_list, "Propagator", selector, value, 1);
-        assert(p_doc);
-        // Find the signals node.
-        YamlNode* signals_node = dse_yaml_find_node(p_doc, "spec/signals");
-        _load_propagator_signal_names(&signal_name_set, signals_node,
-            channel_desc->propagator_target_channel);
-    }
-    /* Get the list of signals. */
-    uint64_t _sig_count64 = 0;
-    signal_list->names =
-        (const char**)set_to_array(&signal_name_set, &_sig_count64);
-    signal_list->length = _sig_count64;
-    set_destroy(&signal_name_set);
-}
-
-
-void _load_signals_legacy(ModelInstanceSpec* model_instance,
-    const char* channel_name, __signal_list_t* signal_list)
-{
-    /* Models are expected to define and reference signals according to the
-    index of the signal in the Model Definition.
-
-    IMPORTANT: signals must be parsed in the order which they occur in the
-    Model Definition YAML Doc.
-    */
-    YamlNode* c_node = NULL;
-    YamlNode* signals_node = NULL;
-    _find_signals_node_legacy(
-        model_instance, channel_name, &c_node, &signals_node);
-    if (c_node == NULL) {
-        log_fatal("Channel (%s) not found in model definition", channel_name);
-    }
-    if (signals_node == NULL) {
-        log_fatal("Signals node not found in model definition ");
-    }
-    assert(c_node);
-    assert(signals_node);
-    signal_list->length = hashlist_length(&signals_node->sequence);
-    signal_list->names = calloc(signal_list->length, sizeof(const char*));
-    for (uint32_t i = 0; i < signal_list->length; i++) {
-        YamlNode* sig_node = hashlist_at(&signals_node->sequence, i);
-        YamlNode* n_node = dse_yaml_find_node(sig_node, "signal");
-        signal_list->names[i] = n_node->scalar;
-    }
-}
-
-
-/**
+/*
 model_configure_channel
 =======================
 
@@ -459,25 +262,11 @@ int model_configure_channel(
         return 0;
     }
 
-    /* Find the signal definitions:
-    If the Model Instance specifies a Propagator, then the signals will be
-    defined under Propagator:spec/signals.
-    Otherwise, the signals will be under Model:spec/channels[name]/signals.
-    */
+    /* Load signals via SignalGroups. */
     __signal_list_t  signal_list = { NULL, 0 };
     ModelChannelType vector_type = MODEL_VECTOR_DOUBLE;
     assert(model_instance->spec);
-    if (model_instance->propagators) {
-        _load_propagator_signals(model_instance, channel_desc, &signal_list);
-    } else {
-        /* Load signals via SignalGroups. */
-        _load_signals(model_instance, channel_spec, &signal_list, &vector_type);
-        if (signal_list.length == 0) {
-            /* Fallback to legacy method. */
-            _load_signals_legacy(
-                model_instance, channel_spec->name, &signal_list);
-        }
-    }
+    _load_signals(model_instance, channel_spec, &signal_list, &vector_type);
     log_notice("  Unique signals identified: %u", signal_list.length);
 
     /* Init the channel and register signals. */
@@ -519,3 +308,168 @@ int model_configure_channel(
     /* Brutal, eh? */
     return 0;
 }
+
+
+DLL_PRIVATE ModelSignalIndex __model_index__(ModelDesc* m, const char* vname, const char* sname)
+{
+    ModelSignalIndex index = {};
+    if (m == NULL || m->sv == NULL) return index;
+
+    SignalVector* sv = m->sv;
+    uint32_t      v_idx = 0;
+    while (sv && sv->name) {
+        if (strcmp(sv->alias, vname) == 0) {
+            for (uint32_t s_idx = 0; s_idx < sv->count; s_idx++) {
+                if (strcmp(sv->signal[s_idx], sname) == 0) {
+                    /* Match! */
+                    index.sv = sv;
+                    index.vector = v_idx;
+                    index.signal = s_idx;
+                    if (sv->is_binary) {
+                        index.binary = &(sv->binary[s_idx]);
+                    } else {
+                        index.scalar = &(sv->scalar[s_idx]);
+                    }
+                    return index;
+                }
+            }
+        }
+        sv++;
+        v_idx++;
+    }
+    return index;
+}
+
+
+/**
+model_create
+============
+
+> Optional method of `ModelVTable` interface.
+
+Called by the Model Runtime to create a new instance of this model.
+
+The `model_create()` method may extend or mutilate the provided Model
+Descriptor. When extending the Model Descriptor _and_ allocating additional
+resources then the `model_destroy()` method should also be implemented.
+
+Fault conditions can be communicated to the caller by setting variable
+`errno` to a non-zero value. Additionally, `log_fatal()` can be used to
+immediately halt execution of a model.
+
+Parameters
+----------
+model (ModelDesc*)
+: The Model Descriptor object representing an instance of this model.
+
+Returns
+-------
+NULL
+: The Channel was configured.
+
+(ModelDesc*)
+: Pointer to a new, or mutilated, version of the Model Descriptor object. The
+  original Model Descriptor object will be released by the Model Runtime (i.e.
+  don't call `free()`).
+
+errno <> 0 (indirect)
+: Indicates an error condition.
+
+Example
+-------
+
+{{< readfile file="../examples/model_create.c" code="true" lang="c" >}}
+
+
+*/
+extern ModelDesc* model_create(ModelDesc* m);
+
+
+/**
+model_step
+==========
+
+> Mandatory method of `ModelVTable` interface. Alternatively, Model implementers
+  may specify the `ModelVTable.step` method dynamically by mutilating the
+  Model Descriptor in the `model_create()` method, or even at runtime.
+
+Called by the Model Runtime to step the model for a time interval.
+
+Parameters
+----------
+model (ModelDesc*)
+: The Model Descriptor object representing an instance of this model.
+
+model_time (double*)
+: (in/out) Specifies the model time for this step of the model.
+
+stop_time (double)
+: Specifies the stop time for this step of the model. The model step should not
+  exceed this time.
+
+Returns
+-------
+0
+: The step completed without error.
+
+<>0
+: An error occurred at some point during the step execution.
+
+model_time (via parameter)
+: The final model time reached for this step. This value may be less than
+  `stop_time` if a step decides to return early.
+*/
+extern int model_step(ModelDesc* model, double* model_time, double stop_time);
+
+
+/**
+model_destroy
+=============
+
+> Optional method of `ModelVTable` interface.
+
+Called by the Model Runtime at the end of a simulation, the `model_destroy()`
+function may be implemented by a Model Integrator to perform any custom
+cleanup operations (e.g. releasing instance related resources, such as open
+files or allocated memory).
+
+Parameters
+----------
+model (ModelDesc*)
+: The Model Descriptor object representing an instance of this model.
+
+*/
+extern void model_destroy(ModelDesc* model);
+
+
+/**
+model_index_
+============
+
+> Provided method (by the Runtime). Model implementers may specify
+  a different index method by mutilating the Model Descriptor in the
+  `model_create()` method, or even at runtime.
+
+A model may use this method to index a signal that is contained within the
+Signal Vectors of the Model Descriptor.
+
+Parameters
+----------
+model (ModelDesc*)
+: The Model Descriptor object representing an instance of this model.
+
+vname (const char*)
+: The name (alias) of the Signal Vector.
+
+sname (const char*)
+: The name of the signal within the Signal Vector.
+
+Returns
+-------
+ModelSignalIndex
+: An index. When valid, either the `scalar` or `binary` fields will be set to
+  a valid pointer (i.e. not NULL).
+
+*/
+extern ModelSignalIndex model_index_(ModelDesc* model, const char* vname,
+    const char* sname);

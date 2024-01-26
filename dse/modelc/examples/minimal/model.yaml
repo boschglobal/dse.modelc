@@ -1,27 +1,27 @@
-# Copyright 2023 Robert Bosch GmbH
+# Copyright 2024 Robert Bosch GmbH
 #
 # SPDX-License-Identifier: Apache-2.0
 
 ---
 kind: Model
 metadata:
-  name: DynamicModel
+  name: Minimal
 spec:
   runtime:
     dynlib:
       - os: linux
         arch: amd64
-        path: lib/dynamic_model.so
+        path: lib/libminimal.so
       - os: linux
         arch: x86
-        path: lib/dynamic_model.so
+        path: lib/libminimal.so
       - os: windows
         arch: x64
-        path: bin/dynamic_model.dll
+        path: bin/minimal.dll
       - os: windows
         arch: x86
-        path: bin/dynamic_model.dll
+        path: bin/minimal.dll
   channels:
-    - alias: model_channel
+    - alias: data
       selectors:
-        channel: test
+        side: data

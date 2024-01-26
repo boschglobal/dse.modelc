@@ -7,8 +7,9 @@
 #include <dse/testing.h>
 #include <dse/logger.h>
 #include <dse/clib/util/strings.h>
+#include <dse/clib/util/yaml.h>
 #include <dse/ncodec/codec.h>
-#include <dse/modelc/model.h>
+#include <dse/modelc/runtime.h>
 #include <dse/modelc/schema.h>
 #include <dse/modelc/controller/model_private.h>
 
@@ -255,7 +256,7 @@ static int _count_sv(void* _mf, void* _number)
 }
 
 
-/**
+/*
 model_sv_create
 ===============
 
@@ -271,11 +272,6 @@ Returns
 SignalVector (pointer to NULL terminated list)
 : A list of SignalVector objects representing the signals assigned to a model.
   The list is NULL terminated (sv->name == NULL). Caller to free.
-
-Example
--------
-
-{{< readfile file="../examples/model_sv_create.c" code="true" lang="c" >}}
 
 */
 SignalVector* model_sv_create(ModelInstanceSpec* mi)
@@ -321,7 +317,7 @@ SignalVector* model_sv_create(ModelInstanceSpec* mi)
 }
 
 
-/**
+/*
 model_sv_destroy
 ================
 
@@ -360,3 +356,188 @@ void model_sv_destroy(SignalVector* sv)
 
     free(sv_save);
 }
+
+
+
+/**
+signal_append
+=============
+
+Append data to the end of the specified binary signal. The append method will
+resize the buffers of the binary signal as required.
+
+Parameters
+----------
+sv (SignalVector*)
+: The Signal Vector object containing the signal.
+
+index (uint32_t)
+: Index of the signal in the Signal Vector object.
+
+data (void*)
+: Address/pointer to the data which should be appended to the binary signal.
+
+len (uint32_t)
+: Length of the provided data buffer being appended.
+
+Returns
+-------
+0
+: The operation completed without error.
+
+<>0
+: Indicates an error condition. Inspect `errno` for additional information.
+*/
+extern int signal_append(SignalVector* sv, uint32_t index,
+    void* data, uint32_t len);
+
+
+/**
+signal_reset
+============
+
+Reset a binary signal (e.g. sets its buffer length to 0). The buffers of the
+binary signal are not released (see `signal_release()`).
+
+Parameters
+----------
+sv (SignalVector*)
+: The Signal Vector object containing the signal.
+
+index (uint32_t)
+: Index of the signal in the Signal Vector object.
+
+Returns
+-------
+0
+: The operation completed without error.
+
+<>0
+: Indicates an error condition. Inspect `errno` for additional information.
+*/
+extern int signal_reset(SignalVector* sv, uint32_t index);
+
+
+/**
+signal_release
+==============
+
+Release the resources allocated to a binary signal (e.g. free the buffer).
+
+Parameters
+----------
+sv (SignalVector*)
+: The Signal Vector object containing the signal.
+
+index (uint32_t)
+: Index of the signal in the Signal Vector object.
+
+Returns
+-------
+0
+: The operation completed without error.
+
+<>0
+: Indicates an error condition. Inspect `errno` for additional information.
+*/
+extern int signal_release(SignalVector* sv, uint32_t index);
+
+
+/**
+signal_codec
+============
+
+Return a pointer to the Codec object associated with a binary signal.
+
+Codec objects are created when a binary signal is specified with a `mime_type`
+annotation.
+
+Parameters
+----------
+sv (SignalVector*)
+: The Signal Vector object containing the signal.
+
+index (uint32_t)
+: Index of the signal in the Signal Vector object.
+
+Returns
+-------
+void*
+: The Codec object associated with the binary signal.
+
+NULL
+: The binary signal does not have an associated Codec object.
+
+Example (Codec Specification)
+-------
+
+```yaml
+kind: SignalGroup
+metadata:
+  name: network
+  labels:
+    channel: network_vector
+  annotations:
+    vector_type: binary
+spec:
+  signals:
+    - signal: can_bus
+      annotations:
+        mime_type: application/x-automotive-bus; interface=stream; type=frame; bus=can; schema=fbs; bus_id=1; node_id=2; interface_id=3
+```
+
+Reference
+---------
+
+[Network Codec API](https://github.com/boschglobal/dse.standards/tree/main/dse/ncodec)
+
+*/
+extern void* signal_codec(SignalVector* sv, uint32_t index);
+
+
+/**
+signal_annotation
+=================
+
+Get an annotation from a signal definition.
+
+Parameters
+----------
+sv (SignalVector*)
+: The Signal Vector object containing the signal.
+
+index (uint32_t)
+: Index of the signal in the Signal Vector object.
+
+name (const char*)
+: The name of the annotation.
+
+Returns
+-------
+const char*
+: The annotation value.
+
+Example (Annotation Specification)
+-------
+
+```yaml
+kind: SignalGroup
+metadata:
+  name: data
+spec:
+  signals:
+    - signal: counter
+      annotations:
+        initial_value: 10
+```
+
+Example (Code Usage)
+-------
+
+{{< readfile file="../examples/signalvector_annotation.c" code="true" lang="c" >}}
+
+
+NULL
+: The requested annotation was not found.
+*/
+extern const char* signal_annotation(SignalVector* sv, uint32_t index, const char* name);

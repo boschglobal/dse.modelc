@@ -45,9 +45,10 @@ set(DSE_CLIB_INCLUDE_DIR "${DSE_CLIB_SOURCE_DIR}/..")
 # APIs
 # ----
 add_library(apis OBJECT
+    model_create.c
     model_interface.c
-    model_signalvector.c
-    model_sv_create.c
+    signalvector_annotation.c
+    signalvector_interface.c
     schema_object_search.c
     simmock_configure.c
     simmock_frame_check.c
