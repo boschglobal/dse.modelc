@@ -4,8 +4,8 @@
 
 ###############
 ## Docker Images.
-GCC_BUILDER_IMAGE ?= gcc-builder:latest
-GCC_TESTER_IMAGE ?= python-builder:latest
+GCC_BUILDER_IMAGE ?= ghcr.io/boschglobal/dse-gcc-builder:main
+GCC_TESTER_IMAGE ?= ghcr.io/boschglobal/dse-python-builder:main
 DOCKER_DIRS = simbus-sa modelc modelc-x86
 
 
@@ -160,8 +160,6 @@ cleanall:
 
 oss:
 	@${DOCKER_BUILDER_CMD} $(MAKE) do-oss
-	mkdir -p $(OSS_DIR)
-	cp -r $(EXTERNAL_BUILD_DIR)/* $(OSS_DIR)
 
 do-build:
 	@for d in $(SUBDIRS); do ($(MAKE) -C $$d build ); done

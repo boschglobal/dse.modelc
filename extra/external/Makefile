@@ -23,7 +23,6 @@ build:
 
 oss:
 	if [ ! -d "build" ]; then make setup; fi
-	cd build; cmake -DCMAKE_TOOLCHAIN_FILE=$(CMAKE_TOOLCHAIN_FILE) ..
 	cd build; make oss
 
 clean:

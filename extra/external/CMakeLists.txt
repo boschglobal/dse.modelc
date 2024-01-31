@@ -18,7 +18,9 @@ add_compile_options(-Wall -W -Wwrite-strings -Wno-missing-field-initializers)
 # Load URLs
 # =========
 include(oss_repos.cmake)
-include($ENV{REPO_MIRRORS} OPTIONAL)
+if($ENV{REPO_MIRRORS})
+    include($ENV{REPO_MIRRORS} OPTIONAL)
+endif()
 
 
 
@@ -28,6 +30,17 @@ include(ExternalProject)
 set_property(DIRECTORY PROPERTY EP_STEP_TARGETS download)
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fPIC")
 
+
+# DSE C Lib
+# ---------
+include(FetchContent)
+FetchContent_Declare(dse_clib
+    URL                 $ENV{DSE_CLIB_URL}
+    HTTP_USERNAME       $ENV{DSE_CLIB_URL_USER}
+    HTTP_PASSWORD       $ENV{DSE_CLIB_URL_TOKEN}
+    SOURCE_DIR          "$ENV{EXTERNAL_BUILD_DIR}/dse.clib"
+)
+FetchContent_MakeAvailable(dse_clib)
 
 # DSE Network Codec
 # -----------------
@@ -139,11 +152,27 @@ ExternalProject_Add(dlfcnwin32
 # OSS Target
 # ==========
 add_custom_target(oss)
+function(oss_copy src dst)
+    add_custom_command(TARGET oss PRE_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_directory
+            "${src}"
+            "../../../dse/__oss__/${dst}"
+    )
+endfunction()
 add_dependencies(oss
+    dlfcnwin32-download
     dse_ncodec-download
     event-download
-    yaml-download
-    msgpackc-download
     hiredis-download
-    dlfcnwin32-download
+    msgpackc-download
+    yaml-download
 )
+oss_copy(${dse_clib_SOURCE_DIR} dse.clib)
+
+
+oss_copy($ENV{EXTERNAL_BUILD_DIR}/dlfcnwin32 dlfcnwin32)
+oss_copy($ENV{EXTERNAL_BUILD_DIR}/dse_ncodec dse_ncodec)
+oss_copy($ENV{EXTERNAL_BUILD_DIR}/event event)
+oss_copy($ENV{EXTERNAL_BUILD_DIR}/hiredis hiredis)
+oss_copy($ENV{EXTERNAL_BUILD_DIR}/msgpackc msgpackc)
+oss_copy($ENV{EXTERNAL_BUILD_DIR}/yaml yaml)
