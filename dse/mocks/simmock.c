@@ -620,7 +620,7 @@ void simmock_frame_check(SimMock* mock, const char* model_name,
         bool       frame_found = false;
 
         _nc->stream->seek(nc, 0, NCODEC_SEEK_SET);
-        NCodecMessage msg = {};
+        NCodecCanMessage msg = {};
         while (ncodec_read(nc, &msg) != -ENOMSG) {
             if (msg.len == 0) continue;
             if (msg.frame_id != check.frame_id) continue;
@@ -685,7 +685,7 @@ void simmock_write_frame(SignalVector* sv, const char* sig_name, uint8_t* data,
     /* Write a frame with modified node_id, so the frame is not filtered. */
     char* node_id_save = __get_ncodec_node_id(nc);
     __set_ncodec_node_id(nc, (char*)"42");
-    ncodec_write(nc, &(struct NCodecMessage){
+    ncodec_write(nc, &(struct NCodecCanMessage){
                          .frame_id = frame_id, .len = len, .buffer = data });
     ncodec_flush(nc);
     __set_ncodec_node_id(nc, node_id_save);
@@ -736,7 +736,7 @@ uint32_t simmock_read_frame(
     assert_non_null(nc);
     NCodecInstance* _nc = (NCodecInstance*)nc;
     char*           node_id_save = __get_ncodec_node_id(nc);
-    NCodecMessage   msg = {};
+    NCodecCanMessage   msg = {};
     int             rlen = 0;
 
     /* Read a frame with modified node_id, so the frame is not filtered. */
@@ -870,7 +870,7 @@ void simmock_print_network_frames(SimMock* mock, int level)
                 sv->length[idx]);
             __set_ncodec_node_id(nc, (char*)"42");
             _nc->stream->seek(nc, 0, NCODEC_SEEK_SET);
-            NCodecMessage msg = {};
+            NCodecCanMessage msg = {};
             while (ncodec_read(nc, &msg) != -ENOMSG) {
                 if (msg.len == 0) continue;
                 log_at(level, "  Frame:  %04x", msg.frame_id);

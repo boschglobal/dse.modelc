@@ -46,7 +46,7 @@ void test_message_sequence(void** state)
     char* node_id_save = get_ncodec_node_id(nc);
     set_ncodec_node_id(nc, "42");
     // Send a message (which will not be filtered).
-    ncodec_write(nc, &(struct NCodecMessage){
+    ncodec_write(nc, &(struct NCodecCanMessage){
                          .frame_id = 42,
                          .buffer = (uint8_t*)buffer,
                          .len = strlen(buffer),

@@ -9,7 +9,7 @@ void do_bus_rx(SignalVector* sv, uint32_t idx)
     NCODEC* nc = sv->codec(sv, idx);
 
     while (1) {
-        NCodecMessage msg = {};
+        NCodecCanMessage msg = {};
         int           len = ncodec_read(nc, &msg);
         if (len < 0) break;
         put_rx_frame_to_queue(msg.frame_id, msg.buffer, msg.len);
@@ -24,7 +24,7 @@ void do_bus_tx(SignalVector* sv, uint32_t idx)
     NCODEC*  nc = sv->codec(sv, idx);
 
     while (get_tx_frame_from_queue(&id, &msg, &len)) {
-        ncodec_write(nc, &(struct NCodecMessage){
+        ncodec_write(nc, &(struct NCodecCanMessage){
                              .frame_id = id,
                              .buffer = msg,
                              .len = len,

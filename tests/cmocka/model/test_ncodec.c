@@ -13,6 +13,7 @@
 
 #define UNUSED(x)     ((void)x)
 #define ARRAY_SIZE(x) (sizeof((x)) / sizeof((x)[0]))
+#define BUF_NODEID_OFFSET 53
 
 
 extern uint8_t __log_level__;
@@ -120,7 +121,7 @@ void test_ncodec__read_empty(void** state)
 {
     ModelCMock*   mock = *state;
     size_t        len;
-    NCodecMessage msg;
+    NCodecCanMessage msg;
 
     /* Use the "binary" signal vector. */
     SignalVector* sv_save = mock->mi->model_desc->sv;
@@ -135,14 +136,14 @@ void test_ncodec__read_empty(void** state)
     NCODEC* nc = sv->codec(sv, 2);
 
     /* First read. */
-    memset(&msg, 0, sizeof(NCodecMessage));
+    memset(&msg, 0, sizeof(NCodecCanMessage));
     len = ncodec_read(nc, &msg);
     assert_int_equal(len, -ENOMSG);
     assert_int_equal(msg.len, 0);
     assert_null(msg.buffer);
 
     /* Read after reset. */
-    memset(&msg, 0, sizeof(NCodecMessage));
+    memset(&msg, 0, sizeof(NCodecCanMessage));
     sv->reset(sv, 2);
     len = ncodec_read(nc, &msg);
     assert_int_equal(len, -ENOMSG);
@@ -150,7 +151,7 @@ void test_ncodec__read_empty(void** state)
     assert_null(msg.buffer);
 
     /* Read after release. */
-    memset(&msg, 0, sizeof(NCodecMessage));
+    memset(&msg, 0, sizeof(NCodecCanMessage));
     sv->release(sv, 2);
     len = ncodec_read(nc, &msg);
     assert_int_equal(len, -ENOMSG);
@@ -183,7 +184,7 @@ void test_ncodec__network_stream(void** state)
     const char* greeting = "Hello World";
     NCODEC*     nc = sv->codec(sv, 2);
     sv->reset(sv, 2);
-    rc = ncodec_write(nc, &(struct NCodecMessage){ .frame_id = 42,
+    rc = ncodec_write(nc, &(struct NCodecCanMessage){ .frame_id = 42,
                               .buffer = (uint8_t*)greeting,
                               .len = strlen(greeting) });
     assert_int_equal(rc, strlen(greeting));
@@ -194,7 +195,7 @@ void test_ncodec__network_stream(void** state)
     /* Copy message, keeping the content, modify the node_id. */
     uint8_t buffer[1024];
     memcpy(buffer, sv->binary[2], len);
-    buffer[54] = 8;
+    buffer[BUF_NODEID_OFFSET] = 8;
     // for (uint32_t i = 0; i< buffer_len;i+=8) printf("%02x %02x %02x %02x %02x
     // %02x %02x %02x\n",
     //     buffer[i+0], buffer[i+1], buffer[i+2], buffer[i+3],
@@ -203,7 +204,7 @@ void test_ncodec__network_stream(void** state)
     /* Read the message back. */
     sv->release(sv, 2);
     sv->append(sv, 2, buffer, len);
-    NCodecMessage msg = {};
+    NCodecCanMessage msg = {};
     len = ncodec_read(nc, &msg);
     assert_int_equal(len, strlen(greeting));
     assert_int_equal(msg.len, strlen(greeting));
@@ -236,13 +237,13 @@ void test_ncodec__config(void** state)
 
     /* Write a message, and check the emitted node_id. */
     const char* greeting = "Hello World";
-    ncodec_write(nc, &(struct NCodecMessage){ .frame_id = 42,
+    ncodec_write(nc, &(struct NCodecCanMessage){ .frame_id = 42,
                          .buffer = (uint8_t*)greeting,
                          .len = strlen(greeting) });
     size_t len = ncodec_flush(nc);
     assert_int_equal(len, 0x66);
     assert_int_equal(len, sv->length[2]);
-    assert_int_equal(((uint8_t*)(sv->binary[2]))[54], 8);
+    assert_int_equal(((uint8_t*)(sv->binary[2]))[BUF_NODEID_OFFSET], 8);
 }
 
 
