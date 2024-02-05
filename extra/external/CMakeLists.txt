@@ -168,8 +168,6 @@ add_dependencies(oss
     yaml-download
 )
 oss_copy(${dse_clib_SOURCE_DIR} dse.clib)
-
-
 oss_copy($ENV{EXTERNAL_BUILD_DIR}/dlfcnwin32 dlfcnwin32)
 oss_copy($ENV{EXTERNAL_BUILD_DIR}/dse_ncodec dse_ncodec)
 oss_copy($ENV{EXTERNAL_BUILD_DIR}/event event)
