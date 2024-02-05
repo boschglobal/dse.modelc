@@ -31,7 +31,7 @@ static int test_setup(void** state)
 static int test_teardown(void** state)
 {
     SimMock* mock = *state;
-    simmock_exit(mock);
+    simmock_exit(mock, false);
     simmock_free(mock);
     return 0;
 }
@@ -74,7 +74,7 @@ void test_network__network2target2network(void** state)
     }
     /* Inject a message carrying the reset_counters signal. */
     uint8_t buffer[8] = { 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
-    simmock_write_frame(mock->sv_network_tx, "can_bus", buffer, 8, 0x1f0u);
+    simmock_write_frame(mock->sv_network_tx, "can_bus", buffer, 8, 0x1f0u, 0);
     assert_int_equal(simmock_step(mock, true), 0);
     /* 20ms */
     {

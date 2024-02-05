@@ -426,16 +426,27 @@ int simmock_step(SimMock* mock, bool assert_rc)
 simmock_exit
 ============
 
-Call `model_exit()` for each model.
+Call `model_destroy()` for each model.
 
 Parameters
 ----------
 mock (SimMock*)
 : A SimMock object.
+
+call_destroy (bool)
+: Indicate that model_destroy() should be explicitly called. Set to `true` when
+  using the SimMock library outside of the ModelC repo (which has its own mock
+  object representing the controller).
 */
-void simmock_exit(SimMock* mock)
+void simmock_exit(SimMock* mock, bool call_destroy)
 {
     assert_non_null(mock);
+
+    if (call_destroy) {
+        for (ModelMock* model = mock->model; model->name; model++) {
+            modelc_destroy(model->mi);
+        }
+    }
     modelc_exit(&mock->sim);
 }
 
@@ -667,9 +678,12 @@ len (size_t)
 
 frame_id (uint32_t)
 : The Frame ID associated with the data.
+
+frame_type (uint8_t)
+: The Frame Type associated with the frame.
 */
 void simmock_write_frame(SignalVector* sv, const char* sig_name, uint8_t* data,
-    size_t len, uint32_t frame_id)
+    size_t len, uint32_t frame_id, uint8_t frame_type)
 {
     assert_non_null(sv);
     assert_true(sv->is_binary);
@@ -686,7 +700,8 @@ void simmock_write_frame(SignalVector* sv, const char* sig_name, uint8_t* data,
     char* node_id_save = __get_ncodec_node_id(nc);
     __set_ncodec_node_id(nc, (char*)"42");
     ncodec_write(nc, &(struct NCodecCanMessage){
-                         .frame_id = frame_id, .len = len, .buffer = data });
+                         .frame_id = frame_id, .frame_type = frame_type,
+                         .len = len, .buffer = data });
     ncodec_flush(nc);
     __set_ncodec_node_id(nc, node_id_save);
     free(node_id_save);

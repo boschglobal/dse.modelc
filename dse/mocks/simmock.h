@@ -142,10 +142,10 @@ void simmock_load_model_check(ModelMock* model, bool expect_create_func,
     bool expect_step_func, bool expect_destroy_func);
 void simmock_setup(SimMock* mock, const char* sig_name, const char* net_name);
 int  simmock_step(SimMock* mock, bool assert_rc);
-void simmock_exit(SimMock* mock);
+void simmock_exit(SimMock* mock, bool call_destroy);
 ModelMock* simmock_find_model(SimMock* mock, const char* name);
 void simmock_write_frame(SignalVector* sv, const char* sig_name, uint8_t* data,
-    size_t len, uint32_t frame_id);
+    size_t len, uint32_t frame_id, uint8_t frame_type);
 uint32_t simmock_read_frame(
     SignalVector* sv, const char* sig_name, uint8_t* data, size_t len);
 void simmock_free(SimMock* mock);

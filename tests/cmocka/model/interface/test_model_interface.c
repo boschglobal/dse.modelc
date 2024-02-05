@@ -23,7 +23,7 @@ static int test_teardown(void** state)
 {
     SimMock* mock = *state;
 
-    simmock_exit(mock);
+    simmock_exit(mock, false);
     simmock_free(mock);
 
     chdir(__entry_path__);

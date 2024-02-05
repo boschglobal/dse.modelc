@@ -44,3 +44,23 @@ int modelc_step(ModelInstanceSpec* model_instance, double step_size)
     double model_time = 0.0;
     return step_model(model_instance, &model_time);
 }
+
+
+/**
+ *  modelc_destroy
+ *
+ *  Bypass the controller and call model_destroy() directly.
+ *
+ *  Parameters
+ *  ----------
+ *  model_instance : ModelInstanceSpec (pointer to)
+ *      The model instance, which holds references to the registered channels
+ * and model functions. step_size : double The duration simulation step to be
+ * performed (in seconds).
+ */
+void modelc_destroy(ModelInstanceSpec* mi)
+{
+    if (mi->model_desc->vtable.destroy == NULL) return;
+    mi->model_desc->vtable.destroy(mi->model_desc);
+    mi->model_desc->vtable.destroy = NULL;
+}

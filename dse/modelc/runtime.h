@@ -120,7 +120,8 @@ DLL_PUBLIC int  modelc_model_create(
 
 
 /* modelc_debug.c - Debug Interface. */
-DLL_PUBLIC int modelc_step(ModelInstanceSpec* model_instance, double step_size);
+DLL_PUBLIC int modelc_step(ModelInstanceSpec* mi, double step_size);
+DLL_PUBLIC void modelc_destroy(ModelInstanceSpec* mi);
 
 
 /* modelc_args.c - CLI argument parsing routines. */
