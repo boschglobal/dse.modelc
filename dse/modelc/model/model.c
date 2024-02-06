@@ -310,7 +310,8 @@ int model_configure_channel(
 }
 
 
-DLL_PRIVATE ModelSignalIndex __model_index__(ModelDesc* m, const char* vname, const char* sname)
+DLL_PRIVATE ModelSignalIndex __model_index__(
+    ModelDesc* m, const char* vname, const char* sname)
 {
     ModelSignalIndex index = {};
     if (m == NULL || m->sv == NULL) return index;
@@ -471,5 +472,72 @@ ModelSignalIndex
   a valid pointer (i.e. not NULL).
 
 */
-extern ModelSignalIndex model_index_(ModelDesc* model, const char* vname,
-    const char* sname);
+extern ModelSignalIndex model_index_(
+    ModelDesc* model, const char* vname, const char* sname);
+
+
+/**
+model_annotation
+================
+
+Retrieve the specified annotation from the Model specification.
+
+Parameters
+----------
+model (ModelDesc*)
+: The Model Descriptor object representing an instance of this model.
+
+name (const char*)
+: The name of the annotation.
+
+Returns
+-------
+const char*
+: The value of the specified annotation.
+
+NULL
+: The specified annotation was not found.
+
+*/
+const char* model_annotation(ModelDesc* m, const char* name)
+{
+    if (m && m->mi) {
+        YamlNode* a = dse_yaml_find_node(
+            m->mi->model_definition.doc, "metadata/annotations");
+        if (a) return dse_yaml_get_scalar(a, name);
+    }
+    return NULL;
+}
+
+
+/**
+model_instance_annotation
+=========================
+
+Retrieve the specified annotation from the Model instance (Stack specification).
+
+Parameters
+----------
+model (ModelDesc*)
+: The Model Descriptor object representing an instance of this model.
+
+name (const char*)
+: The name of the annotation.
+
+Returns
+-------
+const char*
+: The value of the specified annotation.
+
+NULL
+: The specified annotation was not found.
+
+*/
+const char* model_instance_annotation(ModelDesc* m, const char* name)
+{
+    if (m && m->mi) {
+        YamlNode* a = dse_yaml_find_node(m->mi->spec, "annotations");
+        if (a) return dse_yaml_get_scalar(a, name);
+    }
+    return NULL;
+}

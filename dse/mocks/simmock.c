@@ -385,8 +385,10 @@ int simmock_step(SimMock* mock, bool assert_rc)
     int rc = 0;
     for (ModelMock* model = mock->model; model->name; model++) {
         /* Copy scalars from simmock->scalars. */
-        for (uint32_t i = 0; i < mock->sv_signal->count; i++) {
-            model->sv_signal->scalar[i] = mock->sv_signal->scalar[i];
+        if (mock->sv_signal) {
+            for (uint32_t i = 0; i < mock->sv_signal->count; i++) {
+                model->sv_signal->scalar[i] = mock->sv_signal->scalar[i];
+            }
         }
         /* Copy binary from simmock->binary_rx. */
         if (mock->sv_network_rx && mock->sv_network_tx) {
@@ -405,8 +407,10 @@ int simmock_step(SimMock* mock, bool assert_rc)
             }
         }
         /* Copy scalars to simmock->scalars. */
-        for (uint32_t i = 0; i < mock->sv_signal->count; i++) {
-            mock->sv_signal->scalar[i] = model->sv_signal->scalar[i];
+        if (mock->sv_signal) {
+            for (uint32_t i = 0; i < mock->sv_signal->count; i++) {
+                mock->sv_signal->scalar[i] = model->sv_signal->scalar[i];
+            }
         }
         /* Copy binary to simmock->binary_tx. */
         if (mock->sv_network_rx && mock->sv_network_tx) {

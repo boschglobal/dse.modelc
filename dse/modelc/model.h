@@ -177,9 +177,11 @@ DLL_PUBLIC int model_step(ModelDesc* m, double* model_time, double stop_time);
 DLL_PUBLIC void model_destroy(ModelDesc* m);
 
 
-/* Provided by ModelC (via ModelIndex in ModelDesc and also ModelVTable). */
+/* Provided by ModelC. */
 DLL_PUBLIC ModelSignalIndex model_index_(
     ModelDesc* model, const char* vname, const char* sname);
+DLL_PUBLIC const char* model_annotation(ModelDesc* m, const char* name);
+DLL_PUBLIC const char* model_instance_annotation(ModelDesc* m, const char* name);
 
 
 /* Signal Interface. */

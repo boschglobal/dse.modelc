@@ -93,6 +93,7 @@ static int stream_seek(NCODEC* nc, size_t pos, int op)
         } else if (op == NCODEC_SEEK_END) {
             _s->pos = s_len;
         } else if (op == NCODEC_SEEK_RESET) {
+            /* Reset before stream_write has truncate effect. */
             _s->pos = 0;
         } else {
             return -EINVAL;

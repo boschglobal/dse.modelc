@@ -7,7 +7,7 @@
 add_subdirectory(minimal)
 add_subdirectory(extended)
 add_subdirectory(binary)
-# TODO add_subdirectory(ncodec)
+add_subdirectory(ncodec)
 
 add_subdirectory(gateway)
 #add_subdirectory(benchmark)

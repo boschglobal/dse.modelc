@@ -1,0 +1,48 @@
+# Copyright 2024 Robert Bosch GmbH
+#
+# SPDX-License-Identifier: Apache-2.0
+
+---
+kind: Stack
+metadata:
+  name: ncodec_stack
+spec:
+  connection:
+    transport:
+      redispubsub:
+        uri: redis://localhost:6379
+        timeout: 60
+  models:
+    - name: simbus
+      model:
+        name: simbus
+      channels:
+        - name: binary_channel
+          expectedModelCount: 1
+    - name: ncodec_inst
+      uid: 42
+      annotations:
+        node_id: 24
+      model:
+        name: NCodec
+      channels:
+        - name: binary_channel
+          alias: binary
+---
+kind: Model
+metadata:
+  name: simbus
+---
+kind: SignalGroup
+metadata:
+  name: binary_channel
+  labels:
+    channel: binary_channel
+  annotations:
+    vector_type: binary
+spec:
+  signals:
+    - signal: can
+      annotations:
+        # Note that the mime_type may also include the node_id parameter.
+        mime_type: 'application/x-automotive-bus; interface=stream; type=frame; bus=can; schema=fbs; bus_id=1; interface_id=3'

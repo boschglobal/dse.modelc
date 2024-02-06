@@ -1,0 +1,27 @@
+# Copyright 2024 Robert Bosch GmbH
+#
+# SPDX-License-Identifier: Apache-2.0
+
+---
+kind: Model
+metadata:
+  name: NCodec
+spec:
+  runtime:
+    dynlib:
+      - os: linux
+        arch: amd64
+        path: lib/libncodec.so
+      - os: linux
+        arch: x86
+        path: lib/libncodec.so
+      - os: windows
+        arch: x64
+        path: bin/ncodec.dll
+      - os: windows
+        arch: x86
+        path: bin/ncodec.dll
+  channels:
+    - alias: binary
+      selectors:
+        channel: binary_channel

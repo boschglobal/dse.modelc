@@ -4,31 +4,30 @@
 extern int put_rx_frame_to_queue(uint32_t, uint8_t*, size_t);
 extern int get_tx_frame_from_queue(uint32_t*, uint8_t**, size_t*);
 
-void do_bus_rx(SignalVector* sv, uint32_t idx)
-{
-    NCODEC* nc = sv->codec(sv, idx);
+typedef struct {
+    ModelDesc   model;
+    NCODEC*     nc;
+} ExtendedModelDesc;
 
+int model_step(ModelDesc* model, double* model_time, double stop_time)
+{
+    ExtendedModelDesc* m = (ExtendedModelDesc*)model;
+    NCodecCanMessage msg = {};
+
+    /* Message RX. */
     while (1) {
-        NCodecCanMessage msg = {};
-        int           len = ncodec_read(nc, &msg);
-        if (len < 0) break;
+        if (ncodec_read(m->nc, &msg) < 0) break;
         put_rx_frame_to_queue(msg.frame_id, msg.buffer, msg.len);
     }
-}
 
-void do_bus_tx(SignalVector* sv, uint32_t idx)
-{
-    uint32_t id;
-    uint8_t* msg;
-    size_t   len;
-    NCODEC*  nc = sv->codec(sv, idx);
-
-    while (get_tx_frame_from_queue(&id, &msg, &len)) {
-        ncodec_write(nc, &(struct NCodecCanMessage){
-                             .frame_id = id,
-                             .buffer = msg,
-                             .len = len,
-                         });
+    /* Message TX. */
+    ncodec_truncate(m->nc);  /* Clear the codec buffer (i.e. Rx data). */
+    while (get_tx_frame_from_queue(&msg.frame_id, &msg.buffer, &msg.len)) {
+        ncodec_write(m->nc, &msg);
     }
-    ncodec_flush(nc);
+    ncodec_flush(m->nc);
+
+    /* Progress the Model time. */
+    *model_time = stop_time;
+    return 0;
 }
