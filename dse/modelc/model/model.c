@@ -314,13 +314,22 @@ DLL_PRIVATE ModelSignalIndex __model_index__(
     ModelDesc* m, const char* vname, const char* sname)
 {
     ModelSignalIndex index = {};
-    if (m == NULL || m->sv == NULL) return index;
+    if (m == NULL || m->sv == NULL || vname == NULL) return index;
 
     SignalVector* sv = m->sv;
     uint32_t      v_idx = 0;
     while (sv && sv->name) {
+        log_debug("Index search (vector) %s - %s", sv->alias, vname);
         if (strcmp(sv->alias, vname) == 0) {
+            /* Vector match only? */
+            if (sname == NULL) {
+                index.sv = sv;
+                index.vector = v_idx;
+                return index;
+            }
+            /* Signal match. */
             for (uint32_t s_idx = 0; s_idx < sv->count; s_idx++) {
+                log_debug("Index search (signal) %s - %s", sv->signal[s_idx], sname);
                 if (strcmp(sv->signal[s_idx], sname) == 0) {
                     /* Match! */
                     index.sv = sv;
@@ -463,13 +472,16 @@ vname (const char*)
 : The name (alias) of the Signal Vector.
 
 sname (const char*)
-: The name of the signal within the Signal Vector.
+: The name of the signal within the Signal Vector. When set to NULL the index
+  will match on Signal Vector (vanme) only.
 
 Returns
 -------
 ModelSignalIndex
 : An index. When valid, either the `scalar` or `binary` fields will be set to
-  a valid pointer (i.e. not NULL).
+  a valid pointer (i.e. not NULL). When `sname` is not specified the index will
+  contain a valid pointer to a Signal Vector object only (i.e. both `scalar`
+  and `binary` will be set to NULL).
 
 */
 extern ModelSignalIndex model_index_(

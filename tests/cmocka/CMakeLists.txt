@@ -170,7 +170,8 @@ install(
 # ------------------------
 add_executable(test_model_interface
     model/interface/__test__.c
-    model/interface/test_model_interface.c
+    model/interface/test_model_api.c
+    model/interface/test_model_examples.c
     model/stub_controller.c
     ${DSE_MODELC_SOURCE_FILES}
     ${DSE_NCODEC_SOURCE_FILES}

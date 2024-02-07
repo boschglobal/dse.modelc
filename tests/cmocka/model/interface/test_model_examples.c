@@ -235,7 +235,7 @@ void test_model__ncodec(void** state)
 }
 
 
-int run_model_interface_tests(void)
+int run_model_examples_tests(void)
 {
     void* s = test_setup;
     void* t = test_teardown;
@@ -249,5 +249,5 @@ int run_model_interface_tests(void)
         cmocka_unit_test_setup_teardown(test_model__ncodec, s, t),
     };
 
-    return cmocka_run_group_tests_name("MODEL / INTERFACE", tests, NULL, NULL);
+    return cmocka_run_group_tests_name("MODEL / EXAMPLES", tests, NULL, NULL);
 }

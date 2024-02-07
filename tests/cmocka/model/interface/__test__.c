@@ -5,12 +5,14 @@
 #include <dse/testing.h>
 
 
-extern int run_model_interface_tests(void);
+extern int run_model_examples_tests(void);
+extern int run_model_api_tests(void);
 
 
 int main()
 {
     int rc = 0;
-    rc |= run_model_interface_tests();
+    rc |= run_model_api_tests();
+    rc |= run_model_examples_tests();
     return rc;
 }
