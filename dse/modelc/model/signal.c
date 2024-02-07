@@ -349,6 +349,11 @@ void model_sv_destroy(SignalVector* sv)
             }
             free(sv->ncodec);
         }
+        if (sv->index) {
+            hashmap_destroy(sv->index);
+            free(sv->index);
+            sv->index = NULL;
+        }
 
         /* Next signal vector. */
         sv++;

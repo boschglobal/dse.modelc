@@ -8,6 +8,7 @@
 #include <dse/testing.h>
 #include <dse/logger.h>
 #include <dse/clib/collections/set.h>
+#include <dse/clib/collections/hashmap.h>
 #include <dse/clib/util/yaml.h>
 #include <dse/modelc/controller/controller.h>
 #include <dse/modelc/model.h>
@@ -310,6 +311,22 @@ int model_configure_channel(
 }
 
 
+static void _index_signal_vector(SignalVector* sv)
+{
+    /* Reset the index object. */
+    if (sv->index) {
+        hashmap_destroy(sv->index);
+        free(sv->index);
+        sv->index = NULL;
+    }
+    sv->index = calloc(1, sizeof(HashMap));
+    hashmap_init(sv->index);
+    /* Build the index. */
+    for (uint32_t i = 0; i < sv->count; i++) {
+        hashmap_set_long(sv->index, sv->signal[i], (int32_t)i);
+    }
+}
+
 DLL_PRIVATE ModelSignalIndex __model_index__(
     ModelDesc* m, const char* vname, const char* sname)
 {
@@ -319,7 +336,7 @@ DLL_PRIVATE ModelSignalIndex __model_index__(
     SignalVector* sv = m->sv;
     uint32_t      v_idx = 0;
     while (sv && sv->name) {
-        log_debug("Index search (vector) %s - %s", sv->alias, vname);
+        log_trace("Index search (vector) %s - %s", sv->alias, vname);
         if (strcmp(sv->alias, vname) == 0) {
             /* Vector match only? */
             if (sname == NULL) {
@@ -328,20 +345,20 @@ DLL_PRIVATE ModelSignalIndex __model_index__(
                 return index;
             }
             /* Signal match. */
-            for (uint32_t s_idx = 0; s_idx < sv->count; s_idx++) {
-                log_debug("Index search (signal) %s - %s", sv->signal[s_idx], sname);
-                if (strcmp(sv->signal[s_idx], sname) == 0) {
-                    /* Match! */
-                    index.sv = sv;
-                    index.vector = v_idx;
-                    index.signal = s_idx;
-                    if (sv->is_binary) {
-                        index.binary = &(sv->binary[s_idx]);
-                    } else {
-                        index.scalar = &(sv->scalar[s_idx]);
-                    }
-                    return index;
+            if (sv->index == NULL) _index_signal_vector(sv);
+            log_trace("Index search (signal) %s", sname);
+            uint32_t* s_idx = hashmap_get(sv->index, sname);
+            if (s_idx) {
+                /* Match! */
+                index.sv = sv;
+                index.vector = v_idx;
+                index.signal = *s_idx;
+                if (sv->is_binary) {
+                    index.binary = &(sv->binary[*s_idx]);
+                } else {
+                    index.scalar = &(sv->scalar[*s_idx]);
                 }
+                return index;
             }
         }
         sv++;

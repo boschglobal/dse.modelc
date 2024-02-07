@@ -232,6 +232,7 @@ typedef struct SignalVector {
     BinarySignalCodecFunc   codec;
     /* Reference data. */
     ModelInstanceSpec*      mi;
+    void*                   index;  /* Hashmap object, index on `signal`. */
 } SignalVector;
 
 
