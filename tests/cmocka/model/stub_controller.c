@@ -77,6 +77,8 @@ void controller_exit(SimulationSpec* sim)
 {
     ModelInstanceSpec* _instptr = sim->instance_list;
     while (_instptr && _instptr->name) {
+        if (_instptr == NULL) goto exit_next;
+        if (_instptr->model_desc == NULL) goto exit_next;
         if (_instptr->model_desc->vtable.destroy == NULL) goto exit_next;
 
         log_notice("Call symbol: %s ...", MODEL_DESTROY_FUNC_NAME);

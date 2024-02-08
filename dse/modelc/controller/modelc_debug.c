@@ -60,6 +60,9 @@ int modelc_step(ModelInstanceSpec* model_instance, double step_size)
  */
 void modelc_destroy(ModelInstanceSpec* mi)
 {
+    if (mi == NULL) return;
+    if (mi->model_desc == NULL) return;
+
     if (mi->model_desc->vtable.destroy == NULL) return;
     mi->model_desc->vtable.destroy(mi->model_desc);
     mi->model_desc->vtable.destroy = NULL;

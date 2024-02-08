@@ -6,6 +6,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include <string.h>
+#include <linux/limits.h>
 #include <dse/testing.h>
 #include <dse/clib/util/yaml.h>
 #include <dse/ncodec/codec.h>
@@ -193,6 +194,11 @@ void simmock_load(SimMock* mock)
         log_debug("Load model: %s", model->name);
         model->mi = modelc_get_model_instance(&mock->sim, model->name);
         assert_non_null(model->mi);
+
+        char _cwd[PATH_MAX];
+        getcwd(_cwd, PATH_MAX);
+        log_debug("cwd = %s", _cwd);
+        log_debug("fullpath = %s", model->mi->model_definition.full_path);
 
         void* handle = dlopen(
             model->mi->model_definition.full_path, RTLD_NOW | RTLD_LOCAL);

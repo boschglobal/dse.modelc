@@ -14,7 +14,7 @@
 #include <dse/modelc/adapter/transport/endpoint.h>
 
 
-#define OPT_LIST             "ht:U:H:P:s:e:u:n:T:l:f:p:"
+#define OPT_LIST             "ht:U:H:P:s:X:e:u:n:T:l:f:p:"
 #define REDIS_HOST           "localhost"
 #define REDIS_PORT           6379
 #define TRANSPORT            TRANSPORT_REDISPUBSUB
@@ -32,7 +32,8 @@
 uint8_t __log_level__ = LOG_INFO;
 
 
-static struct option long_options[] = { { "help", no_argument, NULL, 'h' },
+static struct option long_options[] = {
+    { "help", no_argument, NULL, 'h' },
     { "transport", required_argument, NULL, 't' },
     { "uri", required_argument, NULL, 'U' },
     { "host", required_argument, NULL, 'H' },
@@ -45,7 +46,9 @@ static struct option long_options[] = { { "help", no_argument, NULL, 'h' },
     { "timeout", required_argument, NULL, 'T' },
     { "logger", required_argument, NULL, 'l' },
     { "file", required_argument, NULL, 'f' },
-    { "path", required_argument, NULL, 'p' }, { 0 } };
+    { "path", required_argument, NULL, 'p' },
+    { 0, 0, 0, 0 },
+};
 
 
 static void print_usage(const char* doc_string)
@@ -196,6 +199,7 @@ void modelc_parse_arguments(
     int          c;
 
     /* Help specified? */
+    // FIXME with only one file parameter, this call will segfault.
     while ((c = getopt_long(argc, argv, OPT_LIST, long_options, NULL)) != -1) {
         switch (c) {
         case 'h':
@@ -266,6 +270,8 @@ void modelc_parse_arguments(
     /* And any YAML files. */
     while (optind < argc) {
         const char* yaml_file = argv[optind++];
+        // FIXME an empty string will circumvent the getopt_long seg.
+        if (strlen(yaml_file) == 0) continue;
         log_notice("Load YAML File: %s", yaml_file);
         args->yaml_doc_list =
             dse_yaml_load_file(yaml_file, args->yaml_doc_list);

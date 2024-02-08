@@ -122,7 +122,6 @@ set(DSE_MODELC_INCLUDE_DIR "${DSE_MODELC_SOURCE_DIR}/../..")
 add_executable(test_model
     model/__test__.c
     model/test_gateway.c
-    model/test_model.c
     model/test_ncodec.c
     model/test_schema.c
     model/test_signal.c
@@ -202,3 +201,9 @@ target_link_libraries(test_model_interface
         # -Wl,--wrap=strdup # Wrapping strdup does not work with libyaml.
 )
 install(TARGETS test_model_interface)
+install(
+    FILES
+        model/interface/annotations.yaml
+    DESTINATION
+        resources/model
+)

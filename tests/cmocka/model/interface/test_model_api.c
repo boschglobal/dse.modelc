@@ -4,6 +4,7 @@
 
 #include <unistd.h>
 #include <stdbool.h>
+#include <linux/limits.h>
 #include <dse/testing.h>
 #include <dse/logger.h>
 #include <dse/mocks/simmock.h>
@@ -12,7 +13,7 @@
 extern ModelSignalIndex __model_index__(
     ModelDesc* m, const char* vname, const char* sname);
 
-static char __entry_path__[200];
+static char __entry_path__[PATH_MAX];
 
 
 static int test_setup(void** state)
@@ -55,7 +56,7 @@ void test_model_api__model_index(void** state)
         BINARY_INST_NAME,
     };
     char* argv[] = {
-        (char*)"test_model_interface",
+        (char*)"test_model_api",
         (char*)"--name=" BINARY_INST_NAME,
         (char*)"--logger=5",  // 1=debug, 5=QUIET (commit with 5!)
         (char*)"data/simulation.yaml",
@@ -124,15 +125,60 @@ void test_model_api__model_index(void** state)
 }
 
 
+#define MINIMAL_INST_NAME      "minimal_inst"
+
+void test_model_api__model_annotation(void** state)
+{
+    chdir("../../../../dse/modelc/build/_out/examples/minimal");
+
+    const char* inst_names[] = {
+        MINIMAL_INST_NAME,
+    };
+    char* argv[] = {
+        (char*)"test_model_api",
+        (char*)"--name=" MINIMAL_INST_NAME,
+        (char*)"--logger=5",  // 1=debug, 5=QUIET (commit with 5!)
+        (char*)"../../../../../../tests/cmocka/build/_out/resources/model/annotations.yaml",
+        (char*)"" // FIXME getopt_long will seg if only one file argument.
+    };
+    SimMock* mock = *state = simmock_alloc(inst_names, ARRAY_SIZE(inst_names));
+    simmock_configure(mock, argv, ARRAY_SIZE(argv), ARRAY_SIZE(inst_names));
+    ModelMock* model = simmock_find_model(mock, MINIMAL_INST_NAME);
+    simmock_load(mock);
+    simmock_load_model_check(model, false, true, false);
+    simmock_setup(mock, "scalar_channel", "binary_channel");
+
+    const char* val = NULL;
+
+    /* Model annotations. */
+    val = model_annotation(model->mi->model_desc, "note");
+    assert_non_null(val);
+    assert_string_equal(val, "model_annotation");
+    val = model_annotation(model->mi->model_desc, "nest/note");
+    assert_non_null(val);
+    assert_string_equal(val, "model_annotation_nest");
+
+    /* Model Instance annotations. */
+    val = model_instance_annotation(model->mi->model_desc, "note");
+    assert_non_null(val);
+    assert_string_equal(val, "instance_annotation");
+    val = model_instance_annotation(model->mi->model_desc, "nest/note");
+    assert_non_null(val);
+    assert_string_equal(val, "instance_annotation_nest");
+
+}
+
+
 int run_model_api_tests(void)
 {
     void* s = test_setup;
     void* t = test_teardown;
 
-    getcwd(__entry_path__, 200);
+    getcwd(__entry_path__, PATH_MAX);
 
     const struct CMUnitTest tests[] = {
         cmocka_unit_test_setup_teardown(test_model_api__model_index, s, t),
+        cmocka_unit_test_setup_teardown(test_model_api__model_annotation, s, t),
     };
 
     return cmocka_run_group_tests_name("MODEL / API", tests, NULL, NULL);
