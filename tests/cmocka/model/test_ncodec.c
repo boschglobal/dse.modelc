@@ -213,6 +213,53 @@ void test_ncodec__network_stream(void** state)
 }
 
 
+void test_ncodec__truncate(void** state)
+{
+    ModelCMock* mock = *state;
+    int         rc;
+
+    /* Use the "binary" signal vector. */
+    SignalVector* sv_save = mock->mi->model_desc->sv;
+    assert_int_equal(_sv_count(sv_save), 1);
+    SignalVector* sv = sv_save;
+    while (sv && sv->name) {
+        if (strcmp(sv->name, "binary") == 0) break;
+        /* Next signal vector. */
+        sv++;
+    }
+
+    /* Check the ncodec objects. */
+    assert_non_null(sv->codec(sv, 2));
+    assert_non_null(sv->ncodec[2]);
+    assert_ptr_equal(sv->codec(sv, 2), sv->ncodec[2]);
+
+    /* Use the codec object with the ncodec library. */
+    const char* greeting = "Hello World";
+    NCODEC*     nc = sv->codec(sv, 2);
+    sv->reset(sv, 2);
+    rc = ncodec_write(nc, &(struct NCodecCanMessage){ .frame_id = 42,
+                              .buffer = (uint8_t*)greeting,
+                              .len = strlen(greeting) });
+    assert_int_equal(rc, strlen(greeting));
+    size_t len = ncodec_flush(nc);
+    assert_int_equal(len, 0x66);
+    assert_int_equal(len, sv->length[2]);
+    assert_int_equal(0x66, _nc->stream->tell(nc));
+
+    /* Truncate the NCodec, and check underlying stream/sv. */
+    uint32_t _bs = sv->buffer_size[2];
+    void* _bin = sv->binary[2];
+    ncodec_truncate(nc);
+    /* Check  sv properties. */
+    assert_int_equal(0, sv->length[2]);
+    assert_int_equal(_bs, sv->buffer_size[2]);
+    assert_ptr_equal(_bin, sv->binary[2]);
+    /* Check  stream properties. */
+    NCodecInstance* _nc = (NCodecInstance*)nc;
+    assert_int_equal(0, _nc->stream->tell(nc));
+}
+
+
 void test_ncodec__config(void** state)
 {
     ModelCMock* mock = *state;
@@ -256,6 +303,7 @@ int run_ncodec_tests(void)
         cmocka_unit_test_setup_teardown(test_ncodec__ncodec_open, s, t),
         cmocka_unit_test_setup_teardown(test_ncodec__read_empty, s, t),
         cmocka_unit_test_setup_teardown(test_ncodec__network_stream, s, t),
+        cmocka_unit_test_setup_teardown(test_ncodec__truncate, s, t),
         cmocka_unit_test_setup_teardown(test_ncodec__config, s, t),
     };
 
