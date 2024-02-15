@@ -11,8 +11,8 @@
 #include <dse/ncodec/codec.h>
 
 
-#define UNUSED(x)     ((void)x)
-#define ARRAY_SIZE(x) (sizeof((x)) / sizeof((x)[0]))
+#define UNUSED(x)         ((void)x)
+#define ARRAY_SIZE(x)     (sizeof((x)) / sizeof((x)[0]))
 #define BUF_NODEID_OFFSET 53
 
 
@@ -119,8 +119,8 @@ void test_ncodec__ncodec_open(void** state)
 
 void test_ncodec__read_empty(void** state)
 {
-    ModelCMock*   mock = *state;
-    size_t        len;
+    ModelCMock*      mock = *state;
+    size_t           len;
     NCodecCanMessage msg;
 
     /* Use the "binary" signal vector. */
@@ -234,8 +234,10 @@ void test_ncodec__truncate(void** state)
     assert_ptr_equal(sv->codec(sv, 2), sv->ncodec[2]);
 
     /* Use the codec object with the ncodec library. */
-    const char* greeting = "Hello World";
-    NCODEC*     nc = sv->codec(sv, 2);
+    const char*     greeting = "Hello World";
+    NCODEC*         nc = sv->codec(sv, 2);
+    NCodecInstance* _nc = (NCodecInstance*)nc;
+
     sv->reset(sv, 2);
     rc = ncodec_write(nc, &(struct NCodecCanMessage){ .frame_id = 42,
                               .buffer = (uint8_t*)greeting,
@@ -248,14 +250,13 @@ void test_ncodec__truncate(void** state)
 
     /* Truncate the NCodec, and check underlying stream/sv. */
     uint32_t _bs = sv->buffer_size[2];
-    void* _bin = sv->binary[2];
+    void*    _bin = sv->binary[2];
     ncodec_truncate(nc);
     /* Check  sv properties. */
     assert_int_equal(0, sv->length[2]);
     assert_int_equal(_bs, sv->buffer_size[2]);
     assert_ptr_equal(_bin, sv->binary[2]);
     /* Check  stream properties. */
-    NCodecInstance* _nc = (NCodecInstance*)nc;
     assert_int_equal(0, _nc->stream->tell(nc));
 }
 
