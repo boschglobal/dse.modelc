@@ -15,10 +15,13 @@
 #define URI_SCHEME_DELIM      "://"
 
 #define TRANSPORT_REDISPUBSUB "redispubsub"
+#define TRANSPORT_REDIS       "redis"
 #define TRANSPORT_MQ          "mq"
 
 
-typedef struct Endpoint Endpoint;
+typedef struct Endpoint        Endpoint;
+typedef struct msgpack_sbuffer msgpack_sbuffer;
+
 
 typedef void* (*EndpointCreateChannelFunc)(
     Endpoint* endpoint, const char* channel_name);
@@ -56,6 +59,13 @@ struct Endpoint {
 /* endpoint.c */
 DLL_PRIVATE Endpoint* endpoint_create(const char* transport, const char* uri,
     uint32_t uid, bool bus_mode, double timeout);
+
+
+/* msgpack.c */
+DLL_PRIVATE msgpack_sbuffer mp_encode_fbs(
+    void* buffer, uint32_t buffer_length, const char* channel_name);
+DLL_PRIVATE int32_t mp_decode_fbs(char* msg, int msg_len, uint8_t** buffer,
+    uint32_t* buffer_length, Endpoint* endpoint, const char** channel_name);
 
 
 #endif  // DSE_MODELC_ADAPTER_TRANSPORT_ENDPOINT_H_

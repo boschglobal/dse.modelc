@@ -1,4 +1,4 @@
-// Copyright 2023 Robert Bosch GmbH
+// Copyright 2024 Robert Bosch GmbH
 //
 // SPDX-License-Identifier: Apache-2.0
 
@@ -7,50 +7,63 @@
 
 
 #include <stdint.h>
+#include <hiredis.h>
+#include <hiredis/async.h>
+#include <hiredis/adapters/libevent.h>
 #include <dse/modelc/adapter/transport/endpoint.h>
 #include <dse/clib/collections/hashmap.h>
 #include <dse/platform.h>
 
 
-typedef struct RedisChannel {
-    char* endpoint_key;
-    char* mbox_key;
-    /* Reference to the Adapter Channel linked to this Endpoint. */
-    void* adapter_channel;
-} RedisChannel;
+#define MAX_REDIS_KEY_SIZE 64
+
+
+typedef struct RedisKeyDesc {
+    char  endpoint[MAX_REDIS_KEY_SIZE];
+    void* data;
+} RedisKeyDesc;
 
 typedef struct RedisEndpoint {
     /* Redis properties. */
-    const char* hostname;
+    const char* path;     /* Unix Pipe. */
+    const char* hostname; /* TCP */
     int32_t     port;
     void*       ctx;
     uint32_t    client_id;
+    int         major_ver;
+    int         minor_ver;
+
     /* RX properties. */
-    double      recv_timeout;
-    HashMap     endpoint_lookup;
+    double recv_timeout;
 
-    /* Redis Command 'redis_recv_fbs' prebaked data. */
-    double recv_fbs__timeout;
-    char*  recv_fbs__timeout_str;
-    int    recv_fbs__argc;
-    char** recv_fbs__argv;
+    /* Async properties. */
+    redisAsyncContext* async_ctx;
+    int                actx_connecting;
+    struct event_base* base;
+    size_t             reply_alloc_size;
+    char*              reply_str;
+    size_t             reply_len;
+    int                reply_errno;
 
-    RedisChannel* recv__endpoint_channel;
+    /* Endpoints. */
+    HashMap      push_hash; /* Used in bus_mode, push to Models. */
+    RedisKeyDesc push;
+    RedisKeyDesc pull;
 } RedisEndpoint;
 
 
 /* redis.c */
-DLL_PRIVATE Endpoint* redis_connect_tcp(const char* hostname, int32_t port,
-    uint32_t model_uid, double recv_timeout);
-DLL_PRIVATE void      redis_disconnect(Endpoint* endpoint);
-DLL_PRIVATE int32_t   redis_start(Endpoint* endpoint);
+DLL_PRIVATE Endpoint* redis_connect(const char* path, const char* hostname,
+    int32_t port, uint32_t model_uid, bool bus_mode, double recv_timeout,
+    bool async);
 DLL_PRIVATE void*     redis_create_channel(
-        Endpoint* endpoint, const char* channel_name, void* adapter_channel);
+        Endpoint* endpoint, const char* channel_name);
+DLL_PRIVATE int32_t redis_start(Endpoint* endpoint);
 DLL_PRIVATE int32_t redis_send_fbs(Endpoint* endpoint, void* endpoint_channel,
     void* buffer, uint32_t buffer_length, uint32_t model_uid);
-DLL_PRIVATE int32_t redis_recv_fbs(Endpoint* endpoint, void** endpoint_channel,
-    uint8_t** buffer, uint32_t* buffer_length);
+DLL_PRIVATE int32_t redis_recv_fbs(Endpoint* endpoint,
+    const char** channel_name, uint8_t** buffer, uint32_t* buffer_length);
 DLL_PRIVATE void    redis_interrupt(Endpoint* endpoint);
-
+DLL_PRIVATE void    redis_disconnect(Endpoint* endpoint);
 
 #endif  // DSE_MODELC_ADAPTER_TRANSPORT_REDIS_H_

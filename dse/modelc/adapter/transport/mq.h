@@ -60,11 +60,6 @@ typedef enum MqKind {
     __MQ_KIND_COUNT__
 } MqKind;
 
-typedef struct MqChannel {
-    /* Reference to the Adapter Channel linked to this Endpoint. */
-    const char* channel_name;
-} MqChannel;
-
 typedef struct MqDesc {
     char  endpoint[MQ_MAX_EP_LEN];
     void* data;

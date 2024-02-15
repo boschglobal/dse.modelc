@@ -8,13 +8,15 @@
 #include <errno.h>
 #include <dse/logger.h>
 #include <dse/modelc/adapter/transport/endpoint.h>
+#include <dse/modelc/adapter/transport/redis.h>
 #include <dse/modelc/adapter/transport/redispubsub.h>
 #include <dse/modelc/adapter/transport/mq.h>
 
 
-#define REDIS_PORT       6379
-#define REDIS_URI_SCHEME "redis" URI_SCHEME_DELIM
-#define UNIX_URI_SCHEME  "unix" URI_SCHEME_DELIM
+#define REDIS_PORT            6379
+#define REDIS_URI_SCHEME      "redis" URI_SCHEME_DELIM
+#define REDISASYNC_URI_SCHEME "redisasync" URI_SCHEME_DELIM
+#define UNIX_URI_SCHEME       "unix" URI_SCHEME_DELIM
 
 
 /**
@@ -60,8 +62,9 @@ Endpoint* endpoint_create(const char* transport, const char* uri, uint32_t uid,
     Endpoint*   endpoint = NULL;
     static char _uri[MAX_URI_LEN]; /* Other API's may refer to this data. */
 
-    /* Redis Pub/Sub. */
-    if (strcmp(transport, TRANSPORT_REDISPUBSUB) == 0) {
+    /* Redis and Redis Pub/Sub. */
+    if ((strcmp(transport, TRANSPORT_REDISPUBSUB) == 0) ||
+        (strcmp(transport, TRANSPORT_REDIS) == 0)) {
         /* Decode the URI. */
         strncpy(_uri, uri, MAX_URI_LEN - 1);
         if (strncmp(_uri, REDIS_URI_SCHEME, strlen(REDIS_URI_SCHEME)) == 0) {
@@ -73,29 +76,49 @@ Endpoint* endpoint_create(const char* transport, const char* uri, uint32_t uid,
             p = strtok_r(NULL, ":", &saveptr);
             if (p) port = atol(p);
             /* Create this endpoint. */
-            endpoint = redispubsub_connect(
-                NULL, hostname, port, uid, bus_mode, timeout);
+            if (strcmp(transport, TRANSPORT_REDISPUBSUB) == 0) {
+                endpoint = redispubsub_connect(
+                    NULL, hostname, port, uid, bus_mode, timeout);
+            } else {
+                endpoint = redis_connect(
+                    NULL, hostname, port, uid, bus_mode, timeout, false);
+            }
+        } else if (strncmp(_uri, REDISASYNC_URI_SCHEME,
+                       strlen(REDISASYNC_URI_SCHEME)) == 0) {
+            /* Parse according to: redisasync://host:[port] */
+            char*   saveptr;
+            char*   p = _uri + strlen(REDISASYNC_URI_SCHEME);
+            char*   hostname = strtok_r(p, ":", &saveptr);
+            int32_t port = REDIS_PORT;
+            p = strtok_r(NULL, ":", &saveptr);
+            if (p) port = atol(p);
+            /* Create this endpoint. */
+            endpoint = redis_connect(
+                NULL, hostname, port, uid, bus_mode, timeout, true);
         } else if (strncmp(_uri, UNIX_URI_SCHEME, strlen(UNIX_URI_SCHEME)) ==
                    0) {
             /* Parse according to: unix:///tmp/redis/redis.sock */
             char* path = _uri + strlen(UNIX_URI_SCHEME);
             /* Create this endpoint. */
-            endpoint =
-                redispubsub_connect(path, NULL, 0, uid, bus_mode, timeout);
+            if (strcmp(transport, TRANSPORT_REDISPUBSUB) == 0) {
+                endpoint =
+                    redispubsub_connect(path, NULL, 0, uid, bus_mode, timeout);
+            } else {
+                endpoint =
+                    redis_connect(path, NULL, 0, uid, bus_mode, timeout, false);
+            }
         } else {
             if (errno == 0) errno = EINVAL;
-            log_error("ERROR: Incorrect Redis URI ($s)", uri);
+            log_error("ERROR: Incorrect Redis URI (%s)", uri);
             return NULL;
         }
-
-    /* Message Queue. */
+        /* Message Queue. */
     } else if (strcmp(transport, TRANSPORT_MQ) == 0) {
         endpoint = mq_connect(uri, uid, bus_mode, timeout);
-
-    /* Unknown transport. */
+        /* Unknown transport. */
     } else {
         if (errno == 0) errno = EINVAL;
-        log_error("ERROR: unknown transport! ($s)", transport);
+        log_error("ERROR: unknown transport! (%s)", transport);
         return NULL;
     }
 
