@@ -31,6 +31,8 @@ target_link_libraries(extended
 install(TARGETS extended
     LIBRARY DESTINATION
         ${MODEL_PATH}/lib
+    RUNTIME DESTINATION
+        ${MODEL_PATH}/lib
     COMPONENT
         extended
 )

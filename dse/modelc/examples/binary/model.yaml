@@ -17,10 +17,10 @@ spec:
         path: lib/libbinary.so
       - os: windows
         arch: x64
-        path: bin/binary.dll
+        path: lib/libbinary.dll
       - os: windows
         arch: x86
-        path: bin/binary.dll
+        path: lib/libbinary.dll
   channels:
     - alias: scalar
       selectors:

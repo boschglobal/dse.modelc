@@ -33,6 +33,8 @@ target_link_libraries(ncodec
 install(TARGETS ncodec
     LIBRARY DESTINATION
         ${MODEL_PATH}/lib
+    RUNTIME DESTINATION
+        ${MODEL_PATH}/lib
     COMPONENT
         ncodec
 )

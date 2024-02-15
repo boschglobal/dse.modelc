@@ -17,10 +17,10 @@ spec:
         path: lib/libextended.so
       - os: windows
         arch: x64
-        path: bin/extended.dll
+        path: lib/libextended.dll
       - os: windows
         arch: x86
-        path: bin/extended.dll
+        path: lib/libextended.dll
   channels:
     - alias: data
       selectors:

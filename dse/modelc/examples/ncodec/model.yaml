@@ -17,10 +17,10 @@ spec:
         path: lib/libncodec.so
       - os: windows
         arch: x64
-        path: bin/ncodec.dll
+        path: lib/libncodec.dll
       - os: windows
         arch: x86
-        path: bin/ncodec.dll
+        path: lib/libncodec.dll
   channels:
     - alias: binary
       selectors:

@@ -17,10 +17,10 @@ spec:
         path: lib/libminimal.so
       - os: windows
         arch: x64
-        path: bin/minimal.dll
+        path: lib/libminimal.dll
       - os: windows
         arch: x86
-        path: bin/minimal.dll
+        path: lib/libminimal.dll
   channels:
     - alias: data
       selectors:

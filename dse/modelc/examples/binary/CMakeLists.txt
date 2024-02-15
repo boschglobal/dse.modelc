@@ -31,6 +31,8 @@ target_link_libraries(binary
 install(TARGETS binary
     LIBRARY DESTINATION
         ${MODEL_PATH}/lib
+    RUNTIME DESTINATION
+        ${MODEL_PATH}/lib
     COMPONENT
         binary
 )
