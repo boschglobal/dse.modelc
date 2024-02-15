@@ -67,14 +67,14 @@ ModelDesc* model_create(ModelDesc* model)
     MclInstanceDesc* mcl_instance = m->mcl_instance = mip->mcl_instance;
 
     /* Set the MCL Channel (should be the first/only SV). */
-    assert(strcmp(m->model.sv->name, MCL_CHANNEL) == 0);
+    assert(strcmp(m->model.sv->alias, MCL_CHANNEL) == 0);
     mcl_instance->mcl_channel_sv = m->model.sv;
     /* Set the MCL Strategy execute function. */
     mcl_instance->strategy->execute = __mcl_execute;
 
     /* Execute the load strategy (i.e. call load_func() on all MCL Models). */
     log_debug("Call MCL Strategy: load_func ...");
-    rc = mcl_instance->strategy->execute(model, MCL_STRATEGY_ACTION_LOAD);
+    rc = mcl_instance->strategy->execute(&m->model, MCL_STRATEGY_ACTION_LOAD);
     if (rc) {
         if (errno == 0) errno = ECANCELED;
         log_fatal("MCL strategy ACTION_LOAD failed!");
@@ -82,7 +82,7 @@ ModelDesc* model_create(ModelDesc* model)
 
     /* Execute the Init strategy (i.e. call load_func() on all MCL Models). */
     log_debug("Call MCL Strategy: init_func ...");
-    rc = mcl_instance->strategy->execute(model, MCL_STRATEGY_ACTION_INIT);
+    rc = mcl_instance->strategy->execute(&m->model, MCL_STRATEGY_ACTION_INIT);
     if (rc) {
         if (errno == 0) errno = ECANCELED;
         log_fatal("MCL strategy ACTION_INIT failed!");
