@@ -1,0 +1,112 @@
+# Copyright 2024 Robert Bosch GmbH
+#
+# SPDX-License-Identifier: Apache-2.0
+
+---
+kind: Stack
+metadata:
+  name: primary_stack
+spec:
+  connection:
+    transport:
+      redispubsub:
+        uri: redis://localhost:6379
+        timeout: 60
+  runtime:
+    env:
+      SIMBUS_LOGLEVEL: 4
+  models:
+    - name: simbus
+      model:
+        name: simbus
+      channels:
+        - name: data_channel
+          expectedModelCount: 4
+    - name: counter_A
+      uid: 42
+      model:
+        name: Counter
+      runtime:
+        env:
+          COUNTER_NAME: counter_A
+          COUNTER_VALUE: 100
+        files:
+          - data/signalgroup.yaml
+      channels:
+        - name: data_channel
+          alias: data
+---
+kind: Stack
+metadata:
+  name: stacked_models
+spec:
+  connection:
+    transport:
+      redispubsub:
+        uri: redis://localhost:6379
+        timeout: 60
+  runtime:
+    env:
+      SIMBUS_LOGLEVEL: 4
+    stacked: true
+  models:
+    - name: counter_B
+      uid: 43
+      model:
+        name: Counter
+      runtime:
+        env:
+          SIMBUS_LOGLEVEL: 3
+          COUNTER_NAME: counter_B
+          COUNTER_VALUE: 200
+        files:
+          - data/signalgroup.yaml
+      channels:
+        - name: data_channel
+          alias: data
+    - name: counter_C
+      uid: 44
+      model:
+        name: Counter
+      runtime:
+        env:
+          SIMBUS_LOGLEVEL: 5
+          COUNTER_NAME: counter_C
+          COUNTER_VALUE: 300
+        files:
+          - data/signalgroup.yaml
+      channels:
+        - name: data_channel
+          alias: data
+---
+kind: Stack
+metadata:
+  name: x32_model
+spec:
+  connection:
+    transport:
+      redispubsub:
+        uri: redis://localhost:6379
+        timeout: 60
+  runtime:
+    env:
+      SIMBUS_LOGLEVEL: 4
+  models:
+    - name: counter_D
+      uid: 45
+      model:
+        name: Counter
+      runtime:
+        env:
+          COUNTER_NAME: counter_D
+          COUNTER_VALUE: 400
+        files:
+          - data/signalgroup.yaml
+        x32: true
+      channels:
+        - name: data_channel
+          alias: data
+---
+kind: Model
+metadata:
+  name: simbus

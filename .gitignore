@@ -7,7 +7,9 @@ out/
 __oss__
 super-linter.log
 /*.zip
-
+extra/tools/simer/bin
+!extra/tools/simer/build
+extra/tools/simer/build/stage
 
 # Prerequisites
 *.d

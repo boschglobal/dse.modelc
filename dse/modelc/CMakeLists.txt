@@ -315,10 +315,9 @@ install(
     COMPONENT
         modelc
 )
-file(GLOB LICENSE_FILES ../../licenses/*.*)
 install(
-    FILES
-        ${LICENSE_FILES}
+    DIRECTORY
+        ../../licenses
     DESTINATION
         licenses
     COMPONENT

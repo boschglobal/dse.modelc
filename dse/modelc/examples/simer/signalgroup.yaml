@@ -1,0 +1,16 @@
+# Copyright 2024 Robert Bosch GmbH
+#
+# SPDX-License-Identifier: Apache-2.0
+
+---
+kind: SignalGroup
+metadata:
+  name: data
+  labels:
+    side: data
+spec:
+  signals:
+    - signal: counter_A
+    - signal: counter_B
+    - signal: counter_C
+    - signal: counter_D

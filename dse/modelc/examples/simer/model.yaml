@@ -1,0 +1,21 @@
+# Copyright 2024 Robert Bosch GmbH
+#
+# SPDX-License-Identifier: Apache-2.0
+
+---
+kind: Model
+metadata:
+  name: Counter
+spec:
+  runtime:
+    dynlib:
+      - os: linux
+        arch: amd64
+        path: lib/libcounter.so
+      - os: linux
+        arch: x86
+        path: lib32/libcounter.so
+  channels:
+    - alias: data
+      selectors:
+        side: data

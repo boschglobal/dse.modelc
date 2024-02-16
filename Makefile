@@ -9,6 +9,11 @@ GCC_TESTER_IMAGE ?= ghcr.io/boschglobal/dse-python-builder:main
 DOCKER_DIRS = simbus-sa modelc modelc-x86
 
 
+###############
+## Docker Images.
+TOOL_DIRS = simer
+
+
 ################
 ## DSE C Schemas.
 DSE_SCHEMA_REPO ?= https://github.com/boschglobal/dse.schemas
@@ -108,17 +113,45 @@ endif
 
 default: build
 
+.PHONY: build
 build:
 	@${DOCKER_BUILDER_CMD} $(MAKE) do-build
 
+.PHONY: package
 package:
 	@${DOCKER_BUILDER_CMD} $(MAKE) do-package
 
-docker: build
+.PHONY: simer
+simer:
+	mkdir -p extra/tools/simer/build/stage/bin
+	mkdir -p extra/tools/simer/build/stage/lib
+	mkdir -p extra/tools/simer/build/stage/lib32
+	@if [ ${PACKAGE_ARCH} = "linux-amd64" ]; then \
+		cp dse/modelc/build/_out/bin/simbus extra/tools/simer/build/stage/bin/simbus ;\
+		cp dse/modelc/build/_out/bin/modelc extra/tools/simer/build/stage/bin/modelc ;\
+		cp dse/modelc/build/_out/lib/mcl_model.so extra/tools/simer/build/stage/lib/mcl_model.so ;\
+		cp -r licenses -t extra/tools/simer/build/stage ;\
+	fi
+	@if [ ${PACKAGE_ARCH} = "linux-x86" ]; then \
+		cp dse/modelc/build/_out/bin/modelc extra/tools/simer/build/stage/bin/modelc32 ;\
+		cp dse/modelc/build/_out/lib/mcl_model.so extra/tools/simer/build/stage/lib32/mcl_model.so ;\
+		cp dse/modelc/build/_out/examples/simer/lib/libcounter.so extra/tools/simer/build/stage/lib32/libcounter.so ;\
+	fi
+
+.PHONY: docker
+docker:
 	for d in $(DOCKER_DIRS) ;\
 	do \
 		docker build -f extra/docker/$$d/Dockerfile \
 				--tag $$d:test . ;\
+	done;
+
+.PHONY: tools
+tools:
+	for d in $(TOOL_DIRS) ;\
+	do \
+		docker build -f extra/tools/$$d/build/package/Dockerfile \
+				--tag $$d:test extra/tools/$$d ;\
 	done;
 
 test_cmocka:
@@ -131,6 +164,7 @@ test_pytest:
 	@${DOCKER_TESTER_CMD} $(MAKE) do-test_pytest-run
 	@${DOCKER_TEST_TEARDOWN_CMD}
 
+.PHONY: test
 test: test_cmocka test_pytest
 
 test-env:
@@ -142,6 +176,7 @@ test-env:
 test-env-it:
 	docker exec -it --workdir /tmp/repo $(TESTER_CONTAINER_NAME) /bin/bash
 
+.PHONY: clean
 clean:
 	@${DOCKER_TEST_TEARDOWN_CMD}
 	@${DOCKER_BUILDER_CMD} $(MAKE) do-clean
@@ -152,18 +187,22 @@ clean:
 	done;
 	docker images -qf dangling=true | xargs -r docker rmi
 
+.PHONY: cleanall
 cleanall:
 	@${DOCKER_BUILDER_CMD} $(MAKE) do-cleanall
 	docker ps --filter status=dead --filter status=exited -aq | xargs -r docker rm -v
 	docker images -qf dangling=true | xargs -r docker rmi
 	docker volume ls -qf dangling=true | xargs -r docker volume rm
 
+.PHONY: oss
 oss:
 	@${DOCKER_BUILDER_CMD} $(MAKE) do-oss
 
+.PHONY: do-build
 do-build:
 	@for d in $(SUBDIRS); do ($(MAKE) -C $$d build ); done
 
+.PHONY: do-package
 do-package:
 	@for d in $(SUBDIRS); do ($(MAKE) -C $$d package ); done
 
@@ -178,6 +217,7 @@ do-test_pytest-run:
 	redis-cli -h $(REDIS_HOST) ping
 	pytest -rx -x --asyncio-mode=strict -W ignore::DeprecationWarning tests/pytest
 
+.PHONY: do-clean
 do-clean:
 	@for d in $(SUBDIRS); do ($(MAKE) -C $$d clean ); done
 	$(MAKE) -C tests/cmocka clean
@@ -187,9 +227,11 @@ do-clean:
 	rm -rvf *.log
 	find . -name '__pycache__' -type d | xargs rm -fr
 
+.PHONY: do-cleanall
 do-cleanall: do-clean
 	@for d in $(SUBDIRS); do ($(MAKE) -C $$d cleanall ); done
 
+.PHONY: do-oss
 do-oss:
 	$(MAKE) -C extra/external oss
 
@@ -197,6 +239,7 @@ do-oss:
 generate:
 	$(MAKE) -C doc generate
 
+.PHONY: super-linter
 super-linter:
 	docker run --rm --volume $$(pwd):/tmp/lint \
 		--env RUN_LOCAL=true \
@@ -209,6 +252,3 @@ super-linter:
 		--env VALIDATE_PYTHON_FLAKE8=true \
 		github/super-linter:slim-v5
 
-
-.PHONY: build docker test package clean cleanall oss generate super-linter \
-		do-build do-test do-package do-clean do-cleanall do-oss
