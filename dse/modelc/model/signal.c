@@ -124,7 +124,9 @@ static int __binary_append(
 
 static int __binary_reset(SignalVector* sv, uint32_t index)
 {
+    /* Note, changes here must be duplicated in stream_seek(). */
     sv->length[index] = 0;
+    sv->reset_called[index] = true;
 
     NCodecInstance* nc = sv->ncodec[index];
     if (nc && nc->stream && nc->stream->seek) {
@@ -198,6 +200,7 @@ static int _add_sv(void* _mfc, void* _sv_data)
         current_sv->binary = mfc->signal_value_binary;
         current_sv->length = mfc->signal_value_binary_size;
         current_sv->buffer_size = mfc->signal_value_binary_buffer_size;
+        current_sv->reset_called = mfc->signal_value_binary_reset_called;
         current_sv->append = __binary_append;
         current_sv->reset = __binary_reset;
         current_sv->release = __binary_release;

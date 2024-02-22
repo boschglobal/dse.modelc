@@ -95,6 +95,7 @@ static void __free_stub_sv(SignalVector* sv)
     if (sv->binary) free(sv->binary);
     if (sv->length) free(sv->length);
     if (sv->buffer_size) free(sv->buffer_size);
+    if (sv->reset_called) free(sv->reset_called);
     if (sv->mime_type) free(sv->mime_type);
     if (sv->ncodec) free(sv->ncodec);
 
@@ -266,6 +267,7 @@ static SignalVector* __stub_sv(SignalVector* sv)
     stub_sv->binary = calloc(stub_sv->count, sizeof(void*));
     stub_sv->length = calloc(stub_sv->count, sizeof(uint32_t));
     stub_sv->buffer_size = calloc(stub_sv->count, sizeof(uint32_t));
+    stub_sv->reset_called = calloc(stub_sv->count, sizeof(bool));
     stub_sv->mime_type = calloc(stub_sv->count, sizeof(const char*));
     stub_sv->ncodec = calloc(stub_sv->count, sizeof(NCODEC*));
 
@@ -403,11 +405,15 @@ int simmock_step(SimMock* mock, bool assert_rc)
                 model->sv_network->append(model->sv_network, i,
                     mock->sv_network_rx->binary[i],
                     mock->sv_network_rx->length[i]);
+                model->sv_network->reset_called[i] = false;
             }
         }
         rc |= modelc_step(model->mi, mock->step_size);
         if (mock->sv_network_rx && mock->sv_network_tx) {
             for (uint32_t i = 0; i < model->sv_network->count; i++) {
+                if (model->sv_network->reset_called[i] == false) {
+                    model->sv_network->length[i] = 0;
+                }
                 mock->sv_network_tx->append(mock->sv_network_tx, i,
                     model->sv_network->binary[i], model->sv_network->length[i]);
             }

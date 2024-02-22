@@ -118,6 +118,9 @@ static int __marshal__adapter2model(void* _mfc, void* _spec)
                 sm[si].signal->bin_size);
             /* Indicate the binary object was consumed. */
             sm[si].signal->bin_size = 0;
+            /* Set the trigger to detect if the binary object is correctly
+               operated by the Model (i.e. calls reset()).*/
+            mfc->signal_value_binary_reset_called[si] = false;
         }
     }
     free(sm);
@@ -140,6 +143,15 @@ static int __marshal__model2adapter(void* _mfc, void* _spec)
     }
     if (mfc->signal_value_binary) {
         for (uint32_t si = 0; si < mfc->signal_count; si++) {
+            if (mfc->signal_value_binary_reset_called[si] == false) {
+                /* Force size to 0.
+                   Expected operation is: read, reset, write (append).
+                   If reset is not called, i.e. the Model does not consume
+                   _this_ signal, then data will be echo'ed back. If more than
+                   one model echoes data back, the SimBus may also echo back
+                   and ever increasing about of data. */
+                mfc->signal_value_binary_size[si] = 0;
+            }
             dse_buffer_append(&sm[si].signal->bin, &sm[si].signal->bin_size,
                 &sm[si].signal->bin_buffer_size, mfc->signal_value_binary[si],
                 mfc->signal_value_binary_size[si]);

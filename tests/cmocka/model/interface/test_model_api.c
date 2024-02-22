@@ -169,6 +169,73 @@ void test_model_api__model_annotation(void** state)
 }
 
 
+#define BINARY_INST_NAME       "binary_inst"
+#define BINARY_SIGNAL_MESSAGE  0
+#define BINARY_SIGNAL_NOT_USED 1
+
+void test_model_api__binary_stream_reset(void** state)
+{
+    chdir("../../../../dse/modelc/build/_out/examples/binary");
+
+    const char* inst_names[] = {
+        BINARY_INST_NAME,
+    };
+    char* argv[] = {
+        (char*)"test_model_api",
+        (char*)"--name=" BINARY_INST_NAME,
+        (char*)"--logger=5",  // 1=debug, 5=QUIET (commit with 5!)
+        (char*)"../../../../../../tests/cmocka/build/_out/resources/model/binary_stream_reset.yaml",
+        (char*)"data/model.yaml",
+    };
+    SimMock* mock = *state = simmock_alloc(inst_names, ARRAY_SIZE(inst_names));
+    simmock_configure(mock, argv, ARRAY_SIZE(argv), ARRAY_SIZE(inst_names));
+    ModelMock* model = simmock_find_model(mock, BINARY_INST_NAME);
+    simmock_load(mock);
+    simmock_load_model_check(model, true, true, true);
+    simmock_setup(mock, "scalar_channel", "binary_channel");
+
+    double   counter = 42.0;
+    char     buffer[100] = "";
+    uint32_t len = 0;
+
+    simmock_print_binary_signals(mock, LOG_DEBUG);
+
+    /* T0 ... Tn */
+    for (uint32_t i = 0; i < 5; i++) {
+        /* Do the check. */
+        BinaryCheck b_checks[] = {
+            { .index = BINARY_SIGNAL_MESSAGE,
+                .buffer = (uint8_t*)buffer,
+                .len = len },
+            /* Len should be 0, buffer would not matter. */
+            { .index = BINARY_SIGNAL_NOT_USED,
+                .buffer = (uint8_t*)buffer,
+                .len = 0 },
+        };
+        simmock_binary_check(
+            mock, BINARY_INST_NAME, b_checks, ARRAY_SIZE(b_checks), NULL);
+        /* Inject some binary data, if reset is called, this will be ignored. */
+        SignalVector* sv = mock->sv_network_tx;
+        char foobar[100] = "foobar";
+        for (int j = 0; j < 2; j++) {
+            sv->reset(sv, j);
+            sv->append(sv, j, foobar, strlen(foobar) + 1);
+        }
+        /* Step the model. */
+        assert_int_equal(simmock_step(mock, true), 0);
+        sv = model->sv_network;
+        assert_true(sv->reset_called[0]);
+        assert_false(sv->reset_called[1]);
+        assert_int_equal(sv->length[1], 0);
+        simmock_print_binary_signals(mock, LOG_DEBUG);
+        /* Set check conditions (for next step). */
+        counter += 1.0;
+        snprintf(buffer, sizeof(buffer), "count is %d", (int)counter);
+        len = strlen(buffer) + 1;
+    }
+}
+
+
 int run_model_api_tests(void)
 {
     void* s = test_setup;
@@ -179,6 +246,7 @@ int run_model_api_tests(void)
     const struct CMUnitTest tests[] = {
         cmocka_unit_test_setup_teardown(test_model_api__model_index, s, t),
         cmocka_unit_test_setup_teardown(test_model_api__model_annotation, s, t),
+        cmocka_unit_test_setup_teardown(test_model_api__binary_stream_reset, s, t),
     };
 
     return cmocka_run_group_tests_name("MODEL / API", tests, NULL, NULL);

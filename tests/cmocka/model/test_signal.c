@@ -162,6 +162,7 @@ void test_signal__binary(void** state)
     assert_non_null(sv->binary);
     assert_non_null(sv->length);
     assert_non_null(sv->buffer_size);
+    assert_non_null(sv->reset_called);
     assert_non_null(sv->append);
     assert_non_null(sv->reset);
     assert_non_null(sv->release);
@@ -185,6 +186,7 @@ void test_signal__binary(void** state)
         assert_null(sv->binary[i]);
         assert_int_equal(sv->length[i], 0);
         assert_int_equal(sv->buffer_size[i], 0);
+        assert_false(sv->reset_called[i]);
         /* Append to the value. */
         sv->append(sv, i, test_val, test_val_len);
         assert_non_null(sv->binary[i]);
@@ -192,7 +194,9 @@ void test_signal__binary(void** state)
         assert_int_equal(sv->length[i], test_val_len);
         assert_int_equal(sv->buffer_size[i], test_val_len);
         /* Reset the value. */
+        assert_false(sv->reset_called[i]);
         sv->reset(sv, i);
+        assert_true(sv->reset_called[i]);
         assert_non_null(sv->binary[i]);
         assert_int_equal(sv->length[i], 0);
         assert_int_equal(sv->buffer_size[i], test_val_len);

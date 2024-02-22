@@ -204,6 +204,7 @@ install(TARGETS test_model_interface)
 install(
     FILES
         model/interface/annotations.yaml
+        model/interface/binary_stream_reset.yaml
     DESTINATION
         resources/model
 )

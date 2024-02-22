@@ -218,10 +218,11 @@ typedef struct SignalVector {
         };
         struct {
             void**       binary;
-            uint32_t*    length;      /* Length of binary object. */
-            uint32_t*    buffer_size; /* Size of allocated buffer. */
+            uint32_t*    length;       /* Length of binary object. */
+            uint32_t*    buffer_size;  /* Size of allocated buffer. */
             const char** mime_type;
-            void**       ncodec;      /* Network Codec objects. */
+            void**       ncodec;       /* Network Codec objects. */
+            bool*        reset_called; /* Indicate that reset() was called. */
         };
     };
     /* Helper functions. */

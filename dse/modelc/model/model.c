@@ -50,6 +50,8 @@ void model_function_destroy(ModelFunction* model_function)
                 free(_mfc->signal_value_binary_size);
             if (_mfc && _mfc->signal_value_binary_buffer_size)
                 free(_mfc->signal_value_binary_buffer_size);
+            if (_mfc && _mfc->signal_value_binary_reset_called)
+                free(_mfc->signal_value_binary_reset_called);
             if (_mfc && _mfc->signal_names) {
                 // fixme Unit tests suggest a double free here.
                 // for (uint32_t _ = 0; _ < _mfc->signal_count; _++)
@@ -290,6 +292,8 @@ int model_configure_channel(
             calloc(signal_list.length, sizeof(uint32_t));
         mfc->signal_value_binary_buffer_size =
             calloc(signal_list.length, sizeof(uint32_t));
+        mfc->signal_value_binary_reset_called =
+            calloc(signal_list.length, sizeof(bool));
         /* Set the references to those vectors (in the Channel Desc).*/
         channel_desc->vector_binary = mfc->signal_value_binary;
         channel_desc->vector_binary_size = mfc->signal_value_binary_size;

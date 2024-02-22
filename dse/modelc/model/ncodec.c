@@ -96,6 +96,7 @@ static int stream_seek(NCODEC* nc, size_t pos, int op)
             /* Reset before stream_write has truncate effect. */
             _s->pos = 0;
             _s->sv->length[_s->idx] = 0;
+            _s->sv->reset_called[_s->idx] = true;
         } else {
             return -EINVAL;
         }

@@ -26,6 +26,7 @@ typedef struct ModelFunctionChannel {
     void**    signal_value_binary;
     uint32_t* signal_value_binary_size;
     uint32_t* signal_value_binary_buffer_size;
+    bool*     signal_value_binary_reset_called;
 } ModelFunctionChannel;
 
 
