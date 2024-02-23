@@ -32,6 +32,7 @@ target_compile_definitions(controller
 target_include_directories(controller
     PRIVATE
         ${DSE_CLIB_INCLUDE_DIR}
+        ${DSE_NCODEC_INCLUDE_DIR}
         ${YAML_SOURCE_DIR}/include
         ../../..
         $<$<BOOL:${WIN32}>:${DLFCNWIN32_SOURCE_DIR}>

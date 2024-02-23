@@ -11,6 +11,7 @@
 #include <dse/modelc/adapter/timer.h>
 #include <dse/modelc/controller/controller.h>
 #include <dse/modelc/controller/model_private.h>
+#include <dse/ncodec/codec.h>
 
 
 #define UNUSED(x) ((void)x)
@@ -28,6 +29,19 @@ static int _do_step_func(void* _mf, void* _step_data)
     ModelFunction* mf = _mf;
     mf_step_data*  step_data = _step_data;
     ModelDesc*     md = step_data->mi->model_desc;
+
+    for (SignalVector* sv = md->sv; sv && sv->name; sv++) {
+        for (uint32_t i = 0; i < sv->count; i++) {
+            if (sv->is_binary == false) continue;
+            if (sv->ncodec[i] == NULL) continue;
+            NCodecInstance* nc = sv->ncodec[i];
+            if (nc && nc->stream && nc->stream->seek) {
+                nc->stream->seek((NCODEC*)nc, 0, NCODEC_SEEK_SET);
+            }
+        }
+    }
+
+
     double         model_time = step_data->model_time;
     int            rc = md->vtable.step(md, &model_time, step_data->stop_time);
     if (rc)
