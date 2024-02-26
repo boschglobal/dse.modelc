@@ -49,13 +49,15 @@ async def main(params, checks):
     )
     # Models
     for m in params['models']:
-        run_list.append(asyncio.wait_for(run(
-            params['MODEL_SANDBOX_DIR'],
+        run_list.append(asyncio.wait_for(
+            run(
+                params['MODEL_SANDBOX_DIR'],
                 f'{MODELC_EXE} --logger 2 ' +
                 f'--transport {params["transport"]} ' +
                 f'--uri {params["uri"]} ' +
                 f'--name {m["MODEL_INST"]} ' +
-                f'{m["MODEL_YAML_FILES"]} ' + ''), timeout=TIMEOUT))
+                f'{m["MODEL_YAML_FILES"]} ' + ''
+            ), timeout=TIMEOUT))
     # Gather results.
     result_list = await asyncio.gather(*run_list)
     for result in result_list:

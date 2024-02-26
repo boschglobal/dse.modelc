@@ -115,7 +115,6 @@ def test_modelc_extended():
     asyncio.run(main(params, checks))
 
 
-#@pytest.mark.skipif(os.environ["PACKAGE_ARCH"] != "linux-amd64", reason="test only runs on linux-amd64")
 def test_modelc_binary():
     params = {
         'MODEL_SANDBOX_DIR': os.getenv('MODELC_SANDBOX_DIR')+'/examples/binary',

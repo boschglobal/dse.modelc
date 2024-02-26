@@ -59,5 +59,3 @@ spec:
     - signal: not_used
       annotations:
         mime_type: 'application/octet-stream'
-
-

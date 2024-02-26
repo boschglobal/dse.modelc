@@ -165,7 +165,6 @@ void test_model_api__model_annotation(void** state)
     val = model_instance_annotation(model->mi->model_desc, "nest/note");
     assert_non_null(val);
     assert_string_equal(val, "instance_annotation_nest");
-
 }
 
 
