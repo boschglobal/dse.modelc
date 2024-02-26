@@ -382,7 +382,6 @@ int32_t mq_recv_fbs(Endpoint* endpoint, const char** channel_name,
 
     if (mq_ep->mq_recv == NULL) log_fatal("MQ not configured");
 
-    int             return_len = 0;
     int             msg_len;
     static char     msg[MQ_MAX_MSGSIZE];
     struct timespec tm;

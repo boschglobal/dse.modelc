@@ -34,13 +34,9 @@ static int _do_step_func(void* _mf, void* _step_data)
         for (uint32_t i = 0; i < sv->count; i++) {
             if (sv->is_binary == false) continue;
             if (sv->ncodec[i] == NULL) continue;
-            NCodecInstance* nc = sv->ncodec[i];
-            if (nc && nc->stream && nc->stream->seek) {
-                nc->stream->seek((NCODEC*)nc, 0, NCODEC_SEEK_SET);
-            }
+            ncodec_seek(sv->ncodec[i], 0, NCODEC_SEEK_SET);
         }
     }
-
 
     double         model_time = step_data->model_time;
     int            rc = md->vtable.step(md, &model_time, step_data->stop_time);

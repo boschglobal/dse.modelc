@@ -187,6 +187,7 @@ void test_signal__binary(void** state)
         assert_int_equal(sv->length[i], 0);
         assert_int_equal(sv->buffer_size[i], 0);
         assert_false(sv->reset_called[i]);
+        sv->reset(sv, i);
         /* Append to the value. */
         sv->append(sv, i, test_val, test_val_len);
         assert_non_null(sv->binary[i]);
@@ -194,7 +195,6 @@ void test_signal__binary(void** state)
         assert_int_equal(sv->length[i], test_val_len);
         assert_int_equal(sv->buffer_size[i], test_val_len);
         /* Reset the value. */
-        assert_false(sv->reset_called[i]);
         sv->reset(sv, i);
         assert_true(sv->reset_called[i]);
         assert_non_null(sv->binary[i]);
@@ -247,6 +247,67 @@ void test_signal__annotations(void** state)
 }
 
 
+void test_signal__binary_echo(void** state)
+{
+    /* ModelC detects and prevents echo of binary data via reset_called.
+     *
+     * Logic exists in the controller which can only be tested with real
+     * operation via ModelC (no mock). This test covers the Model API
+     * aspects.
+     */
+    ModelCMock* mock = *state;
+
+    SignalVector* sv_save = mock->mi->model_desc->sv;
+    assert_int_equal(_sv_count(sv_save), 2);
+
+    /* Use the "binary" signal vector. */
+    SignalVector* sv = sv_save;
+    while (sv && sv->name) {
+        if (strcmp(sv->name, "binary") == 0) break;
+        /* Next signal vector. */
+        sv++;
+    }
+    assert_string_equal(sv->name, "binary");
+    assert_string_equal(sv->alias, "binary_vector");
+
+    /* Initial conditions. */
+    assert_int_equal(sv->length[0], 0);
+    assert_int_equal(sv->length[1], 0);
+    assert_false(sv->reset_called[0]);
+    assert_false(sv->reset_called[1]);
+    char*    test_val = strdup(sv->signal[0]);
+    uint32_t test_val_len = strlen(test_val) + 1;
+
+
+    /* Append to one signal. */
+    int _loglevel_save = __log_level__;
+    __log_level__ = LOG_FATAL;
+    sv->append(sv, 0, test_val, test_val_len);
+    __log_level__ = _loglevel_save;
+    assert_int_equal(sv->length[0], test_val_len);
+    assert_int_equal(sv->length[1], 0);
+    assert_false(sv->reset_called[0]);
+    assert_false(sv->reset_called[1]);
+
+    /* Call reset. */
+    sv->reset(sv, 0);
+    assert_int_equal(sv->length[0], 0);
+    assert_int_equal(sv->length[1], 0);
+    assert_true(sv->reset_called[0]);
+    assert_false(sv->reset_called[1]);
+
+    /* Append again. */
+    sv->append(sv, 0, test_val, test_val_len);
+    assert_int_equal(sv->length[0], test_val_len);
+    assert_int_equal(sv->length[1], 0);
+    assert_true(sv->reset_called[0]);
+    assert_false(sv->reset_called[1]);
+
+    /* Cleanup. */
+    free(test_val);
+}
+
+
 int run_signal_tests(void)
 {
     void* s = test_setup;
@@ -256,6 +317,7 @@ int run_signal_tests(void)
         cmocka_unit_test_setup_teardown(test_signal__scalar, s, t),
         cmocka_unit_test_setup_teardown(test_signal__binary, s, t),
         cmocka_unit_test_setup_teardown(test_signal__annotations, s, t),
+        cmocka_unit_test_setup_teardown(test_signal__binary_echo, s, t),
     };
 
     return cmocka_run_group_tests_name("SIGNAL", tests, NULL, NULL);

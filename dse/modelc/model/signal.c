@@ -116,6 +116,10 @@ static void* __binary_codec_nop(SignalVector* sv, uint32_t index)
 static int __binary_append(
     SignalVector* sv, uint32_t index, void* data, uint32_t len)
 {
+    if (sv->reset_called[index] == false) {
+        errno = EPROTO;
+        log_error("Binary Check: Model did not call Reset before Append!");
+    }
     dse_buffer_append(&sv->binary[index], &sv->length[index],
         &sv->buffer_size[index], data, len);
 
@@ -129,9 +133,7 @@ static int __binary_reset(SignalVector* sv, uint32_t index)
     sv->reset_called[index] = true;
 
     NCodecInstance* nc = sv->ncodec[index];
-    if (nc && nc->stream && nc->stream->seek) {
-        nc->stream->seek((NCODEC*)nc, 0, NCODEC_SEEK_RESET);
-    }
+    ncodec_seek((NCODEC*)nc, 0, NCODEC_SEEK_RESET);
 
     return 0;
 }
