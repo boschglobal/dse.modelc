@@ -223,12 +223,17 @@ list of arguments).
 
 ### simmock_exit
 
-Call `model_exit()` for each model.
+Call `model_destroy()` for each model.
 
 #### Parameters
 
 mock (SimMock*)
 : A SimMock object.
+
+call_destroy (bool)
+: Indicate that model_destroy() should be explicitly called. Set to `true` when
+  using the SimMock library outside of the ModelC repo (which has its own mock
+  object representing the controller).
 
 
 
@@ -486,6 +491,9 @@ len (size_t)
 
 frame_id (uint32_t)
 : The Frame ID associated with the data.
+
+frame_type (uint8_t)
+: The Frame Type associated with the frame.
 
 
 

@@ -19,15 +19,15 @@ simulation environments can then exchange signals and maintain synchronisation.
 title Gateway Model
 
 node "Dynamic Simulation Environment" {
-	component "Model" as m1
-	component "Model" as m2
-	interface "SimBus" as SBif
-	m1 -left-> SBif
-	m2 -right-> SBif
+        component "Model" as m1
+        component "Model" as m2
+        interface "SimBus" as SBif
+        m1 -left-> SBif
+        m2 -right-> SBif
 }
 package "Gateway Model" {
-	component "ModelC Lib" as ModelC
-	component "Model"
+        component "ModelC Lib" as ModelC
+        component "Model"
 }
 
 SBif <-down- ModelC
@@ -64,6 +64,7 @@ typedef struct ModelGatewayDesc {
     int* sv;
     const char** argv;
     char* name_arg;
+    double clock_epsilon;
 }
 ```
 

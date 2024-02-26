@@ -145,6 +145,7 @@ typedef struct SignalVector {
     SignalAnnotationGetFunc annotation;
     BinarySignalCodecFunc codec;
     ModelInstanceSpec* mi;
+    void* index;
 }
 ```
 
@@ -161,6 +162,29 @@ typedef struct SignalVectorVTable {
 ```
 
 ## Functions
+
+### model_annotation
+
+Retrieve the specified annotation from the Model specification.
+
+#### Parameters
+
+model (ModelDesc*)
+: The Model Descriptor object representing an instance of this model.
+
+name (const char*)
+: The name of the annotation.
+
+#### Returns
+
+const char*
+: The value of the specified annotation.
+
+NULL
+: The specified annotation was not found.
+
+
+
 
 ### model_create
 
@@ -238,13 +262,39 @@ vname (const char*)
 : The name (alias) of the Signal Vector.
 
 sname (const char*)
-: The name of the signal within the Signal Vector.
+: The name of the signal within the Signal Vector. When set to NULL the index
+  will match on Signal Vector (vanme) only.
 
 #### Returns
 
 ModelSignalIndex
 : An index. When valid, either the `scalar` or `binary` fields will be set to
-  a valid pointer (i.e. not NULL).
+  a valid pointer (i.e. not NULL). When `sname` is not specified the index will
+  contain a valid pointer to a Signal Vector object only (i.e. both `scalar`
+  and `binary` will be set to NULL).
+
+
+
+
+### model_instance_annotation
+
+Retrieve the specified annotation from the Model instance (Stack specification).
+
+#### Parameters
+
+model (ModelDesc*)
+: The Model Descriptor object representing an instance of this model.
+
+name (const char*)
+: The name of the annotation.
+
+#### Returns
+
+const char*
+: The value of the specified annotation.
+
+NULL
+: The specified annotation was not found.
 
 
 

@@ -106,6 +106,19 @@ typedef struct SimulationSpec {
 
 ## Functions
 
+### modelc_destroy
+
+Bypass the controller and call model_destroy() directly.
+
+#### Parameters
+
+model_instance : ModelInstanceSpec (pointer to)
+    The model instance, which holds references to the registered channels
+and model functions. step_size : double The duration simulation step to be
+performed (in seconds).
+
+
+
 ### modelc_step
 
 Execute a simulation step with the provided step size for all model
