@@ -29,15 +29,15 @@ Component Diagram
 title Gateway Model
 
 node "Dynamic Simulation Environment" {
-	component "Model" as m1
-	component "Model" as m2
-	interface "SimBus" as SBif
-	m1 -left-> SBif
-	m2 -right-> SBif
+        component "Model" as m1
+        component "Model" as m2
+        interface "SimBus" as SBif
+        m1 -left-> SBif
+        m2 -right-> SBif
 }
 package "Gateway Model" {
-	component "ModelC Lib" as ModelC
-	component "Model"
+        component "ModelC Lib" as ModelC
+        component "Model"
 }
 
 SBif <-down- ModelC
@@ -62,7 +62,7 @@ Example
 
 */
 #define __GATEWAY_ERROR_OFFSET (__MODELC_ERROR_OFFSET + 1000)
-#define E_GATEWAYBEHIND             (__GATEWAY_ERROR_OFFSET + 1)
+#define E_GATEWAYBEHIND        (__GATEWAY_ERROR_OFFSET + 1)
 
 
 typedef struct ModelGatewayDesc {
@@ -72,6 +72,8 @@ typedef struct ModelGatewayDesc {
     /* References to allocated memory. */
     const char**       argv;
     char*              name_arg;
+    /* Sync epsilon (i.e. clock tolerance). */
+    double             clock_epsilon;
 } ModelGatewayDesc;
 
 

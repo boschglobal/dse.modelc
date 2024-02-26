@@ -107,6 +107,9 @@ int model_gw_setup(ModelGatewayDesc* gw, const char* name,
         log_info("  %s", gw->argv[i]);
     }
 
+    /* Calculate the default clock epsilon value (model may modify). */
+    gw->clock_epsilon = step_size * 0.01;
+
     /* Setup the ModelC library. */
     ModelCArguments args;
     modelc_set_default_args(&args, "gateway", step_size, end_time);
@@ -156,6 +159,11 @@ int model_gw_sync(ModelGatewayDesc* gw, double model_time)
 {
     ModelInstancePrivate* mip = gw->mi->private;
 
+    /* Adjust the model_time according to clock_epsilon. */
+    if (gw->clock_epsilon > 0.0) {
+        model_time += gw->clock_epsilon;
+    }
+
     /* If the gateway has fallen behind the SimBus time then the gateway
      * needs to advance its time (however it wishes) until this condition is
      * satisfied. Its not possible to advance the model time directly to the
@@ -165,7 +173,7 @@ int model_gw_sync(ModelGatewayDesc* gw, double model_time)
 
     /* Advance the gateway as many times as necessary to reach the desired
      * model time. When this loop exits the gateway will be at the same time
-     * as the SimBus time. After teh call to modelc_sync() the value in
+     * as the SimBus time. After the call to modelc_sync() the value in
      * mip->adapter_model->model_time will be the _next_ time to be used for
      * synchronisation with the SimBus - either within the while loop or on
      * the next call to model_gw_sync(). */
