@@ -19,6 +19,7 @@ add_library(model_api OBJECT
     ncodec.c
     schema.c
     signal.c
+    trace.c
     ${DSE_NCODEC_SOURCE_DIR}/dse/ncodec/codec.c
 )
 target_include_directories(model_api

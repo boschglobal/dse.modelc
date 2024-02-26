@@ -18,6 +18,10 @@
 #define DEFAULT_BINARY_MIME_TYPE "application/octet-stream"
 
 
+extern void ncodec_trace_configure(NCODEC* nc, ModelInstanceSpec* mi);
+extern void ncodec_trace_destroy(NCodecInstance* nc);
+
+
 /* Signal Annotation Functions. */
 
 static SchemaSignalObject* __signal_match;
@@ -221,6 +225,7 @@ static int _add_sv(void* _mfc, void* _sv_data)
             void*   stream = model_sv_stream_create(current_sv, i);
             NCODEC* nc = ncodec_open(current_sv->mime_type[i], stream);
             if (nc) {
+                ncodec_trace_configure(nc, data->mi);
                 current_sv->ncodec[i] = nc;
             } else {
                 model_sv_stream_destroy(stream);
@@ -347,6 +352,7 @@ void model_sv_destroy(SignalVector* sv)
             for (uint32_t i = 0; i < sv->count; i++) {
                 NCodecInstance* nc = sv->ncodec[i];
                 if (nc) {
+                    ncodec_trace_destroy(nc);
                     model_sv_stream_destroy(nc->stream);
                     ncodec_close((NCODEC*)nc);
                     sv->ncodec[i] = NULL;
@@ -366,7 +372,6 @@ void model_sv_destroy(SignalVector* sv)
 
     free(sv_save);
 }
-
 
 
 /**
@@ -550,4 +555,5 @@ Example (Code Usage)
 NULL
 : The requested annotation was not found.
 */
-extern const char* signal_annotation(SignalVector* sv, uint32_t index, const char* name);
+extern const char* signal_annotation(
+    SignalVector* sv, uint32_t index, const char* name);

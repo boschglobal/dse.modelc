@@ -100,6 +100,7 @@ set(DSE_MODELC_SOURCE_FILES
     ${DSE_MODELC_SOURCE_DIR}/model/ncodec.c
     ${DSE_MODELC_SOURCE_DIR}/model/schema.c
     ${DSE_MODELC_SOURCE_DIR}/model/signal.c
+    ${DSE_MODELC_SOURCE_DIR}/model/trace.c
 
     ${DSE_MODELC_SOURCE_DIR}/controller/loader.c
     ${DSE_MODELC_SOURCE_DIR}/controller/model_function.c
