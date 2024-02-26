@@ -307,7 +307,6 @@ static void _adjust_node_id(NCODEC* nc, const char* node_id)
 void test_ncodec__call_sequence(void** state)
 {
     ModelCMock* mock = *state;
-    int         rc;
 
     /* Use the "binary" signal vector. */
     SignalVector* sv_save = mock->mi->model_desc->sv;
@@ -327,7 +326,6 @@ void test_ncodec__call_sequence(void** state)
     /* Initial conditions. */
     const char* greeting = "Hello World";
     NCODEC*         nc = sv->codec(sv, 2);
-    NCodecInstance* _nc = (NCodecInstance*)nc;
 
     assert_int_equal(0, ncodec_seek(nc, 0, NCODEC_SEEK_END));
     assert_int_equal(0, ncodec_tell(nc));

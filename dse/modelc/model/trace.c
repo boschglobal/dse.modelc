@@ -3,6 +3,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 #include <stdlib.h>
+#include <stdint.h>
 #include <ctype.h>
 #include <dse/testing.h>
 #include <dse/logger.h>
@@ -120,7 +121,7 @@ DLL_PRIVATE void ncodec_trace_configure(
         char* _saveptr = NULL;
         char* _frameptr = strtok_r(_filter, ",", &_saveptr);
         while (_frameptr) {
-            int64 frame_id = strtol(_frameptr, NULL, 0);
+            int64_t frame_id = strtol(_frameptr, NULL, 0);
             if (frame_id > 0) {
                 char key[NCT_KEY_LEN];
                 snprintf(key, NCT_KEY_LEN, "%u", (uint32_t)frame_id);

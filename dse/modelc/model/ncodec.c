@@ -3,6 +3,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 #include <errno.h>
+#include <stdint.h>
 #include <dse/testing.h>
 #include <dse/logger.h>
 #include <dse/ncodec/codec.h>
@@ -70,7 +71,7 @@ static size_t stream_write(NCODEC* nc, uint8_t* data, size_t len)
     return len;
 }
 
-static int64 stream_seek(NCODEC* nc, size_t pos, int op)
+static int64_t stream_seek(NCODEC* nc, size_t pos, int op)
 {
     NCodecInstance* _nc = (NCodecInstance*)nc;
     if (_nc && _nc->stream) {
@@ -105,7 +106,7 @@ static int64 stream_seek(NCODEC* nc, size_t pos, int op)
     return -ENOSTR;
 }
 
-static int64 stream_tell(NCODEC* nc)
+static int64_t stream_tell(NCODEC* nc)
 {
     NCodecInstance* _nc = (NCodecInstance*)nc;
     if (_nc && _nc->stream) {
