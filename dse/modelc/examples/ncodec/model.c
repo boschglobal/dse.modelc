@@ -30,6 +30,15 @@ static inline NCODEC* _index(ExtendedModelDesc* m, const char* v, const char* s)
 }
 
 
+static void _adjust_node_id(NCODEC* nc, const char* node_id)
+{
+    ncodec_config(nc, (struct NCodecConfigItem){
+                          .name = "node_id",
+                          .value = node_id,
+                      });
+}
+
+
 ModelDesc* model_create(ModelDesc* model)
 {
     /* Extend the ModelDesc object (using a shallow copy). */
@@ -65,13 +74,15 @@ int model_step(ModelDesc* model, double* model_time, double stop_time)
 {
     ExtendedModelDesc* m = (ExtendedModelDesc*)model;
 
-    /* Message RX. */
+    /* Message RX - spoof the node_id to avoid RX filtering. */
+    _adjust_node_id(m->nc, "49");
     while (1) {
         NCodecCanMessage msg = {};
         int              len = ncodec_read(m->nc, &msg);
         if (len < 0) break;
         log_info("RX (%04x): %s", msg.frame_id, msg.buffer);
     }
+    _adjust_node_id(m->nc, m->node_id);
 
     /* Message TX. */
     char msg[100] = "Hello World!";

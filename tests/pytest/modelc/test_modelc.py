@@ -78,7 +78,7 @@ async def main(params, checks):
         assert found, check
 
 
-def test_modelc_double():
+def test_modelc_minimal():
     params = {
         'MODEL_SANDBOX_DIR': os.getenv('MODELC_SANDBOX_DIR')+'/examples/minimal',
         'models': [
@@ -94,29 +94,61 @@ def test_modelc_double():
     asyncio.run(main(params, checks))
 
 
-@pytest.mark.skip(reason="needs refactor")
-@pytest.mark.skipif(os.environ["PACKAGE_ARCH"] != "linux-amd64", reason="test only runs on linux-amd64")
+def test_modelc_extended():
+    params = {
+        'MODEL_SANDBOX_DIR': os.getenv('MODELC_SANDBOX_DIR')+'/examples/extended',
+        'models': [
+            {
+                'MODEL_INST': 'extended_inst',
+                'MODEL_YAML_FILES': f'{MODEL_YAML} ' + f'{STACK_YAML} ',
+            },
+        ]
+    }
+    checks = [
+        'SignalWrite: 2628574755 = 43.000000 [name=counter]',
+        'SignalWrite: 2906692958 = 1.000000 [name=odd]',
+        'SignalWrite: 3940322353 = 0.000000 [name=even]',
+        'SignalValue: 2628574755 = 46.000000 [name=counter]',
+        'SignalValue: 2906692958 = 0.000000 [name=odd]',
+        'SignalValue: 3940322353 = 1.000000 [name=even]',
+    ]
+    asyncio.run(main(params, checks))
+
+
+#@pytest.mark.skipif(os.environ["PACKAGE_ARCH"] != "linux-amd64", reason="test only runs on linux-amd64")
 def test_modelc_binary():
-    # Two models write data at same cycle (ModelReady). SimBus should append
-    # those two data together, and send again to the models (ModelStart).
-    #   "two\0" + "two\0" => "two\0two\0"
     params = {
         'MODEL_SANDBOX_DIR': os.getenv('MODELC_SANDBOX_DIR')+'/examples/binary',
         'models': [
             {
-                'MODEL_INST': 'binary_model_instance',
-                'MODEL_YAML_FILES' : f'{MODEL_YAML} ' + f'{STACK_YAML} ',
-            },
-            {
-                'MODEL_INST': 'second_binary_model_instance',
+                'MODEL_INST': 'binary_inst',
                 'MODEL_YAML_FILES' : f'{MODEL_YAML} ' + f'{STACK_YAML} ',
             },
         ]
     }
     checks = [
-        'RECV: one one (buffer size=8)',
-        'RECV: two two (buffer size=8)',
-        'RECV: three three (buffer size=12)',
-        'RECV: four four (buffer size=12)',
+        'Message (message) : count is 43',
+        'Message (message) : count is 44',
+        'Message (message) : count is 45',
+        'Message (message) : count is 46',
+    ]
+    asyncio.run(main(params, checks))
+
+
+def test_modelc_ncodec():
+    params = {
+        'MODEL_SANDBOX_DIR': os.getenv('MODELC_SANDBOX_DIR')+'/examples/ncodec',
+        'models': [
+            {
+                'MODEL_INST': 'ncodec_inst',
+                'MODEL_YAML_FILES' : f'{MODEL_YAML} ' + f'{STACK_YAML} ',
+            },
+        ]
+    }
+    checks = [
+        'RX (03e9): Hello World! from node_id=24',
+        'RX (03ea): Hello World! from node_id=24',
+        'RX (03eb): Hello World! from node_id=24',
+        'RX (03ec): Hello World! from node_id=24',
     ]
     asyncio.run(main(params, checks))

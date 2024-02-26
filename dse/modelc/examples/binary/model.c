@@ -81,6 +81,11 @@ int model_step(ModelDesc* model, double* model_time, double stop_time)
 {
     ExtendedModelDesc* m = (ExtendedModelDesc*)model;
 
+    /* Print the binary signal. */
+    log_info("Message (%s) : %s",
+        m->binary.message.sv->signal[m->binary.message.index],
+        m->binary.message.sv->binary[m->binary.message.index]);
+
     /* Scalar signals. */
     *(m->scalars.counter) += 1;
     /* Binary signals. */
