@@ -185,6 +185,48 @@ void test_model__binary(void** state)
     }
 }
 
+#define BENCHMARK_INST_NAME      "benchmark_inst"
+#define BENCHMARK_SIGNAL_COUNTER 0
+
+void test_model__benchmark(void** state)
+{
+    chdir("../../../../dse/modelc/build/_out/examples/benchmark");
+
+    const char* inst_names[] = {
+        BENCHMARK_INST_NAME,
+    };
+    char* argv[] = {
+        (char*)"test_model_interface",
+        (char*)"--name=" BENCHMARK_INST_NAME,
+        (char*)"--logger=5",  // 1=debug, 5=QUIET (commit with 5!)
+        (char*)"data/simulation.yaml",
+        (char*)"data/model.yaml",
+    };
+    SimMock* mock = *state = simmock_alloc(inst_names, ARRAY_SIZE(inst_names));
+    simmock_configure(mock, argv, ARRAY_SIZE(argv), ARRAY_SIZE(inst_names));
+    ModelMock* model = simmock_find_model(mock, BENCHMARK_INST_NAME);
+    simmock_load(mock);
+    simmock_load_model_check(model, false, true, false);
+    simmock_setup(mock, "data_channel", NULL);
+
+    /* Initial value. */
+    double counter = 0.0;
+    simmock_print_scalar_signals(mock, LOG_DEBUG);
+    /* T0 ... Tn */
+    for (uint32_t i = 0; i < 5; i++) {
+        /* Do the check. */
+        SignalCheck checks[] = {
+            { .index = BENCHMARK_SIGNAL_COUNTER, .value = counter },
+        };
+        simmock_signal_check(
+            mock, BENCHMARK_INST_NAME, checks, ARRAY_SIZE(checks), NULL);
+        /* Step the model. */
+        assert_int_equal(simmock_step(mock, true), 0);
+        simmock_print_scalar_signals(mock, LOG_DEBUG);
+        counter += 1.2;
+    }
+}
+
 
 #define NCODEC_INST_NAME      "ncodec_inst"
 #define NCODEC_SIGNAL_COUNTER 0
@@ -247,6 +289,9 @@ int run_model_examples_tests(void)
         cmocka_unit_test_setup_teardown(test_model__extended, s, t),
         cmocka_unit_test_setup_teardown(test_model__binary, s, t),
         cmocka_unit_test_setup_teardown(test_model__ncodec, s, t),
+#ifndef _WIN32
+        cmocka_unit_test_setup_teardown(test_model__benchmark, s, t),
+#endif
     };
 
     return cmocka_run_group_tests_name("MODEL / EXAMPLES", tests, NULL, NULL);

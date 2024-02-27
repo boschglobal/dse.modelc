@@ -4,7 +4,7 @@
 
 ```bash
 # Install Python packages.
-$ pip install  openpyxl numpy ruamel.yaml pandas plotly
+$ pip install -r requirements.txt
 
 # Install Docker Compose.
 $ sudo -E  curl -SL \
@@ -24,15 +24,31 @@ $ git clone https://github.com/boschglobal/dse.modelc.git
 $ cd dse.modelc
 $ make
 
+# Setup benchmark result folder
+$ mkdir tests/pytest/benchmark/_out
+$ sudo chmod 777 tests/pytest/benchmark/_out
+
 # Run the benchmark.
 $ cd tests/pytest/benchmark
-$ cp scenario/redis_6_400.csv input.csv
+$ cp scenario/redis_socket_6_400.csv input.csv
+
+## Method 1 (takes default values)
 $ make
+
+## Method 2
+$ ./benchmark.py execute --transport redis://redis:6379 --scenario 'input.csv' --topology stacked --outdir '_out' --signals 15 --signal_change 5 --channels 3 --models 5 --step_size .05 --end_time 1
+
 
 # Results
 $ ls -al tests/pytest/benchmark/_out
 ```
 
+
+## Generate static yaml files
+
+```bash
+$ ./benchmark.py  generate --models 1 --signals 10 --transport posix:///stem --channels 2 --outdir 'output/'
+```
 
 ## Configuration
 
@@ -42,6 +58,7 @@ $ ls -al tests/pytest/benchmark/_out
     File Type : csv
     Columns :
       - simbus_uri (defines the simbus transport type)
+      - num_of_channels (number of channels)
       - num_of_models (number of models)
       - step_size (step size)
       - end_time (end time)

@@ -1,79 +1,48 @@
-# Copyright 2023 Robert Bosch GmbH
+# Copyright 2024 Robert Bosch GmbH
 #
 # SPDX-License-Identifier: Apache-2.0
 
+
 cmake_minimum_required(VERSION 3.21)
 
-project(BenchmarkModel
-    DESCRIPTION "ModelC - Benchmark Testing Model."
-    HOMEPAGE_URL "${PROJECT_URL}"
-)
-set(PROJECT_VERSION ${VERSION})
+project(Benchmark)
+set(MODEL_PATH "examples/benchmark")
 
 include(FetchContent)
-
-set(MODEL_PATH "examples/benchmark")
-set(CMAKE_SHARED_LIBRARY_PREFIX "")
-
-set(CMAKE_C_STANDARD 99)
-set(CMAKE_C_STANDARD_REQUIRED TRUE)
-set(CMAKE_POSITION_INDEPENDENT_CODE ON)
-set(CMAKE_C_FLAGS_DEBUG "-g -ggdb")
-set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -O3")
-list(APPEND C_CXX_WARNING_FLAGS
-    -Wall
-    -W
-    -Wwrite-strings
-    -Wno-missing-field-initializers
-    -Wno-misleading-indentation
-)
-add_compile_options(${C_CXX_WARNING_FLAGS})
-
-
-# External Project - DSE C Lib
-# ----------------------------
 FetchContent_Declare(dse_clib
     URL                 $ENV{DSE_CLIB_URL}
     HTTP_USERNAME       $ENV{GHE_USER}
     HTTP_PASSWORD       $ENV{GHE_TOKEN}
 )
 FetchContent_MakeAvailable(dse_clib)
-set(DSE_CLIB_SOURCE_DIR ${dse_clib_SOURCE_DIR}/dse)
-set(DSE_CLIB_SOURCE_FILES )
-set(DSE_CLIB_INCLUDE_DIR "${DSE_CLIB_SOURCE_DIR}/..")
+set(DSE_CLIB_INCLUDE_DIR ${dse_clib_SOURCE_DIR})
 
-install(
-    FILES
-        model.yaml
-    DESTINATION
-        ${MODEL_PATH}/data
-    COMPONENT
-        benchmark_model
+add_library(benchmark SHARED
+    model.c
 )
-
-
-
-# Targets
-# =======
-
-
-# Target - benchmark_model
-# ------------------------
-add_library(benchmark_model SHARED
-    benchmark_model.c
-)
-target_include_directories(benchmark_model
+target_include_directories(benchmark
     PRIVATE
         ${DSE_CLIB_INCLUDE_DIR}
         ../../../..
 )
-target_link_libraries(benchmark_model
+target_link_libraries(benchmark
     PRIVATE
         $<$<BOOL:${WIN32}>:${modelc_link_lib}>
 )
-install(TARGETS benchmark_model
+install(TARGETS benchmark
     LIBRARY DESTINATION
         ${MODEL_PATH}/lib
+    RUNTIME DESTINATION
+        ${MODEL_PATH}/lib
     COMPONENT
-        benchmark_model
+        benchmark
+)
+install(
+    FILES
+        model.yaml
+        simulation.yaml
+    DESTINATION
+        ${MODEL_PATH}/data
+    COMPONENT
+        benchmark
 )

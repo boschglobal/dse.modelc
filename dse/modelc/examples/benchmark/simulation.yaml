@@ -1,0 +1,41 @@
+# Copyright 2024 Robert Bosch GmbH
+#
+# SPDX-License-Identifier: Apache-2.0
+
+---
+kind: Stack
+metadata:
+  name: benchmark_stack
+spec:
+  connection:
+    transport:
+      redispubsub:
+        uri: redis://localhost:6379
+        timeout: 60
+  models:
+    - name: simbus
+      model:
+        name: simbus
+      channels:
+        - name: data_channel
+          expectedModelCount: 1
+    - name: benchmark_inst
+      uid: 42
+      model:
+        name: Benchmark
+      channels:
+        - name: data_channel
+          alias: data
+---
+kind: Model
+metadata:
+  name: simbus
+---
+kind: SignalGroup
+metadata:
+  name: data
+  labels:
+    channel: data
+spec:
+  signals:
+    - signal: counter

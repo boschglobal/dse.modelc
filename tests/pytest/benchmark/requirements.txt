@@ -1,0 +1,5 @@
+dse.opstools
+openpyxl
+prettytable
+numpy
+pandas

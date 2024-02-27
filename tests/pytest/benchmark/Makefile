@@ -15,7 +15,7 @@ setup:
 
 .PHONY: main
 main: setup
-	python3 main.py
+	./benchmark.py run
 
 .PHONY: benchmark
 benchmark:

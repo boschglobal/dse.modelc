@@ -8,9 +8,10 @@ add_subdirectory(minimal)
 add_subdirectory(extended)
 add_subdirectory(binary)
 add_subdirectory(ncodec)
-
 add_subdirectory(gateway)
-#add_subdirectory(benchmark)
+if(UNIX)
+add_subdirectory(benchmark)
+endif()
 
 # Code examples for documentation.
 if(UNIX)

@@ -1,3 +1,4 @@
+---
 version: "3.3"
 services:
 
@@ -28,7 +29,7 @@ services:
       - -c
       - |
         pip install -r tests/pytest/benchmark/data/requirements.txt
-        python tests/pytest/benchmark/benchmark.py
+        python tests/pytest/benchmark/benchmark.py run --containerexec True
     depends_on:
       - redis
 
