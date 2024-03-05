@@ -29,7 +29,7 @@
 #define TRANSPORT            TRANSPORT_REDISPUBSUB
 
 
-uint8_t __log_level__ = LOG_INFO;
+uint8_t __log_level__ = LOG_NOTICE;
 
 
 static struct option long_options[] = {
@@ -179,7 +179,7 @@ void modelc_set_default_args(ModelCArguments* args,
     args->timeout = MODEL_TIMEOUT;
     args->timeout_set_by_cli = 0;
     args->log_level_set_by_cli = 0;
-    args->log_level = LOG_INFO;
+    args->log_level = LOG_NOTICE;
     args->step_size = step_size;
     args->end_time = end_time;
     args->uid = MODEL_UID;
