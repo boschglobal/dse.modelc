@@ -167,10 +167,10 @@ add_dependencies(oss
     msgpackc-download
     yaml-download
 )
-oss_copy(${dse_clib_SOURCE_DIR} dse.clib)
-oss_copy($ENV{EXTERNAL_BUILD_DIR}/dlfcnwin32 dlfcnwin32)
-oss_copy($ENV{EXTERNAL_BUILD_DIR}/dse_ncodec dse_ncodec)
-oss_copy($ENV{EXTERNAL_BUILD_DIR}/event event)
-oss_copy($ENV{EXTERNAL_BUILD_DIR}/hiredis hiredis)
-oss_copy($ENV{EXTERNAL_BUILD_DIR}/msgpackc msgpackc)
-oss_copy($ENV{EXTERNAL_BUILD_DIR}/yaml yaml)
+oss_copy(${dse_clib_SOURCE_DIR}                 boschglobal/dse.clib)
+oss_copy($ENV{EXTERNAL_BUILD_DIR}/dlfcnwin32    dlfcn-win32/dlfcn-win32)
+oss_copy($ENV{EXTERNAL_BUILD_DIR}/dse_ncodec    boschglobal/dse.standards)
+oss_copy($ENV{EXTERNAL_BUILD_DIR}/event         libevent/libevent)
+oss_copy($ENV{EXTERNAL_BUILD_DIR}/hiredis       redis/hiredis)
+oss_copy($ENV{EXTERNAL_BUILD_DIR}/msgpackc      msgpack/msgpackc)
+oss_copy($ENV{EXTERNAL_BUILD_DIR}/yaml          yaml/libyaml)
