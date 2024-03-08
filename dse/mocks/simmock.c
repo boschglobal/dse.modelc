@@ -715,9 +715,10 @@ void simmock_write_frame(SignalVector* sv, const char* sig_name, uint8_t* data,
     /* Write a frame with modified node_id, so the frame is not filtered. */
     char* node_id_save = __get_ncodec_node_id(nc);
     __set_ncodec_node_id(nc, (char*)"42");
-    ncodec_write(nc, &(struct NCodecCanMessage){
-                         .frame_id = frame_id, .frame_type = frame_type,
-                         .len = len, .buffer = data });
+    ncodec_write(nc, &(struct NCodecCanMessage){ .frame_id = frame_id,
+                         .frame_type = frame_type,
+                         .len = len,
+                         .buffer = data });
     ncodec_flush(nc);
     __set_ncodec_node_id(nc, node_id_save);
     free(node_id_save);
@@ -765,10 +766,10 @@ uint32_t simmock_read_frame(
         }
     }
     assert_non_null(nc);
-    NCodecInstance* _nc = (NCodecInstance*)nc;
-    char*           node_id_save = __get_ncodec_node_id(nc);
-    NCodecCanMessage   msg = {};
-    int             rlen = 0;
+    NCodecInstance*  _nc = (NCodecInstance*)nc;
+    char*            node_id_save = __get_ncodec_node_id(nc);
+    NCodecCanMessage msg = {};
+    int              rlen = 0;
 
     /* Read a frame with modified node_id, so the frame is not filtered. */
     __set_ncodec_node_id(nc, (char*)"42");
@@ -851,7 +852,7 @@ void simmock_print_binary_signals(SimMock* mock, int level)
                 for (uint32_t j = i; j < i + 8; j++) {
                     if (j < sv->length[idx]) {
                         snprintf(buffer + strlen(buffer),
-                            sizeof(buffer + strlen(buffer)), "%02x ", b[j]);
+                            sizeof(buffer) - strlen(buffer), "%02x ", b[j]);
                     }
                 }
                 log_at(level, "%s", buffer);
@@ -907,8 +908,9 @@ void simmock_print_network_frames(SimMock* mock, int level)
                 log_at(level, "  Frame:  %04x", msg.frame_id);
                 char buffer[100] = {};
                 for (uint32_t i = 0; i < msg.len; i++) {
-                    snprintf(
-                        buffer + strlen(buffer), 10, "%02x ", msg.buffer[i]);
+                    snprintf(buffer + strlen(buffer),
+                        sizeof(buffer) - strlen(buffer), "%02x ",
+                        msg.buffer[i]);
                     if ((i % 8 == 7)) {
                         log_at(level, "   %s", buffer);
                         buffer[0] = 0;

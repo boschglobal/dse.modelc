@@ -44,8 +44,7 @@ static void _trace_log(
 {
     NCodecTraceData*  td = nc->private;
     NCodecCanMessage* msg = m;
-    static char       trace_buffer[NCT_BUFFER_LEN];
-    char*             b = trace_buffer;
+    static char       b[NCT_BUFFER_LEN];
 
     /* Setup bus identifier (on first call). */
     if (strlen(td->bus_identifier) == 0) {
@@ -62,20 +61,28 @@ static void _trace_log(
     }
 
     /* Format and write the log. */
-    memset(trace_buffer, 0, NCT_BUFFER_LEN);
+    memset(b, 0, NCT_BUFFER_LEN);
     if (msg->len <= 16) {
         // Short form log.
         for (uint32_t i = 0; i < msg->len; i++) {
-            if (i && (i % 8 == 0)) snprintf(b + strlen(b), sizeof(b), " ");
-            snprintf(b + strlen(b), sizeof(b), " %02x", msg->buffer[i]);
+            if (i && (i % 8 == 0)) {
+                snprintf(b + strlen(b), sizeof(b) - strlen(b), " ");
+            }
+            snprintf(
+                b + strlen(b), sizeof(b) - strlen(b), " %02x", msg->buffer[i]);
         }
     } else {
         // Long form log.
         for (uint32_t i = 0; i < msg->len; i++) {
             if (strlen(b) > NCT_BUFFER_LEN) break;
-            if (i % 32 == 0) snprintf(b + strlen(b), sizeof(b), "\n ");
-            if (i % 8 == 0) snprintf(b + strlen(b), sizeof(b), " ");
-            snprintf(b + strlen(b), sizeof(b), " %02x", msg->buffer[i]);
+            if (i % 32 == 0) {
+                snprintf(b + strlen(b), sizeof(b) - strlen(b), "\n ");
+            }
+            if (i % 8 == 0) {
+                snprintf(b + strlen(b), sizeof(b) - strlen(b), " ");
+            }
+            snprintf(
+                b + strlen(b), sizeof(b) - strlen(b), " %02x", msg->buffer[i]);
         }
     }
     log_notice("(%s) %.6f [%s] %s %02x %d %d :%s", td->model_inst_name,
