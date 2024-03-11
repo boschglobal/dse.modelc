@@ -4,7 +4,7 @@ Copyright 2024 Robert Bosch GmbH
 SPDX-License-Identifier: Apache-2.0
 -->
 
-# SIMER : Simulation Runner from Dynamic Simulation Environment
+# SIMER : Simulation Runner
 
 Containerised simulation run-time.
 
