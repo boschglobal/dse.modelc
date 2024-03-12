@@ -294,7 +294,7 @@ jobs:
         with:
           push: true
           context: extra/tools/simer
-          file: ./extra/tools/simer/Dockerfile
+          file: ./extra/tools/simer/build/package/Dockerfile
           build-args: |
              PACKAGE_VERSION=${{ env.PACKAGE_VERSION }}
           tags: ${{ steps.meta.outputs.tags }}
