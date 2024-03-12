@@ -46,28 +46,12 @@ $ make
 $ simer dse/modelc/build/_out/examples/minimal
 ```
 
-
-### Toolchains
-
-The Model C Library is built using containerised toolchains. Those are
-available from the DSE C Library and can be built as follows:
-
-```bash
-$ git clone https://github.com/boschglobal/dse.clib.git
-$ cd dse.clib
-$ make docker
-```
-
-Alternatively, the latest Docker Images are available on ghcr.io and can be
-used as follows:
-
-```bash
-$ export GCC_BUILDER_IMAGE=ghcr.io/boschglobal/dse-gcc-builder:main
-$ export GCC_TESTER_IMAGE=ghcr.io/boschglobal/dse-python-builder:main
-```
+Documentation for the `simer` tool is available here : https://boschglobal.github.io/dse.doc/docs/user/simer
 
 
-### Build
+## Build
+
+> Note : see the following section on configuring toolchains.
 
 ```bash
 # Get the repo.
@@ -91,6 +75,26 @@ $ make docker
 # Remove (clean) temporary build artifacts.
 $ make clean
 $ make cleanall
+```
+
+
+### Toolchains
+
+The Model C Library is built using containerised toolchains. Those are
+available from the DSE C Library and can be built as follows:
+
+```bash
+$ git clone https://github.com/boschglobal/dse.clib.git
+$ cd dse.clib
+$ make docker
+```
+
+Alternatively, the latest Docker Images are available on ghcr.io and can be
+used as follows:
+
+```bash
+$ export GCC_BUILDER_IMAGE=ghcr.io/boschglobal/dse-gcc-builder:main
+$ export GCC_TESTER_IMAGE=ghcr.io/boschglobal/dse-python-builder:main
 ```
 
 
