@@ -35,7 +35,7 @@ var (
 
 func printUsage() {
 	fmt.Fprintf(flag.CommandLine.Output(), usage)
-	ignore := []string{"redis", "simbus", "modelc"}
+	ignore := []string{"redis", "simbus", "modelc", "modelc32"}
 	flag.VisitAll(func(f *flag.Flag) {
 		if slices.Contains(ignore, f.Name) == false {
 			fmt.Fprintf(flag.CommandLine.Output(), "  -%s %s\n", f.Name, reflect.TypeOf(f.Value))

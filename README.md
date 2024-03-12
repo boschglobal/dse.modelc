@@ -21,13 +21,31 @@ Model C Library of the Dynamic Simulation Environment (DSE) Core Platform.
 ```
 L- dse/modelc   Model C Library source code.
 L- extra        Build infrastructure.
-  L- docker     Containerised tools.
+  L- tools      Containerised tools.
 L- licenses     Third Party Licenses.
 L- tests        Unit and integration tests.
 ```
 
 
 ## Usage
+
+Simulations can be run using the `simer` tool (part of this project).
+
+```bash
+# Define a shell function for the Simer tool.
+$ export SIMER_IMAGE=ghcr.io/boschglobal/dse-simer:latest
+$ simer() { ( cd "$1" && shift && docker run -it --rm -v $(pwd):/tmp $SIMER_IMAGE "$@"; ) }
+
+# Download and run a simulation ...
+$ export MODELC_URL=https://github.com/boschglobal/dse.modelc/releases/download/v2.0.7/ModelC-2.0.7-linux-amd64.zip
+$ curl -fSL -o /tmp/modelc.zip $MODELC_URL; unzip -d /tmp /tmp/modelc.zip
+$ simer /tmp/ModelC-2.0.7-linux-amd64/examples/minimal
+
+# OR build locally and then run an example simulation ...
+$ make
+$ simer dse/modelc/build/_out/examples/minimal
+```
+
 
 ### Toolchains
 
@@ -67,6 +85,7 @@ $ make
 $ make test
 
 # Build containerised tools.
+$ make tools
 $ make docker
 
 # Remove (clean) temporary build artifacts.
