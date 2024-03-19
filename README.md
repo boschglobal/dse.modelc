@@ -34,7 +34,7 @@ Simulations can be run using the `simer` tool (part of this project).
 ```bash
 # Define a shell function for the Simer tool.
 $ export SIMER_IMAGE=ghcr.io/boschglobal/dse-simer:latest
-$ simer() { ( cd "$1" && shift && docker run -it --rm -v $(pwd):/tmp $SIMER_IMAGE "$@"; ) }
+$ simer() { ( cd "$1" && shift && docker run -it --rm -v $(pwd):/sim $SIMER_IMAGE "$@"; ) }
 
 # Download and run a simulation ...
 $ export MODELC_URL=https://github.com/boschglobal/dse.modelc/releases/download/v2.0.7/ModelC-2.0.7-linux-amd64.zip

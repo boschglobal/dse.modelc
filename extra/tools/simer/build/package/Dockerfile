@@ -6,7 +6,7 @@
 # SIMER Simulation Runtime
 #
 # Usage:
-#	simer() { ( cd "$1" && shift && docker run -it --rm -v $(pwd):/tmp simer:test "$@"; ) }
+#	simer() { ( cd "$1" && shift && docker run -it --rm -v $(pwd):/sim simer:test "$@"; ) }
 #	(then)
 #	simer dse/modelc/build/_out/examples/minimal -endtime 0.002
 
@@ -129,8 +129,8 @@ COPY build/stage/licenses /licenses
 
 # Setup the entry conditions
 # ==========================
-# Run docker with --volume parameter to map the simulation folder into /tmp.
-WORKDIR /tmp
+# Run docker with --volume parameter to map the simulation folder into /sim.
+WORKDIR /sim
 COPY build/package/entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 ENTRYPOINT ["/entrypoint.sh"]

@@ -13,7 +13,7 @@ Containerised simulation run-time.
 
 ```bash
 # Define a shell function (or add to .profile file).
-$ simer() { ( cd "$1" && shift && docker run -it --rm -v $(pwd):/tmp simer:test "$@"; ) }
+$ simer() { ( cd "$1" && shift && docker run -it --rm -v $(pwd):/sim simer:test "$@"; ) }
 
 # Run the simulation.
 $ simer dse/modelc/build/_out/examples/minimal -endtime 0.04
@@ -56,7 +56,7 @@ $ make run_noredis
 ### Container Testing
 
 ```bash
-$ simer() { ( cd "$1" && shift && docker run -it --rm -v $(pwd):/tmp simer:test "$@"; ) }
+$ simer() { ( cd "$1" && shift && docker run -it --rm -v $(pwd):/sim simer:test "$@"; ) }
 $ simer dse/modelc/build/_out/examples/simer -endtime 0.04
 ```
 
@@ -79,7 +79,7 @@ $ go get -x github.com/boschglobal/dse.schemas/code/go/dse@v1.2.6
 
 ```bash
 # Start the container.
-$ docker run --entrypoint /bin/bash -it --rm -v .:/tmp simer:test
+$ docker run --entrypoint /bin/bash -it --rm -v .:/sim simer:test
 
 # Check Redis operation.
 $ /usr/local/bin/redis-server /usr/local/etc/redis/redis.conf

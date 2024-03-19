@@ -283,7 +283,7 @@ spec:
           COUNTER_NAME: counter_B
           COUNTER_VALUE: 200
         files:
-          - /tmp/sim/signalgroup.yaml
+          - data/signalgroup.yaml
       channels:
         - name: data_channel
           alias: data
@@ -315,7 +315,7 @@ $ docker pull ghcr.io/boschglobal/dse-simer:2.0
 ```bash
 # Define a shell function (or add to .profile file).
 $ export SIMER_IMAGE=ghcr.io/boschglobal/dse-simer:latest
-$ simer() { ( cd "$1" && shift && docker run -it --rm -v $(pwd):/tmp $SIMER_IMAGE "$@"; ) }
+$ simer() { ( cd "$1" && shift && docker run -it --rm -v $(pwd):/sim $SIMER_IMAGE "$@"; ) }
 
 # Run the simulation.
 $ simer dse/modelc/build/_out/examples/minimal -endtime 0.04

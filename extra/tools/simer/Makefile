@@ -5,7 +5,7 @@
 
 SRC           := $(shell find . -type f -name '*.go' -print)
 BIN_DIR       := $(CURDIR)/bin
-BUID_DIR      := $(CURDIR)/build/stage
+BUILD_DIR     := $(CURDIR)/build/stage
 CLI_TOOLS     ?= $(BIN_DIR)/simer
 GOFLAGS       :=
 GOPRIVATE     ?= github.com/boschglobal
@@ -19,9 +19,9 @@ run_noredis: build
 	cd ../../../dse/modelc/build/_out/examples/simer; \
 		$(BIN_DIR)/simer \
 		-redis="" \
-		-simbus=$(BUID_DIR)/bin/simbus \
-		-modelc=$(BUID_DIR)/bin/modelc \
-		-modelcX32=$(BUID_DIR)/bin/modelc32 \
+		-simbus=$(BUILD_DIR)/bin/simbus \
+		-modelc=$(BUILD_DIR)/bin/modelc \
+		-modelcX32=$(BUILD_DIR)/bin/modelc32 \
 		-logger=2
 
 
