@@ -9,8 +9,8 @@ import (
 	"log/slog"
 	"os"
 
-	"github.com/boschglobal/dse.modelc/extra/docker/simer/simer/internal/app/simer"
-	"github.com/boschglobal/dse.modelc/extra/docker/simer/simer/internal/pkg/session"
+	"github.com/boschglobal/dse.modelc/extra/tools/simer/internal/app/simer"
+	"github.com/boschglobal/dse.modelc/extra/tools/simer/internal/pkg/session"
 )
 
 var (

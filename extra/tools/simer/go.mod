@@ -1,4 +1,4 @@
-module github.com/boschglobal/dse.modelc/extra/docker/simer/simer
+module github.com/boschglobal/dse.modelc/extra/tools/simer
 
 go 1.21.6
 

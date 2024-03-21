@@ -10,7 +10,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/boschglobal/dse.modelc/extra/docker/simer/simer/internal/pkg/file/handler/kind"
+	"github.com/boschglobal/dse.modelc/extra/tools/simer/internal/pkg/file/handler/kind"
 )
 
 type Handler interface {

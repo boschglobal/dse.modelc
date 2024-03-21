@@ -12,7 +12,7 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/boschglobal/dse.modelc/extra/docker/simer/simer/internal/app/simer"
+	"github.com/boschglobal/dse.modelc/extra/tools/simer/internal/app/simer"
 )
 
 var usage = `

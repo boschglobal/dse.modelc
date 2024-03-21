@@ -11,10 +11,10 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/boschglobal/dse.modelc/extra/docker/simer/simer/internal/pkg/file/handler"
-	"github.com/boschglobal/dse.modelc/extra/docker/simer/simer/internal/pkg/file/handler/kind"
-	"github.com/boschglobal/dse.modelc/extra/docker/simer/simer/internal/pkg/index"
-	"github.com/boschglobal/dse.modelc/extra/docker/simer/simer/internal/pkg/session"
+	"github.com/boschglobal/dse.modelc/extra/tools/simer/internal/pkg/file/handler"
+	"github.com/boschglobal/dse.modelc/extra/tools/simer/internal/pkg/file/handler/kind"
+	"github.com/boschglobal/dse.modelc/extra/tools/simer/internal/pkg/index"
+	"github.com/boschglobal/dse.modelc/extra/tools/simer/internal/pkg/session"
 
 	schema_kind "github.com/boschglobal/dse.schemas/code/go/dse/kind"
 )
@@ -245,7 +245,17 @@ func stackedModelCmd(stackDoc *kind.KindDoc, modelcPath string, modelcX32Path st
 	return cmd
 }
 
+func removeDuplicate[T comparable](s []T) []T {
+	seen := make(map[T]struct{}, len(s))
+	return slices.DeleteFunc(s, func(val T) bool {
+		_, dup := seen[val]
+		seen[val] = struct{}{}
+		return dup
+	})
+}
+
 func buildModelCmd(name string, path string, yamlFiles []string, env map[string]string, flags Flags) *session.Command {
+	yamlFiles = removeDuplicate(yamlFiles)
 	args := []string{}
 	//args = append(args, "--help")
 	args = append(args, "--name", name)
