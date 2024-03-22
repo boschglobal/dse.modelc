@@ -178,7 +178,7 @@ int model_gw_sync(ModelGatewayDesc* gw, double model_time)
      * synchronisation with the SimBus - either within the while loop or on
      * the next call to model_gw_sync(). */
     while (mip->adapter_model->model_time <= model_time) {
-        log_debug("GW steps the Model; model at %d, target is %d",
+        log_debug("GW steps the Model; model at %f, target is %f",
             mip->adapter_model->model_time, model_time);
         int rc = modelc_sync(gw->sim);
         if (rc) return rc;
