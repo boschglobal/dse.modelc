@@ -40,8 +40,7 @@ func (h *YamlKindHandler) Detect(file string) any {
 			if err == io.EOF {
 				break
 			}
-			slog.Error(fmt.Sprintf("Decode error;  file=%s", file))
-			slog.Error(err.Error())
+			slog.Debug(fmt.Sprintf("Decode error;  file=%s (%s)", file, err.Error()))
 			continue
 		}
 		doc.File = file
