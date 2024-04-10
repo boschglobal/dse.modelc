@@ -16,9 +16,7 @@ import (
 var (
 	// Operational flags.
 	tmux   = flag.Bool("tmux", false, "run simulation with TMUX user interface")
-	gdb    = flag.String("gdb", "", "attach this model instance to GDB server")
 	logger = flag.Int("logger", 3, "log level (select between 0..4)")
-
 	// Binary flags (adjusted only during development).
 	redisPath     = flag.String("redis", "redis-server", "path to redis-server executable")
 	simbusPath    = flag.String("simbus", "simbus", "path to SimBus executable (set to \"\" to disable)")

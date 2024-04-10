@@ -255,8 +255,17 @@ func removeDuplicate[T comparable](s []T) []T {
 }
 
 func buildModelCmd(name string, path string, yamlFiles []string, env map[string]string, flags Flags) *session.Command {
+
 	yamlFiles = removeDuplicate(yamlFiles)
 	args := []string{}
+
+	if len(flags.Gdb) != 0 {
+		if slices.Contains(strings.Split(name, ","), flags.Gdb) == true {
+			// Run model 'name' via gdbserver.
+			args = append(args, "localhost:2159", path)
+			path = "/usr/bin/gdbserver"
+		}
+	}
 	args = append(args, "--name", name)
 	if flags.Transport != "" {
 		args = append(args, "--transport", flags.Transport)

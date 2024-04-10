@@ -145,3 +145,58 @@ Init Controller channel: Network
 * down
 * info locals
 * info args
+
+
+## GDB Server
+
+ModelC can be debugged using GDB Server which enables remote debugging - where the program being
+debugged runs on a remote system while debugger (and debugging symbols) are running on the local system.
+
+
+### Run ModelC with GDB Server
+
+GDB Server can be started on a target system a number of ways. For the debugger to connect to the running GDB Server
+instance requires connectivity via port 2159.
+
+> **Note:** In each of the following examples it is assumed that the container images have been built locally and include the same executable files in both local and remote (in container) systems.
+
+```bash
+# GDB Server via 'simer'.
+$ simer dse/modelc/build/_out/examples/minimal -endtime 0.04 -gdb minimal_inst
+
+# GDB Server with standalone command.
+$ gdbserver localhost:2159 dse/modelc/build/_out/bin/modelc --name instance model.yaml simulation.yaml
+
+# GDB Server with docker compose.
+$ cat docker-compose.yaml
+---
+version: "1.0"
+services:
+  ...
+  modelc:
+    image: dse-modelc:test
+    volumes:
+      - ./:/tmp/repo
+      - /usr/bin/gdbserver:/tmp/repo/gdbserver
+    container_name: "modelc"
+    working_dir: /tmp/repo
+    command:
+      gdbserver localhost:2159 dse/modelc/build/_out/bin/modelc --name instance model.yaml simulation.yaml
+    ports:
+      - 2159:2159
+  ...
+$ docker-compose up
+```
+
+
+### Connect to remote ModelC
+
+> **Note:** `solib-search-path` should be set to the local path (relative to the running remote executable).
+
+```bash
+$ gdb dse/modelc/build/_out/bin/modelc
+(gdb) set solib-search-path ./
+(gdb) target remote localhost:2159
+(gdb) continue
+(gdb) bt
+```

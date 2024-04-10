@@ -14,4 +14,6 @@ type Flags struct {
 	Transport string
 	Uri       string
 	Timeout   float64
+
+	Gdb string
 }

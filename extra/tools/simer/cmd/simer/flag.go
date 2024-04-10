@@ -59,6 +59,8 @@ func parseFlags() {
 	flag.StringVar(&flags.Uri, "uri", "redis://localhost:6379", "SimBus connection URI")
 	flag.Float64Var(&flags.Timeout, "timeout", 60.0, "timeout")
 
+	flag.StringVar(&flags.Gdb, "gdb", "", "attach this model instance to GDB server")
+
 	flag.Parse()
 	if flagSpecified("transport") == false {
 		flags.Transport = ""
