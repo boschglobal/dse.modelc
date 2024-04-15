@@ -48,7 +48,6 @@ static int _signal_group_match_handler(
     return 0;
 }
 
-
 static const char* _signal_annotation(ModelInstanceSpec* mi, SignalVector* sv,
     const char* signal, const char* name)
 {
@@ -77,6 +76,47 @@ static const char* _signal_annotation(ModelInstanceSpec* mi, SignalVector* sv,
     }
 
     return value;
+}
+
+
+static const char* __signal_group_annotation_name;
+static const char* __signal_group_annotation_value;
+
+static int _sg_annotation_search_match_handler(
+    ModelInstanceSpec* model_instance, SchemaObject* object)
+{
+    UNUSED(model_instance);
+
+    YamlNode* n = dse_yaml_find_node(object->doc, "metadata/annotations");
+    const char* value = dse_yaml_get_scalar(n, __signal_group_annotation_name);
+    if (value) {
+        /* Match found, return +ve to stop search. */
+        __signal_group_annotation_value = value;
+        return 1;
+    }
+    return 0; /* Continue search. */
+}
+
+static const char* _signal_group_annotation(
+    ModelInstanceSpec* mi, SignalVector* sv, const char* name)
+{
+    /* Set the search vars. */
+    __signal_group_annotation_name = name;
+    __signal_group_annotation_value = NULL;
+
+    /* Search over the schema objects. */
+    ChannelSpec*          cs = model_build_channel_spec(mi, sv->name);
+    SchemaObjectSelector* selector;
+    selector = schema_build_channel_selector(mi, cs, "SignalGroup");
+    if (selector) {
+        schema_object_search(mi, selector, _sg_annotation_search_match_handler);
+    }
+    schema_release_selector(selector);
+    free(cs);
+
+    /* If the search was successful (first match wins), the value will be set.
+     */
+    return __signal_group_annotation_value;
 }
 
 
@@ -162,6 +202,14 @@ static const char* __annotation_get(
     return _signal_annotation(sv->mi, sv, sv->signal[index], name);
 }
 
+static const char* __group_annotation_get(SignalVector* sv, const char* name)
+{
+    assert(sv);
+    assert(sv->mi);
+
+    return _signal_group_annotation(sv->mi, sv, name);
+}
+
 static void* __binary_codec(SignalVector* sv, uint32_t index)
 {
     assert(sv);
@@ -200,6 +248,7 @@ static int _add_sv(void* _mfc, void* _sv_data)
     current_sv->signal = mfc->signal_names;
     current_sv->function_name = data->current_modelfunction_name;
     current_sv->annotation = __annotation_get;
+    current_sv->group_annotation = __group_annotation_get;
     current_sv->mi = data->mi;
     if (mfc->signal_value_binary) {
         current_sv->is_binary = true;
@@ -403,8 +452,8 @@ Returns
 <>0
 : Indicates an error condition. Inspect `errno` for additional information.
 */
-extern int signal_append(SignalVector* sv, uint32_t index,
-    void* data, uint32_t len);
+extern int signal_append(
+    SignalVector* sv, uint32_t index, void* data, uint32_t len);
 
 
 /**
@@ -498,13 +547,15 @@ spec:
   signals:
     - signal: can_bus
       annotations:
-        mime_type: application/x-automotive-bus; interface=stream; type=frame; bus=can; schema=fbs; bus_id=1; node_id=2; interface_id=3
+        mime_type: application/x-automotive-bus; interface=stream; type=frame;
+bus=can; schema=fbs; bus_id=1; node_id=2; interface_id=3
 ```
 
 Reference
 ---------
 
-[Network Codec API](https://github.com/boschglobal/dse.standards/tree/main/dse/ncodec)
+[Network Codec
+API](https://github.com/boschglobal/dse.standards/tree/main/dse/ncodec)
 
 */
 extern void* signal_codec(SignalVector* sv, uint32_t index);
@@ -549,7 +600,8 @@ spec:
 Example (Code Usage)
 -------
 
-{{< readfile file="../examples/signalvector_annotation.c" code="true" lang="c" >}}
+{{< readfile file="../examples/signalvector_annotation.c" code="true" lang="c"
+>}}
 
 
 NULL

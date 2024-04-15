@@ -129,7 +129,8 @@ Example (Model Interface)
 Example (Signal Vector Interface)
 -------
 
-{{< readfile file="../examples/signalvector_interface.c" code="true" lang="c" >}}
+{{< readfile file="../examples/signalvector_interface.c" code="true" lang="c"
+>}}
 
 */
 
@@ -139,8 +140,8 @@ Example (Signal Vector Interface)
 typedef ModelDesc* (*ModelCreate)(ModelDesc* m);
 typedef int (*ModelStep)(ModelDesc* m, double* model_time, double stop_time);
 typedef void (*ModelDestroy)(ModelDesc* m);
-typedef ModelSignalIndex (*ModelIndex)(ModelDesc* m, const char* vname,
-    const char* sname);
+typedef ModelSignalIndex (*ModelIndex)(
+    ModelDesc* m, const char* vname, const char* sname);
 
 
 typedef struct ModelVTable {
@@ -173,7 +174,7 @@ typedef struct ModelSignalIndex {
 
 /* Implemented by Model. */
 DLL_PUBLIC ModelDesc* model_create(ModelDesc* m);
-DLL_PUBLIC int model_step(ModelDesc* m, double* model_time, double stop_time);
+DLL_PUBLIC int  model_step(ModelDesc* m, double* model_time, double stop_time);
 DLL_PUBLIC void model_destroy(ModelDesc* m);
 
 
@@ -181,7 +182,8 @@ DLL_PUBLIC void model_destroy(ModelDesc* m);
 DLL_PUBLIC ModelSignalIndex model_index_(
     ModelDesc* model, const char* vname, const char* sname);
 DLL_PUBLIC const char* model_annotation(ModelDesc* m, const char* name);
-DLL_PUBLIC const char* model_instance_annotation(ModelDesc* m, const char* name);
+DLL_PUBLIC const char* model_instance_annotation(
+    ModelDesc* m, const char* name);
 
 
 /* Signal Interface. */
@@ -193,14 +195,17 @@ typedef int (*BinarySignalReleaseFunc)(SignalVector* sv, uint32_t index);
 typedef void* (*BinarySignalCodecFunc)(SignalVector* sv, uint32_t index);
 typedef const char* (*SignalAnnotationGetFunc)(
     SignalVector* sv, uint32_t index, const char* name);
+typedef const char* (*SignalGroupAnnotationGetFunc)(
+    SignalVector* sv, const char* name);
 
 
 typedef struct SignalVectorVTable {
-    BinarySignalAppendFunc  append;
-    BinarySignalResetFunc   reset;
-    BinarySignalReleaseFunc release;
-    SignalAnnotationGetFunc annotation;
-    BinarySignalCodecFunc   codec;
+    BinarySignalAppendFunc       append;
+    BinarySignalResetFunc        reset;
+    BinarySignalReleaseFunc      release;
+    SignalAnnotationGetFunc      annotation;
+    BinarySignalCodecFunc        codec;
+    SignalGroupAnnotationGetFunc group_annotation;
 } SignalVectorVTable;
 
 
@@ -218,8 +223,8 @@ typedef struct SignalVector {
         };
         struct {
             void**       binary;
-            uint32_t*    length;       /* Length of binary object. */
-            uint32_t*    buffer_size;  /* Size of allocated buffer. */
+            uint32_t*    length;      /* Length of binary object. */
+            uint32_t*    buffer_size; /* Size of allocated buffer. */
             const char** mime_type;
             void**       ncodec;       /* Network Codec objects. */
             bool*        reset_called; /* Indicate that reset() was called. */
@@ -233,18 +238,21 @@ typedef struct SignalVector {
     BinarySignalCodecFunc   codec;
     /* Reference data. */
     ModelInstanceSpec*      mi;
-    void*                   index;  /* Hashmap object, index on `signal`. */
+    void*                   index; /* Hashmap object, index on `signal`. */
+
+    /* TODO: Replace with SignalVectorVTable at next minor version bump. */
+    SignalGroupAnnotationGetFunc group_annotation;
 } SignalVector;
 
 
 /* Provided by ModelC (virtual methods of SignalVectorVTable). */
-DLL_PUBLIC int signal_append(SignalVector* sv, uint32_t index,
-    void* data, uint32_t len);
-DLL_PUBLIC int signal_reset(SignalVector* sv, uint32_t index);
-DLL_PUBLIC int signal_release(SignalVector* sv, uint32_t index);
-DLL_PUBLIC void* signal_codec(SignalVector* sv, uint32_t index);
-DLL_PUBLIC const char* signal_annotation(SignalVector* sv, uint32_t index,
-    const char* name);
+DLL_PUBLIC int signal_append(
+    SignalVector* sv, uint32_t index, void* data, uint32_t len);
+DLL_PUBLIC int         signal_reset(SignalVector* sv, uint32_t index);
+DLL_PUBLIC int         signal_release(SignalVector* sv, uint32_t index);
+DLL_PUBLIC void*       signal_codec(SignalVector* sv, uint32_t index);
+DLL_PUBLIC const char* signal_annotation(
+    SignalVector* sv, uint32_t index, const char* name);
 
 
 #endif  // DSE_MODELC_MODEL_H_

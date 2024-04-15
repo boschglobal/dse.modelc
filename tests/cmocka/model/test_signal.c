@@ -236,14 +236,43 @@ void test_signal__annotations(void** state)
     const char* value;
 
     value = sv->annotation(sv, 0, "name");
+    assert_non_null(value);
     assert_string_equal(value, "binary_foo");
     value = sv->annotation(sv, 0, "mime_type");
     assert_null(value);
 
     value = sv->annotation(sv, 1, "name");
+    assert_non_null(value);
     assert_string_equal(value, "binary_bar");
     value = sv->annotation(sv, 1, "mime_type");
+    assert_non_null(value);
     assert_string_equal(value, "application/custom-stream");
+}
+
+
+void test_signal__group_annotations(void** state)
+{
+    ModelCMock* mock = *state;
+
+    SignalVector* sv_save = mock->mi->model_desc->sv;
+    assert_int_equal(_sv_count(sv_save), 2);
+
+    /* Use the "binary" signal vector. */
+    SignalVector* sv = sv_save;
+    while (sv && sv->name) {
+        if (strcmp(sv->name, "binary") == 0) break;
+        /* Next signal vector. */
+        sv++;
+    }
+
+    /* Check annotations. */
+    const char* value;
+
+    value = sv->group_annotation(sv, "vector_name");
+    assert_non_null(value);
+    assert_string_equal(value, "network_vector");
+    value = sv->group_annotation(sv, "missing");
+    assert_null(value);
 }
 
 
@@ -317,6 +346,7 @@ int run_signal_tests(void)
         cmocka_unit_test_setup_teardown(test_signal__scalar, s, t),
         cmocka_unit_test_setup_teardown(test_signal__binary, s, t),
         cmocka_unit_test_setup_teardown(test_signal__annotations, s, t),
+        cmocka_unit_test_setup_teardown(test_signal__group_annotations, s, t),
         cmocka_unit_test_setup_teardown(test_signal__binary_echo, s, t),
     };
 
