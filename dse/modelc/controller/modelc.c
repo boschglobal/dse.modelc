@@ -196,6 +196,8 @@ int modelc_configure_model(
 }
 
 
+#define MODEL_NAME_SEP ";,"
+
 int modelc_configure(ModelCArguments* args, SimulationSpec* sim)
 {
     assert(args);
@@ -206,10 +208,10 @@ int modelc_configure(ModelCArguments* args, SimulationSpec* sim)
     {
         char* model_names = strdup(args->name);
         char* _saveptr = NULL;
-        char* _nameptr = strtok_r(model_names, ";", &_saveptr);
+        char* _nameptr = strtok_r(model_names, MODEL_NAME_SEP, &_saveptr);
         while (_nameptr) {
             model_count++;
-            _nameptr = strtok_r(NULL, ";", &_saveptr);
+            _nameptr = strtok_r(NULL, MODEL_NAME_SEP, &_saveptr);
         }
         free(model_names);
     }
@@ -253,7 +255,7 @@ int modelc_configure(ModelCArguments* args, SimulationSpec* sim)
     {
         char* model_names = strdup(args->name);
         char* _saveptr = NULL;
-        char* _nameptr = strtok_r(model_names, ";", &_saveptr);
+        char* _nameptr = strtok_r(model_names, MODEL_NAME_SEP, &_saveptr);
         while (_nameptr) {
             _instptr->private = calloc(1, sizeof(ModelInstancePrivate));
             ModelInstancePrivate* mip = _instptr->private;
@@ -278,7 +280,7 @@ int modelc_configure(ModelCArguments* args, SimulationSpec* sim)
             }
 
             /* Next instance? */
-            _nameptr = strtok_r(NULL, ";", &_saveptr);
+            _nameptr = strtok_r(NULL, MODEL_NAME_SEP, &_saveptr);
             _instptr++;
         }
         free(model_names);

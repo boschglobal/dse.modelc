@@ -85,6 +85,7 @@ RUN set -eux; \
         less \
         libc6-x32 \
         libx32stdc++6 \
+		tmux \
         vim \
         unzip \
     && \

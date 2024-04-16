@@ -7,6 +7,7 @@ package session
 import (
 	"fmt"
 	"log/slog"
+	"os"
 	"os/exec"
 	"sync"
 )
@@ -31,12 +32,6 @@ type Command struct {
 
 	Quiet      bool
 	KillNoWait bool
-
-	// Console
-
-	// TMUX
-	Title   string
-	session *Session
 }
 
 func (c Command) Environ() []string {
@@ -87,11 +82,40 @@ func (c *Command) Start(redirect func(c *Command)) error {
 
 	slog.Debug("Starting command...")
 	slog.Debug(fmt.Sprintf("%s", c.cmd.String()))
+	for _, a := range c.cmd.Args {
+		slog.Debug(fmt.Sprintf("  arg:%s:", a))
+	}
 	for _, en := range c.Environ() {
 		slog.Debug(fmt.Sprintf("  env:%s", en))
 	}
 
 	if err := c.cmd.Start(); err != nil {
+		slog.Error(err.Error())
+	}
+
+	return nil
+}
+
+func (c *Command) Run() error {
+	c.cmd = exec.Command(c.Prog, c.Args...)
+	if c.Dir != "" {
+		c.cmd.Dir = c.Dir
+	}
+	c.cmd.Env = append(c.cmd.Environ(), c.Environ()...)
+	c.cmd.Stdin = os.Stdin
+	c.cmd.Stdout = os.Stdout
+	c.cmd.Stderr = os.Stderr
+
+	slog.Debug("Running command...")
+	slog.Debug(fmt.Sprintf("%s", c.cmd.String()))
+	for _, a := range c.cmd.Args {
+		slog.Debug(fmt.Sprintf("  arg:%s:", a))
+	}
+	for _, en := range c.Environ() {
+		slog.Debug(fmt.Sprintf("  env:%s:", en))
+	}
+
+	if err := c.cmd.Run(); err != nil {
 		slog.Error(err.Error())
 	}
 

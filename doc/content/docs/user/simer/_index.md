@@ -358,6 +358,64 @@ Flags:
 ```
 
 
+### Tmux Interface
+
+```bash
+$ simer dse/modelc/build/_out/examples/minimal -endtime 0.04 -tmux
+```
+
+The terminal multiplexer _[tmux](https://github.com/tmux/tmux/wiki)_ is a technical CLI interface which makes it easy to observe the output of simulations which comprised of several models.
+When using the _tmux_ interface each Model is represented in its own terminal window and it is possible to switch between terminal windows using keyboard shortcuts. Some of these shortcuts are listed below.
+
+
+#### Tmux Keyboard Shortcuts
+
+<tt>__Ctrl__+__b__  __c__</tt>
+: Create new window.
+
+<tt>__Ctrl__+__b__  __p__</tt>
+: Select previous window.
+
+
+<tt>__Ctrl__+__b__  __n__</tt>
+: Select next window.
+
+
+<tt>__Ctrl__+__b__  __0..9__</tt>
+: Switch between _tmux_ windows.
+
+<tt>__Ctrl__+__b__  __w__</tt>
+: List windows.
+
+<tt>__Ctrl__+__b__  __[__</tt>
+: Enter copy mode. Use _VI_ keys to move cursor around the window (__q__ to quit copy mode).
+
+<tt>__Ctrl__+__b__  __PgUp__</tt>
+: Enter copy mode and scroll up. Use _VI_ keys to move cursor around the window (__q__ to quit copy mode).
+
+In copy mode use:
+
+<tt>__Spacebar__</tt>
+: Start selection.
+
+<tt>__Esc__</tt>
+: Clear selection.
+
+<tt>__Enter__</tt>
+: Copy selection.
+
+<tt>__/__</tt>
+: Search forwards.
+
+<tt>__?__</tt>
+: Search backwards.
+
+Finally, use:
+
+<tt>__Ctrl__+__b__  __d__</tt>
+: Detach from the _tmux_ session (***and exit the simulation!***).
+
+
 
 ## Definitions
 

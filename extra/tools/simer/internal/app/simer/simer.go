@@ -235,10 +235,10 @@ func stackedModelCmd(stackDoc *kind.KindDoc, modelcPath string, modelcX32Path st
 			env[k] = v
 		}
 	}
-	cmd := buildModelCmd(strings.Join(instanceName, ";"), progPath, yamlFiles, env, flags)
+	cmd := buildModelCmd(strings.Join(instanceName, ","), progPath, yamlFiles, env, flags)
 	slog.Info(fmt.Sprintf("Model Stack: stack=%s", stackDoc.Metadata.Name))
-	slog.Info(fmt.Sprintf("  Names : %s", strings.Join(instanceName, ";")))
-	slog.Info(fmt.Sprintf("  Model : %s", strings.Join(modelName, ";")))
+	slog.Info(fmt.Sprintf("  Names : %s", strings.Join(instanceName, ",")))
+	slog.Info(fmt.Sprintf("  Model : %s", strings.Join(modelName, ",")))
 	slog.Info(fmt.Sprintf("  Prog  : %s", cmd.Prog))
 	slog.Info(fmt.Sprintf("  Args  : %s", cmd.Args))
 	slog.Info(fmt.Sprintf("  Env   : %s", cmd.Env))
@@ -257,7 +257,6 @@ func removeDuplicate[T comparable](s []T) []T {
 func buildModelCmd(name string, path string, yamlFiles []string, env map[string]string, flags Flags) *session.Command {
 	yamlFiles = removeDuplicate(yamlFiles)
 	args := []string{}
-	//args = append(args, "--help")
 	args = append(args, "--name", name)
 	if flags.Transport != "" {
 		args = append(args, "--transport", flags.Transport)
@@ -272,6 +271,7 @@ func buildModelCmd(name string, path string, yamlFiles []string, env map[string]
 	}
 	cmd := func() *session.Command {
 		c := session.Command{
+			Name: name,
 			Prog: path,
 			Args: append(args, yamlFiles...),
 			Env:  env,

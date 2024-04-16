@@ -96,7 +96,7 @@ func (w *PassThroughWriter) Write(d []byte) (int, error) {
 		pos += i + 1
 	}
 	if pos < len(d) {
-		// Partial line (i.e. no \n)
+		// Partial line (i.e. no \n).
 		w.w.Write(d[pos:])
 	}
 	// io.copy() expects length of the passed slice.

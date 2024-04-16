@@ -43,7 +43,12 @@ func main() {
 	cmds = append(cmds, simer.ModelCommandList(index, *modelcPath, *modelcX32Path, flags)...)
 
 	// Start and run the session.
-	s := session.ConsoleSession{}
+	var s session.Session
+	if *tmux == true {
+		s = session.NewTmuxSession()
+	} else {
+		s = &session.ConsoleSession{}
+	}
 	s.Create()
 	for _, c := range cmds {
 		s.Attach(c)
