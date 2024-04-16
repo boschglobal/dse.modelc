@@ -17,6 +17,9 @@ setup:
 main: setup
 	./benchmark.py run
 
+simer:
+	./benchmark.py run --simerexec True
+
 .PHONY: benchmark
 benchmark:
 	@cd $(REPO_DIR); \

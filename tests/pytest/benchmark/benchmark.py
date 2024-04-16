@@ -12,6 +12,7 @@ import csv
 import argparse
 import sys
 from pathlib import Path
+import yaml
 try: # below packages are not needed/available in 'dse-python-builder' container image
     import pandas as pd
     from openpyxl import Workbook, load_workbook
@@ -25,7 +26,8 @@ except Exception as e:
     print(e)
 
 path = Path(os.getcwd())
-cmake_file_path = str(path.parent.parent.parent.absolute()) + '/dse/modelc/examples/benchmark/CMakeLists.txt'
+BASE_PATH = str(path.parent.parent.parent.absolute())
+BENCHMARK_OUT_PATH = BASE_PATH + '/dse/modelc/build/_out/examples/benchmark'
 
 TIMEOUT = 6000
 VALGRIND_CMD = 'valgrind --track-origins=yes --leak-check=full --error-exitcode=808'
@@ -41,12 +43,15 @@ MODEL_YAML = WORKING_DIR + 'model.yaml'
 BENCHMARK_RESULT = {}
 TCP_TRANSPORT = 'redis://redis:6379'
 SOCKET_TRANSPORT = 'unix:///tmp/redis/redis.sock'
+SIMER_SOCKET_TRANSPORT = 'unix:///var/run/redis/redis.sock'
 MQ_TRANSPORT = 'posix:///stem'
 STACK_YAML = WORKING_DIR + "stack.yaml" # Default stack yaml
 SIGNAL_GROUP_YAML = WORKING_DIR + "signal_group.yaml" # Default signal_group yaml
 USE_SAME_MODEL_SOURCE_OBJECT = False # Update value to 'True' if each model instance in stack.yaml file to point same model source object.
 CHANNEL_NAMES = os.getenv('CHANNEL_NAMES', 'data_1_channel;')
 CHANNEL_ALIAS = os.getenv('CHANNEL_NAMES', 'data_1;')
+SIMER_SIMULATION_PATH = '_working/simer'
+LOG_LEVEL = 5
 
 
 def generate_signal_group_yaml(num_of_signals):
@@ -84,7 +89,7 @@ def generate_channel_names(num_of_channels):
     return CHANNEL_NAMES, CHANNEL_ALIAS
 
 
-def generate_model_yaml(num_of_channels, NUM_OF_MODELS):
+def generate_model_yaml(num_of_channels):
     model_path = "_working/model.yaml"
     open(model_path, 'w').close() # removes the file content
     model = Model()
@@ -102,6 +107,38 @@ def generate_model_yaml(num_of_channels, NUM_OF_MODELS):
         md.write(model.dump())
 
 
+def create_simer_simulation_dir():
+    os.makedirs('_working/simer/data', exist_ok=True)
+    os.makedirs('_working/simer/lib', exist_ok=True)
+
+
+def setup_simer_simulation_files():
+    shutil.copy('_working/model.yaml', '_working/simer/data')
+    shutil.copy(BENCHMARK_OUT_PATH + '/lib/libbenchmark.so', '_working/simer/lib')
+    shutil.copy('_working/simulation.yaml', '_working/simer/data')
+    shutil.copy('_working/signal_group.yaml', '_working/simer/data')
+
+
+def update_yaml(path):
+    updated_docs = []
+    with open(path, 'r') as fileStr:
+        docs = yaml.safe_load_all(fileStr)
+        for doc in docs:
+            if doc['kind'] == 'Stack':
+                if TOPOLOGY == 'stacked':
+                    doc['spec'].update({'runtime': {'stacked': True}})
+                if TRANSPORT in (SOCKET_TRANSPORT, TCP_TRANSPORT):
+                    doc['spec']['connection']['transport']['redispubsub'].update({'timeout': 60, 'uri': 'redis://localhost:6379'})
+                elif TRANSPORT == SIMER_SOCKET_TRANSPORT:
+                    doc['spec']['connection']['transport']['redispubsub'].update({'timeout': 60, 'uri': SIMER_SOCKET_TRANSPORT})
+                for i, model in enumerate(doc['spec']['models'], start = 0):
+                    if model['name'] != 'simbus':
+                        doc['spec']['models'][i].update({'runtime': {'files': ['data/signal_group.yaml']}})
+            updated_docs.append(doc)
+    with open('_working/simulation.yaml', 'w') as md:
+        yaml.safe_dump_all(updated_docs, md)
+
+
 def generate_stack_yaml(num_of_models, TRANSPORT, num_of_channels):
     ''' function to update the stack.yaml file with dynamically generated model instance names data'''
     stack = Stack()
@@ -111,10 +148,18 @@ def generate_stack_yaml(num_of_models, TRANSPORT, num_of_channels):
         uri = MQ_TRANSPORT
     elif TRANSPORT == SOCKET_TRANSPORT:
         uri = SOCKET_TRANSPORT
+    elif TRANSPORT == SIMER_SOCKET_TRANSPORT:
+        uri = SIMER_SOCKET_TRANSPORT
+
     channel_names, channel_alias = generate_channel_names(num_of_channels)
     channel_names = channel_names.split(';')
     channel_alias = channel_alias.split(';')
     stack.set_redispubsub(uri=uri, timeout=60)
+
+    # if RUNTIME == 'simer':
+    #     stack.spec.runtime['stacked'] = True
+    #     # stack.spec.update({'runtime':{'stacked':True}})
+
     stack.spec.models.append(
                 ModelInstance(
                     name='simbus',
@@ -141,6 +186,8 @@ def generate_stack_yaml(num_of_models, TRANSPORT, num_of_channels):
             stack_data = stack_data.replace('redispubsub', 'mq')
         md.write(stack_data)
         md.write(model.dump())
+    if RUNTIME == 'simer': # to add the 'runtime' key and val in stack spec
+        update_yaml('_working/stack.yaml')
 
 
 def raise_exception(msg):
@@ -164,7 +211,7 @@ def check_type(value, check_if):
 
 def validate_input(simbus_uri, num_of_models, step_size, end_time, signal_count, signal_change):
     simbus_uri = simbus_uri.strip()
-    if simbus_uri not in ('redis://redis:6379', 'unix:///tmp/redis/redis.sock', 'posix:///stem') :
+    if simbus_uri not in ('redis://redis:6379', 'unix:///tmp/redis/redis.sock', 'posix:///stem', 'unix:///var/run/redis/redis.sock') :
         raise_exception('Invalid simbus URI.')
         return False
     if check_type(num_of_models, 'int'):
@@ -221,22 +268,22 @@ def run_benchmark(input_data):
             continue
 
         generate_stack_yaml(NUM_OF_MODELS, TRANSPORT, NUM_OF_CHANNELS)
-        generate_model_yaml(NUM_OF_CHANNELS, NUM_OF_MODELS)
+        generate_model_yaml(NUM_OF_CHANNELS)
 
         # creates .env file to set the env variables for docker-compose.yaml
         with open('_working/.env', 'w') as file:
             content = [
-                f'SIMBUS_URI={TRANSPORT}\n',
+                f'TRANSPORT={TRANSPORT}\n',
                 f'NUM_OF_MODELS={NUM_OF_MODELS}\n',
                 f'STEP_SIZE={STEP_SIZE}\n',
                 f'END_TIME={END_TIME}\n',
                 f'SIGNAL_COUNT={SIGNAL_COUNT}\n',
                 f'TOPOLOGY={TOPOLOGY}\n',
                 f'SIGNAL_CHANGE={SIGNAL_CHANGE}\n',
-                f'OUTDIR={OUTDIR}\n',
-                f'OUT_FILE={OUT_FILE}\n',
                 f'NUM_OF_CHANNELS={NUM_OF_CHANNELS}\n',
-            ]
+                f'RUNTIME={RUNTIME}\n',
+                f'OUTDIR={OUTDIR}\n',
+                f'OUT_FILE={OUT_FILE}']
             file.writelines(content)
 
         # generates signal_group.yaml file only if there is a change in signal_count from the above row in input.csv
@@ -244,7 +291,16 @@ def run_benchmark(input_data):
             generate_signal_group_yaml(SIGNAL_CHANGE)
             prev_signal_count = SIGNAL_CHANGE
             prev_model_count = NUM_OF_MODELS
-        os.system('make benchmark')
+        if RUNTIME == 'simer':
+            create_simer_simulation_dir()
+            setup_simer_simulation_files()
+            with open('_working/.env') as env_lines:
+                for line in env_lines:
+                    env_keyval = line.split('=')
+                    os.environ[env_keyval[0]] = env_keyval[1].replace('\n', '')
+            os.system('make simer')
+        else:
+            os.system('make benchmark')
 
 
 def process_data_for_plotting(df):
@@ -426,12 +482,12 @@ async def main(params, checks):
 
     # SimBus
     run_list.append(asyncio.wait_for(run(
-            params['MODEL_SANDBOX_DIR'], f'{SIMBUS_EXE} --logger 5 ' + f'--stepsize {STEP_SIZE} ' + f'--transport {transport_name} ' + transport_uri_str + f'--timeout 1 {STACK_YAML}'), timeout=TIMEOUT)
+            params['MODEL_SANDBOX_DIR'], f'{SIMBUS_EXE} --logger {LOG_LEVEL} ' + f'--stepsize {STEP_SIZE} ' + f'--transport {transport_name} ' + transport_uri_str + f'--timeout 1 {STACK_YAML}'), timeout=TIMEOUT)
     )
     # Models
     for m in params['models']:
         run_list.append(asyncio.wait_for(run(
-            params['MODEL_SANDBOX_DIR'], f'{MODELC_EXE} --logger 5 ' + f'--name {m["MODEL_INST"]} ' + f'{m["MODEL_YAML_FILES"]} ' + f'--stepsize {STEP_SIZE} ' + f'--transport {transport_name} ' + transport_uri_str + f'--endtime {END_TIME}'), timeout=TIMEOUT))
+            params['MODEL_SANDBOX_DIR'], f'{MODELC_EXE} --logger {LOG_LEVEL} ' + f'--name {m["MODEL_INST"]} ' + f'{m["MODEL_YAML_FILES"]} ' + f'--stepsize {STEP_SIZE} ' + f'--transport {transport_name} ' + transport_uri_str + f'--endtime {END_TIME}'), timeout=TIMEOUT))
     # Gather results.
     result_list = await asyncio.gather(*run_list)
 
@@ -477,10 +533,13 @@ def generate_csv(csv_file_data, out_path):
 
 
 def display_benchmark_result():
-    out_path = CWD + "tests/pytest/benchmark/_out"
+    if RUNTIME == 'docker':
+        out_path = CWD + "tests/pytest/benchmark/_out"
+    else:
+        out_path = CWD + "_out"
     log_table = PrettyTable()
     print('================================================ Benchmark Test Result ================================================')
-    field_names = ["scenario", "transport", "channels", "models", "step size", "end time", "signals", "signal change" , "run time", "rate (steps/sec)", "factor ()"]
+    field_names = ["runtime", "scenario", "transport", "channels", "models", "step size", "end time", "signals", "signal change" , "run time", "rate (steps/sec)", "factor ()"]
     log_table.field_names = field_names
     csv_file_data = [] if os.path.isfile(out_path + '/' + OUT_FILE) else [field_names] # adding csv header data
     for func in BENCHMARK_RESULT:
@@ -494,9 +553,9 @@ def display_benchmark_result():
         transport = 'redispubsub_tcp'
         if TRANSPORT == MQ_TRANSPORT:
             transport = 'message_queue'
-        elif TRANSPORT == SOCKET_TRANSPORT:
+        elif TRANSPORT == SOCKET_TRANSPORT or TRANSPORT == SIMER_SOCKET_TRANSPORT:
             transport = 'redispubsub_socket'
-        row = [func, transport, NUM_OF_CHANNELS, NUM_OF_MODELS, STEP_SIZE, END_TIME, SIGNAL_COUNT , SIGNAL_CHANGE, mean_runtime, sim_step_per_second, speed]
+        row = [RUNTIME, func, transport, NUM_OF_CHANNELS, NUM_OF_MODELS, STEP_SIZE, END_TIME, SIGNAL_COUNT , SIGNAL_CHANGE, mean_runtime, sim_step_per_second, speed]
         csv_file_data.append(row)
         log_table.add_row(row)
     generate_csv(csv_file_data, out_path)
@@ -541,11 +600,45 @@ def test_stacked_model_instance():
     asyncio.run(main(params, checks))
 
 
+@timer_func
+def test_individual_model_instance_simer():
+    os.system(SIMER_SHELL_CMDS)
+
+
+@timer_func
+def test_stacked_model_instance_simer():
+    os.system(SIMER_SHELL_CMDS)
+
+
+def create_simer_shell_cmds():
+    global SIMER_SHELL_CMDS
+    transport_name = 'redispubsub'
+    transport_uri_str = 'redis://localhost:6379'
+    if TRANSPORT == SOCKET_TRANSPORT:
+        transport_uri_str = TRANSPORT
+    elif TRANSPORT == SIMER_SOCKET_TRANSPORT:
+        transport_uri_str = TRANSPORT
+    elif TRANSPORT == MQ_TRANSPORT:
+        transport_uri_str = TRANSPORT
+        transport_name = 'mq'
+    SIMER_SHELL_CMDS = f'''export SIMER_IMAGE=ghcr.io/boschglobal/dse-simer:latest;
+                        simer() {{ ( cd "$1" && shift && docker run -it --rm -v $(pwd):/sim $SIMER_IMAGE "$@"; ) }};
+                        simer {SIMER_SIMULATION_PATH} -endtime {END_TIME} -stepsize {STEP_SIZE} -transport {transport_name} -uri {transport_uri_str} -logger {LOG_LEVEL}'''
+    print(SIMER_SHELL_CMDS.split(';')[-1].strip())
+
+
 def execute_tests():
-    if TOPOLOGY == 'stacked':
-        test_stacked_model_instance()
-    else:
-        test_individual_model_instance()
+    if args.dockerexec:
+        if TOPOLOGY == 'stacked':
+            test_stacked_model_instance()
+        else:
+            test_individual_model_instance()
+    elif args.simerexec:
+        create_simer_shell_cmds()
+        if TOPOLOGY == 'stacked':
+            test_stacked_model_instance_simer()
+        else:
+            test_individual_model_instance_simer()
     display_benchmark_result()
 
 
@@ -560,6 +653,7 @@ default_num_of_models = '1'
 default_signal_count = 10
 default_signal_change = default_signal_count
 default_num_of_channels = 1
+default_runtime = 'docker'
 
 parser = argparse.ArgumentParser()
 
@@ -576,7 +670,7 @@ generate_parser.add_argument("--outdir", nargs='?', help="folder to save generat
 
 # parser for command 'execute'
 execute_parser = sub_parsers.add_parser("execute", help="benchmark function execution which takes optional arguments to change transport, scenario, topology, outdir, signals, signal_change, channel, models, step size and end time.")
-execute_parser.add_argument("--transport", nargs='?', choices=['redis://redis:6379', 'unix:///tmp/redis/redis.sock', 'posix:///stem'], help="Transport type")
+execute_parser.add_argument("--transport", nargs='?', choices=['redis://redis:6379', 'unix:///tmp/redis/redis.sock', 'posix:///stem', 'unix:///var/run/redis/redis.sock'], help="Transport type")
 execute_parser.add_argument("--scenario", nargs='?',  help="input file path, file type : csv")
 execute_parser.add_argument("--topology", nargs='?', choices=['individual', 'stacked'], help="")
 execute_parser.add_argument("--outdir", nargs='?', help="folder to save generated result files")
@@ -586,8 +680,10 @@ execute_parser.add_argument("--channels", nargs='?', help="number of channels")
 execute_parser.add_argument("--models", nargs='?', help="number of models")
 execute_parser.add_argument("--step_size", nargs='?', help="step size")
 execute_parser.add_argument("--end_time", nargs='?', help="end time")
+execute_parser.add_argument("--runtime", nargs='?', help="runtime(simer or docker)")
 
-run_parser.add_argument("--containerexec", nargs='?', help=argparse.SUPPRESS, default=False)
+run_parser.add_argument("--dockerexec", nargs='?', help=argparse.SUPPRESS, default=False)
+run_parser.add_argument("--simerexec", nargs='?', help=argparse.SUPPRESS, default=False)
 args = parser.parse_args()
 
 # display help if no command given
@@ -607,6 +703,18 @@ TRANSPORT = default_transport
 SCENARIO = default_scenario
 TOPOLOGY = default_topology
 OUTDIR = default_outdir
+RUNTIME = os.getenv('RUNTIME', default_runtime)
+if RUNTIME == 'simer':
+    sh_transport = os.getenv('TRANSPORT')
+    if sh_transport == 'redispubsub_tcp':
+        TRANSPORT = 'redis://redis:6379' + '-CMD_IN'
+        os.environ['TRANSPORT'] = TRANSPORT
+    elif sh_transport == 'mq':
+        TRANSPORT = 'posix:///stem' + '-CMD_IN'
+        os.environ['TRANSPORT'] = TRANSPORT
+    elif sh_transport == 'redispubsub_socket':
+        TRANSPORT = 'unix:///var/run/redis/redis.sock' + '-CMD_IN'
+        os.environ['TRANSPORT'] = TRANSPORT
 
 
 def exec():
@@ -619,7 +727,7 @@ def exec():
 
 
 if args.command == "run":
-    if args.containerexec is False:
+    if args.dockerexec is False and args.simerexec is False:
         exec()
     else:
         NUM_OF_MODELS = os.getenv('NUM_OF_MODELS')
@@ -628,14 +736,16 @@ if args.command == "run":
         SIGNAL_COUNT = os.getenv('SIGNAL_COUNT')
         SIGNAL_CHANGE = os.getenv('SIGNAL_CHANGE')
         OUT_FILE = os.getenv('OUT_FILE')
-        TRANSPORT = os.getenv('SIMBUS_URI')
+        TRANSPORT = os.getenv('TRANSPORT')
         TOPOLOGY = os.getenv('TOPOLOGY')
         OUTDIR = os.getenv('OUTDIR')
         NUM_OF_CHANNELS = os.getenv('NUM_OF_CHANNELS')
-        INDIVIDUAL_MODEL_INSTANCE_MODELS, STACKED_MODEL_INSTANCE_MODEL_INSTANCES = form_model_instance_param_data(NUM_OF_MODELS)
+        if args.dockerexec:
+            INDIVIDUAL_MODEL_INSTANCE_MODELS, STACKED_MODEL_INSTANCE_MODEL_INSTANCES = form_model_instance_param_data(NUM_OF_MODELS)
         execute_tests()
 
 if args.command == "execute":
+    os.makedirs('_working', exist_ok=True)
     if hasattr(args, 'transport') and args.transport is not None:
         TRANSPORT = args.transport + '-CMD_IN'
     if hasattr(args, 'scenario') and args.scenario is not None:
@@ -658,8 +768,23 @@ if args.command == "execute":
         STEP_SIZE = args.step_size + '-CMD_IN'
     if hasattr(args, 'end_time') and args.end_time is not None:
         END_TIME = args.end_time + '-CMD_IN'
+    if hasattr(args, 'runtime') and args.runtime is not None:
+        RUNTIME = args.runtime
+    if RUNTIME == 'simer':
+        models = NUM_OF_MODELS
+        signals = SIGNAL_CHANGE
+        channels = NUM_OF_CHANNELS
+        # variable type will be string if its from cmdline arguments, default is of type int
+        if isinstance(models, str):
+            models = models.rstrip('-CMD_IN')
+        if isinstance(signals, str):
+            signals = signals.rstrip('-CMD_IN')
+        if isinstance(channels, str):
+            channels = channels.rstrip('-CMD_IN')
+        generate_stack_yaml(models, TRANSPORT.rstrip('-CMD_IN'), signals)
+        generate_signal_group_yaml(signals)
+        generate_model_yaml(channels)
     exec()
-
 
 if args.command == "generate":
     dir_name = "_working"
@@ -684,7 +809,7 @@ if args.command == "generate":
 
     generate_stack_yaml(model, transport, channel)
     generate_signal_group_yaml(signal)
-    generate_model_yaml(channel, model)
+    generate_model_yaml(channel)
 
     try :
         shutil.copy('_working/stack.yaml', outdir + 'stack.yaml')

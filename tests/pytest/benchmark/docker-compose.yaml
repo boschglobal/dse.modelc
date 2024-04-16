@@ -29,7 +29,7 @@ services:
       - -c
       - |
         pip install -r tests/pytest/benchmark/data/requirements.txt
-        python tests/pytest/benchmark/benchmark.py run --containerexec True
+        python tests/pytest/benchmark/benchmark.py run --dockerexec True
     depends_on:
       - redis
 

@@ -11,6 +11,16 @@ $ sudo -E  curl -SL \
     https://github.com/docker/compose/releases/download/v2.23.3/docker-compose-linux-x86_64 \
     -o /usr/local/bin/docker-compose
 $ sudo chmod 777 /usr/local/bin/docker-compose
+
+# Simer redis socket setup.
+# uncomment and update unixsocket path and permission in redis.conf file.
+$ sudo nano /etc/redis/redis.conf
+    unixsocket /run/redis/redis.sock
+    unixsocketperm 777
+# Restart redis service.
+$ sudo service redis-server restart
+# Test socket connection.
+$ redis-cli -s /var/run/redis/redis.sock ping
 ```
 
 
@@ -36,8 +46,10 @@ $ cp scenario/redis_socket_6_400.csv input.csv
 $ make
 
 ## Method 2
-$ ./benchmark.py execute --transport redis://redis:6379 --scenario 'input.csv' --topology stacked --outdir '_out' --signals 15 --signal_change 5 --channels 3 --models 5 --step_size .05 --end_time 1
+$ ./benchmark.py execute --transport redis://redis:6379 --scenario 'input.csv' --topology stacked --outdir '_out' --signals 15 --signal_change 5 --channels 3 --models 5 --step_size .05 --end_time 1 --runtime docker
 
+## Method 3 - switch between container runtime(simer and docker)
+$ sh scenario.sh --runtime simer --transport redispubsub_socket
 
 # Results
 $ ls -al tests/pytest/benchmark/_out
