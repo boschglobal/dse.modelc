@@ -315,7 +315,7 @@ $ docker pull ghcr.io/boschglobal/dse-simer:2.0
 ```bash
 # Define a shell function (or add to .profile file).
 $ export SIMER_IMAGE=ghcr.io/boschglobal/dse-simer:latest
-$ simer() { ( cd "$1" && shift && docker run -it --rm -v $(pwd):/sim $SIMER_IMAGE "$@"; ) }
+$ simer() { ( cd "$1" && shift && docker run -it --rm -v $(pwd):/sim -p 2159:2159 $SIMER_IMAGE "$@"; ) }
 
 # Run the simulation.
 $ simer dse/modelc/build/_out/examples/minimal -endtime 0.04
@@ -414,6 +414,25 @@ Finally, use:
 
 <tt>__Ctrl__+__b__  __d__</tt>
 : Detach from the _tmux_ session (***and exit the simulation!***).
+
+
+### GDB Debugging
+
+Models running in a simulation can be debugged with GDB by indicating which model
+is being debugged via the option `-gdb`, and then connecting a GDB instance to
+that model running "remotely" in the Simer simulation.
+
+```bash
+# Start the simulation and indicate the Model being debugged.
+$ simer dse/modelc/build/_out/examples/gdb -endtime 0.04 -tmux -gdb gdb_inst
+
+# Start GDB (in a second terminal), and connect to the simulation.
+$ gdb dse/modelc/build/_out/bin/modelc
+(gdb) set solib-search-path dse/modelc/build/_out/examples/gdb/lib
+(gdb) target remote localhost:2159
+(gdb) continue
+(gdb) bt
+```
 
 
 
