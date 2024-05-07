@@ -229,11 +229,12 @@ spec:
 ### Environment & Files
 
 __Environment variables__ may be specified in either the `StackRuntime:env` or
-`ModelInstanceRuntime:env` properties. The environment variables are passed
-by the `simer` tool to the ModelC runtime in the order that they are
-defined, `StackRuntime` environment variables first, and then
-`ModelInstanceRuntime` variables. Values set later will overwrite earlier
-values (or any existing environment variables).
+`ModelInstanceRuntime:env` properties, or with the `-env` CLI option. The
+environment variables are passed by the `simer` tool to the ModelC runtime in
+the order that they are defined, `StackRuntime` environment variables first, and then
+`ModelInstanceRuntime` variables, and lastly those specified via the `-env`
+flag(s). Values set later will overwrite earlier values (or any existing
+environment variables).
 
 __Additional Files__ may be specified in the `ModelInstanceRuntime:files` property. The path
 of each listed file should be relative to _simulation path_ or an _absolute path_.

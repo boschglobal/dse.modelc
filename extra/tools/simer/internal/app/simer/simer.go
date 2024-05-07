@@ -180,6 +180,11 @@ func ModelCommandList(docMap map[string][]kind.KindDoc, modelcPath string, model
 				// Locate the YAML files.
 				yamlFiles := []string{stackDoc.File}
 				if doc, ok := findModelDoc(docMap, model.Model.Name); ok {
+					modelSpec := doc.Spec.(*schema_kind.ModelSpec)
+					if modelSpec.Runtime.Gateway != nil {
+						slog.Debug(fmt.Sprintf("Gateway model: %s  (start externally)", model.Name))
+						continue // Gateway model, skip (started externally).
+					}
 					yamlFiles = append(yamlFiles, doc.File)
 				}
 				if model.Runtime != nil && model.Runtime.Files != nil {
