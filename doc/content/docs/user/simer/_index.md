@@ -355,6 +355,8 @@ Flags:
         SimBus transport (redispubsub)
   -uri *flag.stringValue
         SimBus connection URI (redis://localhost:6379)
+  -valgrind *flag.stringValue
+        run this model instance via Valgrind
 ```
 
 
@@ -480,6 +482,9 @@ Stack
 
 Stacked Models
 : A list/collection of models which are stacked into a single ModelC runtime instance.
+
+Valgrind
+: A tool used to detect memory leaks. Run with valgrind as a part of a model QA strategy (i.e. as a part of E2E tests).
 
 x32
 : The linux x32 ABI architecture specifier, for models which must run as 32bit processes.

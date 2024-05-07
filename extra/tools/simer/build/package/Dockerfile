@@ -86,6 +86,7 @@ RUN set -eux; \
         libc6-x32 \
         libx32stdc++6 \
 		tmux \
+		valgrind \
         vim \
         unzip \
     && \

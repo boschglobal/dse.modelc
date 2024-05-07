@@ -16,4 +16,6 @@ type Flags struct {
 	Timeout   float64
 
 	Gdb string
+
+	Valgrind string
 }

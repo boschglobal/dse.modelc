@@ -259,13 +259,28 @@ func buildModelCmd(name string, path string, yamlFiles []string, env map[string]
 	yamlFiles = removeDuplicate(yamlFiles)
 	args := []string{}
 
+	// Command modifiers.
 	if len(flags.Gdb) != 0 {
 		if slices.Contains(strings.Split(name, ","), flags.Gdb) == true {
 			// Run model 'name' via gdbserver.
 			args = append(args, "localhost:2159", path)
 			path = "/usr/bin/gdbserver"
 		}
+	} else if len(flags.Valgrind) != 0 {
+		if slices.Contains(strings.Split(name, ","), flags.Valgrind) == true {
+			// Prefix 'path' with the valgrind command and options.
+			valgrindArgs := []string{
+				"--track-origins=yes",
+				"--leak-check=full",
+				"--error-exitcode=808",
+			}
+			args = append(args, valgrindArgs...)
+			args = append(args, path)
+			path = "/usr/bin/valgrind"
+		}
 	}
+
+	// Continue building the command.
 	args = append(args, "--name", name)
 	if flags.Transport != "" {
 		args = append(args, "--transport", flags.Transport)

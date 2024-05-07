@@ -61,6 +61,8 @@ func parseFlags() {
 
 	flag.StringVar(&flags.Gdb, "gdb", "", "attach this model instance to GDB server")
 
+	flag.StringVar(&flags.Valgrind, "valgrind", "", "run this model instance via Valgrind")
+
 	flag.Parse()
 	if flagSpecified("transport") == false {
 		flags.Transport = ""
