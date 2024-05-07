@@ -124,7 +124,7 @@ func SimbusCommand(docMap map[string][]kind.KindDoc, simbusPath string, flags Fl
 					Name: "SimBus",
 					Prog: simbusPath,
 					Args: append(args, yamlFiles...),
-					Env:  calculateEnv(stackSpec, &model),
+					Env:  calculateEnv(stackSpec, &model, flags),
 				}
 				slog.Info(fmt.Sprintf("SimBus: stack=%s (%s)", stackDoc.Metadata.Name, stackDoc.File))
 				slog.Info(fmt.Sprintf("  Prog : %s", cmd.Prog))
@@ -190,7 +190,7 @@ func ModelCommandList(docMap map[string][]kind.KindDoc, modelcPath string, model
 				if model.Runtime != nil && model.Runtime.X32 != nil && *model.Runtime.X32 {
 					progPath = modelcX32Path
 				}
-				cmd := buildModelCmd(model.Name, progPath, yamlFiles, calculateEnv(stackSpec, &model), flags)
+				cmd := buildModelCmd(model.Name, progPath, yamlFiles, calculateEnv(stackSpec, &model, flags), flags)
 				slog.Info(fmt.Sprintf("Model: name=%s, stack=%s", model.Name, stackDoc.Metadata.Name))
 				slog.Info(fmt.Sprintf("  Model : %s", model.Model.Name))
 				slog.Info(fmt.Sprintf("  Prog  : %s", cmd.Prog))
@@ -230,7 +230,7 @@ func stackedModelCmd(stackDoc *kind.KindDoc, modelcPath string, modelcX32Path st
 			progPath = modelcX32Path
 		}
 		// Collate the environment.
-		modelEnv := calculateEnv(stackSpec, &model)
+		modelEnv := calculateEnv(stackSpec, &model, flags)
 		for k, v := range modelEnv {
 			env[k] = v
 		}
@@ -305,7 +305,7 @@ func buildModelCmd(name string, path string, yamlFiles []string, env map[string]
 	return cmd
 }
 
-func calculateEnv(stack *schema_kind.StackSpec, model *schema_kind.ModelInstance) map[string]string {
+func calculateEnv(stack *schema_kind.StackSpec, model *schema_kind.ModelInstance, flags Flags) map[string]string {
 	env := map[string]string{}
 	if stack.Runtime != nil && stack.Runtime.Env != nil {
 		for k, v := range *stack.Runtime.Env {
@@ -315,6 +315,20 @@ func calculateEnv(stack *schema_kind.StackSpec, model *schema_kind.ModelInstance
 	if model != nil && model.Runtime != nil && model.Runtime.Env != nil {
 		for k, v := range *model.Runtime.Env {
 			env[k] = v
+		}
+	}
+	// Apply modifications (format MODEL:NAME=VAL).
+	for _, mod := range flags.EnvModifier {
+		m := strings.SplitN(mod, "=", 2)
+		if len(m) != 2 {
+			continue
+		}
+		k := strings.SplitN(m[0], ":", 2)
+		if len(k) != 2 {
+			continue
+		}
+		if model.Name == k[0] {
+			env[k[1]] = m[1]
 		}
 	}
 	return env

@@ -4,6 +4,19 @@
 
 package simer
 
+import "strings"
+
+type listFlag []string
+
+func (l *listFlag) String() string {
+	return strings.Join(*l, "::")
+}
+
+func (l *listFlag) Set(value string) error {
+	*l = append(*l, value)
+	return nil
+}
+
 type Flags struct {
 	Stack     string
 	StackList []string
@@ -15,7 +28,8 @@ type Flags struct {
 	Uri       string
 	Timeout   float64
 
-	Gdb string
+	EnvModifier listFlag
 
+	Gdb      string
 	Valgrind string
 }

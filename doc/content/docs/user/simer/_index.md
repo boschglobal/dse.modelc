@@ -339,10 +339,14 @@ Examples:
 Flags:
   -endtime *flag.float64Value
         simulation end time (0.002)
+  -env *simer.listFlag
+        environment modifier, in format '-env MODEL:NAME=VAL'
   -gdb *flag.stringValue
         attach this model instance to GDB server
   -logger *flag.intValue
         log level (select between 0..4) (3)
+  -modelcX32 *flag.stringValue
+        path to ModelC x32 executable (modelc32)
   -stack *flag.stringValue
         run the named simulation stack(s)
   -stepsize *flag.float64Value

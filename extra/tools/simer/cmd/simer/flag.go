@@ -59,8 +59,9 @@ func parseFlags() {
 	flag.StringVar(&flags.Uri, "uri", "redis://localhost:6379", "SimBus connection URI")
 	flag.Float64Var(&flags.Timeout, "timeout", 60.0, "timeout")
 
-	flag.StringVar(&flags.Gdb, "gdb", "", "attach this model instance to GDB server")
+	flag.Var(&flags.EnvModifier, "env", "environment modifier, in format '-env MODEL:NAME=VAL'")
 
+	flag.StringVar(&flags.Gdb, "gdb", "", "attach this model instance to GDB server")
 	flag.StringVar(&flags.Valgrind, "valgrind", "", "run this model instance via Valgrind")
 
 	flag.Parse()
