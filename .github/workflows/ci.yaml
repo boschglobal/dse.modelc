@@ -88,9 +88,9 @@ jobs:
             sandbox_out.tar.gz
           retention-days: 1
 
-  test:
+  test_e2e:
     runs-on: [ubuntu-latest]
-    needs: [build]
+    needs: [build, runtimes, tools]
     strategy:
       matrix:
         package_arch:
@@ -101,36 +101,38 @@ jobs:
         HOST_DOCKER_WORKSPACE: ${{ github.workspace }}
       volumes:
         - /var/run/docker.sock:/var/run/docker.sock
-    services:
-      redis:
-        image: redis:6.2.0
     steps:
       - uses: actions/checkout@v3
         with:
           ref: ${{ github.event.pull_request.head.sha }}
 
-      - uses: actions/download-artifact@v3
+      - name: Download artifact
+        uses: actions/download-artifact@v3
         with:
-          name: ${{ env.package_name }}-${{ matrix.package_arch }}-sandbox
-          path: .
+          name: image_simer
+          path: /tmp
+      - name: Download artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: image_testscript
+          path: /tmp
 
-      - name: Sandbox
+      - name: Load images
         run: |
-          echo '${{ job.container.network }}'
-          echo "DSE_DOCKER_NETWORK=${{ job.container.network }}" >> $GITHUB_ENV
-          tar xzf sandbox_out.tar.gz
-          find ${{ env.build_dir }}/_out -type f -name '*' -exec ls -sh --color=auto {} \;
+          docker load --input /tmp/simer.tar
+          docker load --input /tmp/testscript.tar
+          docker image ls -a
 
       - name: Test
         env:
           PACKAGE_ARCH: ${{ matrix.package_arch }}
         run: |
-          make test_pytest
+          make test_e2e
 
   publish:
     if: startsWith(github.ref, 'refs/tags/')
     runs-on: [ubuntu-latest]
-    needs: [build, test]
+    needs: [build, test_e2e]
     strategy:
       matrix:
         package_arch:
@@ -170,20 +172,47 @@ jobs:
           files: |
             ${{ env.build_dir }}/_dist/${{ env.package_name }}-${{ env.PACKAGE_VERSION }}-${{ matrix.package_arch }}.zip
 
-  container:
+
+  docker_push:
     if: startsWith(github.ref, 'refs/tags/')
     runs-on: [ubuntu-latest]
-    needs: [build, test]
+    needs: [runtimes, tools, test_e2e]
+    strategy:
+      matrix:
+        container:
+          - simer
+          - testscript
+    steps:
+      - name: Log in to the Container registry
+        uses: docker/login-action@v2
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Download artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: image_${{ matrix.container }}
+          path: /tmp
+
+      - name: Load and Push Image
+        run: |
+          docker load --input /tmp/${{ matrix.container }}.tar
+          docker image ls -a
+          docker image push --all-tags ${{ env.REGISTRY }}/${{ env.IMAGE_BASE_NAME }}-${{ matrix.container }}
+
+
+  runtimes:
+    if: startsWith(github.ref, 'refs/tags/')
+    runs-on: [ubuntu-latest]
+    needs: [build]
     strategy:
       matrix:
         name: [modelc]
         arch: [linux-amd64]
         include:
-          - name: modelc
-            arch: linux-amd64
-          - name: modelc-x86
-            arch: linux-x86
-          - name: simbus-sa
+          - name: testscript
             arch: linux-amd64
     steps:
       - name: Checkout
@@ -204,6 +233,9 @@ jobs:
         uses: docker/metadata-action@v4
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_BASE_NAME }}-${{ matrix.name }}
+          tags: |
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
 
       - name: Version
         if: startsWith(github.ref, 'refs/tags/')
@@ -221,22 +253,30 @@ jobs:
           tar xzf sandbox_out.tar.gz
           find ${{ env.build_dir }}/_out -type f -name '*' -exec ls -sh --color=auto {} \;
 
-      - name: Build and push
+      - name: Build Image
         uses: docker/build-push-action@v4
         with:
-          push: true
+          push: false
           context: .
           file: ./extra/docker/${{ matrix.name }}/Dockerfile
           build-args: |
              PACKAGE_VERSION=${{ env.PACKAGE_VERSION }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+          outputs: type=docker,dest=/tmp/${{ matrix.name }}.tar
+
+      - name: Upload image artifact
+        uses: actions/upload-artifact@v2
+        with:
+          name: image_${{ matrix.name }}
+          path: /tmp/${{ matrix.name }}.tar
+          retention-days: 1
 
 
   tools:
     if: startsWith(github.ref, 'refs/tags/')
     runs-on: [ubuntu-latest]
-    needs: [build, test]
+    needs: [build]
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -293,10 +333,85 @@ jobs:
       - name: Build and push
         uses: docker/build-push-action@v4
         with:
-          push: true
+          push: false
           context: extra/tools/simer
           file: ./extra/tools/simer/build/package/Dockerfile
           build-args: |
              PACKAGE_VERSION=${{ env.PACKAGE_VERSION }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+          outputs: type=docker,dest=/tmp/simer.tar
+
+      - name: Upload image artifact
+        uses: actions/upload-artifact@v2
+        with:
+          name: image_simer
+          path: /tmp/simer.tar
+          retention-days: 1
+
+
+  containers:
+    if: startsWith(github.ref, 'refs/tags/')
+    runs-on: [ubuntu-latest]
+    needs: [build, test_e2e]
+    strategy:
+      matrix:
+        name: [modelc]
+        arch: [linux-amd64]
+        include:
+          - name: modelc
+            arch: linux-amd64
+          - name: modelc-x86
+            arch: linux-x86
+          - name: simbus-sa
+            arch: linux-amd64
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Log in to the Container registry
+        uses: docker/login-action@v2
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
+      - name: Extract metadata (tags, labels) for Docker
+        id: meta
+        uses: docker/metadata-action@v4
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_BASE_NAME }}-${{ matrix.name }}
+          tags: |
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+
+      - name: Version
+        if: startsWith(github.ref, 'refs/tags/')
+        id: package
+        run: |
+          echo "PACKAGE_VERSION=${{ fromJSON(steps.meta.outputs.json).labels['org.opencontainers.image.version'] }}" >> $GITHUB_ENV
+
+      - uses: actions/download-artifact@v3
+        with:
+          name: ${{ env.package_name }}-${{ matrix.arch }}-sandbox
+          path: .
+
+      - name: Sandbox
+        run: |
+          tar xzf sandbox_out.tar.gz
+          find ${{ env.build_dir }}/_out -type f -name '*' -exec ls -sh --color=auto {} \;
+
+      - name: Build and push
+        uses: docker/build-push-action@v4
+        with:
+          push: true
+          context: .
+          file: ./extra/docker/${{ matrix.name }}/Dockerfile
+          build-args: |
+             PACKAGE_VERSION=${{ env.PACKAGE_VERSION }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+
