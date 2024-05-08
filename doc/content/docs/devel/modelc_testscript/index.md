@@ -1,0 +1,105 @@
+---
+title: "Testing with Testscript"
+linkTitle: "Testing Testscript"
+draft: false
+tags:
+- Developer
+- Simer
+- Testing
+- Testscript
+github_repo: "https://github.com/boschglobal/dse.modelc"
+github_subdir: "doc"
+---
+
+## Testscript for E2E Testing
+
+DSE Projects can use Testscript to run End-to-end tests (E2E) which are written in the (simple) txtar format. The containerised runtime supports both the Simer simulation runner as well as Taskfile based workflows.
+
+
+## Code Layout and Test Organisation
+
+```
+L- tests/testscript    Directory containing Testscript tests.
+  L- e2e               Collection of E2E tests.
+    L- testcase.txtar  Individual testcase (in txtar format).
+L- Makefile            High-level build automation.
+```
+
+
+### Example Test Files
+
+<details>
+<summary>tests/exec.txtar</summary>
+{{< readfile file="examples/tests/exec.txtar" code="true" lang="sh" >}}
+</details>
+
+<br />
+
+<details>
+<summary>tests/simer.txtar</summary>
+{{< readfile file="examples/tests/simer.txtar" code="true" lang="sh" >}}
+</details>
+
+<br />
+
+<details>
+<summary>Makefile</summary>
+{{< readfile file="examples/Makefile" code="true" lang="make" >}}
+</details>
+
+
+## Testing Features and Integrations
+
+Testscript is provided as a containerised runtime with a minimal set of features and integrations. Use this runtime to run other containerised tools and advanced processing workflows.
+
+
+### Volumes and Paths
+
+The containerised runtime has its working directory (`WORKDIR`) set to `/repo` and this path will typically be mapped to the repo being tested. In addition the following paths are available:
+
+* `ENTRYDIR` - full host path to the repo directory. Use this path when mapping volumes into a docker container in your testscript.
+* `/repo` - the mapped container path to the repo directory.
+* `SIM` - path to simulation (relative from `ENTRYDIR`).
+
+
+### Docker
+
+Docker is included in the runtime and setup to access the host docker system.
+
+> Hint: When mapping a volume into a container use the `ENTRYDIR` full host path rather than `/repo` as the docker system will consider mount paths from the host perspective (rather than the perspective of the running container).
+
+
+### Taskfile
+
+Task is included in the runtime, along with a set of CLI tools (i.e. `curl`) that a task might use. Typically a task would run a containerised workflow where additional tools are installed.
+
+
+### Testscript
+
+Testscript is included in the runtime and is also set as the container `ENTRYPOINT`.
+
+
+## Testing Techniques
+
+### E2E / Smoke Tests
+
+Testscript can be used to write a simple E2E / Smoke test using the Simer simulation runner. The following minimal example shows how easily a test can be written:
+
+```txtar
+env NAME=minimal_inst
+env SIM=dse/modelc/build/_out/examples/minimal
+exec sh -e $WORK/test.sh
+stdout 'SignalValue: 2628574755 = 4.000000 \[name=counter\]'
+-- test.sh --
+SIMER="${SIMER:-ghcr.io/boschglobal/dse-simer:latest}"
+docker run --name simer -i --rm -v $ENTRYDIR/$SIM:/sim \
+    $SIMER -valgrind $NAME -env $NAME:SIMBUS_LOGLEVEL=2
+```
+
+
+## References / Links
+
+* [Simer](docs/user/simer)
+* [Testscript](https://pkg.go.dev/github.com/rogpeppe/go-internal/testscript)
+* [txtar](https://pkg.go.dev/golang.org/x/tools/txtar)
+* [Taskfile](https://taskfile.dev/)

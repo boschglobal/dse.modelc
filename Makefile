@@ -4,13 +4,14 @@
 
 ###############
 ## Docker Images.
-GCC_BUILDER_IMAGE ?= ghcr.io/boschglobal/dse-gcc-builder:main
-GCC_TESTER_IMAGE ?= ghcr.io/boschglobal/dse-python-builder:main
-DOCKER_DIRS = simbus-sa modelc modelc-x86
+GCC_BUILDER_IMAGE ?= ghcr.io/boschglobal/dse-gcc-builder:latest
+TESTSCRIPT_IMAGE ?= ghcr.io/boschglobal/dse-testscript:latest
+SIMER_IMAGE ?= ghcr.io/boschglobal/dse-simer:latest
 
 
 ###############
-## Docker Images.
+## Docker Containers.
+DOCKER_DIRS = simbus-sa modelc modelc-x86 testscript
 TOOL_DIRS = simer
 
 
