@@ -113,6 +113,16 @@ jobs:
           docker load --input /tmp/testscript.tar
           docker image ls -a
 
+      - uses: actions/download-artifact@v3
+        with:
+          name: ${{ env.package_name }}-linux-amd64-sandbox
+          path: .
+
+      - name: Sandbox
+        run: |
+          tar xzf sandbox_out.tar.gz
+          find ${{ env.build_dir }}/_out -type f -name '*' -exec ls -sh --color=auto {} \;
+
       - name: Test
         run: |
           make test_e2e
