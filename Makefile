@@ -173,7 +173,7 @@ do-test_cmocka-run:
 do-test_testscript-e2e:
 # Test debug; add '-v' to Testscript command (e.g. $(TESTSCRIPT_IMAGE) -v \).
 ifeq ($(PACKAGE_ARCH), linux-amd64)
-	set -eux; for t in $(TESTSCRIPT_E2E_FILES) ;\
+	@set -eu; for t in $(TESTSCRIPT_E2E_FILES) ;\
 	do \
 		echo "Running E2E Test: $$t" ;\
 		docker run -i --rm \
