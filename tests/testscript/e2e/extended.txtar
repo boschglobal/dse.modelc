@@ -1,0 +1,25 @@
+env NAME=extended_inst
+env SIM=dse/modelc/build/_out/examples/extended
+
+
+# TEST: extended example model
+exec sh -e $WORK/test.sh
+
+stdout 'Load YAML File: data/simulation.yaml'
+stdout 'Loading symbol: model_create ... ok'
+stdout 'Loading symbol: model_step ... ok'
+stdout 'Loading symbol: model_destroy ... not found'
+stdout 'Run the Simulation ...'
+stdout 'Controller exit ...'
+
+stdout 'SignalWrite: 2628574755 = 43.000000 \[name=counter\]'
+stdout 'SignalWrite: 2906692958 = 1.000000 \[name=odd\]'
+stdout 'SignalWrite: 3940322353 = 0.000000 \[name=even\]'
+stdout 'SignalValue: 2628574755 = 46.000000 \[name=counter\]'
+stdout 'SignalValue: 2906692958 = 0.000000 \[name=odd\]'
+stdout 'SignalValue: 3940322353 = 1.000000 \[name=even\]'
+
+-- test.sh --
+SIMER="${SIMER:-ghcr.io/boschglobal/dse-simer:latest}"
+docker run --name simer -i --rm -v $ENTRYDIR/$SIM:/sim \
+    $SIMER -valgrind $NAME -env $NAME:SIMBUS_LOGLEVEL=2

@@ -54,9 +54,16 @@ PACKAGE_PATH = $(NAMESPACE)/dist
 
 ###############
 ## Test Parameters.
-export SIMBUS_URI ?= redis://redis:6379
-export REDIS_HOST ?= redis
-export TESTER_CONTAINER_NAME = modelc_testenv
+export TESTSCRIPT_E2E_DIR ?= tests/testscript/e2e
+TESTSCRIPT_E2E_FILES = \
+	$(TESTSCRIPT_E2E_DIR)/minimal.txtar \
+	$(TESTSCRIPT_E2E_DIR)/extended.txtar \
+	$(TESTSCRIPT_E2E_DIR)/binary.txtar \
+	$(TESTSCRIPT_E2E_DIR)/ncodec.txtar \
+	$(TESTSCRIPT_E2E_DIR)/mstep.txtar \
+	$(TESTSCRIPT_E2E_DIR)/transport.txtar \
+
+#	$(TESTSCRIPT_E2E_DIR)/gateway.txtar \
 
 
 ifneq ($(CI), true)
@@ -71,44 +78,6 @@ ifneq ($(CI), true)
 		--volume ~/.ccache:/root/.ccache \
 		--workdir /tmp/repo \
 		$(GCC_BUILDER_IMAGE)
-
-	DOCKER_TESTER_CMD := docker run -it --rm \
-		--env CMAKE_TOOLCHAIN_FILE=/tmp/repo/extra/cmake/$(PACKAGE_ARCH).cmake \
-		--env EXTERNAL_BUILD_DIR=$(EXTERNAL_BUILD_DIR) \
-		--env PACKAGE_ARCH=$(PACKAGE_ARCH) \
-		--env PACKAGE_VERSION=$(PACKAGE_VERSION) \
-		--env PIP_EXTRA_INDEX_URL=$(PIP_EXTRA_INDEX_URL) \
-		--env SIMBUS_URI=$(SIMBUS_URI) \
-		--net dse \
-		--volume $$(pwd):/tmp/repo \
-		--volume $(EXTERNAL_BUILD_DIR):$(EXTERNAL_BUILD_DIR) \
-		--volume ~/.ccache:/root/.ccache \
-		--workdir /tmp/repo \
-		$(GCC_TESTER_IMAGE)
-
-	DOCKER_GDB_CMD := docker run -it --rm --name $(TESTER_CONTAINER_NAME) \
-		--env CMAKE_TOOLCHAIN_FILE=/tmp/repo/extra/cmake/$(PACKAGE_ARCH).cmake \
-		--env EXTERNAL_BUILD_DIR=$(EXTERNAL_BUILD_DIR) \
-		--env PACKAGE_ARCH=$(PACKAGE_ARCH) \
-		--env PACKAGE_VERSION=$(PACKAGE_VERSION) \
-		--env PIP_EXTRA_INDEX_URL=$(PIP_EXTRA_INDEX_URL) \
-		--env SIMBUS_URI=$(SIMBUS_URI) \
-		--net dse \
-		--volume $$(pwd):/tmp/repo \
-		--volume $(EXTERNAL_BUILD_DIR):$(EXTERNAL_BUILD_DIR) \
-		--volume ~/.ccache:/root/.ccache \
-		--workdir /tmp/repo \
-		$(GCC_BUILDER_IMAGE)
-
-	DOCKER_TEST_SETUP_CMD :=  \
-		docker network create dse; \
-		docker run -d --rm --name redis --net dse  redis; \
-		true
-
-	DOCKER_TEST_TEARDOWN_CMD :=  \
-		docker network inspect dse >/dev/null 2>&1 && docker network inspect -f '{{ range $$key, $$value := .Containers }}{{ printf "%s\n" $$key}}{{ end }}' dse | xargs -r docker kill; \
-		docker network rm dse > /dev/null 2>&1; \
-		true
 endif
 
 
@@ -155,31 +124,19 @@ tools:
 				--tag $$d:test extra/tools/$$d ;\
 	done;
 
+.PHONY: test_cmocka
 test_cmocka:
 	@${DOCKER_BUILDER_CMD} $(MAKE) do-test_cmocka-build
 	@${DOCKER_BUILDER_CMD} $(MAKE) do-test_cmocka-run
 
-test_pytest:
-	@${DOCKER_TEST_TEARDOWN_CMD}
-	@${DOCKER_TEST_SETUP_CMD}
-	@${DOCKER_TESTER_CMD} $(MAKE) do-test_pytest-run
-	@${DOCKER_TEST_TEARDOWN_CMD}
+.PHONY: test_e2e
+test_e2e: do-test_testscript-e2e
 
 .PHONY: test
-test: test_cmocka test_pytest
-
-test-env:
-	@${DOCKER_TEST_TEARDOWN_CMD}
-	@${DOCKER_TEST_SETUP_CMD}
-	@${DOCKER_TESTER_CMD} /bin/bash
-	@${DOCKER_TEST_TEARDOWN_CMD}
-
-test-env-it:
-	docker exec -it --workdir /tmp/repo $(TESTER_CONTAINER_NAME) /bin/bash
+test: test_cmocka test_e2e
 
 .PHONY: clean
 clean:
-	@${DOCKER_TEST_TEARDOWN_CMD}
 	@${DOCKER_BUILDER_CMD} $(MAKE) do-clean
 	for d in $(DOCKER_IMAGES) ;\
 	do \
@@ -213,10 +170,22 @@ do-test_cmocka-build:
 do-test_cmocka-run:
 	$(MAKE) -C tests/cmocka run
 
-do-test_pytest-run:
-	@-pip install -r tests/pytest/requirements.txt
-	redis-cli -h $(REDIS_HOST) ping
-	pytest -rx -x --asyncio-mode=strict -W ignore::DeprecationWarning tests/pytest
+do-test_testscript-e2e:
+# Test debug; add '-v' to Testscript command (e.g. $(TESTSCRIPT_IMAGE) -v \).
+ifeq ($(PACKAGE_ARCH), linux-amd64)
+	@set -eu; for t in $(TESTSCRIPT_E2E_FILES) ;\
+	do \
+		echo "Running E2E Test: $$t" ;\
+		docker run -it --rm \
+			-e ENTRYDIR=$$(pwd) \
+			-v /var/run/docker.sock:/var/run/docker.sock \
+			-v $$(pwd):/repo \
+			$(TESTSCRIPT_IMAGE) \
+				-e ENTRYDIR=$$(pwd) \
+				-e SIMER=$(SIMER_IMAGE) \
+				$$t ;\
+	done;
+endif
 
 .PHONY: do-clean
 do-clean:

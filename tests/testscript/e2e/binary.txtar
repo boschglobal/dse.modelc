@@ -1,0 +1,23 @@
+env NAME=binary_inst
+env SIM=dse/modelc/build/_out/examples/binary
+
+
+# TEST: binary example model
+exec sh -e $WORK/test.sh
+
+stdout 'Load YAML File: data/simulation.yaml'
+stdout 'Loading symbol: model_create ... ok'
+stdout 'Loading symbol: model_step ... ok'
+stdout 'Loading symbol: model_destroy ... ok'
+stdout 'Run the Simulation ...'
+stdout 'Controller exit ...'
+
+stdout 'Message \(message\) : count is 43'
+stdout 'Message \(message\) : count is 44'
+stdout 'Message \(message\) : count is 45'
+stdout 'Message \(message\) : count is 46'
+
+-- test.sh --
+SIMER="${SIMER:-ghcr.io/boschglobal/dse-simer:latest}"
+docker run --name simer -i --rm -v $ENTRYDIR/$SIM:/sim \
+    $SIMER -valgrind $NAME -env $NAME:SIMBUS_LOGLEVEL=2

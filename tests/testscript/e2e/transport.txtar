@@ -1,0 +1,46 @@
+env NAME=minimal_inst
+env SIM=dse/modelc/build/_out/examples/minimal
+
+
+# TEST: redispubsub
+env SIMBUS_TRANSPORT=redispubsub
+env SIMBUS_URI=redis://localhost:6379
+
+exec sh -e $WORK/test.sh
+
+stdout 'Transport: redispubsub'
+stdout 'URI: redis://localhost:6379'
+stdout 'SignalValue: 2628574755 = 4.000000 \[name=counter\]'
+
+
+# TEST: redis
+env SIMBUS_TRANSPORT=redis
+env SIMBUS_URI=redis://localhost:6379
+
+exec sh -e $WORK/test.sh
+
+stdout 'Transport: redis'
+stdout 'URI: redis://localhost:6379'
+stdout 'SignalValue: 2628574755 = 4.000000 \[name=counter\]'
+
+
+# TEST: redisasync
+env SIMBUS_TRANSPORT=redis
+env SIMBUS_URI=redisasync://localhost:6379
+
+exec sh -e $WORK/test.sh
+
+stdout 'Transport: redis'
+stdout 'URI: redisasync://localhost:6379'
+stdout 'SignalValue: 2628574755 = 4.000000 \[name=counter\]'
+
+
+-- test.sh --
+SIMER="${SIMER:-ghcr.io/boschglobal/dse-simer:latest}"
+docker run --name simer -i --rm -v $ENTRYDIR/$SIM:/sim \
+    $SIMER -valgrind $NAME \
+        -env simbus:SIMBUS_TRANSPORT=$SIMBUS_TRANSPORT \
+        -env simbus:SIMBUS_URI=$SIMBUS_URI \
+        -env $NAME:SIMBUS_TRANSPORT=$SIMBUS_TRANSPORT \
+        -env $NAME:SIMBUS_URI=$SIMBUS_URI \
+        -env $NAME:SIMBUS_LOGLEVEL=2

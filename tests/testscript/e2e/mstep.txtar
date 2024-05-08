@@ -1,0 +1,21 @@
+env NAME=minimal_inst
+env SIM=dse/modelc/build/_out/examples/minimal
+env SANDBOX=dse/modelc/build/_out
+
+
+# TEST: MStep executable
+exec sh -e $WORK/test.sh
+
+stdout 'Model Function: model_step'
+stdout 'Starting Simulation \(for 10 steps\) ...'
+stdout 'step 9 \(model_time=0.004500\)'
+stdout 'Simulation complete.'
+stdout 'value: 10'
+
+-- test.sh --
+cd /repo/$SIM
+/repo/$SANDBOX/bin/mstep \
+    --logger 2 \
+    --name $NAME \
+    data/model.yaml \
+    data/simulation.yaml

@@ -1,0 +1,69 @@
+env NAME=ncodec_inst
+env SIM=dse/modelc/build/_out/examples/ncodec
+
+
+# TEST: ncodec example model
+exec sh -e $WORK/test.sh
+
+stdout 'Load YAML File: data/simulation.yaml'
+stdout 'Loading symbol: model_create ... ok'
+stdout 'Loading symbol: model_step ... ok'
+stdout 'Loading symbol: model_destroy ... not found'
+stdout 'Run the Simulation ...'
+stdout 'Controller exit ...'
+
+stdout 'RX \(03e9\): Hello World! from node_id=24'
+stdout 'RX \(03ea\): Hello World! from node_id=24'
+stdout 'RX \(03eb\): Hello World! from node_id=24'
+stdout 'RX \(03ec\): Hello World! from node_id=24'
+
+
+# TEST: trace wildcard.
+exec sh -e $WORK/test_trace_wildcard.sh
+
+stdout '\(ncodec_inst\) 0.000000 \[1:24:3\] TX 3e9 1 29 :'
+stdout '48 65 6c 6c 6f 20 57 6f  72 6c 64 21 20 66 72 6f  6d 20 6e 6f 64 65 5f 69  64 3d 32 34 00'
+stdout '\(ncodec_inst\) 0.000500 \[1:24:3\] RX 3e9 1 29 :'
+stdout '\(ncodec_inst\) 0.000500 \[1:24:3\] TX 3ea 1 29 :'
+stdout '\(ncodec_inst\) 0.001000 \[1:24:3\] RX 3ea 1 29 :'
+stdout '\(ncodec_inst\) 0.001000 \[1:24:3\] TX 3eb 1 29 :'
+stdout '\(ncodec_inst\) 0.001500 \[1:24:3\] RX 3eb 1 29 :'
+stdout '\(ncodec_inst\) 0.001500 \[1:24:3\] TX 3ec 1 29 :'
+stdout '\(ncodec_inst\) 0.002000 \[1:24:3\] RX 3ec 1 29 :'
+stdout '\(ncodec_inst\) 0.002000 \[1:24:3\] TX 3ed 1 29 :'
+
+
+# TEST: trace frame list.
+exec sh -e $WORK/test_trace_framelist.sh
+
+stdout '\(ncodec_inst\) 0.000500 \[1:24:3\] TX 3ea 1 29 :'
+stdout '\(ncodec_inst\) 0.001000 \[1:24:3\] RX 3ea 1 29 :'
+stdout '\(ncodec_inst\) 0.001000 \[1:24:3\] TX 3eb 1 29 :'
+stdout '\(ncodec_inst\) 0.001500 \[1:24:3\] RX 3eb 1 29 :'
+
+! stdout '\(ncodec_inst\) 0.000000 \[1:24:3\] TX 3e9 1 29 :'
+! stdout '\(ncodec_inst\) 0.000500 \[1:24:3\] RX 3e9 1 29 :'
+! stdout '\(ncodec_inst\) 0.001500 \[1:24:3\] TX 3ec 1 29 :'
+! stdout '\(ncodec_inst\) 0.002000 \[1:24:3\] RX 3ec 1 29 :'
+! stdout '\(ncodec_inst\) 0.002000 \[1:24:3\] TX 3ed 1 29 :'
+
+
+-- test.sh --
+SIMER="${SIMER:-ghcr.io/boschglobal/dse-simer:latest}"
+docker run --name simer -i --rm -v $ENTRYDIR/$SIM:/sim \
+    $SIMER -valgrind $NAME \
+        -env $NAME:SIMBUS_LOGLEVEL=2
+
+-- test_trace_wildcard.sh --
+SIMER="${SIMER:-ghcr.io/boschglobal/dse-simer:latest}"
+docker run --name simer -i --rm -v $ENTRYDIR/$SIM:/sim \
+    $SIMER -valgrind $NAME \
+        -env $NAME:SIMBUS_LOGLEVEL=4 \
+        -env $NAME:NCODEC_TRACE_CAN_1=*
+
+-- test_trace_framelist.sh --
+SIMER="${SIMER:-ghcr.io/boschglobal/dse-simer:latest}"
+docker run --name simer -i --rm -v $ENTRYDIR/$SIM:/sim \
+    $SIMER -valgrind $NAME \
+        -env $NAME:SIMBUS_LOGLEVEL=4 \
+        -env $NAME:NCODEC_TRACE_CAN_1=0x3ea,0x3eb
