@@ -4,7 +4,7 @@
 
 ###############
 ## Docker Images.
-GCC_BUILDER_IMAGE ?= ghcr.io/boschglobal/dse-gcc-builder:latest
+GCC_BUILDER_IMAGE ?= ghcr.io/boschglobal/dse-gcc-builder:main
 TESTSCRIPT_IMAGE ?= ghcr.io/boschglobal/dse-testscript:latest
 SIMER_IMAGE ?= ghcr.io/boschglobal/dse-simer:latest
 
@@ -176,7 +176,7 @@ ifeq ($(PACKAGE_ARCH), linux-amd64)
 	@set -eu; for t in $(TESTSCRIPT_E2E_FILES) ;\
 	do \
 		echo "Running E2E Test: $$t" ;\
-		docker run -it --rm \
+		docker run -i --rm \
 			-e ENTRYDIR=$$(pwd) \
 			-v /var/run/docker.sock:/var/run/docker.sock \
 			-v $$(pwd):/repo \
