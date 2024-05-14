@@ -199,7 +199,7 @@ void modelc_parse_arguments(
     int          c;
 
     /* Help specified? */
-    // FIXME with only one file parameter, this call will segfault.
+    optind = 1;  // Reset (to 1) because tests repeatedly call this function.
     while ((c = getopt_long(argc, argv, OPT_LIST, long_options, NULL)) != -1) {
         switch (c) {
         case 'h':
