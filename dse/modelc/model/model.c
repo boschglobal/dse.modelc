@@ -17,9 +17,11 @@
 
 #define VECTOR_TYPE_BINARY_STR "binary"
 
+
 typedef struct __signal_list_t {
-    const char** names;
-    uint32_t     length;
+    const char**     names;
+    uint32_t         length;
+    SignalTransform* transform;
 } __signal_list_t;
 
 
@@ -53,11 +55,9 @@ void model_function_destroy(ModelFunction* model_function)
             if (_mfc && _mfc->signal_value_binary_reset_called)
                 free(_mfc->signal_value_binary_reset_called);
             if (_mfc && _mfc->signal_names) {
-                // fixme Unit tests suggest a double free here.
-                // for (uint32_t _ = 0; _ < _mfc->signal_count; _++)
-                //     free((void*)_mfc->signal_names[_]);
                 free(_mfc->signal_names);
             }
+            if (_mfc && _mfc->signal_transform) free(_mfc->signal_transform);
         }
         hashmap_destroy(&model_function->channels);
         for (uint32_t _ = 0; _ < _keys_length; _++)
@@ -96,6 +96,28 @@ static ModelFunctionChannel* _get_mfc(ModelInstanceSpec* model_instance,
 
 static HashList         __handler_signal_list;
 static ModelChannelType __handler_signal_vector_type;
+static HashMap          __handler_transform_map;
+
+
+static SignalTransform* _parse_signal_transform(SchemaSignalObject* so)
+{
+    YamlNode* linear_node = dse_yaml_find_node(so->data, "transform/linear");
+    if (linear_node == NULL) return NULL;
+
+    /* Create an object for the transform. */
+    SignalTransform* st = malloc(sizeof(SignalTransform));
+    *st = (SignalTransform){ .linear.factor = 1.0, .linear.offset = 0.0 };
+    dse_yaml_get_double(linear_node, "factor", &st->linear.factor);
+    dse_yaml_get_double(linear_node, "offset", &st->linear.offset);
+    /* Linear factor *CANNOT* be 0 ... the transform is effectively disabled. */
+    if (st->linear.factor == 0.0) {
+        log_notice("Signal (%s): linear transform factor configured as 0 "
+                   "(invalid value), transform disabled!",
+            so->signal);
+    }
+
+    return st;
+}
 
 
 static int _signal_group_match_handler(
@@ -112,6 +134,10 @@ static int _signal_group_match_handler(
         if (so->signal) {
             /* Signals are taken in parsing order. */
             hashlist_append(&__handler_signal_list, (void*)so->signal);
+
+            /* Locate an associated signal transform. */
+            SignalTransform* st = _parse_signal_transform(so);
+            if (st) hashmap_set_alt(&__handler_transform_map, so->signal, st);
         }
         free(so);
     } while (1);
@@ -172,6 +198,7 @@ void _load_signals(ModelInstanceSpec* model_instance, ChannelSpec* channel_spec,
 {
     /* Setup handler related storage. */
     hashlist_init(&__handler_signal_list, 512);
+    hashmap_init(&__handler_transform_map);
     __handler_signal_vector_type = *vector_type;
     /* Select and handle the schema objects (default name to provided name). */
     SchemaObjectSelector* selector = schema_build_channel_selector(
@@ -190,9 +217,25 @@ void _load_signals(ModelInstanceSpec* model_instance, ChannelSpec* channel_spec,
         }
     }
     *vector_type = __handler_signal_vector_type;
+    /* Construct the signal transform list. */
+    if (hashmap_number_keys(__handler_transform_map)) {
+        signal_list->transform =
+            calloc(signal_list->length, sizeof(SignalTransform));
+        for (size_t i = 0; i < signal_list->length; i++) {
+            SignalTransform* st =
+                hashmap_get(&__handler_transform_map, signal_list->names[i]);
+            if (st == NULL) continue;
+            /* Copy over the transform object. */
+            memcpy(&signal_list->transform[i], st, sizeof(SignalTransform));
+            log_info("    transform[linear] : factor=%d, offset=%d",
+                signal_list->transform[i].linear.factor,
+                signal_list->transform[i].linear.offset);
+        }
+    }
     /* Clear handler related storage. */
     schema_release_selector(selector);
     hashlist_destroy(&__handler_signal_list);
+    hashmap_destroy(&__handler_transform_map);
 }
 
 
@@ -309,6 +352,7 @@ int model_configure_channel(
     /* MFC is owner and should free. */
     mfc->signal_count = channel_desc->signal_count = signal_list.length;
     mfc->signal_names = channel_desc->signal_names = signal_list.names;
+    mfc->signal_transform = signal_list.transform;
 
     /* Brutal, eh? */
     return 0;

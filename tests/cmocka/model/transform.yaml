@@ -1,0 +1,61 @@
+---
+kind: Stack
+metadata:
+  name: stack
+spec:
+  connection:
+    transport:
+      redispubsub:
+        uri: redis://redis:6379
+        timeout: 60
+  models:
+    - name: transform
+      uid: 42
+      model:
+        name: Transform
+      channels:
+        - name: scalar
+          alias: scalar_vector
+---
+kind: Model
+metadata:
+  name: Transform
+spec:
+  runtime:
+    dynlib:
+      - os: linux
+        arch: amd64
+        path: lib/model.so
+  channels:
+    - alias: scalar_vector
+      selectors:
+        channel: scalar
+---
+kind: SignalGroup
+metadata:
+  name: test_signal_transform
+  labels:
+    channel: scalar
+spec:
+  signals:
+    - signal: one
+    - signal: two
+      transform:
+        linear:
+          factor: 1.0
+          offset: 0.0
+    - signal: three
+      transform:
+        linear:
+          factor: 2.0
+          offset: 10.0
+    - signal: four
+      transform:
+        linear:
+          factor: 3.0
+          offset: -200.0
+    - signal: five
+      transform:
+        linear:
+          factor: 0.0
+          offset: 100.0

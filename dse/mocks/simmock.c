@@ -117,7 +117,20 @@ void simmock_free(SimMock* mock)
 {
     if (mock == NULL) return;
 
-    if (mock->model) free(mock->model);
+    if (mock->model) {
+        for (ModelMock* model = mock->model; model->name; model++) {
+            if (model->sm_signal) {
+                // use mock count because model sv already destroyed.
+                for (uint32_t i = 0; i < mock->sv_signal->count; i++) {
+                    if (model->sm_signal[i].signal)
+                        free(model->sm_signal[i].signal);
+                }
+                free(model->sm_signal);
+            }
+        }
+
+        free(mock->model);
+    }
     if (mock->sv_signal) {
         if (mock->sv_signal->scalar) free(mock->sv_signal->scalar);
         free(mock->sv_signal);
@@ -337,6 +350,19 @@ void simmock_setup(SimMock* mock, const char* sig_name, const char* net_name)
             /* Next signal vector. */
             sv++;
         }
+
+        /* Create a signal map. */
+        if (model->sv_signal) {
+            ModelFunction* mf = controller_get_model_function(
+                model->mi, model->sv_signal->function_name);
+            model->mfc_signal =
+                hashmap_get(&mf->channels, model->sv_signal->name);
+            model->sm_signal =
+                calloc(model->sv_signal->count, sizeof(SignalMap));
+            for (uint32_t i = 0; i < model->sv_signal->count; i++) {
+                model->sm_signal[i].signal = calloc(1, sizeof(SignalValue));
+            }
+        }
     }
 
     /* Setup the mocked signal exchange. */
@@ -394,9 +420,11 @@ int simmock_step(SimMock* mock, bool assert_rc)
     for (ModelMock* model = mock->model; model->name; model++) {
         /* Copy scalars from simmock->scalars. */
         if (mock->sv_signal) {
+            // mock -> [signal->val -> [transform]] -> model
             for (uint32_t i = 0; i < mock->sv_signal->count; i++) {
-                model->sv_signal->scalar[i] = mock->sv_signal->scalar[i];
+                model->sm_signal[i].signal->val = mock->sv_signal->scalar[i];
             }
+            controller_transform_to_model(model->mfc_signal, model->sm_signal);
         }
         /* Copy binary from simmock->binary_rx. */
         if (mock->sv_network_rx && mock->sv_network_tx) {
@@ -420,8 +448,11 @@ int simmock_step(SimMock* mock, bool assert_rc)
         }
         /* Copy scalars to simmock->scalars. */
         if (mock->sv_signal) {
+            // model -> [[transform] -> signal->val] -> mock
+            controller_transform_from_model(
+                model->mfc_signal, model->sm_signal);
             for (uint32_t i = 0; i < mock->sv_signal->count; i++) {
-                mock->sv_signal->scalar[i] = model->sv_signal->scalar[i];
+                mock->sv_signal->scalar[i] = model->sm_signal[i].signal->val;
             }
         }
         /* Copy binary to simmock->binary_tx. */

@@ -106,9 +106,7 @@ static int __marshal__adapter2model(void* _mfc, void* _spec)
         am, mfc->channel_name, mfc->signal_names, mfc->signal_count);
 
     if (mfc->signal_value_double) {
-        for (uint32_t si = 0; si < mfc->signal_count; si++) {
-            mfc->signal_value_double[si] = sm[si].signal->val;
-        }
+        controller_transform_to_model(mfc, sm);
     }
     if (mfc->signal_value_binary) {
         for (uint32_t si = 0; si < mfc->signal_count; si++) {
@@ -137,9 +135,7 @@ static int __marshal__model2adapter(void* _mfc, void* _spec)
     sm = adapter_get_signal_map(
         am, mfc->channel_name, mfc->signal_names, mfc->signal_count);
     if (mfc->signal_value_double) {
-        for (uint32_t si = 0; si < mfc->signal_count; si++) {
-            sm[si].signal->final_val = mfc->signal_value_double[si];
-        }
+        controller_transform_from_model(mfc, sm);
     }
     if (mfc->signal_value_binary) {
         for (uint32_t si = 0; si < mfc->signal_count; si++) {

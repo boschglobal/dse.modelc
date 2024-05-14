@@ -22,6 +22,7 @@ add_library(controller OBJECT
     modelc_args.c
     modelc_debug.c
     step.c
+    transform.c
 )
 target_compile_definitions(controller
     PRIVATE

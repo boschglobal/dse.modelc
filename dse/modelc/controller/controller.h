@@ -15,6 +15,15 @@
 #include <dse/platform.h>
 
 
+typedef struct SignalTransform {
+    struct LinearTransform {
+        /* This transformation is disabled when factor = 0 (default). */
+        double factor;
+        double offset;
+    } linear;
+} SignalTransform;
+
+
 typedef struct ModelFunctionChannel {
     const char*  channel_name;
     const char** signal_names;
@@ -27,6 +36,9 @@ typedef struct ModelFunctionChannel {
     uint32_t* signal_value_binary_size;
     uint32_t* signal_value_binary_buffer_size;
     bool*     signal_value_binary_reset_called;
+
+    /* Signal Transform; only allocated if transforms are present. */
+    SignalTransform* signal_transform;
 } ModelFunctionChannel;
 
 
@@ -96,6 +108,13 @@ DLL_PRIVATE int sim_step_models(SimulationSpec* sim, double* model_time);
 
 /* model.c */
 DLL_PUBLIC void model_function_destroy(ModelFunction* model_function);
+
+
+/* transform.c */
+DLL_PRIVATE void controller_transform_to_model(
+    ModelFunctionChannel* mfc, SignalMap* sm);
+DLL_PRIVATE void controller_transform_from_model(
+    ModelFunctionChannel* mfc, SignalMap* sm);
 
 
 #endif  // DSE_MODELC_CONTROLLER_CONTROLLER_H_

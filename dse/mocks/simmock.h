@@ -7,6 +7,8 @@
 
 #include <stdbool.h>
 #include <dse/logger.h>
+#include <dse/modelc/adapter/adapter.h>
+#include <dse/modelc/controller/controller.h>
 #include <dse/modelc/model.h>
 #include <dse/modelc/runtime.h>
 
@@ -111,12 +113,14 @@ center footer Dynamic Simulation Environment
 */
 
 typedef struct ModelMock {
-    const char*        name;
-    ModelInstanceSpec* mi;
-    SignalVector*      sv_signal;
-    SignalVector*      sv_network;
-    SignalVector*      sv_save;
-    ModelVTable        vtable;
+    const char*           name;
+    ModelInstanceSpec*    mi;
+    SignalVector*         sv_signal;
+    SignalVector*         sv_network;
+    SignalVector*         sv_save;
+    ModelVTable           vtable;
+    SignalMap*            sm_signal;
+    ModelFunctionChannel* mfc_signal;
 } ModelMock;
 
 typedef struct SimMock {

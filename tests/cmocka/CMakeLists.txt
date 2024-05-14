@@ -108,6 +108,7 @@ set(DSE_MODELC_SOURCE_FILES
     ${DSE_MODELC_SOURCE_DIR}/controller/modelc_debug.c
     ${DSE_MODELC_SOURCE_DIR}/controller/modelc_args.c
     ${DSE_MODELC_SOURCE_DIR}/controller/step.c
+    ${DSE_MODELC_SOURCE_DIR}/controller/transform.c
 
     ${DSE_MOCKS_SOURCE_DIR}/simmock.c
 )
@@ -126,6 +127,7 @@ add_executable(test_model
     model/test_ncodec.c
     model/test_schema.c
     model/test_signal.c
+    model/test_transform.c
     model/stub_controller.c
     ${DSE_MODELC_SOURCE_FILES}
     ${DSE_NCODEC_SOURCE_FILES}
@@ -161,6 +163,7 @@ install(
         model/gateway.yaml
         model/ncodec.yaml
         model/signal.yaml
+        model/transform.yaml
     DESTINATION
         resources/model
 )
