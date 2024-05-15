@@ -4,13 +4,14 @@
 
 
 # Example Models.
-add_subdirectory(minimal)
-add_subdirectory(extended)
 add_subdirectory(binary)
-add_subdirectory(ncodec)
-add_subdirectory(simer)
+add_subdirectory(extended)
 add_subdirectory(gateway)
 add_subdirectory(gdb)
+add_subdirectory(minimal)
+add_subdirectory(ncodec)
+add_subdirectory(simer)
+add_subdirectory(transform)
 if(UNIX)
 add_subdirectory(benchmark)
 endif()

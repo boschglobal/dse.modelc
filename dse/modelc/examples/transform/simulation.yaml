@@ -1,0 +1,53 @@
+# Copyright 2024 Robert Bosch GmbH
+#
+# SPDX-License-Identifier: Apache-2.0
+
+---
+kind: Stack
+metadata:
+  name: transform_stack
+spec:
+  connection:
+    transport:
+      redispubsub:
+        uri: redis://localhost:6379
+        timeout: 60
+  models:
+    - name: simbus
+      model:
+        name: simbus
+      channels:
+        - name: data_channel
+          expectedModelCount: 2
+    - name: ponger_inst
+      uid: 42
+      model:
+        name: Ponger
+      channels:
+        - name: data_channel
+          alias: data
+    - name: pingit_inst
+      uid: 24
+      model:
+        name: Pingit
+      channels:
+        - name: data_channel
+          alias: data
+---
+kind: Model
+metadata:
+  name: simbus
+---
+kind: SignalGroup
+metadata:
+  name: data
+  labels:
+    side: data
+spec:
+  signals:
+    - signal: ping
+    - signal: pong
+      transform:
+        linear:
+          factor: 20
+          offset: -100

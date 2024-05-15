@@ -1,0 +1,50 @@
+# Copyright 2024 Robert Bosch GmbH
+#
+# SPDX-License-Identifier: Apache-2.0
+
+---
+kind: Model
+metadata:
+  name: Ponger
+spec:
+  runtime:
+    dynlib:
+      - os: linux
+        arch: amd64
+        path: lib/libponger.so
+      - os: linux
+        arch: x86
+        path: lib/libponger.so
+      - os: windows
+        arch: x64
+        path: lib/libponger.dll
+      - os: windows
+        arch: x86
+        path: lib/libponger.dll
+  channels:
+    - alias: data
+      selectors:
+        side: data
+---
+kind: Model
+metadata:
+  name: Pingit
+spec:
+  runtime:
+    dynlib:
+      - os: linux
+        arch: amd64
+        path: lib/libpingit.so
+      - os: linux
+        arch: x86
+        path: lib/libpingit.so
+      - os: windows
+        arch: x64
+        path: lib/libpingit.dll
+      - os: windows
+        arch: x86
+        path: lib/libpingit.dll
+  channels:
+    - alias: data
+      selectors:
+        side: data

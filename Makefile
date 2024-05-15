@@ -58,6 +58,7 @@ export TESTSCRIPT_E2E_DIR ?= tests/testscript/e2e
 TESTSCRIPT_E2E_FILES = \
 	$(TESTSCRIPT_E2E_DIR)/minimal.txtar \
 	$(TESTSCRIPT_E2E_DIR)/extended.txtar \
+	$(TESTSCRIPT_E2E_DIR)/transform.txtar \
 	$(TESTSCRIPT_E2E_DIR)/binary.txtar \
 	$(TESTSCRIPT_E2E_DIR)/ncodec.txtar \
 	$(TESTSCRIPT_E2E_DIR)/mstep.txtar \

@@ -1,0 +1,23 @@
+env NAME=transform_inst
+env SIM=dse/modelc/build/_out/examples/transform
+
+
+# TEST: transform example model
+exec sh -e $WORK/test.sh
+
+stdout 'Load YAML File: data/simulation.yaml'
+stdout 'Loading symbol: model_create ... not found'
+stdout 'Loading symbol: model_step ... ok'
+stdout 'Loading symbol: model_destroy ... not found'
+stdout 'Run the Simulation ...'
+stdout 'Controller exit ...'
+stdout 'SignalValue: 2061178551 = 0.000000 \[name=pong\]'
+stdout 'SignalValue: 2061178551 = 10.000000 \[name=pong\]'
+stdout 'uid=2061178551, val=10.000000, final_val=10.000000, name=pong'
+stdout 'uid=375255177, val=-100.000000, final_val=-100.000000, name=ping'
+stdout 'model_time=0.002000'
+
+-- test.sh --
+SIMER="${SIMER:-ghcr.io/boschglobal/dse-simer:latest}"
+docker run --name simer -i --rm -v $ENTRYDIR/$SIM:/sim \
+    $SIMER -valgrind $NAME -env simbus:SIMBUS_LOGLEVEL=2
