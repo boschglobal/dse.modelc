@@ -452,7 +452,8 @@ int simmock_step(SimMock* mock, bool assert_rc)
             controller_transform_from_model(
                 model->mfc_signal, model->sm_signal);
             for (uint32_t i = 0; i < mock->sv_signal->count; i++) {
-                mock->sv_signal->scalar[i] = model->sm_signal[i].signal->val;
+                mock->sv_signal->scalar[i] =
+                    model->sm_signal[i].signal->final_val;
             }
         }
         /* Copy binary to simmock->binary_tx. */

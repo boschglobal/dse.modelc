@@ -214,6 +214,11 @@ void _load_signals(ModelInstanceSpec* model_instance, ChannelSpec* channel_spec,
         for (uint32_t i = 0; i < signal_list->length; i++) {
             signal_list->names[i] = hashlist_at(&__handler_signal_list, i);
             log_info("  signal[%u] : %s", i, signal_list->names[i]);
+            SignalTransform* st =
+                hashmap_get(&__handler_transform_map, signal_list->names[i]);
+            if (st) log_info("    transform[linear] : factor=%f, offset=%f",
+                st->linear.factor,
+                st->linear.offset);
         }
     }
     *vector_type = __handler_signal_vector_type;
@@ -227,9 +232,6 @@ void _load_signals(ModelInstanceSpec* model_instance, ChannelSpec* channel_spec,
             if (st == NULL) continue;
             /* Copy over the transform object. */
             memcpy(&signal_list->transform[i], st, sizeof(SignalTransform));
-            log_info("    transform[linear] : factor=%d, offset=%d",
-                signal_list->transform[i].linear.factor,
-                signal_list->transform[i].linear.offset);
         }
     }
     /* Clear handler related storage. */

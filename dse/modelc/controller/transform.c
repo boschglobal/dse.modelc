@@ -40,18 +40,18 @@ DLL_PRIVATE void controller_transform_from_model(
         for (uint32_t si = 0; si < mfc->signal_count; si++) {
             if (mfc->signal_transform[si].linear.factor != 0) {
                 // Linear transform: value * factor + offset
-                sm[si].signal->val =
+                sm[si].signal->final_val =
                     (mfc->signal_value_double[si] -
                         mfc->signal_transform[si].linear.offset) /
                     mfc->signal_transform[si].linear.factor;
             } else {
                 // Disabled, direct.
-                sm[si].signal->val = mfc->signal_value_double[si];
+                sm[si].signal->final_val = mfc->signal_value_double[si];
             }
         }
     } else {
         for (uint32_t si = 0; si < mfc->signal_count; si++) {
-            sm[si].signal->val = mfc->signal_value_double[si];
+            sm[si].signal->final_val = mfc->signal_value_double[si];
         }
     }
 }
