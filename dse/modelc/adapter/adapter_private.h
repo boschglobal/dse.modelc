@@ -35,6 +35,7 @@ DLL_PRIVATE SignalValue* _get_signal_value(
     Channel* channel, const char* signal_name);
 DLL_PRIVATE SignalValue* _get_signal_value_byindex(
     Channel* channel, uint32_t index);
+DLL_PRIVATE void _refresh_index(Channel* channel);
 
 
 #endif  // DSE_MODELC_ADAPTER_ADAPTER_PRIVATE_H_

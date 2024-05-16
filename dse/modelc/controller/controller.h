@@ -29,6 +29,10 @@ typedef struct ModelFunctionChannel {
     const char** signal_names;
     uint32_t     signal_count;
 
+    /* Signal map (to adapter channel). */
+    SignalMap* signal_map;
+    uint32_t   signal_map_hash_code;
+
     /* Signal Value storage (in Vectors) and will be directly accessed by
        Model Functions. Only the configured type will be allocated. */
     double*   signal_value_double;

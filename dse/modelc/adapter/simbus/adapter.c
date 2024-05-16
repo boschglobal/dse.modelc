@@ -87,7 +87,8 @@ void simbus_adapter_init_channel(
 
     /* Set the Signal UID's, if specified, otherwise they are generated
        when processing SignalLookups. */
-    for (uint32_t si = 0; si < ch->signal_values_length; si++) {
+    _refresh_index(ch);
+    for (uint32_t si = 0; si < ch->index.count; si++) {
         SignalValue* sv = _get_signal_value_byindex(ch, si);
         sv->uid = simbus_generate_uid_hash(sv->name);
         log_simbus("    [%u] uid=%u, name=%s", si, sv->uid, sv->name);

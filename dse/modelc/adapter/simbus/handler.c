@@ -17,7 +17,7 @@
 static uint32_t _process_signal_lookup(Channel* ch, const char* signal_name)
 {
     /* NOTE: may create new SignalValue objects, call
-       _update_signal_value_keys() after processing a SignalIndex message to
+       _refresh_index() after processing a SignalIndex message to
        update the internal indexes. */
 
     /* Search for signal name, if missing will be created. */
@@ -63,7 +63,7 @@ static void process_signal_index_message(Adapter* adapter, Channel* channel,
         ns(SignalLookup_signal_uid_add(builder, signal_uid));
         resp__signal_lookup_list[_vi] = ns(SignalLookup_end(builder));
     }
-    _update_signal_value_keys(channel);
+    _refresh_index(channel);
 
     /* Create the response Lookup vecotr. */
     log_simbus("SignalIndex --> [%s]", channel->name);
@@ -429,8 +429,8 @@ static void sv_delta_to_msgpack(Channel* channel, msgpack_packer* pk)
     /* First(root) Object, array, 2 elements. */
     msgpack_pack_array(pk, 2);
     uint32_t changed_signal_count = 0;
-    for (uint32_t i = 0; i < channel->signal_values_length; i++) {
-        SignalValue* sv = channel->signal_values_map[i].signal;
+    for (uint32_t i = 0; i < channel->index.count; i++) {
+        SignalValue* sv = channel->index.map[i].signal;
         if (sv->uid == 0) continue;
         if ((sv->val != sv->final_val) || (sv->bin && sv->bin_size)) {
             changed_signal_count++;
@@ -438,8 +438,8 @@ static void sv_delta_to_msgpack(Channel* channel, msgpack_packer* pk)
     }
     /* 1st Object in root Array, list of UID's. */
     msgpack_pack_array(pk, changed_signal_count);
-    for (uint32_t i = 0; i < channel->signal_values_length; i++) {
-        SignalValue* sv = channel->signal_values_map[i].signal;
+    for (uint32_t i = 0; i < channel->index.count; i++) {
+        SignalValue* sv = channel->index.map[i].signal;
         if (sv->uid == 0) continue;
         if ((sv->val != sv->final_val) || (sv->bin && sv->bin_size)) {
             msgpack_pack_uint32(pk, sv->uid);
@@ -447,8 +447,8 @@ static void sv_delta_to_msgpack(Channel* channel, msgpack_packer* pk)
     }
     /* 2st Object in root Array, list of Values. */
     msgpack_pack_array(pk, changed_signal_count);
-    for (uint32_t i = 0; i < channel->signal_values_length; i++) {
-        SignalValue* sv = channel->signal_values_map[i].signal;
+    for (uint32_t i = 0; i < channel->index.count; i++) {
+        SignalValue* sv = channel->index.map[i].signal;
         if (sv->uid == 0) continue;
         if (sv->bin && sv->bin_size) {
             msgpack_pack_bin_with_body(pk, sv->bin, sv->bin_size);
@@ -465,8 +465,8 @@ static void sv_delta_to_msgpack(Channel* channel, msgpack_packer* pk)
 
 static void resolve_channel(Channel* channel)
 {
-    for (uint32_t i = 0; i < channel->signal_values_length; i++) {
-        SignalValue* sv = channel->signal_values_map[i].signal;
+    for (uint32_t i = 0; i < channel->index.count; i++) {
+        SignalValue* sv = channel->index.map[i].signal;
         sv->val = sv->final_val;
         sv->bin_size = 0;
     }
@@ -494,6 +494,7 @@ static void resolve_and_notify(
     notify(SignalVector_vec_start(builder));
     for (uint32_t i = 0; i < am->channels_length; i++) {
         Channel* ch = _get_channel_byindex(am, i);
+        _refresh_index(ch);
 
         msgpack_sbuffer_clear(&sbuf);
         sv_delta_to_msgpack(ch, &pk);
@@ -539,8 +540,8 @@ static void resolve_channel_and_model_start(
     /* First(root) Object, array, 2 elements. */
     msgpack_pack_array(&pk, 2);
     uint32_t changed_signal_count = 0;
-    for (uint32_t i = 0; i < channel->signal_values_length; i++) {
-        SignalValue* sv = channel->signal_values_map[i].signal;
+    for (uint32_t i = 0; i < channel->index.count; i++) {
+        SignalValue* sv = channel->index.map[i].signal;
         if (sv->uid == 0) continue;
         if ((sv->val != sv->final_val) || (sv->bin && sv->bin_size)) {
             changed_signal_count++;
@@ -548,8 +549,8 @@ static void resolve_channel_and_model_start(
     }
     /* 1st Object in root Array, list of UID's. */
     msgpack_pack_array(&pk, changed_signal_count);
-    for (uint32_t i = 0; i < channel->signal_values_length; i++) {
-        SignalValue* sv = channel->signal_values_map[i].signal;
+    for (uint32_t i = 0; i < channel->index.count; i++) {
+        SignalValue* sv = channel->index.map[i].signal;
         if (sv->uid == 0) continue;
         if ((sv->val != sv->final_val) || (sv->bin && sv->bin_size)) {
             msgpack_pack_uint32(&pk, sv->uid);
@@ -557,8 +558,8 @@ static void resolve_channel_and_model_start(
     }
     /* 2st Object in root Array, list of Values. */
     msgpack_pack_array(&pk, changed_signal_count);
-    for (uint32_t i = 0; i < channel->signal_values_length; i++) {
-        SignalValue* sv = channel->signal_values_map[i].signal;
+    for (uint32_t i = 0; i < channel->index.count; i++) {
+        SignalValue* sv = channel->index.map[i].signal;
         if (sv->uid == 0) continue;
         if (sv->bin && sv->bin_size) {
             msgpack_pack_bin_with_body(&pk, sv->bin, sv->bin_size);
@@ -573,8 +574,8 @@ static void resolve_channel_and_model_start(
     log_simbus("    data payload: %lu bytes", sbuf.size);
 
     /* Resolve the Bus. */
-    for (uint32_t i = 0; i < channel->signal_values_length; i++) {
-        SignalValue* sv = channel->signal_values_map[i].signal;
+    for (uint32_t i = 0; i < channel->index.count; i++) {
+        SignalValue* sv = channel->index.map[i].signal;
         sv->val = sv->final_val;
         sv->bin_size = 0;
     }
@@ -624,7 +625,7 @@ void simbus_handle_notify_message(
     /* Benchmarking/Profiling. */
     if (adapter->bus_time > 0.0) {
         struct timespec ref_ts = get_timespec_now();
-        uint64_t model_exec_time =
+        uint64_t        model_exec_time =
             notify(NotifyMessage_bench_model_time_ns(notify_message));
         uint64_t model_proc_time =
             notify(NotifyMessage_bench_notify_time_ns(notify_message));
@@ -808,6 +809,7 @@ void simbus_handle_message(Adapter* adapter, const char* channel_name,
             if (0) {
                 for (uint32_t i = 0; i < am->channels_length; i++) {
                     Channel* ch = _get_channel_byindex(am, i);
+                    _refresh_index(ch);
                     resolve_channel_and_model_start(
                         adapter, ch, model_time, stop_time);
                 }

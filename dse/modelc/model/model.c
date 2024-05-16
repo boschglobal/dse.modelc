@@ -57,6 +57,7 @@ void model_function_destroy(ModelFunction* model_function)
             if (_mfc && _mfc->signal_names) {
                 free(_mfc->signal_names);
             }
+            if (_mfc && _mfc->signal_map) free(_mfc->signal_map);
             if (_mfc && _mfc->signal_transform) free(_mfc->signal_transform);
         }
         hashmap_destroy(&model_function->channels);
@@ -216,9 +217,9 @@ void _load_signals(ModelInstanceSpec* model_instance, ChannelSpec* channel_spec,
             log_info("  signal[%u] : %s", i, signal_list->names[i]);
             SignalTransform* st =
                 hashmap_get(&__handler_transform_map, signal_list->names[i]);
-            if (st) log_info("    transform[linear] : factor=%f, offset=%f",
-                st->linear.factor,
-                st->linear.offset);
+            if (st)
+                log_info("    transform[linear] : factor=%f, offset=%f",
+                    st->linear.factor, st->linear.offset);
         }
     }
     *vector_type = __handler_signal_vector_type;

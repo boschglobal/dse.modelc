@@ -43,21 +43,20 @@ typedef struct Channel {
     void*       endpoint_channel;  // Reference to an Endpoint object
                                    // which represents this Channel.
     /* Signal properties. */
-    HashMap     signal_values;       // Collection of SignalValue, key is name.
-    char**      signal_values_keys;  // Cached result of hashmap_keys, update
-                                     // on hashmap_set/remove.
-    uint32_t    signal_values_length;
-    SignalMap*  signal_values_map;  // Generated based on signal_values_keys,
-                                    // cached speedup.
-    /* Signal references (to controller/model API). */
-    void*       ref__signal_value;
-    bool        ref__convert_uint32;  // the type of the void* signal_value
-    bool        ref__convert_int32;   // double otherwise.
+    HashMap     signal_values;
+    struct {
+        /* Index supporting the signal_values hash. */
+        char**     names;
+        uint32_t   count;
+        uint32_t   hash_code;
+        /* Map used by _this_ channel (contains all signals). */
+        SignalMap* map;
+    } index;
     /* Bus properties. */
-    SimpleSet*  model_register_set;
-    SimpleSet*  model_ready_set;
-    uint32_t    expected_model_count;  // Don't start until count reached,
-                                       // could get more(?).
+    SimpleSet* model_register_set;
+    SimpleSet* model_ready_set;
+    uint32_t   expected_model_count;  // Don't start until count reached,
+                                      // could get more(?).
 } Channel;
 
 

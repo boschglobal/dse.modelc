@@ -100,10 +100,12 @@ static int __marshal__adapter2model(void* _mfc, void* _spec)
     marshal_spec*         spec = _spec;
     ModelInstancePrivate* mip = spec->mi->private;
     AdapterModel*         am = mip->adapter_model;
-    SignalMap*            sm;
 
-    sm = adapter_get_signal_map(
-        am, mfc->channel_name, mfc->signal_names, mfc->signal_count);
+    if (mfc->signal_map == NULL) {
+        mfc->signal_map = adapter_get_signal_map(
+            am, mfc->channel_name, mfc->signal_names, mfc->signal_count);
+    }
+    SignalMap* sm = mfc->signal_map;
 
     if (mfc->signal_value_double) {
         controller_transform_to_model(mfc, sm);
@@ -121,7 +123,6 @@ static int __marshal__adapter2model(void* _mfc, void* _spec)
             mfc->signal_value_binary_reset_called[si] = false;
         }
     }
-    free(sm);
     return 0;
 }
 static int __marshal__model2adapter(void* _mfc, void* _spec)
@@ -130,10 +131,13 @@ static int __marshal__model2adapter(void* _mfc, void* _spec)
     marshal_spec*         spec = _spec;
     ModelInstancePrivate* mip = spec->mi->private;
     AdapterModel*         am = mip->adapter_model;
-    SignalMap*            sm;
 
-    sm = adapter_get_signal_map(
-        am, mfc->channel_name, mfc->signal_names, mfc->signal_count);
+    if (mfc->signal_map == NULL) {
+        mfc->signal_map = adapter_get_signal_map(
+            am, mfc->channel_name, mfc->signal_names, mfc->signal_count);
+    }
+    SignalMap* sm = mfc->signal_map;
+
     if (mfc->signal_value_double) {
         controller_transform_from_model(mfc, sm);
     }
@@ -155,7 +159,6 @@ static int __marshal__model2adapter(void* _mfc, void* _spec)
             mfc->signal_value_binary_size[si] = 0;
         }
     }
-    free(sm);
     return 0;
 }
 static int __marshal__model_function(void* _mf, void* _spec)

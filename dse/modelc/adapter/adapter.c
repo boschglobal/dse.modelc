@@ -157,22 +157,6 @@ error_clean_up:
 }
 
 
-SignalValue* _get_signal_value(Channel* channel, const char* signal_name)
-{
-    SignalValue* sv = hashmap_get(&channel->signal_values, signal_name);
-    if (sv) return sv;
-
-    /* Add a new SignalValue, assume dynamically provided name. */
-    sv = calloc(1, sizeof(SignalValue));
-    assert(sv);
-    sv->name = malloc(strlen(signal_name) + 1);
-    snprintf(sv->name, strlen(signal_name) + 1, "%s", signal_name);
-    if (hashmap_set(&channel->signal_values, signal_name, sv)) return sv;
-    assert(0); /* Should not happen. */
-    return NULL;
-}
-
-
 static SignalMap* _get_signal_value_map(
     Channel* channel, const char** signal_name, uint32_t signal_count)
 {
@@ -187,41 +171,70 @@ static SignalMap* _get_signal_value_map(
 }
 
 
-void _update_signal_value_keys(Channel* channel)
+static void _destroy_index(Channel* channel)
 {
-    if (channel->signal_values_keys) {
-        for (uint32_t _ = 0; _ < channel->signal_values_length; _++)
-            free(channel->signal_values_keys[_]);
-        free(channel->signal_values_keys);
-        channel->signal_values_keys = NULL;
+    if (channel->index.names) {
+        for (uint32_t _ = 0; _ < channel->index.count; _++)
+            free(channel->index.names[_]);
+        free(channel->index.names);
+        channel->index.names = NULL;
+        channel->index.count = 0;
     }
-    if (channel->signal_values_map) {
-        free(channel->signal_values_map);
-        channel->signal_values_map = NULL;
+    if (channel->index.map) {
+        free(channel->index.map);
+        channel->index.map = NULL;
     }
-    channel->signal_values_keys = hashmap_keys(&channel->signal_values);
-    channel->signal_values_length = hashmap_number_keys(channel->signal_values);
-    channel->signal_values_map = _get_signal_value_map(channel,
-        (const char**)channel->signal_values_keys,
-        channel->signal_values_length);
+}
+
+static void _generate_index(Channel* channel)
+{
+    _destroy_index(channel);
+
+    channel->index.names = hashmap_keys(&channel->signal_values);
+    channel->index.count = hashmap_number_keys(channel->signal_values);
+    channel->index.map = _get_signal_value_map(
+        channel, (const char**)channel->index.names, channel->index.count);
+}
+
+static void _invalidate_index(Channel* channel)
+{
+    channel->index.hash_code++;  // Signal consumers of index change.
+    _destroy_index(channel);
+}
+
+void _refresh_index(Channel* channel)
+{
+    if (channel->index.names == NULL) _generate_index(channel);
+}
+
+SignalValue* _get_signal_value(Channel* channel, const char* signal_name)
+{
+    SignalValue* sv = hashmap_get(&channel->signal_values, signal_name);
+    if (sv) return sv;
+
+    /* Add a new SignalValue, assume dynamically provided name. */
+    sv = calloc(1, sizeof(SignalValue));
+    sv->name = strdup(signal_name);
+    sv = hashmap_set(&channel->signal_values, signal_name, sv);
+    assert(sv);
+    _invalidate_index(channel);
+
+    return sv;
 }
 
 
 SignalValue* _get_signal_value_byindex(Channel* channel, uint32_t index)
 {
-    assert(index < channel->signal_values_length);
-    const char* signal_name = channel->signal_values_keys[index];
-    return _get_signal_value(channel, signal_name);
+    _refresh_index(channel);
+    assert(index < channel->index.count);
+    return _get_signal_value(channel, channel->index.names[index]);
 }
 
 
 SignalMap* adapter_get_signal_map(AdapterModel* am, const char* channel_name,
     const char** signal_name, uint32_t signal_count)
 {
-    /* Generate a mapping from Index to SignalValue to avoid constant
-       hashmap lookups. Generate each time new signals are added.
-
-       This will generate an array of map objects. The indexing will
+    /* This will generate an array of map objects. The indexing will
        match the callers signal_name array, the map holds a pointer
        to the signal value of the adapter (the consolidation point).
 
@@ -229,13 +242,9 @@ SignalMap* adapter_get_signal_map(AdapterModel* am, const char* channel_name,
 
        Caller to free SignalMap, but not referenced SignalValue object.
     */
-    SignalMap* sm;
-    Channel*   ch = _get_channel(am, channel_name);
+    Channel* ch = _get_channel(am, channel_name);
     assert(ch);
-
-    sm = _get_signal_value_map(ch, signal_name, signal_count);
-    _update_signal_value_keys(ch);
-    return sm;
+    return _get_signal_value_map(ch, signal_name, signal_count);
 }
 
 
@@ -252,7 +261,7 @@ Channel* adapter_init_channel(AdapterModel* am, const char* channel_name,
     for (uint32_t i = 0; i < signal_count; i++) {
         _get_signal_value(ch, signal_name[i]); /* Creates if missing. */
     }
-    _update_signal_value_keys(ch);
+    _refresh_index(ch);
 
     /* Return the channel object so that caller can configure other properties.
      */
@@ -329,7 +338,9 @@ static void _adapter_register(AdapterModel* am)
          channel_index++) {
         Channel* ch = _get_channel_byindex(am, channel_index);
         ns(MessageType_union_ref_t) message;
-        uint32_t signal_list_length = ch->signal_values_length;
+
+        _refresh_index(ch);
+        uint32_t signal_list_length = ch->index.count;
 
         /* SignalIndex with SignalLookup */
         log_simbus("SignalIndex --> [%s]", ch->name);
@@ -445,8 +456,8 @@ static void sv_delta_to_msgpack(Channel* channel, msgpack_packer* pk)
     /* First(root) Object, array, 2 elements. */
     msgpack_pack_array(pk, 2);
     uint32_t changed_signal_count = 0;
-    for (uint32_t i = 0; i < channel->signal_values_length; i++) {
-        SignalValue* sv = channel->signal_values_map[i].signal;
+    for (uint32_t i = 0; i < channel->index.count; i++) {
+        SignalValue* sv = channel->index.map[i].signal;
         if (sv->uid == 0) continue;
         if ((sv->val != sv->final_val) || (sv->bin && sv->bin_size)) {
             changed_signal_count++;
@@ -454,8 +465,8 @@ static void sv_delta_to_msgpack(Channel* channel, msgpack_packer* pk)
     }
     /* 1st Object in root Array, list of UID's. */
     msgpack_pack_array(pk, changed_signal_count);
-    for (uint32_t i = 0; i < channel->signal_values_length; i++) {
-        SignalValue* sv = channel->signal_values_map[i].signal;
+    for (uint32_t i = 0; i < channel->index.count; i++) {
+        SignalValue* sv = channel->index.map[i].signal;
         if (sv->uid == 0) continue;
         if ((sv->val != sv->final_val) || (sv->bin && sv->bin_size)) {
             msgpack_pack_uint32(pk, sv->uid);
@@ -463,8 +474,8 @@ static void sv_delta_to_msgpack(Channel* channel, msgpack_packer* pk)
     }
     /* 2st Object in root Array, list of Values. */
     msgpack_pack_array(pk, changed_signal_count);
-    for (uint32_t i = 0; i < channel->signal_values_length; i++) {
-        SignalValue* sv = channel->signal_values_map[i].signal;
+    for (uint32_t i = 0; i < channel->index.count; i++) {
+        SignalValue* sv = channel->index.map[i].signal;
         if (sv->uid == 0) continue;
         if (sv->bin && sv->bin_size) {
             msgpack_pack_bin_with_body(pk, sv->bin, sv->bin_size);
@@ -496,7 +507,7 @@ static int notify_encode_sv(void* value, void* data)
     for (uint32_t i = 0; i < am->channels_length; i++) {
         Channel* ch = _get_channel_byindex(am, i);
         assert(ch);
-        assert(ch->signal_values_map);
+        _refresh_index(ch);
         log_simbus("SignalVector --> [%s:%u]", ch->name, am->model_uid);
 
         msgpack_sbuffer_clear(&sbuf);
@@ -736,24 +747,27 @@ void adapter_destroy(Adapter* adapter)
 }
 
 
+static void _destroy_signal_value(void* map_item, void* data)
+{
+    UNUSED(data);
+
+    SignalValue* sv = map_item;
+    if (sv) {
+        if (sv->name) free(sv->name);
+        if (sv->bin) free(sv->bin);
+        free(sv);
+    }
+}
+
+
 void adapter_destroy_adapter_model(AdapterModel* am)
 {
     if (am && am->channels_length) {
         for (uint32_t i = 0; i < am->channels_length; i++) {
             Channel* ch = _get_channel_byindex(am, i);
-            for (uint32_t si = 0; si < ch->signal_values_length; si++) {
-                SignalValue* sv = _get_signal_value_byindex(ch, si);
-                if (sv->name) free(sv->name);
-                if (sv->bin) free(sv->bin);
-                if (sv) free(sv);
-            }
-            hashmap_destroy(&ch->signal_values);
-            if (ch->signal_values_keys) {
-                for (uint32_t _ = 0; _ < ch->signal_values_length; _++)
-                    free(ch->signal_values_keys[_]);
-            }
-            free(ch->signal_values_keys);
-            free(ch->signal_values_map);
+            hashmap_destroy_ext(
+                &ch->signal_values, _destroy_signal_value, NULL);
+            _destroy_index(ch);
             if (ch->model_register_set) {
                 set_destroy(ch->model_register_set);
                 free(ch->model_register_set);
@@ -780,8 +794,8 @@ SignalValue* _find_signal_by_uid(Channel* channel, uint32_t uid)
 {
     if (uid == 0) return NULL;
 
-    for (unsigned int i = 0; i < channel->signal_values_length; i++) {
-        SignalValue* sv = channel->signal_values_map[i].signal;
+    for (unsigned int i = 0; i < channel->index.count; i++) {
+        SignalValue* sv = channel->index.map[i].signal;
         if (sv->uid == uid) return sv;
     }
     return NULL;
@@ -791,6 +805,8 @@ SignalValue* _find_signal_by_uid(Channel* channel, uint32_t uid)
 static void process_signal_value_data(
     Channel* channel, flatbuffers_uint8_vec_t data_vector, size_t length)
 {
+    _refresh_index(channel);
+
     /* Unpack. */
     bool             result;
     msgpack_unpacker unpacker;
@@ -940,6 +956,7 @@ static void process_signal_index_message(
         return;
     }
     /* Decode the SignalLookup vector. */
+    _refresh_index(channel);
     ns(SignalLookup_vec_t) vector = ns(SignalIndex_indexes(signal_index_table));
     size_t vector_len = ns(SignalLookup_vec_len(vector));
     for (uint32_t _vi = 0; _vi < vector_len; _vi++) {
@@ -953,8 +970,8 @@ static void process_signal_index_message(
         log_simbus("    SignalLookup: %s [UID=%u]", signal_name, signal_uid);
         if (signal_uid == 0) continue;
         /* Update the Adapter signal_value array. */
-        for (unsigned int i = 0; i < channel->signal_values_length; i++) {
-            SignalValue* sv = channel->signal_values_map[i].signal;
+        for (unsigned int i = 0; i < channel->index.count; i++) {
+            SignalValue* sv = channel->index.map[i].signal;
             if (strcmp(sv->name, signal_name) == 0) {
                 sv->uid = signal_uid;
                 break;
@@ -1113,13 +1130,14 @@ void adapter_model_dump_debug(AdapterModel* am, const char* name)
     for (uint32_t channel_index = 0; channel_index < am->channels_length;
          channel_index++) {
         Channel* ch = _get_channel_byindex(am, channel_index);
+        _refresh_index(ch);
         log_simbus("----------------------------------------");
         log_simbus("Channel [%u]:", channel_index);
         log_simbus("  name         : %s", ch->name);
-        log_simbus("  signal_count : %u", ch->signal_values_length);
+        log_simbus("  signal_count : %u", ch->index.count);
         log_simbus("  signal_value :");
-        for (uint32_t i = 0; i < ch->signal_values_length; i++) {
-            SignalValue* sv = ch->signal_values_map[i].signal;
+        for (uint32_t i = 0; i < ch->index.count; i++) {
+            SignalValue* sv = ch->index.map[i].signal;
             log_simbus("    [%u] uid=%u, val=%f, final_val=%f, name=%s", i,
                 sv->uid, sv->val, sv->final_val, sv->name);
         }
