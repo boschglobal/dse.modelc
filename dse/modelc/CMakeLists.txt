@@ -48,6 +48,7 @@ set(DSE_CLIB_SOURCE_FILES
     ${DSE_CLIB_SOURCE_DIR}/clib/collections/hashmap.c
     ${DSE_CLIB_SOURCE_DIR}/clib/collections/queue.c
     ${DSE_CLIB_SOURCE_DIR}/clib/collections/set.c
+    ${DSE_CLIB_SOURCE_DIR}/clib/data/marshal.c
     ${DSE_CLIB_SOURCE_DIR}/clib/util/binary.c
     ${DSE_CLIB_SOURCE_DIR}/clib/util/strings.c
     ${DSE_CLIB_SOURCE_DIR}/clib/util/yaml.c
