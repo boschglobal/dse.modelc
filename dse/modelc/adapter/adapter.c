@@ -755,7 +755,7 @@ static void _destroy_signal_value(void* map_item, void* data)
     if (sv) {
         if (sv->name) free(sv->name);
         if (sv->bin) free(sv->bin);
-        free(sv);
+        // Hashmap will free sv object.
     }
 }
 
