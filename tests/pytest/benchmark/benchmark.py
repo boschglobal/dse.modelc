@@ -51,7 +51,7 @@ USE_SAME_MODEL_SOURCE_OBJECT = False # Update value to 'True' if each model inst
 CHANNEL_NAMES = os.getenv('CHANNEL_NAMES', 'data_1_channel;')
 CHANNEL_ALIAS = os.getenv('CHANNEL_NAMES', 'data_1;')
 SIMER_SIMULATION_PATH = '_working/simer'
-LOG_LEVEL = 5
+LOG_LEVEL = 1
 
 
 def generate_signal_group_yaml(num_of_signals):
@@ -347,18 +347,32 @@ def plot_to_excel(plot_data, csv_data, max_df_val, file_name):
     plot_data = plot_data.drop(columns = ['scenario', 'transport', 'channels'])
     row_count, col_count = plot_data.shape
     out_file_name = f'_out/{file_name}.xlsx'
-    sheet_name = '_'.join(scenario.split('_')[1:3]) + '_' + transport.split('_')[-1] + '_chnl_'+str(channels)
+
+    tmp_scenario = scenario.split('_')
+    sheet_name = (tmp_scenario[-1].title() + tmp_scenario[1].title() + transport.replace('redispubsub_', 'redis_').replace('message_queue', 'mq').title() + '#' + str(1)).replace('_', '')
+
     if os.path.exists(out_file_name) is False :
         wb = Workbook()
         ws = wb.active
-        for row in dataframe_to_rows(csv_data, index=False, header=True):# loading the complete plot data in first sheet.
-            ws.append(row)
-        ws.title = 'Plot_Data'
+        ws.title = f'{sheet_name}_D' # gets created only one time
         wb.save(out_file_name)
     wb = load_workbook(out_file_name)
-    wb.create_sheet(sheet_name)
-    ws = wb[sheet_name]
+    sheetNames = [name.replace('_P', '') for name in wb.sheetnames if '_D' not in name]
+    if len(sheetNames) > 0:
+        sheetNameId = sheetNames[-1].split('#')
+        sheet_id = int(sheetNameId[-1]) + 1
+        sheet_name = sheetNameId[0] + '#' + str(sheet_id)
 
+    data_sheet = sheet_name + '_D'
+    if data_sheet not in wb.sheetnames:
+        wb.create_sheet(data_sheet)
+    ws = wb[data_sheet]
+    for row in dataframe_to_rows(csv_data, index=False, header=True):# loading the complete plot data
+        ws.append(row)
+
+    plot_sheet = sheet_name + '_P'
+    wb.create_sheet(plot_sheet)
+    ws = wb[plot_sheet]
     data = plot_data.values.tolist()
     for row in data:
         ws.append(row)
@@ -381,7 +395,7 @@ def plot_to_excel(plot_data, csv_data, max_df_val, file_name):
     if os.path.exists(f"_out/{file_name}.csv"):
         os.remove(f"_out/{file_name}.csv")
     ws.add_chart(chart, "K2")
-    wb.active = wb[sheet_name]
+    wb.active = wb[plot_sheet]
     wb.save(out_file_name)
 
 
