@@ -191,6 +191,9 @@ int32_t wait_message(Adapter* adapter, const char**    channel_name,
             if (channel_name) *channel_name = msg_channel_name;
             break;
         }
+        /* Condition: bus mode
+           Message processed, caller determines next action. */
+        if (adapter->bus_mode) break;
     }
     return 0;
 }
