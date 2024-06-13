@@ -63,7 +63,7 @@ func IndexYamlFiles(path string) map[string][]kind.KindDoc {
 	return index
 }
 
-func RedisCommand(redisPath string) *session.Command {
+func RedisCommand(redisPath string, quiet bool) *session.Command {
 	if redisPath == "" {
 		slog.Info("No Redis path specified, remote operation(?).")
 		return nil
@@ -73,7 +73,7 @@ func RedisCommand(redisPath string) *session.Command {
 		Name:       "Redis",
 		Prog:       redisPath,
 		Args:       []string{"/usr/local/etc/redis/redis.conf"},
-		Quiet:      true,
+		Quiet:      quiet,
 		KillNoWait: true,
 	}
 }

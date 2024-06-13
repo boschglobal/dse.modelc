@@ -29,12 +29,18 @@ func main() {
 	slog.SetDefault(NewLogger(*logger))
 	printFlags()
 
-	// Build commands.
 	index := simer.IndexYamlFiles(".")
 	cmds := []*session.Command{}
-	if c := simer.RedisCommand(*redisPath); c != nil {
+
+	// Redis.
+	quietRedis := true
+	if *logger < 3 {
+		quietRedis = false
+	}
+	if c := simer.RedisCommand(*redisPath, quietRedis); c != nil {
 		cmds = append(cmds, c)
 	}
+	// Simbus and Models.
 	if c := simer.SimbusCommand(index, *simbusPath, flags); c != nil {
 		cmds = append(cmds, c)
 	}
