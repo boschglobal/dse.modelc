@@ -38,6 +38,7 @@ RUN apt-get -y update; \
         gnupg \
         less \
         lsb-release \
+        make \
         unzip \
         vim \
         zip \
