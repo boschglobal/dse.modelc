@@ -248,27 +248,40 @@ int32_t redispubsub_start(Endpoint* endpoint)
     RedisPubSubEndpoint* redis_ep = (RedisPubSubEndpoint*)endpoint->private;
 
     /* Redis connection - RX direction (sub_key) one for each channel. */
-    if (redis_ep->hostname) {
-        redis_ep->sub_ctx =
-            redisAsyncConnect(redis_ep->hostname, redis_ep->port);
-    } else if (redis_ep->path) {
-        redis_ep->sub_ctx = redisAsyncConnectUnix(redis_ep->path);
-    } else {
-        log_fatal("Redis Pub/Sub connect parameters not complete.");
-    }
-    redisAsyncContext* _sub_ctx = (redisAsyncContext*)redis_ep->sub_ctx;
-    if (_sub_ctx == NULL || _sub_ctx->err) {
-        if (_sub_ctx) {
-            log_notice("Connection error: %s", _sub_ctx->errstr);
+    for (int i = 0; i < 60; i++) {
+        if (redis_ep->hostname) {
+            redis_ep->sub_ctx =
+                redisAsyncConnect(redis_ep->hostname, redis_ep->port);
+        } else if (redis_ep->path) {
+            redis_ep->sub_ctx = redisAsyncConnectUnix(redis_ep->path);
+        } else {
+            log_fatal("Redis Pub/Sub connect parameters not complete.");
+        }
+        /* Check the context was created OK. */
+        if (redis_ep->sub_ctx) {
+            redisAsyncContext* _ctx = redis_ep->sub_ctx;
+            if (_ctx->err) {
+                log_notice("Connection error: %s", _ctx->err);
+                redisAsyncFree(redis_ep->sub_ctx);
+                redis_ep->sub_ctx = NULL;
+            } else {
+                /* Context is OK. */
+                break;
+            }
         } else {
             log_notice("Connection error: can't allocate Redis context");
         }
+        /* Otherwise retry. */
         log_error("Redis connect failed!");
-        goto error_clean_up;
+        sleep(1);
+    }
+    if (redis_ep->sub_ctx == NULL) {
+        log_fatal("redisAsyncConnect() failed!");
     }
     signal(SIGPIPE, SIG_IGN);
     redis_ep->sub_event_base = event_base_new();
     redisLibeventAttach(redis_ep->sub_ctx, redis_ep->sub_event_base);
+
     /* Build the SUB command. */
     char**   keys = hashmap_keys(&endpoint->endpoint_channels);
     uint32_t count = hashmap_number_keys(endpoint->endpoint_channels);
@@ -288,6 +301,7 @@ int32_t redispubsub_start(Endpoint* endpoint)
     for (uint32_t _ = 0; _ < count; _++)
         free(keys[_]);
     free(keys);
+
     /* Run the SUB command. */
     log_trace("Subscribe Command : ");
     for (int i = 0; i < redis_ep->sub__argc; i++)
@@ -302,8 +316,7 @@ int32_t redispubsub_start(Endpoint* endpoint)
     redis_ep->sub_event_timeout = event_new(redis_ep->sub_event_base, -1, 0,
         &__event_timeout_handler__, redis_ep->sub_event_base);
     if (!redis_ep->sub_event_timeout) {
-        log_error("event_new() failed!");
-        goto error_clean_up;
+        log_fatal("event_new() failed!");
     }
     event_add(redis_ep->sub_event_timeout, &timeout);
     event_base_dispatch(redis_ep->sub_event_base);
@@ -313,7 +326,7 @@ int32_t redispubsub_start(Endpoint* endpoint)
         log_trace("redispubsub_recv_fbs: no message (timeout)");
     }
     if (!redis_ep->sub_active) {
-        log_error("Redis SUBSCRIBE did not activate!");
+        log_fatal("Redis SUBSCRIBE did not activate!");
     }
     event_del(redis_ep->sub_event_timeout);
     event_free(redis_ep->sub_event_timeout);
@@ -323,16 +336,11 @@ int32_t redispubsub_start(Endpoint* endpoint)
     redis_ep->sub_event_timeout = event_new(redis_ep->sub_event_base, -1,
         EV_PERSIST, &__event_timeout_handler__, redis_ep->sub_event_base);
     if (!redis_ep->sub_event_timeout) {
-        log_error("event_new() failed!");
-        goto error_clean_up;
+        log_fatal("event_new() failed!");
     }
     event_add(redis_ep->sub_event_timeout, &timeout_1s);
 
     return 0;
-
-error_clean_up:
-    redis_endpoint_destroy(endpoint);
-    return 1;
 }
 
 
