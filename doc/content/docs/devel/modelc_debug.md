@@ -51,17 +51,17 @@ Example Makefile:
 ```bash
 # Docker CMDS (shortened example).
 ifneq ($(CI), true)
-	DOCKER_BUILDER_CMD := docker run -it --rm \
-		--volume $$(pwd):/tmp/repo \
-		...
-		--env GDB_CMD="$(GDB_CMD)" \
-		--workdir /tmp/repo \
-		$(GCC_BUILDER_IMAGE)
+  DOCKER_BUILDER_CMD := docker run -it --rm \
+    --volume $$(pwd):/tmp/repo \
+    ...
+    --env GDB_CMD="$(GDB_CMD)" \
+    --workdir /tmp/repo \
+    $(GCC_BUILDER_IMAGE)
 endif
 
 # Run target.
 run:
-	cd build/_out; $(GDB_CMD) bin/test_tdd
+  cd build/_out; $(GDB_CMD) bin/test_tdd
 ```
 
 

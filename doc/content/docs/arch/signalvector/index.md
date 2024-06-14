@@ -78,7 +78,7 @@ const char* value = sv->annotation(sv, i, "name");
 
 ### Configuration
 
-Binary signal vectors are represented by a `SignalGroup` YAML document with a ***metadata annotation*** **`vector_type: binary`**. Each signal of a binary signal vector should also have an annotation `mime_type` which describes the binary data. The default value provided by the Signal Vector API is `application/octet-stream` (which, from a system integration perspective, is almost totally useless).
+Binary signal vectors are represented by a `SignalGroup` YAML document with a **metadata annotation** `vector_type: binary`. Each signal of a binary signal vector should also have an annotation `mime_type` which describes the binary data. The default value provided by the Signal Vector API is `application/octet-stream` (which, from a system integration perspective, is almost totally useless).
 
 Individual signals may have additional annotations which can be used to describe the behaviour or properties of the signal - those annotations may be interpreted by a model which uses those signals.
 
@@ -194,9 +194,9 @@ int model_function(ModelInstanceSpec* mi)
 * [dse/modelc/model.h](https://github.com/boschglobal/dse.modelc/blob/main/dse/modelc/model.h) - definition of Signal Vector API.
 * [SignalGroup](https://github.com/boschglobal/dse.schemas/blob/main/schemas/yaml/SignalGroup.yaml) schema definition.
 * DSE Model C examples:
-    * [Binary Model](https://github.com/boschglobal/dse.modelc/tree/main/dse/modelc/examples/binary)
-    * [NCodec Model](https://github.com/boschglobal/dse.modelc/tree/main/dse/modelc/examples/ncodec)
-    * [Transform Model](https://github.com/boschglobal/dse.modelc/tree/main/dse/modelc/examples/transform)
+  * [Binary Model](https://github.com/boschglobal/dse.modelc/tree/main/dse/modelc/examples/binary)
+  * [NCodec Model](https://github.com/boschglobal/dse.modelc/tree/main/dse/modelc/examples/ncodec)
+  * [Transform Model](https://github.com/boschglobal/dse.modelc/tree/main/dse/modelc/examples/transform)
 * Binary Codecs:
-    * [Network Codec]({{< relref "docs/devel/modelc_ncodec/index.md" >}}) from DSE Model C which implements a stream interface to the Network Codec API by using binary signals and associated MIME type annotations.
-    * [Network Codec API](https://github.com/boschglobal/dse.standards/tree/main/dse/ncodec) generalised codec library with an example binary stream implementation.
+  * [Network Codec]({{< relref "docs/devel/modelc_ncodec/index.md" >}}) from DSE Model C which implements a stream interface to the Network Codec API by using binary signals and associated MIME type annotations.
+  * [Network Codec API](https://github.com/boschglobal/dse.standards/tree/main/dse/ncodec) generalised codec library with an example binary stream implementation.

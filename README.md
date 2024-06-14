@@ -18,7 +18,7 @@ Model C Library of the Dynamic Simulation Environment (DSE) Core Platform.
 
 ### Project Structure
 
-```
+```text
 L- dse/modelc   Model C Library source code.
 L- extra        Build infrastructure.
   L- tools      Containerised tools.
@@ -46,7 +46,7 @@ $ make
 $ simer dse/modelc/build/_out/examples/minimal
 ```
 
-Documentation for the `simer` tool is available here : https://boschglobal.github.io/dse.doc/docs/user/simer
+Documentation for the `simer` tool is available here : <https://boschglobal.github.io/dse.doc/docs/user/simer>
 
 
 ## Build

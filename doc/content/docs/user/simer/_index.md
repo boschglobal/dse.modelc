@@ -37,7 +37,7 @@ partition parts of the simulation, each with its own runtime configuration.
 
 #### ModelC Example Simulation
 
-```
+```text
 # Example Source Code:
 L- dse/modelc/examples/simer
   L- simulation.yaml          Stack definitions.
@@ -59,7 +59,7 @@ L- dse/modelc/build/_out/examples/simer    <== simulation path
 
 #### Manifest Generated Simulation
 
-```
+```text
 # Project repo (Taskfile/Manifest based):
 L- <repo>/out/simulation/<name>
   L- simulation.yaml          Stack definitions.
@@ -89,7 +89,7 @@ is set for one model in a set of stacked models, the x32 versions of _all_ stack
 be executed by the x32 version of the ModelC runtime.
 
 
-#### Example
+#### Example x32 Model
 
 <details>
 <summary>simulation.yaml</summary>
@@ -125,7 +125,7 @@ can then be started independently in their own environment.
 their own stack and run independently (with an older version of Simer).
 
 
-#### Example
+#### Example Remote Model
 
 <details>
 <summary>simulation.yaml</summary>
@@ -188,7 +188,7 @@ will start _all_ models in that stack in a single instance of the ModelC runtime
 > Note: the `simbus` model, provided by the SimBus tool, is started independently of any runtime properties.
 
 
-#### Example
+#### Example Stacked Model
 
 <details>
 <summary>simulation.yaml</summary>
@@ -240,7 +240,7 @@ __Additional Files__ may be specified in the `ModelInstanceRuntime:files` proper
 of each listed file should be relative to _simulation path_ or an _absolute path_.
 
 
-#### Example
+#### Example with Env & Files
 
 <details>
 <summary>simulation.yaml</summary>
@@ -420,7 +420,7 @@ In copy mode use:
 Finally, use:
 
 <tt>__Ctrl__+__b__  __d__</tt>
-: Detach from the _tmux_ session (***and exit the simulation!***).
+: Detach from the _tmux_ session (__and exit the simulation!__).
 
 
 ### GDB Debugging

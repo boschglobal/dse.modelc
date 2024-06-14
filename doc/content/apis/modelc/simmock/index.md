@@ -122,6 +122,8 @@ typedef struct ModelMock {
     int* sv_network;
     int* sv_save;
     int vtable;
+    int* sm_signal;
+    int* mfc_signal;
 }
 ```
 

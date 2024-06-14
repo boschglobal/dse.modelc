@@ -216,10 +216,10 @@ super-linter:
 		--env RUN_LOCAL=true \
 		--env DEFAULT_BRANCH=main \
 		--env IGNORE_GITIGNORED_FILES=true \
-		--env FILTER_REGEX_EXCLUDE="(dse/mocks/examples/.*|dse/modelc/examples/doc/.*|doc/content/apis/modelc/examples/.*|doc/content/docs/examples/modelc/.*)" \
+		--env FILTER_REGEX_EXCLUDE="(dse/mocks/examples/.*|dse/modelc/examples/doc/.*|doc/content/apis/modelc/examples/.*|doc/content/docs/examples/modelc/.*|doc/content/apis.*)" \
 		--env VALIDATE_CPP=true \
+		--env VALIDATE_DOCKERFILE=true \
+		--env VALIDATE_MARKDOWN=true \
 		--env VALIDATE_YAML=true \
-		--env VALIDATE_PYTHON_PYLINT=true \
-		--env VALIDATE_PYTHON_FLAKE8=true \
-		github/super-linter:slim-v5
+		ghcr.io/super-linter/super-linter:slim-v6
 

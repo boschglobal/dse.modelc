@@ -3,8 +3,6 @@ title: "Transports"
 draft: true
 ---
 
-# Transports
-
 ## Redis PubSub
 
 ### Usage TCP
@@ -34,7 +32,7 @@ spec:
 
 ### Usage UNIX Socket File
 
-#### CLI
+#### CLI with Socket
 
 ```bash
 $ simbus stack.yaml --transport redispubsub --uri unix:///tmp/redis/redis.sock
@@ -42,7 +40,7 @@ $ modelc --name instance model.yaml --transport redispubsub --uri unix:///tmp/re
 ```
 
 
-#### Stack (YAML)
+#### Stack with Socket
 
 ```yaml
 ---
@@ -108,8 +106,8 @@ $ ulimit -Sq 100000
 
 #### More Info
 
-* https://stackoverflow.com/questions/60275031/how-to-set-posix-message-queues-limit-to-unlimited-in-docker-container-using-u
-* https://man7.org/linux/man-pages/man7/mq_overview.7.html
+* <https://stackoverflow.com/questions/60275031/how-to-set-posix-message-queues-limit-to-unlimited-in-docker-container-using-u>
+* <https://man7.org/linux/man-pages/man7/mq_overview.7.html>
 
 
 ### Usage
@@ -117,7 +115,7 @@ $ ulimit -Sq 100000
 The `stem` part of the URI should be unique to the running simulation.
 
 
-#### CLI
+#### CLI with Message Queue
 
 ```bash
 $ simbus stack.yaml --transport mq --uri posix:///stem
@@ -125,7 +123,7 @@ $ modelc --name instance model.yaml --transport mq --uri posix:///stem
 ```
 
 
-#### Stack (YAML)
+#### Stack with Message Queue
 
 ```yaml
 ---

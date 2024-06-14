@@ -25,7 +25,7 @@ jobs:
           VALIDATE_ALL_CODEBASE: true
           DEFAULT_BRANCH: main
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          FILTER_REGEX_EXCLUDE: (dse/clib/fmi/fmi2/headers/.*|dse/clib/fmi/fmi3/headers/.*)
+          FILTER_REGEX_EXCLUDE: (dse/mocks/examples/.*|dse/modelc/examples/doc/.*|doc/content/apis/modelc/examples/.*|doc/content/docs/examples/modelc/.*|doc/content/apis.*)
           VALIDATE_CPP: true
           VALIDATE_DOCKERFILE: true
           # VALIDATE_MARKDOWN: true

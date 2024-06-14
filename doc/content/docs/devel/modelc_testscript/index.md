@@ -18,7 +18,7 @@ DSE Projects can use Testscript to run End-to-end tests (E2E) which are written 
 
 ## Code Layout and Test Organisation
 
-```
+```test
 L- tests/testscript    Directory containing Testscript tests.
   L- e2e               Collection of E2E tests.
     L- testcase.txtar  Individual testcase (in txtar format).

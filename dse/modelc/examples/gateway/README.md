@@ -4,13 +4,15 @@ Copyright 2023 Robert Bosch GmbH
 SPDX-License-Identifier: Apache-2.0
 -->
 
-### Run the Example
+# Gateway Example
+
+## Run the Example
 
 This example runs the Gateway using a containerised SimBus and ModelC runtime
 environment. There are numerous other ways to configure and run simulations.
 
 
-#### Build the Project
+### Build the Project
 
 ```bash
 $ git clone https://github.com/boschglobal/dse.modelc.git
@@ -19,7 +21,7 @@ $ make
 ```
 
 
-#### Setup SimBus
+### Setup SimBus
 
 ```bash
 # Create a network for the simulation.
@@ -38,7 +40,7 @@ $ docker run --rm -it --name simbus --net dse \
 The Docker images can also be build locally with the `make docker` target.
 
 
-##### Run the Gateway
+#### Run the Gateway
 
 ```bash
 # Start a container.

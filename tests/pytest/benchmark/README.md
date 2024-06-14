@@ -24,7 +24,7 @@ $ redis-cli -s /var/run/redis/redis.sock ping
 ```
 
 
-## Run a benchmark.
+## Run a benchmark
 
 ```bash
 # Clone the repo (if necessary).
@@ -65,15 +65,18 @@ $ ./benchmark.py  generate --models 1 --signals 10 --transport posix:///stem --c
 ## Configuration
 
 ### Input file setup
-    File Path : dse.modelc/tests/pytest/benchmark/
-    File Name : input.csv
-    File Type : csv
-    Columns :
-      - simbus_uri (defines the simbus transport type)
-      - num_of_channels (number of channels)
-      - num_of_models (number of models)
-      - step_size (step size)
-      - end_time (end time)
-      - signal_count (total number signals to be generated in signal_group.yaml)
-      - signal_change (max range of signals involved in simulation)
-      - out_file (file name for storing benchmark result. expected file type : csv)
+
+```yaml
+File Path : dse.modelc/tests/pytest/benchmark/
+File Name : input.csv
+File Type : csv
+Columns :
+    - simbus_uri (defines the simbus transport type)
+    - num_of_channels (number of channels)
+    - num_of_models (number of models)
+    - step_size (step size)
+    - end_time (end time)
+    - signal_count (total number signals to be generated in signal_group.yaml)
+    - signal_change (max range of signals involved in simulation)
+    - out_file (file name for storing benchmark result. expected file type : csv)
+```

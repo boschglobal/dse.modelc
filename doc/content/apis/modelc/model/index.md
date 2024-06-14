@@ -87,7 +87,8 @@ center footer Dynamic Simulation Environment
 ### Example (Signal Vector Interface)
 
 
-{{< readfile file="../examples/signalvector_interface.c" code="true" lang="c" >}}
+{{< readfile file="../examples/signalvector_interface.c" code="true" lang="c"
+>}}
 
 
 
@@ -146,6 +147,7 @@ typedef struct SignalVector {
     BinarySignalCodecFunc codec;
     ModelInstanceSpec* mi;
     void* index;
+    SignalGroupAnnotationGetFunc group_annotation;
 }
 ```
 
@@ -158,6 +160,7 @@ typedef struct SignalVectorVTable {
     BinarySignalReleaseFunc release;
     SignalAnnotationGetFunc annotation;
     BinarySignalCodecFunc codec;
+    SignalGroupAnnotationGetFunc group_annotation;
 }
 ```
 
@@ -370,7 +373,8 @@ spec:
 #### Example (Code Usage)
 
 
-{{< readfile file="../examples/signalvector_annotation.c" code="true" lang="c" >}}
+{{< readfile file="../examples/signalvector_annotation.c" code="true" lang="c"
+>}}
 
 
 NULL
@@ -445,13 +449,15 @@ spec:
   signals:
     - signal: can_bus
       annotations:
-        mime_type: application/x-automotive-bus; interface=stream; type=frame; bus=can; schema=fbs; bus_id=1; node_id=2; interface_id=3
+        mime_type: application/x-automotive-bus; interface=stream; type=frame;
+bus=can; schema=fbs; bus_id=1; node_id=2; interface_id=3
 ```
 
 #### Reference
 
 
-[Network Codec API](https://github.com/boschglobal/dse.standards/tree/main/dse/ncodec)
+[Network Codec
+API](https://github.com/boschglobal/dse.standards/tree/main/dse/ncodec)
 
 
 

@@ -21,7 +21,7 @@ features which are most often used when developing.
 ## Code Layout and Test Organisation
 
 
-```
+```text
 L- tests/cmocka       Directory containing CMocka tests.
   L- target           An individual test target (single test executable).
     L- __tests__.c    Entry point for the test target (runs test groups).
