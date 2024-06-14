@@ -31,9 +31,9 @@ MD026:
 MD028: false
 MD029: false                  # Ordered list item prefix
 MD033: false                  # Allow inline HTML
-#MD034: false
+# MD034: false
 MD036: false                  # Emphasis used instead of a heading
-#MD040: false
+# MD040: false
 
 #################
 # Rules by tags #
