@@ -188,6 +188,7 @@ endif()
 set(DSE_MOCK_DIR ${CMAKE_SOURCE_DIR}/../mocks)
 set(DSE_MODELC_PUBLIC_HEADERS
     gateway.h
+    mcl.h
     mcl_mk1.h
     model.h
     runtime.h

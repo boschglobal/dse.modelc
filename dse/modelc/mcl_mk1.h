@@ -2,8 +2,8 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-#ifndef DSE_MODELC_MCL_H_
-#define DSE_MODELC_MCL_H_
+#ifndef DSE_MODELC_MCL_MK1_H_
+#define DSE_MODELC_MCL_MK1_H_
 
 #include <dse/platform.h>
 #include <dse/clib/util/yaml.h>
@@ -175,4 +175,4 @@ __attribute__((deprecated))
 DLL_PUBLIC void mcl_destroy(ModelInstanceSpec* model_instance);
 
 
-#endif  // DSE_MODELC_MCL_H_
+#endif  // DSE_MODELC_MCL_MK1_H_

@@ -15,6 +15,7 @@ project(ModelC_Model_API)
 # ------------------
 add_library(model_api OBJECT
     gateway.c
+    mcl.c
     model.c
     ncodec.c
     schema.c
