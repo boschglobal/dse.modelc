@@ -32,11 +32,11 @@ DOC_LINKTITLE_gateway := Gateway
 DOC_TITLE_gateway := "Gateway API Reference"
 
 # Module "mcl"
-DOC_INPUT_mcl := dse/modelc/mcl.h
-DOC_CDIR_mcl := dse/modelc/controller/mcl.c
-DOC_OUTPUT_mcl := doc/content/apis/modelc/mcl/index.md
-DOC_LINKTITLE_mcl := MCL
-DOC_TITLE_mcl := "MCL API Reference"
+#DOC_INPUT_mcl := dse/modelc/mcl.h
+#DOC_CDIR_mcl := dse/modelc/controller/mcl.c
+#DOC_OUTPUT_mcl := doc/content/apis/modelc/mcl/index.md
+#DOC_LINKTITLE_mcl := MCL
+#DOC_TITLE_mcl := "MCL API Reference"
 
 # Module "model"
 DOC_INPUT_model := dse/modelc/model.h
@@ -68,7 +68,7 @@ DOC_TITLE_simmock := "SimMock API Reference"
 
 
 # Targets
-DOC_C_MODULES := gateway mcl model runtime schema simmock
+DOC_C_MODULES := gateway model runtime schema simmock
 #DOC_C_MODULES :=  model
 
 .PHONY: examples

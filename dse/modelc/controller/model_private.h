@@ -8,7 +8,7 @@
 
 #include <dse/modelc/adapter/adapter.h>
 #include <dse/modelc/controller/controller.h>
-#include <dse/modelc/mcl.h>
+#include <dse/modelc/mcl_mk1.h>
 
 
 typedef struct ModelInstancePrivate {

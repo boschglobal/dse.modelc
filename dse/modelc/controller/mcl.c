@@ -14,7 +14,7 @@
 #include <dse/clib/util/strings.h>
 #include <dse/clib/util/yaml.h>
 #include <dse/modelc/controller/model_private.h>
-#include <dse/modelc/mcl.h>
+#include <dse/modelc/mcl_mk1.h>
 
 
 #define HASHLIST_DEFAULT_SIZE 8
@@ -63,8 +63,8 @@ void mcl_register_adapter(MclAdapterDesc* adapter_desc)
 
 
 /**
-mcl_load
-========
+mcl_loadlib
+===========
 
 Loads an MCL Library which will contain a number of Strategy and/or Adapter
 methods. The MCL Library should implement function `mcl_setup()` which will
@@ -89,7 +89,8 @@ exit(errno)
 : Any error in loading an MCL represents a fatal configuration error and
   `exit()` is called to terminate execution.
 */
-int mcl_load(ModelInstanceSpec* model_instance)
+__attribute__((deprecated))
+int mcl_loadlib(ModelInstanceSpec* model_instance)
 {
     if (__mcl_dll_handle == NULL) _allocate_mcl();
     assert(__mcl_dll_handle);
@@ -180,6 +181,7 @@ exit(errno)
 : Any error in creating an MCL Model instance represents a fatal configuration
   error and `exit()` is called to terminate execution.
 */
+__attribute__((deprecated))
 int mcl_create(ModelInstanceSpec* model_instance)
 {
     assert(__mcl_strategy);
@@ -350,6 +352,7 @@ model_instance (ModelInstanceSpec*)
 : Model Instance object representing the Model. Contains various identifying
   and configuration elements.
 */
+__attribute__((deprecated))
 void mcl_destroy(ModelInstanceSpec* model_instance)
 {
     if (model_instance && model_instance->private) {

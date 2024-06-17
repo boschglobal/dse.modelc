@@ -9,7 +9,7 @@
 #include <dse/clib/collections/hashlist.h>
 #include <dse/modelc/controller/model_private.h>
 #include <dse/modelc/model.h>
-#include <dse/modelc/mcl.h>
+#include <dse/modelc/mcl_mk1.h>
 #include <dse/logger.h>
 
 
@@ -45,7 +45,7 @@ ModelDesc* model_create(ModelDesc* model)
      /* Load the MCL dll's. */
     log_debug("Load the MCL(s) ...");
     errno = 0;
-    int rc = mcl_load(mi);
+    int rc = mcl_loadlib(mi);
     if (rc) {
         if (errno == 0) errno = ECANCELED;
         log_fatal("Failed to load the configured MCL(s)!");
