@@ -163,16 +163,16 @@ typedef struct MclInstanceDesc {
 
 /* mcl.c - Model Compatibility Library (MCL) interface.*/
 __attribute__((deprecated))
-DLL_PUBLIC void mcl_register_strategy(MclStrategyDesc* strategy);
+DLL_PUBLIC void mcl_mk1_register_strategy(MclStrategyDesc* strategy);
 __attribute__((deprecated))
-DLL_PUBLIC void mcl_register_adapter(MclAdapterDesc* adapter);
+DLL_PUBLIC void mcl_mk1_register_adapter(MclAdapterDesc* adapter);
 
 __attribute__((deprecated))
-DLL_PUBLIC int  mcl_loadlib(ModelInstanceSpec* model_instance);
+DLL_PUBLIC int  mcl_mk1_loadlib(ModelInstanceSpec* model_instance);
 __attribute__((deprecated))
-DLL_PUBLIC int  mcl_create(ModelInstanceSpec* model_instance);
+DLL_PUBLIC int  mcl_mk1_create(ModelInstanceSpec* model_instance);
 __attribute__((deprecated))
-DLL_PUBLIC void mcl_destroy(ModelInstanceSpec* model_instance);
+DLL_PUBLIC void mcl_mk1_destroy(ModelInstanceSpec* model_instance);
 
 
 #endif  // DSE_MODELC_MCL_MK1_H_

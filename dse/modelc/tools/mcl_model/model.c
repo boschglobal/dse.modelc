@@ -45,7 +45,7 @@ ModelDesc* model_create(ModelDesc* model)
      /* Load the MCL dll's. */
     log_debug("Load the MCL(s) ...");
     errno = 0;
-    int rc = mcl_loadlib(mi);
+    int rc = mcl_mk1_loadlib(mi);
     if (rc) {
         if (errno == 0) errno = ECANCELED;
         log_fatal("Failed to load the configured MCL(s)!");
@@ -54,7 +54,7 @@ ModelDesc* model_create(ModelDesc* model)
     /* Create the MCL Instance. */
     log_debug("Create the MCL Instance ...");
     errno = 0;
-    rc = mcl_create(mi);
+    rc = mcl_mk1_create(mi);
     if (rc) {
         if (errno == 0) errno = ECANCELED;
         log_fatal("Failed to create the MCL Instance!");
@@ -132,5 +132,5 @@ void model_destroy(ModelDesc* model)
     /* Execute the unload strategy. */
     log_debug("Call MCL Strategy: unload_func ...");
     mcl_instance->strategy->execute(model, MCL_STRATEGY_ACTION_UNLOAD);
-    mcl_destroy(mi);
+    mcl_mk1_destroy(mi);
 }

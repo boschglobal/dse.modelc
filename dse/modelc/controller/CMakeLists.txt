@@ -16,7 +16,7 @@ project(ModelC_Controller)
 add_library(controller OBJECT
     controller.c
     loader.c
-    mcl.c
+    mcl_mk1.c
     model_function.c
     modelc.c
     modelc_args.c

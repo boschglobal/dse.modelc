@@ -46,7 +46,7 @@ static void _allocate_mcl()
 }
 
 
-void mcl_register_strategy(MclStrategyDesc* strategy_desc)
+void mcl_mk1_register_strategy(MclStrategyDesc* strategy_desc)
 {
     assert(__mcl_strategy);
     log_notice("  Adding MCL strategy: %s", strategy_desc->name);
@@ -54,7 +54,7 @@ void mcl_register_strategy(MclStrategyDesc* strategy_desc)
 }
 
 
-void mcl_register_adapter(MclAdapterDesc* adapter_desc)
+void mcl_mk1_register_adapter(MclAdapterDesc* adapter_desc)
 {
     assert(__mcl_adapter);
     log_notice("  Adding MCL adapter: %s", adapter_desc->name);
@@ -63,7 +63,7 @@ void mcl_register_adapter(MclAdapterDesc* adapter_desc)
 
 
 /**
-mcl_loadlib
+mcl_mk1_loadlib
 ===========
 
 Loads an MCL Library which will contain a number of Strategy and/or Adapter
@@ -90,7 +90,7 @@ exit(errno)
   `exit()` is called to terminate execution.
 */
 __attribute__((deprecated))
-int mcl_loadlib(ModelInstanceSpec* model_instance)
+int mcl_mk1_loadlib(ModelInstanceSpec* model_instance)
 {
     if (__mcl_dll_handle == NULL) _allocate_mcl();
     assert(__mcl_dll_handle);
@@ -157,7 +157,7 @@ int mcl_loadlib(ModelInstanceSpec* model_instance)
 
 
 /**
-mcl_create
+mcl_mk1_create
 ==========
 
 Creates an instance of an MCL Model. All configured Model Libraries (of the
@@ -182,7 +182,7 @@ exit(errno)
   error and `exit()` is called to terminate execution.
 */
 __attribute__((deprecated))
-int mcl_create(ModelInstanceSpec* model_instance)
+int mcl_mk1_create(ModelInstanceSpec* model_instance)
 {
     assert(__mcl_strategy);
     assert(model_instance);
@@ -340,7 +340,7 @@ int mcl_create(ModelInstanceSpec* model_instance)
 
 
 /**
-mcl_destroy
+mcl_mk1_destroy
 ===========
 
 Destroy an instance of an MCL Model, releasing any allocated memory or other
@@ -353,7 +353,7 @@ model_instance (ModelInstanceSpec*)
   and configuration elements.
 */
 __attribute__((deprecated))
-void mcl_destroy(ModelInstanceSpec* model_instance)
+void mcl_mk1_destroy(ModelInstanceSpec* model_instance)
 {
     if (model_instance && model_instance->private) {
         ModelInstancePrivate* mip = model_instance->private;
@@ -374,7 +374,7 @@ void mcl_destroy(ModelInstanceSpec* model_instance)
 
 
 /**
-mcl_register_strategy
+mcl_mk1_register_strategy
 =====================
 
 An MCL Library calls this function to register a particular MCL Strategy with
@@ -385,11 +385,11 @@ Parameters
 strategy (MclStrategyDesc*)
 : MCL Strategy object representing a strategy capability of the MCL Library.
 */
-extern void mcl_register_strategy(MclStrategyDesc* strategy);
+extern void mcl_mk1_register_strategy(MclStrategyDesc* strategy);
 
 
 /**
-mcl_register_adapter
+mcl_mk1_register_adapter
 ====================
 
 An MCL Library calls this function to register a particular MCL Adapter with
@@ -400,4 +400,4 @@ Parameters
 adapter (MclAdapterDesc*)
 : MCL Strategy object representing a strategy capability of the MCL Library.
 */
-extern void mcl_register_adapter(MclAdapterDesc* adapter);
+extern void mcl_mk1_register_adapter(MclAdapterDesc* adapter);
