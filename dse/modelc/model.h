@@ -204,38 +204,37 @@ typedef struct SignalVectorVTable {
 
 
 typedef struct SignalVector {
-    const char*  name;
-    const char*  alias;
-    const char*  function_name;
-    bool         is_binary;
+    const char* name;
+    const char* alias;
+
+    /* Reference data. */
+    const char*        function_name;
+    ModelInstanceSpec* mi;
+    void*              index; /* Hashmap object, index on `signal`. */
+
     /* Vector representation of Signals (each with _count_ elements). */
     uint32_t     count;
-    const char** signal; /* Signal name. */
-    union {              /* Signal value. */
-        struct {
-            double* scalar;
-        };
-        struct {
-            void**       binary;
-            uint32_t*    length;      /* Length of binary object. */
-            uint32_t*    buffer_size; /* Size of allocated buffer. */
-            const char** mime_type;
-            void**       ncodec;       /* Network Codec objects. */
-            bool*        reset_called; /* Indicate that reset() was called. */
-        };
+    const char** signal; /* Signal names. */
+    bool         is_binary;
+    struct {
+        /* Scalar signals (is_binary == false). */
+        double* scalar;
     };
-    /* Helper functions. */
-    BinarySignalAppendFunc  append;
-    BinarySignalResetFunc   reset;
-    BinarySignalReleaseFunc release;
-    SignalAnnotationGetFunc annotation;
-    BinarySignalCodecFunc   codec;
-    /* Reference data. */
-    ModelInstanceSpec*      mi;
-    void*                   index; /* Hashmap object, index on `signal`. */
+    struct {
+        /* Binary signals (is_binary == trule). */
+        void**       binary;
+        uint32_t*    length;      /* Length of binary object. */
+        uint32_t*    buffer_size; /* Size of allocated buffer. */
+        const char** mime_type;
+        void**       ncodec;       /* Network Codec objects. */
+        bool*        reset_called; /* Indicate that reset() was called. */
+    };
 
-    /* TODO: Replace with SignalVectorVTable at next minor version bump. */
-    SignalGroupAnnotationGetFunc group_annotation;
+    /* Helper functions. */
+    SignalVectorVTable vtable;
+
+    /* Reserved. */
+    uint64_t __reserved__[8];
 } SignalVector;
 
 

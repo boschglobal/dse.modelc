@@ -112,10 +112,10 @@ void test_signal__scalar(void** state)
     assert_int_equal(sv->is_binary, false);
     assert_non_null(sv->signal);
     assert_non_null(sv->scalar);
-    assert_non_null(sv->append);
-    assert_non_null(sv->reset);
-    assert_non_null(sv->release);
-    assert_non_null(sv->annotation);
+    assert_non_null(sv->vtable.append);
+    assert_non_null(sv->vtable.reset);
+    assert_non_null(sv->vtable.release);
+    assert_non_null(sv->vtable.annotation);
 
     /* Signal properties. */
     const char* expected_names[] = {
@@ -128,9 +128,9 @@ void test_signal__scalar(void** state)
         assert_double_equal(sv->scalar[i], 0.0, DBL_EPSILON);
         /* Toggle the value. */
         sv->scalar[i] = test_val;
-        sv->reset(sv, i);                    /* NOP */
-        sv->release(sv, i);                  /* NOP */
-        sv->append(sv, i, (void*)"1234", 4); /* NOP */
+        sv->vtable.reset(sv, i);                    /* NOP */
+        sv->vtable.release(sv, i);                  /* NOP */
+        sv->vtable.append(sv, i, (void*)"1234", 4); /* NOP */
         assert_double_equal(sv->scalar[i], test_val, DBL_EPSILON);
     }
 }
@@ -163,10 +163,10 @@ void test_signal__binary(void** state)
     assert_non_null(sv->length);
     assert_non_null(sv->buffer_size);
     assert_non_null(sv->reset_called);
-    assert_non_null(sv->append);
-    assert_non_null(sv->reset);
-    assert_non_null(sv->release);
-    assert_non_null(sv->annotation);
+    assert_non_null(sv->vtable.append);
+    assert_non_null(sv->vtable.reset);
+    assert_non_null(sv->vtable.release);
+    assert_non_null(sv->vtable.annotation);
 
     /* Signal properties. */
     const char* expected_names[] = {
@@ -187,27 +187,27 @@ void test_signal__binary(void** state)
         assert_int_equal(sv->length[i], 0);
         assert_int_equal(sv->buffer_size[i], 0);
         assert_false(sv->reset_called[i]);
-        sv->reset(sv, i);
+        sv->vtable.reset(sv, i);
         /* Append to the value. */
-        sv->append(sv, i, test_val, test_val_len);
+        sv->vtable.append(sv, i, test_val, test_val_len);
         assert_non_null(sv->binary[i]);
         assert_string_equal((char*)sv->binary[i], test_val);
         assert_int_equal(sv->length[i], test_val_len);
         assert_int_equal(sv->buffer_size[i], test_val_len);
         /* Reset the value. */
-        sv->reset(sv, i);
+        sv->vtable.reset(sv, i);
         assert_true(sv->reset_called[i]);
         assert_non_null(sv->binary[i]);
         assert_int_equal(sv->length[i], 0);
         assert_int_equal(sv->buffer_size[i], test_val_len);
         /* Append to the value with embedded NULL. */
         test_val[5] = '\0';
-        sv->append(sv, i, test_val, test_val_len);
+        sv->vtable.append(sv, i, test_val, test_val_len);
         assert_non_null(sv->binary[i]);
         assert_int_equal(sv->length[i], test_val_len);
         assert_int_equal(sv->buffer_size[i], test_val_len);
         /* Release the value. */
-        sv->release(sv, i);
+        sv->vtable.release(sv, i);
         assert_null(sv->binary[i]);
         assert_int_equal(sv->length[i], 0);
         assert_int_equal(sv->buffer_size[i], 0);
@@ -235,16 +235,16 @@ void test_signal__annotations(void** state)
     /* Check annotations. */
     const char* value;
 
-    value = sv->annotation(sv, 0, "name");
+    value = sv->vtable.annotation(sv, 0, "name");
     assert_non_null(value);
     assert_string_equal(value, "binary_foo");
-    value = sv->annotation(sv, 0, "mime_type");
+    value = sv->vtable.annotation(sv, 0, "mime_type");
     assert_null(value);
 
-    value = sv->annotation(sv, 1, "name");
+    value = sv->vtable.annotation(sv, 1, "name");
     assert_non_null(value);
     assert_string_equal(value, "binary_bar");
-    value = sv->annotation(sv, 1, "mime_type");
+    value = sv->vtable.annotation(sv, 1, "mime_type");
     assert_non_null(value);
     assert_string_equal(value, "application/custom-stream");
 }
@@ -268,10 +268,10 @@ void test_signal__group_annotations(void** state)
     /* Check annotations. */
     const char* value;
 
-    value = sv->group_annotation(sv, "vector_name");
+    value = sv->vtable.group_annotation(sv, "vector_name");
     assert_non_null(value);
     assert_string_equal(value, "network_vector");
-    value = sv->group_annotation(sv, "missing");
+    value = sv->vtable.group_annotation(sv, "missing");
     assert_null(value);
 }
 
@@ -311,7 +311,7 @@ void test_signal__binary_echo(void** state)
     /* Append to one signal. */
     int _loglevel_save = __log_level__;
     __log_level__ = LOG_FATAL;
-    sv->append(sv, 0, test_val, test_val_len);
+    sv->vtable.append(sv, 0, test_val, test_val_len);
     __log_level__ = _loglevel_save;
     assert_int_equal(sv->length[0], test_val_len);
     assert_int_equal(sv->length[1], 0);
@@ -319,14 +319,14 @@ void test_signal__binary_echo(void** state)
     assert_false(sv->reset_called[1]);
 
     /* Call reset. */
-    sv->reset(sv, 0);
+    sv->vtable.reset(sv, 0);
     assert_int_equal(sv->length[0], 0);
     assert_int_equal(sv->length[1], 0);
     assert_true(sv->reset_called[0]);
     assert_false(sv->reset_called[1]);
 
     /* Append again. */
-    sv->append(sv, 0, test_val, test_val_len);
+    sv->vtable.append(sv, 0, test_val, test_val_len);
     assert_int_equal(sv->length[0], test_val_len);
     assert_int_equal(sv->length[1], 0);
     assert_true(sv->reset_called[0]);
