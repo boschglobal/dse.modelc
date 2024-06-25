@@ -247,8 +247,8 @@ static int _add_sv(void* _mfc, void* _sv_data)
     current_sv->count = mfc->signal_count;
     current_sv->signal = mfc->signal_names;
     current_sv->function_name = data->current_modelfunction_name;
-    current_sv->annotation = __annotation_get;
-    current_sv->group_annotation = __group_annotation_get;
+    current_sv->vtable.annotation = __annotation_get;
+    current_sv->vtable.group_annotation = __group_annotation_get;
     current_sv->mi = data->mi;
     if (mfc->signal_value_binary) {
         current_sv->is_binary = true;
@@ -256,16 +256,16 @@ static int _add_sv(void* _mfc, void* _sv_data)
         current_sv->length = mfc->signal_value_binary_size;
         current_sv->buffer_size = mfc->signal_value_binary_buffer_size;
         current_sv->reset_called = mfc->signal_value_binary_reset_called;
-        current_sv->append = __binary_append;
-        current_sv->reset = __binary_reset;
-        current_sv->release = __binary_release;
-        current_sv->codec = __binary_codec;
+        current_sv->vtable.append = __binary_append;
+        current_sv->vtable.reset = __binary_reset;
+        current_sv->vtable.release = __binary_release;
+        current_sv->vtable.codec = __binary_codec;
         /* Mime Type. */
         current_sv->mime_type = calloc(current_sv->count, sizeof(char*));
         for (uint32_t i = 0; i < current_sv->count; i++) {
             current_sv->mime_type[i] = DEFAULT_BINARY_MIME_TYPE;
             const char* mt;
-            mt = current_sv->annotation(current_sv, i, "mime_type");
+            mt = current_sv->vtable.annotation(current_sv, i, "mime_type");
             if (mt) current_sv->mime_type[i] = mt;
         }
         /* NCodec. */
@@ -283,10 +283,10 @@ static int _add_sv(void* _mfc, void* _sv_data)
     } else {
         current_sv->is_binary = false;
         current_sv->scalar = mfc->signal_value_double;
-        current_sv->append = __binary_append_nop;
-        current_sv->reset = __binary_reset_nop;
-        current_sv->release = __binary_release_nop;
-        current_sv->codec = __binary_codec_nop;
+        current_sv->vtable.append = __binary_append_nop;
+        current_sv->vtable.reset = __binary_reset_nop;
+        current_sv->vtable.release = __binary_release_nop;
+        current_sv->vtable.codec = __binary_codec_nop;
     }
 
     /* Progress the data object to the next item (for next call). */

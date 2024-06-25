@@ -217,8 +217,8 @@ void test_model_api__binary_stream_reset(void** state)
         SignalVector* sv = mock->sv_network_tx;
         char foobar[100] = "foobar";
         for (int j = 0; j < 2; j++) {
-            sv->reset(sv, j);
-            sv->append(sv, j, foobar, strlen(foobar) + 1);
+            sv->vtable.reset(sv, j);
+            sv->vtable.append(sv, j, foobar, strlen(foobar) + 1);
         }
         /* Step the model. */
         assert_int_equal(simmock_step(mock, true), 0);

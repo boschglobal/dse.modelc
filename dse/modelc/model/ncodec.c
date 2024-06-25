@@ -65,7 +65,7 @@ static size_t stream_write(NCODEC* nc, uint8_t* data, size_t len)
     /* Write from current pos (i.e. truncate). */
     if (_s->pos > s_len) _s->pos = s_len;
     _s->sv->length[_s->idx] = _s->pos;
-    _s->sv->append(_s->sv, _s->idx, data, len);
+    _s->sv->vtable.append(_s->sv, _s->idx, data, len);
     _s->pos += len;
 
     return len;
