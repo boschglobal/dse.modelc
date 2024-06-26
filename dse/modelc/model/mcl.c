@@ -9,6 +9,23 @@
 #include <dse/clib/data/marshal.h>
 #include <dse/modelc/mcl.h>
 
+
+__attribute__((unused)) static void __compile_time_checks(void)
+{
+    /* Compile-time type size check. Get actual size with:
+     *    char (*___)[sizeof(MclDesc)] = 1;
+     *    char (*___)[sizeof(MarshalSignalMap)] = 1;
+     */
+    #if __SIZEOF_POINTER__ == 8
+    _Static_assert(sizeof(MclDesc) == 256, "Compatibility FAIL!");
+    _Static_assert(sizeof(MarshalSignalMap) == 56, "Compatibility FAIL!");
+    #else
+    _Static_assert(sizeof(MclDesc) == 160, "Compatibility FAIL!");
+    _Static_assert(sizeof(MarshalSignalMap) == 28, "Compatibility FAIL!");
+    #endif
+}
+
+
 /**
 mcl_create
 ==========

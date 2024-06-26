@@ -5,6 +5,7 @@
 #ifndef DSE_MODELC_RUNTIME_H_
 #define DSE_MODELC_RUNTIME_H_
 
+#include <limits.h>
 #include <dse/modelc/model.h>
 
 
@@ -66,6 +67,9 @@ typedef struct ModelInstanceSpec {
     void* yaml_doc_list;
     /* Private data of the specific Model Instance. */
     void* private;
+
+    /* Reserved. */
+    uint64_t __reserved__[4];
 } ModelInstanceSpec;
 
 

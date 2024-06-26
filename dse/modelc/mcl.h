@@ -68,26 +68,32 @@ typedef struct MclVTable {
     MclMarshalOut marshal_out;
     MclMarshalIn  marshal_in;
     MclUnload     unload;
+
+    /* Reserved (space for 2 function pointers). */
+    void* __reserved__[2];
 } MclVTable;
 
 
 typedef struct MclDesc {
-    ModelDesc model;
+    ModelDesc   model;
     /* Extensions to base ModelDesc type. */
     const char* adapter;
     const char* version;
-    MclVTable vtable;
+    MclVTable   vtable;
     /* Model Time Calculation. */
-    double step_size;
-    double model_time;
-    double model_time_correction;
+    double      step_size;
+    double      model_time;
+    double      model_time_correction;
     /* References for Signal Vector marshalling. */
     struct {
-        size_t*       count;
-        const char**  signal;
-        double**      scalar;
+        size_t*      count;
+        const char** signal;
+        double**     scalar;
     } source;
-    MarshalSignalMap* msm; // NULL terminated list
+    MarshalSignalMap* msm;  // NULL terminated list
+
+    /* Reserved. */
+    uint64_t __reserved__[3];
 } MclDesc;
 
 
