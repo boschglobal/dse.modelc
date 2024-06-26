@@ -60,8 +60,8 @@ int main(int argc, char** argv)
                     char buffer[100];
                     snprintf(buffer, sizeof(buffer), "st=%f,index=%d",
                         model_time, i);
-                    sv->vtable.reset(sv, i);
-                    sv->vtable.append(sv, i, buffer, strlen(buffer) + 1);
+                    signal_reset(sv, i);
+                    signal_append(sv, i, buffer, strlen(buffer) + 1);
                 }
             } else {
                 /* Scalar vector. */

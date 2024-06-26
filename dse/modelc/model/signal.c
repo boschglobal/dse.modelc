@@ -4,6 +4,7 @@
 
 #include <stdlib.h>
 #include <assert.h>
+#include <errno.h>
 #include <dse/testing.h>
 #include <dse/logger.h>
 #include <dse/clib/util/strings.h>
@@ -24,14 +25,14 @@ extern void ncodec_trace_destroy(NCodecInstance* nc);
 
 __attribute__((unused)) static void __compile_time_checks(void)
 {
-    /* Compile-time type size check. Get actual size with:
-     *    char (*___)[sizeof(SignalVector)] = 1;
-     */
-    #if __SIZEOF_POINTER__ == 8
+/* Compile-time type size check. Get actual size with:
+ *    char (*___)[sizeof(SignalVector)] = 1;
+ */
+#if __SIZEOF_POINTER__ == 8
     _Static_assert(sizeof(SignalVector) == 256, "Compatibility FAIL!");
-    #else
+#else
     _Static_assert(sizeof(SignalVector) == 168, "Compatibility FAIL!");
-    #endif
+#endif
 }
 
 
@@ -462,11 +463,28 @@ Returns
 0
 : The operation completed without error.
 
+-EINVAL (-22)
+: Bad arguments.
+
+-ENOSYS (-88)
+: The called function is not available.
+
 <>0
 : Indicates an error condition. Inspect `errno` for additional information.
 */
-extern int signal_append(
-    SignalVector* sv, uint32_t index, void* data, uint32_t len);
+inline int signal_append(
+    SignalVector* sv, uint32_t index, void* data, uint32_t len)
+{
+    if (sv && index < sv->count && sv->is_binary) {
+        if (sv->vtable.append) {
+            return sv->vtable.append(sv, index, data, len);
+        } else {
+            return -ENOSYS;
+        }
+    } else {
+        return -EINVAL;
+    }
+}
 
 
 /**
@@ -489,10 +507,27 @@ Returns
 0
 : The operation completed without error.
 
+-EINVAL (-22)
+: Bad arguments.
+
+-ENOSYS (-88)
+: The called function is not available.
+
 <>0
 : Indicates an error condition. Inspect `errno` for additional information.
 */
-extern int signal_reset(SignalVector* sv, uint32_t index);
+inline int signal_reset(SignalVector* sv, uint32_t index)
+{
+    if (sv && index < sv->count && sv->is_binary) {
+        if (sv->vtable.reset) {
+            return sv->vtable.reset(sv, index);
+        } else {
+            return -ENOSYS;
+        }
+    } else {
+        return -EINVAL;
+    }
+}
 
 
 /**
@@ -514,10 +549,27 @@ Returns
 0
 : The operation completed without error.
 
+-EINVAL (-22)
+: Bad arguments.
+
+-ENOSYS (-88)
+: The called function is not available.
+
 <>0
 : Indicates an error condition. Inspect `errno` for additional information.
 */
-extern int signal_release(SignalVector* sv, uint32_t index);
+inline int signal_release(SignalVector* sv, uint32_t index)
+{
+    if (sv && index < sv->count && sv->is_binary) {
+        if (sv->vtable.release) {
+            return sv->vtable.release(sv, index);
+        } else {
+            return -ENOSYS;
+        }
+    } else {
+        return -EINVAL;
+    }
+}
 
 
 /**
@@ -543,7 +595,8 @@ void*
 : The Codec object associated with the binary signal.
 
 NULL
-: The binary signal does not have an associated Codec object.
+: The binary signal does not have an associated Codec object, inspect `errno`
+for additional information..
 
 Example (Codec Specification)
 -------
@@ -571,7 +624,20 @@ Reference
 API](https://github.com/boschglobal/dse.standards/tree/main/dse/ncodec)
 
 */
-extern void* signal_codec(SignalVector* sv, uint32_t index);
+inline void* signal_codec(SignalVector* sv, uint32_t index)
+{
+    if (sv && index < sv->count && sv->is_binary) {
+        if (sv->vtable.codec) {
+            return sv->vtable.codec(sv, index);
+        } else {
+            errno = ENOSYS;
+            return NULL;
+        }
+    } else {
+        errno = EINVAL;
+        return NULL;
+    }
+}
 
 
 /**
@@ -596,6 +662,10 @@ Returns
 const char*
 : The annotation value.
 
+NULL
+: The requested annotation was not found, inspect `errno` for additional
+information..
+
 Example (Annotation Specification)
 -------
 
@@ -615,10 +685,58 @@ Example (Code Usage)
 
 {{< readfile file="../examples/signalvector_annotation.c" code="true" lang="c"
 >}}
+*/
+inline const char* signal_annotation(
+    SignalVector* sv, uint32_t index, const char* name)
+{
+    if (sv && index < sv->count) {
+        if (sv->vtable.annotation) {
+            return sv->vtable.annotation(sv, index, name);
+        } else {
+            errno = ENOSYS;
+            return NULL;
+        }
+    } else {
+        errno = EINVAL;
+        return NULL;
+    }
+}
 
+
+/**
+signal_group_annotation
+=======================
+
+Get an annotation from a signal group.
+
+Parameters
+----------
+sv (SignalVector*)
+: The Signal Vector object representing the signal group.
+
+name (const char*)
+: The name of the annotation.
+
+Returns
+-------
+const char*
+: The annotation value.
 
 NULL
-: The requested annotation was not found.
+: The requested annotation was not found, inspect `errno` for additional
+information..
 */
-extern const char* signal_annotation(
-    SignalVector* sv, uint32_t index, const char* name);
+inline const char* signal_group_annotation(SignalVector* sv, const char* name)
+{
+    if (sv) {
+        if (sv->vtable.group_annotation) {
+            return sv->vtable.group_annotation(sv, name);
+        } else {
+            errno = ENOSYS;
+            return NULL;
+        }
+    } else {
+        errno = EINVAL;
+        return NULL;
+    }
+}
