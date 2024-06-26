@@ -15,6 +15,22 @@
 #include <dse/modelc/schema.h>
 
 
+__attribute__((unused)) static void __compile_time_checks(void)
+{
+    /* Compile-time type size check. Get actual size with:
+     *    char (*___)[sizeof(ModelInstanceSpec)] = 1;
+     *    char (*___)[sizeof(ModelDesc)] = 1;
+     */
+    #if __SIZEOF_POINTER__ == 8
+    _Static_assert(sizeof(ModelInstanceSpec) == 128, "Compatibility FAIL!");
+    _Static_assert(sizeof(ModelDesc) == 96, "Compatibility FAIL!");
+    #else
+    _Static_assert(sizeof(ModelInstanceSpec) == 80, "Compatibility FAIL!");
+    _Static_assert(sizeof(ModelDesc) == 56, "Compatibility FAIL!");
+    #endif
+}
+
+
 #define VECTOR_TYPE_BINARY_STR "binary"
 
 

@@ -5,6 +5,7 @@
 #ifndef DSE_MODELC_RUNTIME_H_
 #define DSE_MODELC_RUNTIME_H_
 
+#include <limits.h>
 #include <dse/modelc/model.h>
 
 
@@ -66,6 +67,9 @@ typedef struct ModelInstanceSpec {
     void* yaml_doc_list;
     /* Private data of the specific Model Instance. */
     void* private;
+
+    /* Reserved. */
+    uint64_t __reserved__[4];
 } ModelInstanceSpec;
 
 
@@ -120,7 +124,7 @@ DLL_PUBLIC int  modelc_model_create(
 
 
 /* modelc_debug.c - Debug Interface. */
-DLL_PUBLIC int modelc_step(ModelInstanceSpec* mi, double step_size);
+DLL_PUBLIC int  modelc_step(ModelInstanceSpec* mi, double step_size);
 DLL_PUBLIC void modelc_destroy(ModelInstanceSpec* mi);
 
 

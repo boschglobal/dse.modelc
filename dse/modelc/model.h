@@ -143,21 +143,28 @@ typedef void (*ModelDestroy)(ModelDesc* m);
 typedef ModelSignalIndex (*ModelIndex)(
     ModelDesc* m, const char* vname, const char* sname);
 
-
 typedef struct ModelVTable {
     ModelCreate  create;
     ModelStep    step;
     ModelDestroy destroy;
     ModelIndex   index;
+
+    /* Reserved (space for 2 function pointers). */
+    void* __reserved__[2];
 } ModelVTable;
 
 
 typedef struct ModelDesc {
-    ModelVTable        vtable;
     ModelIndex         index;
     SimulationSpec*    sim;
     ModelInstanceSpec* mi;
     SignalVector*      sv;
+
+    /* Model Function Table. */
+    ModelVTable vtable;
+
+    /* Reserved. */
+    uint64_t __reserved__[2];
 } ModelDesc;
 
 
@@ -206,6 +213,9 @@ typedef struct SignalVectorVTable {
     SignalAnnotationGetFunc      annotation;
     BinarySignalCodecFunc        codec;
     SignalGroupAnnotationGetFunc group_annotation;
+
+    /* Reserved (space for 2 function pointers). */
+    void* __reserved__[2];
 } SignalVectorVTable;
 
 
@@ -240,7 +250,7 @@ typedef struct SignalVector {
     SignalVectorVTable vtable;
 
     /* Reserved. */
-    uint64_t __reserved__[8];
+    uint64_t __reserved__[9];
 } SignalVector;
 
 

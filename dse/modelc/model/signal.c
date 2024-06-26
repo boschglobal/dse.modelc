@@ -22,6 +22,19 @@ extern void ncodec_trace_configure(NCODEC* nc, ModelInstanceSpec* mi);
 extern void ncodec_trace_destroy(NCodecInstance* nc);
 
 
+__attribute__((unused)) static void __compile_time_checks(void)
+{
+    /* Compile-time type size check. Get actual size with:
+     *    char (*___)[sizeof(SignalVector)] = 1;
+     */
+    #if __SIZEOF_POINTER__ == 8
+    _Static_assert(sizeof(SignalVector) == 256, "Compatibility FAIL!");
+    #else
+    _Static_assert(sizeof(SignalVector) == 168, "Compatibility FAIL!");
+    #endif
+}
+
+
 /* Signal Annotation Functions. */
 
 static SchemaSignalObject* __signal_match;
@@ -87,7 +100,7 @@ static int _sg_annotation_search_match_handler(
 {
     UNUSED(model_instance);
 
-    YamlNode* n = dse_yaml_find_node(object->doc, "metadata/annotations");
+    YamlNode*   n = dse_yaml_find_node(object->doc, "metadata/annotations");
     const char* value = dse_yaml_get_scalar(n, __signal_group_annotation_name);
     if (value) {
         /* Match found, return +ve to stop search. */
