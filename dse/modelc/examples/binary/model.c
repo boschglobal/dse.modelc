@@ -95,8 +95,8 @@ int model_step(ModelDesc* model, double* model_time, double stop_time)
         m->binary.message.buffer_size = len + 1;
         _format_message(&(m->binary.message), (int)*(m->scalars.counter));
     }
-    m->binary.message.sv->vtable.reset(m->binary.message.sv, m->binary.message.index);
-    m->binary.message.sv->vtable.append(m->binary.message.sv, m->binary.message.index,
+    signal_reset(m->binary.message.sv, m->binary.message.index);
+    signal_append(m->binary.message.sv, m->binary.message.index,
         m->binary.message.buffer, strlen(m->binary.message.buffer) + 1);
 
     *model_time = stop_time;

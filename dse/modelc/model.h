@@ -231,7 +231,7 @@ typedef struct SignalVector {
         double* scalar;
     };
     struct {
-        /* Binary signals (is_binary == trule). */
+        /* Binary signals (is_binary == true). */
         void**       binary;
         uint32_t*    length;      /* Length of binary object. */
         uint32_t*    buffer_size; /* Size of allocated buffer. */
@@ -256,6 +256,7 @@ DLL_PUBLIC int         signal_release(SignalVector* sv, uint32_t index);
 DLL_PUBLIC void*       signal_codec(SignalVector* sv, uint32_t index);
 DLL_PUBLIC const char* signal_annotation(
     SignalVector* sv, uint32_t index, const char* name);
-
+DLL_PUBLIC const char* signal_group_annotation(
+    SignalVector* sv, const char* name);
 
 #endif  // DSE_MODELC_MODEL_H_
