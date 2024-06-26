@@ -28,8 +28,8 @@
 
 static double __stop_request = 0; /* Very private, indicate stop request. */
 
-extern ModelSignalIndex __model_index__(ModelDesc* m, const char* vname,
-    const char* sname);
+extern ModelSignalIndex __model_index__(
+    ModelDesc* m, const char* vname, const char* sname);
 
 
 static int _destroy_model_function(void* mf, void* additional_data)
@@ -309,11 +309,7 @@ static int _configure_model_channel(YamlNode* ch_node, ModelInstanceSpec* mi)
     }
 
     /* Configure the channel. */
-    ModelChannelDesc channel_desc = {
-        .name = name,
-        .function_name = MODEL_STEP_FUNC_NAME,
-    };
-    int rc = model_configure_channel(mi, &channel_desc);
+    int rc = model_configure_channel(mi, name, MODEL_STEP_FUNC_NAME);
     if (rc != 0) {
         if (errno == 0) errno = rc;
         log_error("Channel could not be configured! Check stack alias.");

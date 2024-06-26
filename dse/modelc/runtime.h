@@ -26,24 +26,6 @@ typedef struct ChannelSpec {
 } ChannelSpec;
 
 
-typedef struct ModelChannelDesc {
-    const char*  name;
-    const char*  function_name;
-    /* Reference to the parsed signal names. */
-    const char** signal_names;
-    uint32_t     signal_count;
-    /* Indicate if this Channel is connected to a Propagator Model. */
-    bool         propagator_source_channel;
-    bool         propagator_target_channel;
-    /* Allocated vector table (one only depending on type). */
-    double*      vector_double;
-    void**       vector_binary;
-    /* Additional vector tables supporting vector_binary. */
-    uint32_t*    vector_binary_size;        /* Size of binary object. */
-    uint32_t*    vector_binary_buffer_size; /* Size of allocated buffer. */
-} ModelChannelDesc;
-
-
 typedef struct ModelDefinitionSpec {
     const char* name;
     const char* path;
@@ -154,8 +136,8 @@ DLL_PRIVATE void  model_sv_stream_destroy(void* stream);
 /* model.c - Model Interface. */
 DLL_PRIVATE ChannelSpec* model_build_channel_spec(
     ModelInstanceSpec* model_instance, const char* channel_name);
-DLL_PRIVATE int model_configure_channel(
-    ModelInstanceSpec* model_instance, ModelChannelDesc* channel_desc);
+DLL_PRIVATE int model_configure_channel(ModelInstanceSpec* model_instance,
+    const char* name, const char* function_name);
 
 
 /* model_runtime.c - Runtime Interface (for operation in foreign systems). */
