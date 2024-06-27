@@ -37,7 +37,7 @@ void test_message_sequence(void** state)
 {
     ModelCMock*   mock = *state;
     SignalVector* sv = mock->mi->model_desc->sv;
-    NCODEC*       nc = sv->codec(sv, 2);
+    NCODEC*       nc = sv->vtable.codec(sv, 2);
     const char*   buffer = "hello world";
 
     // ...

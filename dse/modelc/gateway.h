@@ -74,6 +74,9 @@ typedef struct ModelGatewayDesc {
     char*              name_arg;
     /* Sync epsilon (i.e. clock tolerance). */
     double             clock_epsilon;
+
+    /* Reserved. */
+    uint64_t __reserved__[4];
 } ModelGatewayDesc;
 
 

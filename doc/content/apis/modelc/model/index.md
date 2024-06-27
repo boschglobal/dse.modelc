@@ -99,11 +99,12 @@ center footer Dynamic Simulation Environment
 
 ```c
 typedef struct ModelDesc {
-    ModelVTable vtable;
     ModelIndex index;
     SimulationSpec* sim;
     ModelInstanceSpec* mi;
     SignalVector* sv;
+    ModelVTable vtable;
+    uint64_t [2] __reserved__;
 }
 ```
 
@@ -127,6 +128,7 @@ typedef struct ModelVTable {
     ModelStep step;
     ModelDestroy destroy;
     ModelIndex index;
+    void *[2] __reserved__;
 }
 ```
 
@@ -137,17 +139,13 @@ typedef struct SignalVector {
     const char* name;
     const char* alias;
     const char* function_name;
-    _Bool is_binary;
-    uint32_t count;
-    const char** signal;
-    BinarySignalAppendFunc append;
-    BinarySignalResetFunc reset;
-    BinarySignalReleaseFunc release;
-    SignalAnnotationGetFunc annotation;
-    BinarySignalCodecFunc codec;
     ModelInstanceSpec* mi;
     void* index;
-    SignalGroupAnnotationGetFunc group_annotation;
+    uint32_t count;
+    const char** signal;
+    _Bool is_binary;
+    SignalVectorVTable vtable;
+    uint64_t [9] __reserved__;
 }
 ```
 
@@ -161,6 +159,7 @@ typedef struct SignalVectorVTable {
     SignalAnnotationGetFunc annotation;
     BinarySignalCodecFunc codec;
     SignalGroupAnnotationGetFunc group_annotation;
+    void *[2] __reserved__;
 }
 ```
 
@@ -356,6 +355,10 @@ name (const char*)
 const char*
 : The annotation value.
 
+NULL
+: The requested annotation was not found, inspect `errno` for additional
+information..
+
 #### Example (Annotation Specification)
 
 
@@ -375,10 +378,6 @@ spec:
 
 {{< readfile file="../examples/signalvector_annotation.c" code="true" lang="c"
 >}}
-
-
-NULL
-: The requested annotation was not found.
 
 
 
@@ -406,6 +405,12 @@ len (uint32_t)
 0
 : The operation completed without error.
 
+-EINVAL (-22)
+: Bad arguments.
+
+-ENOSYS (-88)
+: The called function is not available.
+
 <>0
 : Indicates an error condition. Inspect `errno` for additional information.
 
@@ -432,7 +437,8 @@ void*
 : The Codec object associated with the binary signal.
 
 NULL
-: The binary signal does not have an associated Codec object.
+: The binary signal does not have an associated Codec object, inspect `errno`
+for additional information..
 
 #### Example (Codec Specification)
 
@@ -462,6 +468,29 @@ API](https://github.com/boschglobal/dse.standards/tree/main/dse/ncodec)
 
 
 
+### signal_group_annotation
+
+Get an annotation from a signal group.
+
+#### Parameters
+
+sv (SignalVector*)
+: The Signal Vector object representing the signal group.
+
+name (const char*)
+: The name of the annotation.
+
+#### Returns
+
+const char*
+: The annotation value.
+
+NULL
+: The requested annotation was not found, inspect `errno` for additional
+information..
+
+
+
 ### signal_release
 
 Release the resources allocated to a binary signal (e.g. free the buffer).
@@ -478,6 +507,12 @@ index (uint32_t)
 
 0
 : The operation completed without error.
+
+-EINVAL (-22)
+: Bad arguments.
+
+-ENOSYS (-88)
+: The called function is not available.
 
 <>0
 : Indicates an error condition. Inspect `errno` for additional information.
@@ -501,6 +536,12 @@ index (uint32_t)
 
 0
 : The operation completed without error.
+
+-EINVAL (-22)
+: Bad arguments.
+
+-ENOSYS (-88)
+: The called function is not available.
 
 <>0
 : Indicates an error condition. Inspect `errno` for additional information.

@@ -5,7 +5,7 @@
 
 void configure_codec(ModelDesc* m, SignalVector* sv, uint32_t idx)
 {
-    NCODEC* nc = sv->codec(sv, idx);
+    NCODEC* nc = sv->vtable.codec(sv, idx);
     const char* node_id = NULL;
     for (int i = 0; i >= 0; i++) {
         NCodecConfigItem nci = ncodec_stat(nc, &i);

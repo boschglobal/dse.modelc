@@ -65,6 +65,7 @@ typedef struct ModelGatewayDesc {
     const char** argv;
     char* name_arg;
     double clock_epsilon;
+    uint64_t [4] __reserved__;
 }
 ```
 
