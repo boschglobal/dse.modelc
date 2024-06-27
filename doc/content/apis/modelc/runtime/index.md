@@ -46,23 +46,6 @@ typedef struct ModelCArguments {
 }
 ```
 
-### ModelChannelDesc
-
-```c
-typedef struct ModelChannelDesc {
-    const char* name;
-    const char* function_name;
-    const char** signal_names;
-    int signal_count;
-    int propagator_source_channel;
-    int propagator_target_channel;
-    double* vector_double;
-    void** vector_binary;
-    int* vector_binary_size;
-    int* vector_binary_buffer_size;
-}
-```
-
 ### ModelDefinitionSpec
 
 ```c
@@ -87,6 +70,7 @@ typedef struct ModelInstanceSpec {
     void* spec;
     void* yaml_doc_list;
     void* private;
+    int [4] __reserved__;
 }
 ```
 
