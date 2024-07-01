@@ -192,7 +192,7 @@ int32_t mcl_step(MclDesc* model, double end_time)
     if (model && model->vtable.step) {
         /* Calculate epsilon value (if necessary). */
         if (model->step_size) mcl_epsilon = model->step_size * 0.01;
-        
+
         do {
             /* Determine times. */
             model_current_time = model->model_time;
