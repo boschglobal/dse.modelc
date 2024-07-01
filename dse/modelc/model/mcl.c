@@ -9,7 +9,6 @@
 #include <dse/clib/data/marshal.h>
 #include <dse/modelc/mcl.h>
 
-
 /**
 mcl_create
 ==========
@@ -85,8 +84,7 @@ int32_t mcl_load(MclDesc* model)
             errno = 0;
             HashList msm_list;
             hashlist_init(&msm_list, 64);
-            SimpleSet ex_signals;
-            set_init(&ex_signals);
+
             MarshalMapSpec source = {
                 .count = *model->source.count,
                 .scalar = model->source.scalar,
@@ -100,17 +98,19 @@ int32_t mcl_load(MclDesc* model)
                     .signal = sv->signal,
                 };
                 MarshalSignalMap* msm = marshal_generate_signalmap(
-                    signal, source, &ex_signals, sv->is_binary);
+                    signal, source, NULL, sv->is_binary);
                 if (errno != 0) return errno;
                 hashlist_append(&msm_list, msm);
 
                 /* Logging. */
                 log_notice("FMU <-> SignalVector mapping for: %s", msm->name);
                 for (uint32_t i = 0; i < msm->count; i++) {
-                    log_notice("  Variable: %s", sv->signal[msm->signal.index[i]]);
+                    log_notice("  Variable: %s (%d) <-> %s (%d)",
+                        sv->signal[msm->signal.index[i]], msm->signal.index[i],
+                        model->source.signal[msm->source.index[i]],
+                        msm->source.index[i]);
                 }
             }
-            set_destroy(&ex_signals);
 
             /* Convert to a NTL. */
             size_t count = hashlist_length(&msm_list);
@@ -186,9 +186,13 @@ int32_t mcl_step(MclDesc* model, double end_time)
 {
     double model_stop_time;
     double model_current_time;
+    double mcl_epsilon = 0.0;
     int rc;
 
     if (model && model->vtable.step) {
+        /* Calculate epsilon value (if necessary). */
+        if (model->step_size) mcl_epsilon = model->step_size * 0.01;
+        
         do {
             /* Determine times. */
             model_current_time = model->model_time;
@@ -210,11 +214,15 @@ int32_t mcl_step(MclDesc* model, double end_time)
                 model_stop_time = t;
             }
             /* Model stop time past Simulation stop time. */
-            if (model_stop_time > end_time) return 0;
+            if (model_stop_time > end_time + mcl_epsilon) return 0;
+
+            log_trace("Step the FMU Model: %f %f (%f) %f",
+                model_current_time, model_stop_time,
+                (model_stop_time + mcl_epsilon), end_time);
 
             rc = model->vtable.step(model, &model_current_time, model_stop_time);
             model->model_time = model_current_time;
-        } while (model_stop_time < end_time);
+        } while (model_stop_time + mcl_epsilon < end_time);
 
         return rc;
     } else {
