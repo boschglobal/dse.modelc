@@ -1,0 +1,61 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Debug Example",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${input:modelc_path}",
+            "args": [],
+            "stopAtEntry": false,
+            "cwd": "${workspaceFolder}",
+            "externalConsole": false,
+            "MIMode": "gdb",
+            "targetArchitecture": "x64",
+            "miDebuggerPath": "/usr/bin/gdb",
+            "customLaunchSetupCommands": [
+                {
+                    "text": "-gdb-set solib-search-path ${workspaceFolder}/dse/modelc/build/_out/examples/${input:solib_search_directory}/lib",
+                    "description": "setting SO lib search path",
+                    "ignoreFailures": false
+                },
+                {
+                    "text": "target remote ${input:remote_host}:2159",
+                    "description": "connecting to target IP",
+                    "ignoreFailures": false
+                }
+            ],
+            "setupCommands": [
+                {
+                    "description": "Enable pretty-printing for gdb",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                }
+            ],
+            "logging": {
+                "engineLogging": true
+            },
+            "preLaunchTask": "simer_start",
+            "postDebugTask": "simer_cleanup"
+        }
+    ],
+    "inputs": [
+        {
+            "id": "modelc_path",
+            "type": "promptString",
+            "description": "Specify path to local modelc executable (absolute path)"
+        },
+        {
+            "id": "solib_search_directory",
+            "type": "pickString",
+            "options": ["benchmark", "binary", "extended", "gateway", "gdb", "minimal", "ncodec", "simer", "transform"],
+            "description": "Select shared library directory"           
+
+        },
+        {
+            "id": "remote_host",
+            "type": "promptString",
+            "description": "Specify remote host ip (e.g. localhost)"
+        }
+    ]
+}

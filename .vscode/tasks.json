@@ -1,0 +1,41 @@
+{
+  "version": "2.0.0",
+  "options": { "cwd": "${workspaceFolder}/.vscode" },
+  "tasks": [
+        {
+          "label": "simer_start",
+          "type": "shell",          
+          "command": "docker run --detach --name simergdb --rm --publish 2159:2159 --volume ${workspaceFolder}/dse/modelc/build/_out/examples/${input:simulation_directory}:/sim simer:test -logger ${input:log_level} -gdb ${input:model_instance} -endtime ${input:end_time}",
+        },
+        {
+          "label": "simer_cleanup",
+          "type": "shell",
+          "command": "docker kill simergdb",
+        }
+      ],
+      "inputs": [
+        {
+          "id": "simulation_directory",
+          "type": "pickString",
+          "options": ["benchmark", "binary", "extended", "gateway", "gdb", "minimal", "ncodec", "simer", "transform"], 
+          "description": "Select the simulation directory",
+        },
+        {
+          "id": "log_level",
+          "type": "promptString",
+          "description": "Specify the logger level (6=LOG_ERROR 3=LOG_INFO 1=LOG_DEBUG)",
+          "default": "1"
+        },
+        {
+          "id": "model_instance",
+          "type": "promptString",
+          "description": "Specify the model instance name",
+        },
+        {
+          "id": "end_time",
+          "type": "promptString",
+          "description": "Specify the simulation end time",
+          "default": "0.04"
+        },
+      ]
+}
