@@ -15,8 +15,8 @@ set(PROJECT_VERSION ${VERSION})
 
 include(GNUInstallDirs)
 
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set(CMAKE_INSTALL_PREFIX ${CMAKE_BINARY_DIR}/_out)
-
 set(CMAKE_C_STANDARD 99)
 set(CMAKE_C_STANDARD_REQUIRED TRUE)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
@@ -322,6 +322,14 @@ install(
         ../../licenses
     DESTINATION
         licenses
+    COMPONENT
+        modelc
+)
+install(
+    DIRECTORY
+        ${CMAKE_BINARY_DIR}/compile_commands.json
+    DESTINATION
+        doc
     COMPONENT
         modelc
 )
