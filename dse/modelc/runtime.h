@@ -120,7 +120,7 @@ DLL_PUBLIC int  modelc_model_create(
 
 
 /* modelc_debug.c - Debug Interface. */
-DLL_PUBLIC int modelc_step(ModelInstanceSpec* mi, double step_size);
+DLL_PUBLIC int  modelc_step(ModelInstanceSpec* mi, double step_size);
 DLL_PUBLIC void modelc_destroy(ModelInstanceSpec* mi);
 
 
@@ -146,6 +146,39 @@ DLL_PRIVATE ChannelSpec* model_build_channel_spec(
     ModelInstanceSpec* model_instance, const char* channel_name);
 DLL_PRIVATE int model_configure_channel(
     ModelInstanceSpec* model_instance, ModelChannelDesc* channel_desc);
+
+
+/* model_runtime.c - Runtime Interface (for operation in foreign systems). */
+#define MODEL_RUNTIME_CREATE_FUNC_NAME  "model_runtime_create"
+#define MODEL_RUNTIME_STEP_FUNC_NAME    "model_runtime_step"
+#define MODEL_RUNTIME_DESTROY_FUNC_NAME "model_runtime_destroy"
+
+typedef struct {
+    ModelDesc model;
+    /*  Runtime properties. */
+    struct {
+        /* Used by Importer. */
+        const char* runtime_model;
+
+        /* Used by Importer/Runtime interface. */
+        const char* sim_path;
+        const char* model_name;
+        const char* simulation_yaml;
+        int         argc;
+        char**      argv;
+
+        /* Used by the Model Runtime. */
+        uint8_t log_level;
+        double  step_size;
+        double  end_time;
+        double  step_time_correction;
+    } runtime;
+} RuntimeModelDesc;
+
+DLL_PRIVATE RuntimeModelDesc* model_runtime_create(RuntimeModelDesc* model);
+DLL_PRIVATE int model_runtime_step(
+    RuntimeModelDesc* model, double* model_time, double stop_time);
+DLL_PRIVATE void model_runtime_destroy(RuntimeModelDesc* model);
 
 
 #endif  // DSE_MODELC_RUNTIME_H_

@@ -67,26 +67,35 @@ set(DSE_CLIB_INCLUDE_DIR "${DSE_CLIB_SOURCE_DIR}/../..")
 
 # External Project - DSE Network Codec
 # ------------------------------------
-set(DSE_NCODEC_SOURCE_DIR "$ENV{EXTERNAL_BUILD_DIR}/dse_ncodec")
-set(DSE_NCODEC_BINARY_DIR "$ENV{EXTERNAL_BUILD_DIR}/dse_ncodec")
-find_library(DSE_NCODEC_LIB
-    NAMES
-        libautomotive-bus-codec.a
-    PATHS
-        ${DSE_NCODEC_BINARY_DIR}
-    REQUIRED
-    NO_DEFAULT_PATH
+FetchContent_Declare(dse_network_codec
+    URL                 $ENV{DSE_NCODEC_URL}
+    HTTP_USERNAME       $ENV{DSE_NCODEC_URL_USER}
+    HTTP_PASSWORD       $ENV{DSE_NCODEC_URL_TOKEN}
 )
-add_library(dse_ncodec STATIC IMPORTED GLOBAL)
-set_target_properties(dse_ncodec
-    PROPERTIES
-        IMPORTED_LOCATION "${DSE_NCODEC_LIB}"
-        INTERFACE_INCLUDE_DIRECTORIES "${DSE_NCODEC_SOURCE_DIR}"
-)
+FetchContent_MakeAvailable(dse_network_codec)
+set(DSE_NCODEC_SOURCE_DIR ${dse_network_codec_SOURCE_DIR}/dse/ncodec)
 set(DSE_NCODEC_SOURCE_FILES
-    ${DSE_NCODEC_SOURCE_DIR}/dse/ncodec/codec.c
+    ${DSE_NCODEC_SOURCE_DIR}/codec.c
+    ${DSE_NCODEC_SOURCE_DIR}/libs/automotive-bus/codec.c
+    ${DSE_NCODEC_SOURCE_DIR}/libs/automotive-bus/frame_can_fbs.c
 )
-set(DSE_NCODEC_INCLUDE_DIR "${DSE_NCODEC_SOURCE_DIR}")
+set(DSE_NCODEC_INCLUDE_DIR "${DSE_NCODEC_SOURCE_DIR}/../..")
+
+
+# External Project - Automotive Bus Schema
+# ----------------------------------------
+FetchContent_Declare(automotive-bus-schema
+    URL https://github.com/boschglobal/automotive-bus-schema/releases/download/v1.0.3/automotive-bus-schema.tar.gz
+)
+FetchContent_MakeAvailable(automotive-bus-schema)
+set(SCHEMAS_SOURCE_DIR ${automotive-bus-schema_SOURCE_DIR}/flatbuffers/c)
+set(FLATCC_SOURCE_DIR ${SCHEMAS_SOURCE_DIR}/automotive_bus_schema/flatcc/src)
+set(FLATCC_SOURCE_FILES
+    ${FLATCC_SOURCE_DIR}/builder.c
+    ${FLATCC_SOURCE_DIR}/emitter.c
+    ${FLATCC_SOURCE_DIR}/refmap.c
+)
+set(FLATCC_INCLUDE_DIR ${SCHEMAS_SOURCE_DIR}/automotive_bus_schema/flatcc/include)
 
 
 
@@ -102,7 +111,9 @@ set(DSE_MODELC_SOURCE_FILES
     ${DSE_MODELC_SOURCE_DIR}/model/signal.c
     ${DSE_MODELC_SOURCE_DIR}/model/trace.c
 
+    ${DSE_MODELC_SOURCE_DIR}/controller/controller_stub.c
     ${DSE_MODELC_SOURCE_DIR}/controller/loader.c
+    ${DSE_MODELC_SOURCE_DIR}/controller/log.c
     ${DSE_MODELC_SOURCE_DIR}/controller/model_function.c
     ${DSE_MODELC_SOURCE_DIR}/controller/modelc.c
     ${DSE_MODELC_SOURCE_DIR}/controller/modelc_debug.c
@@ -128,16 +139,19 @@ add_executable(test_model
     model/test_schema.c
     model/test_signal.c
     model/test_transform.c
-    model/stub_controller.c
+    ${DSE_CLIB_SOURCE_FILES}
     ${DSE_MODELC_SOURCE_FILES}
     ${DSE_NCODEC_SOURCE_FILES}
-    ${DSE_CLIB_SOURCE_FILES}
+    ${FLATCC_SOURCE_FILES}
 )
 target_include_directories(test_model
     PRIVATE
+        ${DSE_CLIB_INCLUDE_DIR}
         ${DSE_MODELC_INCLUDE_DIR}
         ${DSE_NCODEC_INCLUDE_DIR}
-        ${DSE_CLIB_INCLUDE_DIR}
+        ${DSE_NCODEC_INCLUDE_DIR}/dse/ncodec/libs
+        ${FLATCC_INCLUDE_DIR}
+        ${SCHEMAS_SOURCE_DIR}
         ${YAML_SOURCE_DIR}/include
         ./
 )
@@ -150,7 +164,6 @@ target_compile_definitions(test_model
 )
 target_link_libraries(test_model
     PRIVATE
-        dse_ncodec
         cmocka
         yaml
         dl
@@ -175,16 +188,19 @@ add_executable(test_model_interface
     model/interface/__test__.c
     model/interface/test_model_api.c
     model/interface/test_model_examples.c
-    model/stub_controller.c
+    ${DSE_CLIB_SOURCE_FILES}
     ${DSE_MODELC_SOURCE_FILES}
     ${DSE_NCODEC_SOURCE_FILES}
-    ${DSE_CLIB_SOURCE_FILES}
+    ${FLATCC_SOURCE_FILES}
 )
 target_include_directories(test_model_interface
     PRIVATE
-        ${DSE_MODELC_INCLUDE_DIR}
-        ${DSE_NCODEC_INCLUDE_DIR}
         ${DSE_CLIB_INCLUDE_DIR}
+        ${DSE_MODELC_INCLUDE_DIR}
+        ${DSE_NCODEC_INCLUDE_DIR}/dse/ncodec/libs
+        ${DSE_NCODEC_INCLUDE_DIR}
+        ${FLATCC_INCLUDE_DIR}
+        ${SCHEMAS_SOURCE_DIR}
         ${YAML_SOURCE_DIR}/include
         ./
 )
@@ -197,7 +213,6 @@ target_compile_definitions(test_model_interface
 )
 target_link_libraries(test_model_interface
     PRIVATE
-        dse_ncodec
         cmocka
         yaml
         dl

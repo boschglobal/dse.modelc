@@ -20,7 +20,6 @@ set(PROJECT_VERSION ${VERSION})
 # ------
 add_executable(simbus
     simbus.c
-    ${DSE_CLIB_SOURCE_FILES}
 )
 target_include_directories(simbus
     PRIVATE
@@ -35,11 +34,11 @@ target_compile_definitions(simbus
 target_link_libraries(simbus
     PRIVATE
         adapter
+        clib_api
         controller
+        dse_ncodec
+        flatcc_runtime
         model_api
-        $<$<BOOL:${WIN32}>:ws2_32>
-        $<$<BOOL:${WIN32}>:iphlpapi>
-        $<$<AND:$<BOOL:${WIN32}>,$<STREQUAL:${CMAKE_CXX_COMPILER_ID},"GNU">>:"-static winpthread">
 )
 install(TARGETS simbus
     COMPONENT

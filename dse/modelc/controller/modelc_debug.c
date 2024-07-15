@@ -22,7 +22,11 @@
  *  modelc_step
  *
  *  Execute a simulation step with the provided step size for all model
- * functions of the given model instance.
+ *  functions of the given model instance.
+ *
+ *  The AdapterModel properties are normally set from a Start Message, however
+ *  when the SimBus is mocked (or not present) then the `stop_time` needs to be
+ *  set. `model_time` is set in the call to `step_model()`.
  *
  *  Parameters
  *  ----------

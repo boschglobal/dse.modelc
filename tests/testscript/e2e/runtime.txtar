@@ -1,0 +1,33 @@
+env NAME=target_inst
+env SIM=dse/modelc/build/_out/examples/runtime
+
+
+# TEST: Runtime using Global Dynamic Linking
+exec sh -e $WORK/test.sh
+
+stdout 'Importer: Runtime: lib/libruntime.so'
+stdout 'Importer: Simulation Path: sim'
+stdout 'Importer: Simulation YAML: data/simulation.yaml'
+stdout 'Importer: Model: target_inst'
+stdout 'Runtime: Simulation YAML: sim/data/simulation.yaml'
+stdout 'Load YAML File: sim/data/simulation.yaml'
+stdout 'Load YAML File: sim/data/model.yaml'
+stdout 'Channel Name: scalar'
+stdout 'Channel Name: network'
+stdout 'mime_type  : application/x-automotive-bus; interface=stream; type=frame; bus=can; schema=fbs; node_id=24; bus_id=1; interface_id=3'
+stdout 'Importer: Calling vtable.step\(\): model_time=0.004500, stop_time=0.005000'
+stdout 'Model: RX\[03f1\] Hello World!'
+stdout 'name       : can'
+stdout 'length     : 126'
+stdout 'name : counter'
+stdout 'value: 10'
+stdout 'Importer: Calling vtable.destroy\(\)'
+
+
+-- test.sh --
+SIMER="${SIMER:-ghcr.io/boschglobal/dse-simer:latest}"
+docker run --name simer -i --rm \
+    -v $ENTRYDIR/$SIM:/sim \
+    --entrypoint="" $SIMER \
+    valgrind -q --leak-check=yes --error-exitcode=808 \
+    bin/importer lib/libruntime.so sim data/simulation.yaml target_inst

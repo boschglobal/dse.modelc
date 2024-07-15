@@ -27,7 +27,6 @@ FetchContent_Declare(dse_clib
 )
 FetchContent_MakeAvailable(dse_clib)
 set(DSE_CLIB_SOURCE_DIR ${dse_clib_SOURCE_DIR}/dse)
-set(DSE_CLIB_SOURCE_FILES )
 set(DSE_CLIB_INCLUDE_DIR "${DSE_CLIB_SOURCE_DIR}/..")
 
 

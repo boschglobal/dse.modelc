@@ -1,0 +1,24 @@
+# Copyright 2024 Robert Bosch GmbH
+#
+# SPDX-License-Identifier: Apache-2.0
+
+---
+kind: Stack
+metadata:
+  name: target_stack
+  annotations:
+    model_runtime__model_inst: target_inst
+    model_runtime__yaml_files:
+      - data/simulation.yaml
+      - data/model.yaml
+spec:
+  models:
+    - name: target_inst
+      uid: 42
+      model:
+        name: Target
+      channels:
+        - name: scalar
+          alias: scalar_vector
+        - name: network
+          alias: network_vector

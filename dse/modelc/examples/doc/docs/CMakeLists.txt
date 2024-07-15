@@ -40,8 +40,14 @@ set(DSE_CLIB_INCLUDE_DIR "${DSE_CLIB_SOURCE_DIR}/..")
 
 # External Project - DSE Network Codec
 # ------------------------------------
-set(DSE_NCODEC_SOURCE_DIR "$ENV{EXTERNAL_BUILD_DIR}/dse_ncodec")
-set(DSE_NCODEC_INCLUDE_DIR "${DSE_NCODEC_SOURCE_DIR}")
+FetchContent_Declare(dse_network_codec
+    URL                 $ENV{DSE_NCODEC_URL}
+    HTTP_USERNAME       $ENV{GHE_USER}
+    HTTP_PASSWORD       $ENV{GHE_TOKEN}
+)
+FetchContent_MakeAvailable(dse_network_codec)
+set(DSE_NCODEC_SOURCE_DIR ${dse_network_codec_SOURCE_DIR}/dse/ncodec)
+set(DSE_NCODEC_INCLUDE_DIR "${DSE_NCODEC_SOURCE_DIR}/../..")
 
 
 

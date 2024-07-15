@@ -2,13 +2,8 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-#include <stdarg.h>
-#include <stddef.h>
-#include <stdlib.h>
 #include <stdint.h>
-#include <float.h>
-#include <setjmp.h>
-#include <cmocka.h>
+#include <dse/testing.h>
 #include <dse/clib/collections/hashmap.h>
 #include <dse/modelc/model.h>
 #include <dse/modelc/adapter/transport/endpoint.h>

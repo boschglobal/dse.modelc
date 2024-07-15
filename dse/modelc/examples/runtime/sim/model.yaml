@@ -1,0 +1,52 @@
+# Copyright 2024 Robert Bosch GmbH
+#
+# SPDX-License-Identifier: Apache-2.0
+
+---
+kind: Model
+metadata:
+  name: Target
+spec:
+  runtime:
+    dynlib:
+      - os: linux
+        arch: amd64
+        path: lib/libtarget.so
+      - os: linux
+        arch: x86
+        path: lib/libtarget.so
+      - os: windows
+        arch: x64
+        path: lib/libtarget.dll
+      - os: windows
+        arch: x86
+        path: lib/libtarget.dll
+  channels:
+    - alias: scalar_vector
+      selectors:
+        side: scalar_vector
+    - alias: network_vector
+      selectors:
+        channel: network_vector
+---
+kind: SignalGroup
+metadata:
+  name: scalar_vector
+  labels:
+    side: scalar_vector
+spec:
+  signals:
+    - signal: counter
+---
+kind: SignalGroup
+metadata:
+  name: network_vector
+  labels:
+    channel: network_vector
+  annotations:
+    vector_type: binary
+spec:
+  signals:
+    - signal: can
+      annotations:
+        mime_type: 'application/x-automotive-bus; interface=stream; type=frame; bus=can; schema=fbs; node_id=24; bus_id=1; interface_id=3'

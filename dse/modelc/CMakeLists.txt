@@ -33,10 +33,10 @@ list(APPEND C_CXX_WARNING_FLAGS
 add_compile_options(${C_CXX_WARNING_FLAGS})
 add_compile_definitions(DLL_BUILD)
 
+include(FetchContent)
 
 # External Project - DSE C Lib
 # ----------------------------
-include(FetchContent)
 FetchContent_Declare(dse_clib
     URL                 $ENV{DSE_CLIB_URL}
     HTTP_USERNAME       $ENV{DSE_CLIB_URL_USER}
@@ -44,37 +44,32 @@ FetchContent_Declare(dse_clib
 )
 FetchContent_MakeAvailable(dse_clib)
 set(DSE_CLIB_SOURCE_DIR ${dse_clib_SOURCE_DIR}/dse)
-set(DSE_CLIB_SOURCE_FILES
-    ${DSE_CLIB_SOURCE_DIR}/clib/collections/hashmap.c
-    ${DSE_CLIB_SOURCE_DIR}/clib/collections/queue.c
-    ${DSE_CLIB_SOURCE_DIR}/clib/collections/set.c
-    ${DSE_CLIB_SOURCE_DIR}/clib/data/marshal.c
-    ${DSE_CLIB_SOURCE_DIR}/clib/util/binary.c
-    ${DSE_CLIB_SOURCE_DIR}/clib/util/strings.c
-    ${DSE_CLIB_SOURCE_DIR}/clib/util/yaml.c
-)
 set(DSE_CLIB_INCLUDE_DIR "${DSE_CLIB_SOURCE_DIR}/..")
+
+
+# External Project - DSE Schemas
+# ------------------------------
+FetchContent_Declare(dse_schemas
+    URL                 $ENV{DSE_SCHEMA_URL}
+    HTTP_USERNAME       $ENV{DSE_SCHEMA_URL_USER}
+    HTTP_PASSWORD       $ENV{DSE_SCHEMA_URL_TOKEN}
+    SOURCE_SUBDIR       flatbuffers/c
+)
+FetchContent_MakeAvailable(dse_schemas)
+set(DSE_SCHEMAS_SOURCE_DIR ${dse_schemas_SOURCE_DIR}/flatbuffers/c)
 
 
 # External Project - DSE Network Codec
 # ------------------------------------
-set(DSE_NCODEC_SOURCE_DIR "$ENV{EXTERNAL_BUILD_DIR}/dse_ncodec")
-set(DSE_NCODEC_BINARY_DIR "$ENV{EXTERNAL_BUILD_DIR}/dse_ncodec")
-find_library(DSE_NCODEC_LIB
-    NAMES
-        libautomotive-bus-codec.a
-    PATHS
-        ${DSE_NCODEC_BINARY_DIR}
-    REQUIRED
-    NO_DEFAULT_PATH
+FetchContent_Declare(dse_network_codec
+    URL                 $ENV{DSE_NCODEC_URL}
+    HTTP_USERNAME       $ENV{DSE_NCODEC_URL_USER}
+    HTTP_PASSWORD       $ENV{DSE_NCODEC_URL_TOKEN}
 )
-add_library(dse_ncodec STATIC IMPORTED GLOBAL)
-set_target_properties(dse_ncodec
-    PROPERTIES
-        IMPORTED_LOCATION "${DSE_NCODEC_LIB}"
-        INTERFACE_INCLUDE_DIRECTORIES "${DSE_NCODEC_SOURCE_DIR}"
-)
-set(DSE_NCODEC_INCLUDE_DIR "${DSE_NCODEC_SOURCE_DIR}")
+FetchContent_MakeAvailable(dse_network_codec)
+set(DSE_NCODEC_SOURCE_DIR ${dse_network_codec_SOURCE_DIR}/dse/ncodec)
+set(DSE_NCODEC_INCLUDE_DIR "${DSE_NCODEC_SOURCE_DIR}/../..")
+
 
 
 # External Projects (targets common to sub projects)
@@ -201,25 +196,50 @@ if(UNIX)
 add_subdirectory(${DSE_MOCK_DIR} ${CMAKE_CURRENT_BINARY_DIR}/mocks)
 endif()
 
-# Model C (static)
-# -------
-if(UNIX)
-add_library(modelc_static_lib STATIC
-    ${DSE_CLIB_SOURCE_FILES}
+# Target - clib_api (APIs Called from Models/ModelC)
+# -----------------
+add_library(clib_api OBJECT
+    ${DSE_CLIB_SOURCE_DIR}/clib/collections/hashmap.c
+    ${DSE_CLIB_SOURCE_DIR}/clib/collections/queue.c
+    ${DSE_CLIB_SOURCE_DIR}/clib/collections/set.c
+    ${DSE_CLIB_SOURCE_DIR}/clib/data/marshal.c
+    ${DSE_CLIB_SOURCE_DIR}/clib/util/binary.c
+    ${DSE_CLIB_SOURCE_DIR}/clib/util/strings.c
+    ${DSE_CLIB_SOURCE_DIR}/clib/util/yaml.c
 )
-set_target_properties(modelc_static_lib
-    PROPERTIES
-        OUTPUT_NAME modelc
+target_compile_definitions(clib_api
+    PRIVATE
+        PLATFORM_OS="${CDEF_PLATFORM_OS}"
+        PLATFORM_ARCH="${CDEF_PLATFORM_ARCH}"
+        MODELC_VERSION="${VERSION}"
 )
-target_include_directories(modelc_static_lib
+target_include_directories(clib_api
     PRIVATE
         ${DSE_CLIB_INCLUDE_DIR}
         ${YAML_SOURCE_DIR}/include
 )
+target_link_libraries(clib_api
+    PRIVATE
+        yaml
+        dl
+        m
+)
+
+# Model C (static)
+# -------
+if(UNIX)
+add_library(modelc_static_lib STATIC)
+set_target_properties(modelc_static_lib
+    PROPERTIES
+        OUTPUT_NAME modelc
+)
 target_link_libraries(modelc_static_lib
     PUBLIC
         adapter
+        clib_api
         controller
+        dse_ncodec
+        flatcc_runtime
         model_api
     PRIVATE
         mcheck
@@ -233,9 +253,7 @@ endif()
 
 # Model C (shared)
 # -------
-add_library(modelc_shared_lib SHARED
-    ${DSE_CLIB_SOURCE_FILES}
-)
+add_library(modelc_shared_lib SHARED)
 set_target_properties(modelc_shared_lib
     PROPERTIES
         OUTPUT_NAME modelc
@@ -248,16 +266,33 @@ target_include_directories(modelc_shared_lib
 target_link_libraries(modelc_shared_lib
     PUBLIC
         adapter
+        clib_api
         controller
+        dse_ncodec
+        flatcc_runtime
         model_api
-    PRIVATE
-        $<$<BOOL:${WIN32}>:ws2_32>
-        $<$<BOOL:${WIN32}>:iphlpapi>
-        $<$<AND:$<BOOL:${WIN32}>,$<STREQUAL:${CMAKE_CXX_COMPILER_ID},"GNU">>:"-static winpthread">
 )
 if(NOT DEFINED modelc_link_lib)
     set(modelc_link_lib modelc_shared_lib)
 endif()
+
+# Model Runtime
+# -------------
+add_library(model_runtime_lib STATIC)
+set_target_properties(model_runtime_lib
+    PROPERTIES
+        OUTPUT_NAME model_runtime
+)
+target_link_libraries(model_runtime_lib
+    PUBLIC
+    PRIVATE
+        clib_api
+        dse_ncodec
+        flatcc_runtime
+        model_api
+        model_runtime
+)
+set(model_runtime_link_lib model_runtime_lib)
 
 # Model C install
 # ---------------
@@ -284,6 +319,7 @@ endif()
 install(
     TARGETS
         modelc_shared_lib
+        model_runtime_lib
     LIBRARY DESTINATION
         ${CMAKE_INSTALL_LIBDIR}
     COMPONENT
@@ -303,7 +339,7 @@ install(
 )
 install(
     FILES
-        ${DSE_NCODEC_SOURCE_DIR}/dse/ncodec/codec.h
+        ${DSE_NCODEC_SOURCE_DIR}/codec.h
     DESTINATION
         ${CMAKE_INSTALL_INCLUDEDIR}/dse/ncodec
     COMPONENT
@@ -326,7 +362,7 @@ install(
         modelc
 )
 install(
-    DIRECTORY
+    FILES
         ${CMAKE_BINARY_DIR}/compile_commands.json
     DESTINATION
         doc

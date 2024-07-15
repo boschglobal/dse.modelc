@@ -2,8 +2,6 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-//#include <stddef.h>
-
 #include <stdlib.h>
 #include <getopt.h>
 #include <string.h>
@@ -27,9 +25,6 @@
 #define MODEL_UID            0
 #define MODEL_TIMEOUT        60
 #define TRANSPORT            TRANSPORT_REDISPUBSUB
-
-
-uint8_t __log_level__ = LOG_NOTICE;
 
 
 static struct option long_options[] = {

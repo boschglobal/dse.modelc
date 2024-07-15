@@ -42,19 +42,26 @@ FetchContent_Declare(dse_clib
 )
 FetchContent_MakeAvailable(dse_clib)
 
+# External Project - DSE Schemas
+# ------------------------------
+FetchContent_Declare(dse_schemas
+    URL                 $ENV{DSE_SCHEMA_URL}
+    HTTP_USERNAME       $ENV{DSE_SCHEMA_URL_USER}
+    HTTP_PASSWORD       $ENV{DSE_SCHEMA_URL_TOKEN}
+    SOURCE_DIR          "$ENV{EXTERNAL_BUILD_DIR}/dse.schemas"
+)
+FetchContent_MakeAvailable(dse_schemas)
+
 # DSE Network Codec
 # -----------------
-ExternalProject_Add(dse_ncodec
-    URL                 ${ExternalProject__DSE_NCODEC__URL}
-    HTTP_USERNAME       ${ExternalProject__DSE_NCODEC__USERNAME}
-    HTTP_PASSWORD       ${ExternalProject__DSE_NCODEC__PASSWORD}
-    SOURCE_DIR          "$ENV{EXTERNAL_BUILD_DIR}/dse_ncodec"
-    SOURCE_SUBDIR       "dse/ncodec/libs/automotive-bus"
-    BINARY_DIR          "$ENV{EXTERNAL_BUILD_DIR}/dse_ncodec"
-    CMAKE_ARGS
-        -DCMAKE_C_FLAGS=${CMAKE_C_FLAGS}
-    INSTALL_COMMAND     ""
+include(FetchContent)
+FetchContent_Declare(dse_network_codec
+    URL                 $ENV{DSE_NCODEC_URL}
+    HTTP_USERNAME       $ENV{DSE_NCODEC_URL_USER}
+    HTTP_PASSWORD       $ENV{DSE_NCODEC_URL_TOKEN}
+    SOURCE_DIR          "$ENV{EXTERNAL_BUILD_DIR}/dse.ncodec"
 )
+FetchContent_MakeAvailable(dse_network_codec)
 
 
 # Lib Event
@@ -161,15 +168,15 @@ function(oss_copy src dst)
 endfunction()
 add_dependencies(oss
     dlfcnwin32-download
-    dse_ncodec-download
     event-download
     hiredis-download
     msgpackc-download
     yaml-download
 )
 oss_copy(${dse_clib_SOURCE_DIR}                 boschglobal/dse.clib)
+oss_copy(${dse_schemas_SOURCE_DIR}              boschglobal/dse.schemas)
+oss_copy(${dse_network_codec_SOURCE_DIR}        boschglobal/dse.ncodec)
 oss_copy($ENV{EXTERNAL_BUILD_DIR}/dlfcnwin32    dlfcn-win32/dlfcn-win32)
-oss_copy($ENV{EXTERNAL_BUILD_DIR}/dse_ncodec    boschglobal/dse.standards)
 oss_copy($ENV{EXTERNAL_BUILD_DIR}/event         libevent/libevent)
 oss_copy($ENV{EXTERNAL_BUILD_DIR}/hiredis       redis/hiredis)
 oss_copy($ENV{EXTERNAL_BUILD_DIR}/msgpackc      msgpack/msgpackc)

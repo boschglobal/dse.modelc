@@ -16,17 +16,18 @@ TOOL_DIRS = simer
 
 
 ################
-## DSE C Schemas.
+## DSE Projects.
+DSE_CLIB_REPO ?= https://github.com/boschglobal/dse.clib
+DSE_CLIB_VERSION ?= 1.0.17
+export DSE_CLIB_URL ?= $(DSE_CLIB_REPO)/archive/refs/tags/v$(DSE_CLIB_VERSION).zip
+
 DSE_SCHEMA_REPO ?= https://github.com/boschglobal/dse.schemas
 DSE_SCHEMA_VERSION ?= 1.2.8
 export DSE_SCHEMA_URL ?= $(DSE_SCHEMA_REPO)/releases/download/v$(DSE_SCHEMA_VERSION)/dse-schemas.tar.gz
 
-
-###############
-## DSE C Library.
-DSE_CLIB_REPO ?= https://github.com/boschglobal/dse.clib
-DSE_CLIB_VERSION ?= 1.0.17
-export DSE_CLIB_URL ?= $(DSE_CLIB_REPO)/archive/refs/tags/v$(DSE_CLIB_VERSION).zip
+DSE_NCODEC_REPO ?= https://github.com/boschglobal/dse.standards
+DSE_NCODEC_VERSION ?= 1.0.7
+export DSE_NCODEC_URL ?= $(DSE_NCODEC_REPO)/archive/refs/tags/v$(DSE_NCODEC_VERSION).zip
 
 
 ###############
@@ -63,6 +64,7 @@ TESTSCRIPT_E2E_FILES = \
 	$(TESTSCRIPT_E2E_DIR)/ncodec.txtar \
 	$(TESTSCRIPT_E2E_DIR)/mstep.txtar \
 	$(TESTSCRIPT_E2E_DIR)/transport.txtar \
+	$(TESTSCRIPT_E2E_DIR)/runtime.txtar \
 
 #	$(TESTSCRIPT_E2E_DIR)/gateway.txtar \
 

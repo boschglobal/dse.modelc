@@ -6,24 +6,22 @@ cmake_minimum_required(VERSION 3.21)
 
 project(ModelC_Adapter)
 
-include(FetchContent)
-
-
-# External Project - DSE Schemas
-# ------------------------------
-FetchContent_Declare(dse_schemas
-    URL                 $ENV{DSE_SCHEMA_URL}
-    HTTP_USERNAME       $ENV{DSE_SCHEMA_URL_USER}
-    HTTP_PASSWORD       $ENV{DSE_SCHEMA_URL_TOKEN}
-    SOURCE_SUBDIR       flatbuffers/c
-)
-FetchContent_MakeAvailable(dse_schemas)
-set(DSE_SCHEMAS_SOURCE_DIR ${dse_schemas_SOURCE_DIR}/flatbuffers/c)
-
-
 
 # Targets
 # =======
+
+# Target - flatcc_runtime
+# -----------------------
+add_library(flatcc_runtime OBJECT
+    ${DSE_SCHEMAS_SOURCE_DIR}/dse_schemas/flatcc/src/builder.c
+    ${DSE_SCHEMAS_SOURCE_DIR}/dse_schemas/flatcc/src/emitter.c
+    ${DSE_SCHEMAS_SOURCE_DIR}/dse_schemas/flatcc/src/refmap.c
+)
+target_include_directories(flatcc_runtime
+    PRIVATE
+        ${DSE_SCHEMAS_SOURCE_DIR}/dse_schemas/flatcc/include
+)
+
 
 # Target - adapter
 # ----------------
@@ -40,9 +38,6 @@ add_library(adapter OBJECT
     $<$<BOOL:${UNIX}>:transport/mq_posix.c>
     transport/redis.c
     transport/redispubsub.c
-    ${DSE_SCHEMAS_SOURCE_DIR}/dse_schemas/flatcc/src/builder.c
-    ${DSE_SCHEMAS_SOURCE_DIR}/dse_schemas/flatcc/src/emitter.c
-    ${DSE_SCHEMAS_SOURCE_DIR}/dse_schemas/flatcc/src/refmap.c
 )
 target_include_directories(adapter
     PRIVATE
