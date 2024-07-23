@@ -80,6 +80,8 @@ typedef struct SimulationSpec {
     double             end_time;
     /* Model Instances, list, last entry all values set NULL (EOL detect). */
     ModelInstanceSpec* instance_list;
+    /* The simulation is in a different location (i.e. not the CWD). */
+    const char*        sim_path;
 } SimulationSpec;
 
 
@@ -104,6 +106,8 @@ typedef struct ModelCArguments {
     int         log_level_set_by_cli;
     /* MStep "hidden" arguments. */
     uint32_t    steps;
+    /* The simulation is in a different location (i.e. not the CWD). */
+    const char* sim_path;
 } ModelCArguments;
 
 

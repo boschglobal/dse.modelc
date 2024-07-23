@@ -7,6 +7,7 @@
 #include <string.h>
 #include <dse/testing.h>
 #include <dse/logger.h>
+#include <dse/clib/util/strings.h>
 #include <dse/clib/util/yaml.h>
 #include <dse/modelc/runtime.h>
 #include <dse/modelc/adapter/transport/endpoint.h>
@@ -167,22 +168,13 @@ static void _args_extract_yaml_connection(ModelCArguments* args)
 void modelc_set_default_args(ModelCArguments* args,
     const char* model_instance_name, double step_size, double end_time)
 {
-    args->transport = NULL;
-    args->uri = NULL;
-    args->host = NULL;
-    args->port = 0;
+    *args = (ModelCArguments){};
     args->timeout = MODEL_TIMEOUT;
-    args->timeout_set_by_cli = 0;
-    args->log_level_set_by_cli = 0;
     args->log_level = LOG_NOTICE;
     args->step_size = step_size;
     args->end_time = end_time;
     args->uid = MODEL_UID;
     args->name = model_instance_name;
-    args->file = NULL;
-    args->path = NULL;
-    args->yaml_doc_list = NULL;
-    args->steps = 0;
 }
 
 
@@ -264,12 +256,14 @@ void modelc_parse_arguments(
     }
     /* And any YAML files. */
     while (optind < argc) {
-        const char* yaml_file = argv[optind++];
+        const char* _file = argv[optind++];
         // FIXME an empty string will circumvent the getopt_long seg.
-        if (strlen(yaml_file) == 0) continue;
-        log_notice("Load YAML File: %s", yaml_file);
-        args->yaml_doc_list =
-            dse_yaml_load_file(yaml_file, args->yaml_doc_list);
+        if (strlen(_file) == 0) continue;
+
+        char* y_file = dse_path_cat(args->sim_path, _file);
+        log_notice("Load YAML File: %s", y_file);
+        args->yaml_doc_list = dse_yaml_load_file(y_file, args->yaml_doc_list);
+        free(y_file);
     }
 
     /**

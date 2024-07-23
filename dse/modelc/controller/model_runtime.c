@@ -57,8 +57,7 @@ static void __log_operating_conditions(void)
 }
 
 
-static int __build_args(
-    RuntimeModelDesc* rm, const char* sim_yaml, int* argc, char*** argv)
+static int __build_args(const char* sim_yaml, int* argc, char*** argv)
 {
     /* Extract parameters from the simulation YAML file. */
     YamlDocList* doc_list = dse_yaml_load_file(sim_yaml, NULL);
@@ -82,7 +81,7 @@ static int __build_args(
     _argv[0] = strdup("model_runtime");
     _argv[1] = model_inst_opt;
     for (size_t i = 0; i < yaml_len; i++) {
-        _argv[2 + i] = dse_path_cat(rm->runtime.sim_path, yaml_files[i]);
+        _argv[2 + i] = strdup(yaml_files[i]);
     }
 
     dse_yaml_destroy_doc_list(doc_list);
@@ -111,11 +110,12 @@ RuntimeModelDesc* model_runtime_create(RuntimeModelDesc* rm)
     __log("Model: %s", rm->runtime.model_name);
 
     /* Argument parsing. */
-    __build_args(rm, simulation_yaml, &rm->runtime.argc, &rm->runtime.argv);
+    __build_args(simulation_yaml, &rm->runtime.argc, &rm->runtime.argv);
     ModelCArguments args;
     modelc_set_default_args(&args, NULL,
         rm->runtime.step_size ? rm->runtime.step_size : STEP_SIZE,
         rm->runtime.end_time ? rm->runtime.end_time : END_TIME);
+    args.sim_path = rm->runtime.sim_path;  /* Inject the simulation path. */
     modelc_parse_arguments(
         &args, rm->runtime.argc, rm->runtime.argv, "Model Loader and Stepper");
     if (args.name == NULL) log_fatal("name argument not provided!");
