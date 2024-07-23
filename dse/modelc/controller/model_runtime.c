@@ -160,8 +160,11 @@ RuntimeModelDesc* model_runtime_create(RuntimeModelDesc* rm)
     __log("mi->model_desc->vtable.destroy: %p", mi->model_desc->vtable.destroy);
 
     /* Complete the RuntimeModelDesc object .*/
+    memcpy(&rm->model.vtable, &vtable, sizeof(ModelVTable));
+    rm->model.index = mi->model_desc->index;
     rm->model.mi = mi;
     rm->model.sv = mi->model_desc->sv;
+
     return rm;
 }
 
