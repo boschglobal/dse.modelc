@@ -7,9 +7,6 @@
 #include <dse/modelc/runtime.h>
 
 
-uint8_t __log_level__ = 4;  /* LOG_NOTICE */
-
-
 /**
 Runtime for Importer Interface
 ==============================

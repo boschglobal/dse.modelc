@@ -179,10 +179,10 @@ typedef struct {
     } runtime;
 } RuntimeModelDesc;
 
-DLL_PRIVATE RuntimeModelDesc* model_runtime_create(RuntimeModelDesc* model);
-DLL_PRIVATE int model_runtime_step(
+DLL_PUBLIC RuntimeModelDesc* model_runtime_create(RuntimeModelDesc* model);
+DLL_PUBLIC int model_runtime_step(
     RuntimeModelDesc* model, double* model_time, double stop_time);
-DLL_PRIVATE void model_runtime_destroy(RuntimeModelDesc* model);
+DLL_PUBLIC void model_runtime_destroy(RuntimeModelDesc* model);
 
 
 #endif  // DSE_MODELC_RUNTIME_H_

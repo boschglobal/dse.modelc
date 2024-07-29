@@ -285,7 +285,6 @@ set_target_properties(model_runtime_lib
 )
 target_link_libraries(model_runtime_lib
     PUBLIC
-    PRIVATE
         clib_api
         dse_ncodec
         flatcc_runtime

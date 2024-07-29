@@ -61,6 +61,7 @@ add_library(model_runtime OBJECT
     modelc_args.c
     step.c
     transform.c
+    log.c
 )
 target_compile_definitions(model_runtime
     PRIVATE

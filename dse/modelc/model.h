@@ -9,24 +9,18 @@
 #include <stdbool.h>
 
 
-#ifndef DLL_PUBLIC
+/* DLL Interface visibility. */
 #if defined _WIN32 || defined __CYGWIN__
 #ifdef DLL_BUILD
 #define DLL_PUBLIC __declspec(dllexport)
 #else
 #define DLL_PUBLIC __declspec(dllimport)
-#endif
-#else
-#define DLL_PUBLIC __attribute__((visibility("default")))
-#endif
-#endif
-#ifndef DLL_PRIVATE
-#if defined _WIN32 || defined __CYGWIN__
+#endif /* DLL_BUILD */
 #define DLL_PRIVATE
-#else
+#else /* Linux */
+#define DLL_PUBLIC  __attribute__((visibility("default")))
 #define DLL_PRIVATE __attribute__((visibility("hidden")))
-#endif
-#endif
+#endif /* _WIN32 || defined __CYGWIN__ */
 
 
 #define __MODELC_ERROR_OFFSET   (2000)

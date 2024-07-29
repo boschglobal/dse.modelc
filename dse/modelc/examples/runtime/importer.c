@@ -9,7 +9,6 @@
 #include <errno.h>
 #include <dlfcn.h>
 #include <unistd.h>
-//#include <linux/limits.h>
 #include <limits.h>
 #include <dse/modelc/runtime.h>
 
