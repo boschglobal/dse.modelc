@@ -17,6 +17,7 @@
 #define TRANSPORT_REDISPUBSUB "redispubsub"
 #define TRANSPORT_REDIS       "redis"
 #define TRANSPORT_MQ          "mq"
+#define TRANSPORT_LOOPBACK    "loopb"
 
 
 typedef struct Endpoint        Endpoint;
@@ -35,13 +36,20 @@ typedef void (*EndpointInterruptFunc)(Endpoint* endpoint);
 typedef void (*EndpointDisconnectFunc)(Endpoint* endpoint);
 
 
-struct Endpoint {
+typedef enum EndpointKind {
+    ENDPOINT_KIND_MESSAGE = 0,
+    ENDPOINT_KIND_LOOPBACK,
+    __ENDPOINT_KIND_SIZE__,
+} EndpointKind;
+
+
+typedef struct Endpoint {
     /* Endpoint properties. */
-    bool                      stop_request;
-    /* This UID represents the Model C and may be used as the basis for a
-       number of Models (i.e. seed for a generator function). */
-    uint32_t                  uid;
-    bool                      bus_mode;
+    uint32_t     uid;
+    bool         stop_request;
+    bool         bus_mode;
+    EndpointKind kind;
+
     /* Callbacks */
     EndpointCreateChannelFunc create_channel;
     EndpointStartFunc         start;
@@ -49,11 +57,13 @@ struct Endpoint {
     EndpointRecvFbsFunc       recv_fbs;
     EndpointInterruptFunc     interrupt;
     EndpointDisconnectFunc    disconnect;
+
     /* Channel storage container. */
-    HashMap                   endpoint_channels;
+    HashMap endpoint_channels;
+
     /* Private object for endpoint specific data. */
     void* private;
-};
+} Endpoint;
 
 
 /* endpoint.c */

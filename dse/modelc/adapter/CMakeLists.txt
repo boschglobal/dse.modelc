@@ -27,6 +27,8 @@ target_include_directories(flatcc_runtime
 # ----------------
 add_library(adapter OBJECT
     adapter.c
+    adapter_msg.c
+    index.c
     message.c
     simbus/adapter.c
     simbus/handler.c

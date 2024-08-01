@@ -20,6 +20,28 @@
 #define notify(x) FLATBUFFERS_WRAP_NAMESPACE(dse_schemas_fbs_notify, x)
 
 
+/* Adapter Message Interface. */
+
+typedef void (*HandleChannelMessageFunc)(Adapter* adapter,
+    const char* channel_name, ns(ChannelMessage_table_t) channel_message,
+    int32_t     token);
+typedef void (*HandleNotifyMessageFunc)(
+    Adapter* adapter, notify(NotifyMessage_table_t) notify_message);
+
+typedef struct AdapterMsgVTable {
+    AdapterVTable vtable;
+
+    /* Message handling. */
+    HandleChannelMessageFunc handle_message;
+    HandleNotifyMessageFunc  handle_notify_message;
+
+    /* Supporting data objects. */
+    flatcc_builder_t builder;
+    uint8_t*         ep_buffer;
+    uint32_t         ep_buffer_length;
+} AdapterMsgVTable;
+
+
 /* message.c */
 DLL_PRIVATE int32_t send_notify_message(
     Adapter* adapter, notify(NotifyMessage_ref_t) message);
@@ -30,13 +52,6 @@ DLL_PRIVATE int32_t send_message_ack(Adapter* adapter, void* endpoint_channel,
     int32_t rc, char* response);
 DLL_PRIVATE int32_t wait_message(Adapter* adapter, const char** channel_name,
     ns(MessageType_union_type_t) message_type, int32_t token, bool* found);
-
-typedef void (*HandleChannelMessageFunc)(Adapter* adapter,
-    const char* channel_name, ns(ChannelMessage_table_t) channel_message,
-    int32_t     token);
-
-typedef void (*HandleNotifyMessageFunc)(
-    Adapter* adapter, notify(NotifyMessage_table_t) notify_message);
 
 
 #endif  // DSE_MODELC_ADAPTER_MESSAGE_H_

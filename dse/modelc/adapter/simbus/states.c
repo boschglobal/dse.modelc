@@ -4,7 +4,7 @@
 
 #include <stddef.h>
 #include <dse/modelc/adapter/simbus/simbus_private.h>
-#include <dse/modelc/adapter/adapter_private.h>
+#include <dse/modelc/adapter/private.h>
 
 
 #define UNUSED(x) ((void)x)

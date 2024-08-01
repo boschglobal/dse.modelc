@@ -6,7 +6,7 @@
 #include <dse/logger.h>
 #include <dse/clib/util/strings.h>
 #include <dse/modelc/adapter/simbus/simbus_private.h>
-#include <dse/modelc/adapter/adapter_private.h>
+#include <dse/modelc/adapter/private.h>
 #include <dse/modelc/adapter/timer.h>
 #include <dse/modelc/adapter/message.h>
 
@@ -31,8 +31,8 @@ static uint32_t _process_signal_lookup(Channel* ch, const char* signal_name)
 static void process_signal_index_message(Adapter* adapter, Channel* channel,
     uint32_t model_uid, ns(SignalIndex_table_t) signal_index_table)
 {
-    AdapterPrivate*   ap = (AdapterPrivate*)(adapter->private);
-    flatcc_builder_t* builder = &(ap->builder);
+    AdapterMsgVTable* v = (AdapterMsgVTable*)adapter->vtable;
+    flatcc_builder_t* builder = &(v->builder);
 
     flatcc_builder_reset(builder);
 
@@ -84,8 +84,8 @@ static void process_signal_index_message(Adapter* adapter, Channel* channel,
 static void process_signal_read_message(Adapter* adapter, Channel* channel,
     uint32_t model_uid, ns(SignalRead_table_t) signal_read_table)
 {
-    AdapterPrivate*   ap = (AdapterPrivate*)(adapter->private);
-    flatcc_builder_t* builder = &(ap->builder);
+    AdapterMsgVTable* v = (AdapterMsgVTable*)adapter->vtable;
+    flatcc_builder_t* builder = &(v->builder);
 
     flatcc_builder_reset(builder);
     uint32_t read_signal_count = 0;  // Incase of unpack error, return NOP.
@@ -477,8 +477,8 @@ static void resolve_and_notify(
     Adapter* adapter, double model_time, double schedule_time)
 {
     AdapterModel*     am = adapter->bus_adapter_model;
-    AdapterPrivate*   ap = (AdapterPrivate*)(adapter->private);
-    flatcc_builder_t* builder = &(ap->builder);
+    AdapterMsgVTable* v = (AdapterMsgVTable*)adapter->vtable;
+    flatcc_builder_t* builder = &(v->builder);
     msgpack_sbuffer   sbuf;
     msgpack_packer    pk;
 
@@ -527,8 +527,8 @@ static void resolve_and_notify(
 static void resolve_channel_and_model_start(
     Adapter* adapter, Channel* channel, double model_time, double stop_time)
 {
-    AdapterPrivate*   ap = (AdapterPrivate*)(adapter->private);
-    flatcc_builder_t* builder = &(ap->builder);
+    AdapterMsgVTable* v = (AdapterMsgVTable*)adapter->vtable;
+    flatcc_builder_t* builder = &(v->builder);
 
     log_simbus("SignalValue+", channel->name);
 
@@ -713,8 +713,8 @@ void simbus_handle_message(Adapter* adapter, const char* channel_name,
     Channel* channel = hashmap_get(&am->channels, channel_name);
     assert(channel);
 
-    AdapterPrivate*   ap = (AdapterPrivate*)(adapter->private);
-    flatcc_builder_t* builder = &(ap->builder);
+    AdapterMsgVTable* v = (AdapterMsgVTable*)adapter->vtable;
+    flatcc_builder_t* builder = &(v->builder);
     int32_t           rc = 0;
     char*             response = NULL;
 

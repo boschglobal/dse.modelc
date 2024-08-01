@@ -9,7 +9,6 @@
 #include <stdint.h>
 #include <hiredis.h>
 #include <hiredis/async.h>
-#include <hiredis/adapters/libevent.h>
 #include <dse/modelc/adapter/transport/endpoint.h>
 #include <dse/clib/collections/hashmap.h>
 #include <dse/platform.h>

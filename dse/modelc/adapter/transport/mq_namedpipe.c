@@ -10,7 +10,7 @@
 #include <dse/modelc/adapter/transport/mq.h>
 
 
-#define UNUSED(x) ((void)x)
+#define UNUSED(x)        ((void)x)
 
 
 /**

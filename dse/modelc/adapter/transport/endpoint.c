@@ -62,9 +62,9 @@ Endpoint* endpoint_create(const char* transport, const char* uri, uint32_t uid,
     Endpoint*   endpoint = NULL;
     static char _uri[MAX_URI_LEN]; /* Other API's may refer to this data. */
 
-    /* Redis and Redis Pub/Sub. */
     if ((strcmp(transport, TRANSPORT_REDISPUBSUB) == 0) ||
         (strcmp(transport, TRANSPORT_REDIS) == 0)) {
+        /* Redis and Redis Pub/Sub. */
         /* Decode the URI. */
         strncpy(_uri, uri, MAX_URI_LEN - 1);
         if (strncmp(_uri, REDIS_URI_SCHEME, strlen(REDIS_URI_SCHEME)) == 0) {
@@ -112,11 +112,18 @@ Endpoint* endpoint_create(const char* transport, const char* uri, uint32_t uid,
             log_error("ERROR: Incorrect Redis URI (%s)", uri);
             return NULL;
         }
-        /* Message Queue. */
     } else if (strcmp(transport, TRANSPORT_MQ) == 0) {
+        /* Message Queue. */
         endpoint = mq_connect(uri, uid, bus_mode, timeout);
-        /* Unknown transport. */
+    } else if (strcmp(transport, TRANSPORT_LOOPBACK) == 0) {
+        /* Loopback - may also be created outside of this function. */
+        endpoint = calloc(1, sizeof(Endpoint));
+        endpoint->kind = ENDPOINT_KIND_LOOPBACK;
+        endpoint->uid = uid;
+        endpoint->bus_mode = bus_mode;
+        endpoint->disconnect = (EndpointDisconnectFunc)free;
     } else {
+        /* Unknown transport. */
         if (errno == 0) errno = EINVAL;
         log_error("ERROR: unknown transport! (%s)", transport);
         return NULL;

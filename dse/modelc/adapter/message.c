@@ -7,30 +7,10 @@
 #include <stdint.h>
 #include <dse/logger.h>
 #include <dse/modelc/adapter/adapter.h>
-#include <dse/modelc/adapter/adapter_private.h>
+#include <dse/modelc/adapter/private.h>
 #include <dse/modelc/adapter/message.h>
 #include <dse/modelc/adapter/transport/endpoint.h>
 #include <dse_schemas/flatbuffers/simbus_channel_builder.h>
-
-
-/**
-The operation of this API is typically:
-
-    configure_handler();
-    ready_count = 0;
-    send_message(ready);
-    wait_message(ready_response);
-        for each message()
-            message_handle();
-                if ready_response then increment ready_count;
-            found = true;
-        if found return true;
-    if ready_count then
-        send_message(start)
-
-So, the handler should extract/maintain any state needed, and the main loop can
-decide if/what message should be sent next based on that state.
- */
 
 
 static int32_t get_token(void)
@@ -45,9 +25,9 @@ static bool process_sbch_message(Adapter* adapter, uint8_t* msg_ptr,
     const char* channel_name, ns(MessageType_union_type_t) message_type,
     int32_t     token)
 {
-    AdapterPrivate* _ap = (AdapterPrivate*)(adapter->private);
-    bool            ack_found = false;
-    bool            msg_type_found = false;
+    AdapterMsgVTable* v = (AdapterMsgVTable*)adapter->vtable;
+    bool              ack_found = false;
+    bool              msg_type_found = false;
 
     /* Extract the Channel Message and Token. */
     ns(ChannelMessage_table_t) channel_message;
@@ -85,7 +65,8 @@ static bool process_sbch_message(Adapter* adapter, uint8_t* msg_ptr,
             if (_msg_type == message_type) {
                 msg_type_found = true;
             }
-            _ap->handle_message(
+            // TODO add null check here.
+            v->handle_message(
                 adapter, channel_name, channel_message, message_token);
         }
     }
@@ -96,15 +77,15 @@ static bool process_sbch_message(Adapter* adapter, uint8_t* msg_ptr,
 
 static void process_sbno_message(Adapter* adapter, uint8_t* msg_ptr)
 {
-    AdapterPrivate* _ap = (AdapterPrivate*)(adapter->private);
+    AdapterMsgVTable* v = (AdapterMsgVTable*)adapter->vtable;
 
-    if (_ap->handle_notify_message == NULL) {
+    if (v->handle_notify_message == NULL) {
         log_fatal("No notify message handler for adapter!");
         return;
     }
     notify(NotifyMessage_table_t) notify_message;
     notify_message = notify(NotifyMessage_as_root(msg_ptr));
-    _ap->handle_notify_message(adapter, notify_message);
+    v->handle_notify_message(adapter, notify_message);
 }
 
 
@@ -144,13 +125,14 @@ int32_t wait_message(Adapter* adapter, const char**    channel_name,
     ns(MessageType_union_type_t) message_type, int32_t token, bool* found)
 {
     assert(adapter);
-    assert(adapter->private);
+    assert(adapter->vtable);
     assert(found);
-    AdapterPrivate* _ap = (AdapterPrivate*)(adapter->private);
-    Endpoint*       endpoint = adapter->endpoint;
-    uint8_t**       buffer = &(_ap->ep_buffer); /* realloc may be called */
-    uint32_t*       buffer_length = &(_ap->ep_buffer_length);
-    int32_t         length = _ap->ep_buffer_length;
+
+    Endpoint*         endpoint = adapter->endpoint;
+    AdapterMsgVTable* v = (AdapterMsgVTable*)adapter->vtable;
+    uint8_t**         buffer = &(v->ep_buffer); /* realloc may be called */
+    uint32_t*         buffer_length = &(v->ep_buffer_length);
+    int32_t           length = v->ep_buffer_length;
 
     *found = false;
 
@@ -202,21 +184,19 @@ int32_t wait_message(Adapter* adapter, const char**    channel_name,
 /**send_message
 
 NOTE: the message will already be encoded to the builder object on the
-adapter->private, therefore, this function should only be called once per
+adapter->vtable, therefore, this function should only be called once per
 message (i.e. send_all should be unwound to a for loop with a
 flacc_builder_reset() call on each loop ... or a buffer memcpy).
  */
 int32_t send_message(Adapter* adapter, void* endpoint_channel,
     uint32_t model_uid, ns(MessageType_union_ref_t) message, bool ack)
 {
-    //    assert(am);
-    //    Adapter *adapter = am->adapter;
     assert(model_uid);
     assert(adapter);
-    assert(adapter->private);
-    AdapterPrivate*   _ap = (AdapterPrivate*)(adapter->private);
+    assert(adapter->vtable);
     Endpoint*         endpoint = adapter->endpoint;
-    flatcc_builder_t* builder = &(_ap->builder);
+    AdapterMsgVTable* v = (AdapterMsgVTable*)adapter->vtable;
+    flatcc_builder_t* builder = &(v->builder);
     uint8_t*          buf;
     size_t            size;
     int32_t           token = 0;
@@ -278,7 +258,7 @@ int32_t send_message(Adapter* adapter, void* endpoint_channel,
         msg_ptr = flatbuffers_read_size_prefix(msg_ptr, &msg_len);
         ns(ChannelMessage_table_t) channel_message;
         channel_message = ns(ChannelMessage_as_root(msg_ptr));
-        _ap->handle_message(adapter, 0, channel_message, 0);
+        v->handle_message(adapter, 0, channel_message, 0);
     }
 
 error_clean_up:
@@ -297,12 +277,12 @@ int32_t send_message_ack(Adapter* adapter, void* endpoint_channel,
     int32_t rc, char* response)
 {
     assert(adapter);
-    assert(adapter->private);
+    assert(adapter->vtable);
     assert(token || rc);
 
-    AdapterPrivate*   _ap = (AdapterPrivate*)(adapter->private);
     Endpoint*         endpoint = adapter->endpoint;
-    flatcc_builder_t* builder = &(_ap->builder);
+    AdapterMsgVTable* v = (AdapterMsgVTable*)adapter->vtable;
+    flatcc_builder_t* builder = &(v->builder);
     uint8_t*          buf;
     size_t            size;
     ns(ChannelMessage_ref_t) channel_message;
@@ -340,7 +320,7 @@ int32_t send_message_ack(Adapter* adapter, void* endpoint_channel,
         msg_ptr = flatbuffers_read_size_prefix(msg_ptr, &msg_len);
         ns(ChannelMessage_table_t) channel_message;
         channel_message = ns(ChannelMessage_as_root(msg_ptr));
-        _ap->handle_message(adapter, 0, channel_message, 0);
+        v->handle_message(adapter, 0, channel_message, 0);
     }
 
 error_clean_up:
@@ -353,8 +333,8 @@ int32_t send_notify_message(
     Adapter* adapter, notify(NotifyMessage_ref_t) message)
 {
     Endpoint*         endpoint = adapter->endpoint;
-    AdapterPrivate*   ap = (AdapterPrivate*)(adapter->private);
-    flatcc_builder_t* builder = &(ap->builder);
+    AdapterMsgVTable* v = (AdapterMsgVTable*)adapter->vtable;
+    flatcc_builder_t* builder = &(v->builder);
 
     flatcc_builder_create_buffer(builder, flatbuffers_notify_identifier,
         builder->block_align, message, builder->min_align,

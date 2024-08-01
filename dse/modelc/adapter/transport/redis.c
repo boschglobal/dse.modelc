@@ -7,10 +7,11 @@
 #include <errno.h>
 #include <assert.h>
 #include <msgpack.h>
+#include <hiredis/adapters/libevent.h>
 #include <dse/logger.h>
+#include <dse/clib/collections/hashmap.h>
 #include <dse/modelc/adapter/transport/redis.h>
 #include <dse/modelc/adapter/transport/endpoint.h>
-#include <dse/clib/collections/hashmap.h>
 
 
 #define REDIS_VERSION_FIELD      "redis_version:"

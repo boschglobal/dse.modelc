@@ -59,7 +59,8 @@ DLL_PRIVATE void mq_posix_open(MqDesc* mq_desc, MqKind kind, MqMode mode)
         (mode == MQ_MODE_PULL) ? MQ_POSIX_OFLAG_PULL : MQ_POSIX_OFLAG_PUSH;
     handle->mqd = mq_open(mq_desc->endpoint, _mode, MQ_POSIX_MASK, NULL);
     if (handle->mqd == -1) {
-        log_error("Could not open endpoint, check configuration: sysctl fs.mqueue and ulimit -a !");
+        log_error("Could not open endpoint, check configuration: sysctl "
+                  "fs.mqueue and ulimit -a !");
         log_fatal("Could not open endpoint: %s", mq_desc->endpoint);
     }
 }

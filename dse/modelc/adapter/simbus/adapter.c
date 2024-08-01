@@ -9,7 +9,7 @@
 #include <dse/modelc/adapter/simbus/simbus.h>
 #include <dse/modelc/adapter/simbus/simbus_private.h>
 #include <dse/modelc/adapter/adapter.h>
-#include <dse/modelc/adapter/adapter_private.h>
+#include <dse/modelc/adapter/private.h>
 #include <dse/modelc/adapter/message.h>
 
 
@@ -25,16 +25,16 @@ Adapter* simbus_adapter_create(void* endpoint, double bus_step_size)
     Adapter* adapter = adapter_create(endpoint);
 
     assert(adapter);
-    assert(adapter->private);
+    assert(adapter->vtable);
 
     /* Configure as Bus Adapter. */
-    AdapterPrivate* _ap = (AdapterPrivate*)(adapter->private);
+    AdapterMsgVTable* v = (AdapterMsgVTable*)adapter->vtable;
     adapter->bus_mode = true;
     adapter->bus_time =
         0.0 - bus_step_size;  // Will be set to 0.0 on first Sync.
     adapter->bus_step_size = bus_step_size;
-    _ap->handle_message = simbus_handle_message;
-    _ap->handle_notify_message = simbus_handle_notify_message;
+    v->handle_message = simbus_handle_message;
+    v->handle_notify_message = simbus_handle_notify_message;
 
     /* Create the Adapter Model object. */
     adapter->bus_adapter_model = calloc(1, sizeof(AdapterModel));

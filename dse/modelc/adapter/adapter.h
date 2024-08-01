@@ -20,6 +20,40 @@
 #define UID_KEY_LEN              12
 
 
+typedef struct Adapter      Adapter;
+typedef struct AdapterModel AdapterModel;
+
+
+/*
+Adapter Interface
+-----------------
+*/
+
+typedef int (*AdapterConnect)(
+    AdapterModel* am, SimulationSpec* sim, int retry_count);
+typedef int (*AdapterRegister)(AdapterModel* am);
+typedef int (*AdapterReady)(AdapterModel* am);
+typedef int (*AdapterStart)(AdapterModel* am);
+typedef int (*AdapterExit)(AdapterModel* am);
+typedef void (*AdapterDestroy)(Adapter* a);
+
+typedef struct AdapterVTable {
+    AdapterConnect  connect;
+    AdapterRegister register_;
+    AdapterReady    ready;
+    AdapterStart    start;
+    AdapterExit     exit;
+    AdapterDestroy  destroy;
+} AdapterVTable;
+
+typedef AdapterVTable* (*AdapterVTableCreate)(void);
+
+
+/*
+Adapter Objects
+---------------
+*/
+
 typedef struct SignalValue {
     char*    name;
     uint32_t uid;
@@ -40,10 +74,10 @@ typedef struct SignalMap {
 
 typedef struct Channel {
     const char* name;
-    void*       endpoint_channel;  // Reference to an Endpoint object
-                                   // which represents this Channel.
+    void*       endpoint_channel;  // Reference to an Endpoint object.
+
     /* Signal properties. */
-    HashMap     signal_values;
+    HashMap signal_values;  // map{name:SignalValue}
     struct {
         /* Index supporting the signal_values hash. */
         char**     names;
@@ -52,28 +86,28 @@ typedef struct Channel {
         /* Map used by _this_ channel (contains all signals). */
         SignalMap* map;
     } index;
+
     /* Bus properties. */
     SimpleSet* model_register_set;
     SimpleSet* model_ready_set;
-    uint32_t   expected_model_count;  // Don't start until count reached,
-                                      // could get more(?).
+    uint32_t   expected_model_count;
 } Channel;
 
 
-typedef struct Adapter Adapter;
-
 typedef struct AdapterModel {
     /* Model properties. */
-    uint32_t        model_uid;
-    double          model_time;
-    double          stop_time;
+    uint32_t model_uid;
+    double   model_time;
+    double   stop_time;
+
     /* Channel properties. */
-    HashMap         channels;       // Collection of Channel, key is name.
-    char**          channels_keys;  // Cached result of hashmap_keys, update on
-                                    // hashmap_set/remove.
-    uint32_t        channels_length;
+    HashMap  channels;  // map{name: Channel}.
+    char**   channels_keys;
+    uint32_t channels_length;
+
     /* Reference objects. */
-    Adapter*        adapter;
+    Adapter* adapter;
+
     /* Benchmarking/Profiling. */
     struct timespec bench_notifyrecv_ts;
     uint64_t        bench_steptime_ns;
@@ -81,8 +115,12 @@ typedef struct AdapterModel {
 
 
 typedef struct Adapter {
-    bool          stop_request;
-    HashMap       models; /* UID indexed hash of AdapterModel objects. */
+    bool    stop_request;
+    HashMap models;  // map{uid:AdapterModel}
+
+    /* Adapter vtable, type may be extended. */
+    AdapterVTable* vtable;
+
     /* Bus properties. */
     bool          bus_mode;
     double        bus_time;
@@ -95,14 +133,11 @@ typedef struct Adapter {
 
     /* Benchmarking/Profiling. */
     struct timespec bench_notifysend_ts;
-
-    /* Private object supporting the operation of the Adapter.*/
-    void* private;
 } Adapter;
 
 
 /* adapter.c */
-DLL_PRIVATE Adapter* adapter_create(void* endpoint);
+DLL_PRIVATE Adapter* adapter_create(Endpoint* endpoint);
 DLL_PRIVATE Channel* adapter_init_channel(AdapterModel* am,
     const char* channel_name, const char** signal_name, uint32_t count);
 DLL_PRIVATE void     adapter_connect(
