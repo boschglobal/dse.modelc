@@ -2,6 +2,7 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
+export MAKE_NPROC ?= $(shell nproc)
 GDB_CMD ?= valgrind -q --leak-check=yes
 # GDB_CMD ?= gdb -q -ex='set confirm on' -ex=run -ex=quit
 
@@ -15,8 +16,8 @@ build:
 # Build from scratch if no build dir.
 	if [ ! -d "build" ]; then make setup; fi
 # Build.
-	cd build; make
-	cd build; make install
+	cd build; cmake --build . -j $(MAKE_NPROC)
+	cd build; cmake --build . -j $(MAKE_NPROC) -t install
 	@echo ""
 	@echo "Sandbox files: - $$(pwd)/build/_out"
 	@echo "--------------"

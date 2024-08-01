@@ -10,6 +10,7 @@ export PACKAGE_ARCH ?= linux-amd64
 export CMAKE_TOOLCHAIN_FILE ?= $(shell pwd -P)/../../extra/cmake/$(PACKAGE_ARCH).cmake
 export PROJECT_URL ?= https://github.com/boschglobal/$(NAMESPACE).$(MODULE).git
 export PACKAGE_VERSION ?= 0.0.2
+export MAKE_NPROC ?= $(shell nproc)
 
 
 SUBDIRS = adapter controller common
@@ -18,7 +19,7 @@ SUBDIRS = adapter controller common
 default: build
 
 external:
-	$(MAKE) -C ../../extra/external
+	$(MAKE) -j $(MAKE_NPROC) -C ../../extra/external
 
 build: external
 # Build from scratch if no build dir.
@@ -28,8 +29,8 @@ build: external
 		cmake -DCMAKE_TOOLCHAIN_FILE=$(CMAKE_TOOLCHAIN_FILE) .. ; \
 	fi
 # Build incremental.
-	cd build; make
-	cd build; make install
+	cd build; cmake --build . -j $(MAKE_NPROC)
+	cd build; cmake --build . -j $(MAKE_NPROC) -t install
 	@echo ""
 	@echo "Sandbox files: - $$(pwd)/build/_out"
 	@echo "--------------"
@@ -50,10 +51,10 @@ package:
 
 clean:
 	@-for d in $(SUBDIRS); do ($(MAKE) -C $$d $@ ); done
-	$(MAKE) -C ../../extra/external clean
+	$(MAKE) -j $(MAKE_NPROC) -C ../../extra/external clean
 	rm -rf build
 
 cleanall: clean
-	$(MAKE) -C ../../extra/external cleanall
+	$(MAKE) -j $(MAKE_NPROC) -C ../../extra/external cleanall
 
 .PHONY: default build external package clean cleanall
