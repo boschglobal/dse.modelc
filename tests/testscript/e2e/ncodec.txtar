@@ -5,6 +5,7 @@ env SIM=dse/modelc/build/_out/examples/ncodec
 # TEST: ncodec example model
 exec sh -e $WORK/test.sh
 
+stderr 'Using Valgrind'
 stdout 'Load YAML File: data/simulation.yaml'
 stdout 'Loading symbol: model_create ... ok'
 stdout 'Loading symbol: model_step ... ok'
@@ -21,6 +22,7 @@ stdout 'RX \(03ec\): Hello World! from node_id=24'
 # TEST: trace wildcard.
 exec sh -e $WORK/test_trace_wildcard.sh
 
+stderr 'Using Valgrind'
 stdout '\(ncodec_inst\) 0.000000 \[1:24:3\] TX 3e9 1 29 :'
 stdout '48 65 6c 6c 6f 20 57 6f  72 6c 64 21 20 66 72 6f  6d 20 6e 6f 64 65 5f 69  64 3d 32 34 00'
 stdout '\(ncodec_inst\) 0.000500 \[1:24:3\] RX 3e9 1 29 :'
@@ -36,6 +38,7 @@ stdout '\(ncodec_inst\) 0.002000 \[1:24:3\] TX 3ed 1 29 :'
 # TEST: trace frame list.
 exec sh -e $WORK/test_trace_framelist.sh
 
+stderr 'Using Valgrind'
 stdout '\(ncodec_inst\) 0.000500 \[1:24:3\] TX 3ea 1 29 :'
 stdout '\(ncodec_inst\) 0.001000 \[1:24:3\] RX 3ea 1 29 :'
 stdout '\(ncodec_inst\) 0.001000 \[1:24:3\] TX 3eb 1 29 :'

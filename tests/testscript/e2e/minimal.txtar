@@ -5,6 +5,7 @@ env SIM=dse/modelc/build/_out/examples/minimal
 # TEST: minimal example model
 exec sh -e $WORK/test.sh
 
+stderr 'Using Valgrind'
 stdout 'Load YAML File: data/simulation.yaml'
 stdout 'Loading symbol: model_create ... not found'
 stdout 'Loading symbol: model_step ... ok'
