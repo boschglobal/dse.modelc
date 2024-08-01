@@ -17,7 +17,7 @@
 #define TRANSPORT_REDISPUBSUB "redispubsub"
 #define TRANSPORT_REDIS       "redis"
 #define TRANSPORT_MQ          "mq"
-#define TRANSPORT_LOOPBACK    "loopb"
+#define TRANSPORT_LOOPBACK    "loopback"
 
 
 typedef struct Endpoint        Endpoint;

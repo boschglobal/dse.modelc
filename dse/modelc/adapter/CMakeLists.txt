@@ -28,6 +28,7 @@ target_include_directories(flatcc_runtime
 add_library(adapter OBJECT
     adapter.c
     adapter_msg.c
+    adapter_loopb.c
     index.c
     message.c
     simbus/adapter.c
@@ -49,6 +50,7 @@ target_include_directories(adapter
         ${DSE_CLIB_INCLUDE_DIR}
         ${DSE_SCHEMAS_SOURCE_DIR}
         ${DSE_SCHEMAS_SOURCE_DIR}/dse_schemas/flatcc/include
+        $<$<BOOL:${WIN32}>:${DLFCNWIN32_SOURCE_DIR}>
         ../../..
 )
 target_link_libraries(adapter
@@ -56,10 +58,31 @@ target_link_libraries(adapter
         msgpackc
         hiredis
         event
+        dl
         m
         $<$<BOOL:${UNIX}>:rt>
         $<$<BOOL:${WIN32}>:ws2_32>
         $<$<BOOL:${WIN32}>:iphlpapi>
         $<$<AND:$<BOOL:${WIN32}>,$<STREQUAL:${CMAKE_CXX_COMPILER_ID},"GNU">>:"-static winpthread">
         $<$<AND:$<BOOL:${WIN32}>,$<NOT:$<STREQUAL:${CMAKE_CXX_COMPILER_ID},"GNU">>>:-static pthread>
+)
+
+
+# Target - adapter loopback
+# -------------------------
+add_library(adapter_loopback OBJECT
+    adapter.c
+    adapter_loopb.c
+    index.c
+)
+target_include_directories(adapter_loopback
+    PRIVATE
+        ${DSE_CLIB_INCLUDE_DIR}
+        $<$<BOOL:${WIN32}>:${DLFCNWIN32_SOURCE_DIR}>
+        ../../..
+)
+target_link_libraries(adapter_loopback
+    PRIVATE
+        dl
+        m
 )

@@ -2,12 +2,12 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
+#include <assert.h>
 #include <stdlib.h>
 #include <stdbool.h>
 #include <string.h>
 #include <errno.h>
 #include <dlfcn.h>
-#include <msgpack.h>
 #include <dse/logger.h>
 #include <dse/clib/collections/hashmap.h>
 #include <dse/clib/util/strings.h>
@@ -17,8 +17,9 @@
 #include <dse/modelc/controller/model_private.h>
 
 
-#define UNUSED(x)                 ((void)x)
-#define ADAPTER_CREATE_MSG_VTABLE "adapter_create_msg_vtable"
+#define UNUSED(x)                   ((void)x)
+#define ADAPTER_CREATE_MSG_VTABLE   "adapter_create_msg_vtable"
+#define ADAPTER_CREATE_LOOPB_VTABLE "adapter_create_loopb_vtable"
 
 
 static void* _create_vtable(Endpoint* endpoint)
@@ -32,7 +33,8 @@ static void* _create_vtable(Endpoint* endpoint)
     /* Select/create the adapter VTable. */
     switch (endpoint->kind) {
     case ENDPOINT_KIND_LOOPBACK:
-        log_error("Loopback not supported!");
+        log_debug("Load function handle: %s", ADAPTER_CREATE_LOOPB_VTABLE);
+        func = dlsym(handle, ADAPTER_CREATE_LOOPB_VTABLE);
         break;
     case ENDPOINT_KIND_MESSAGE:
         log_debug("Load function handle: %s", ADAPTER_CREATE_MSG_VTABLE);
@@ -133,8 +135,10 @@ static Channel* _create_channel(AdapterModel* am, const char* channel_name)
     }
     /* Set the endpoint object. */
     if (am->adapter && am->adapter->endpoint) {
-        ch->endpoint_channel = am->adapter->endpoint->create_channel(
-            am->adapter->endpoint, ch->name);
+        if (am->adapter->endpoint->create_channel) {
+            ch->endpoint_channel = am->adapter->endpoint->create_channel(
+                am->adapter->endpoint, ch->name);
+        }
     }
 
     /* Add the new Channel to the hashmap. */
