@@ -50,6 +50,9 @@ func IndexYamlFiles(path string) map[string][]kind.KindDoc {
 	if err != nil {
 		slog.Error(err.Error())
 	}
+	if len(kindDocs) == 0 {
+		slog.Error("No Kind Docs found, check simulation path volume mapping(?).")
+	}
 
 	index := map[string][]kind.KindDoc{}
 
@@ -80,7 +83,7 @@ func RedisCommand(redisPath string, quiet bool) *session.Command {
 
 func SimbusCommand(docMap map[string][]kind.KindDoc, simbusPath string, flags Flags) *session.Command {
 	if simbusPath == "" {
-		slog.Info("No SimBus path specified, remote operation(?).")
+		slog.Info("No SimBus path specified; loopback or remote SimBus connection.")
 		return nil
 	}
 	slog.Debug("Build SimBus command...")

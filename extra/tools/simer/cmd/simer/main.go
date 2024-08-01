@@ -29,8 +29,11 @@ func main() {
 	slog.SetDefault(NewLogger(*logger))
 	printFlags()
 
-	index := simer.IndexYamlFiles(".")
 	cmds := []*session.Command{}
+	index := simer.IndexYamlFiles(".")
+	if len(index) == 0 {
+		os.Exit(1)
+	}
 
 	// Redis.
 	quietRedis := true
