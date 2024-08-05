@@ -8,6 +8,7 @@
 #include <dlfcn.h>
 #include <dse/testing.h>
 #include <dse/logger.h>
+#include <dse/clib/util/strings.h>
 #include <dse/modelc/controller/controller.h>
 #include <dse/modelc/controller/model_private.h>
 #include <dse/modelc/model.h>
@@ -17,23 +18,26 @@ extern Controller* controller_object_ref(void);
 
 
 extern ModelDesc* __model_gw_create__(ModelDesc* m);
-extern int __model_gw_step__(ModelDesc* m, double* model_time, double stop_time);
+extern int        __model_gw_step__(
+           ModelDesc* m, double* model_time, double stop_time);
 extern void __model_gw_destroy__(ModelDesc* m);
 
 
-int controller_load_model(ModelInstanceSpec* model_instance)
+static int controller_load_model(ModelInstanceSpec* mi, SimulationSpec* sim)
 {
-    assert(model_instance);
-    ModelInstancePrivate* mip = model_instance->private;
+    assert(mi);
+    ModelInstancePrivate* mip = mi->private;
     ControllerModel*      controller_model = mip->controller_model;
     assert(controller_model);
-    const char* dynlib_filename = model_instance->model_definition.full_path;
+    const char* dynlib_filename = mi->model_definition.full_path;
 
     errno = 0;
 
     if (dynlib_filename) {
-        log_notice("Loading dynamic model: %s ...", dynlib_filename);
-        void* handle = dlopen(dynlib_filename, RTLD_NOW | RTLD_LOCAL);
+        char* model_path = dse_path_cat(sim->sim_path, dynlib_filename);
+        log_notice("Loading dynamic model: %s ...", model_path);
+        void* handle = dlopen(model_path, RTLD_NOW | RTLD_LOCAL);
+        free(model_path);
         if (handle == NULL) {
             log_notice("ERROR: dlopen call: %s", dlerror());
             goto error_dl;
@@ -52,7 +56,7 @@ int controller_load_model(ModelInstanceSpec* model_instance)
 
     } else {
         if (dse_yaml_find_node(
-                model_instance->model_definition.doc, "spec/runtime/gateway")) {
+                mi->model_definition.doc, "spec/runtime/gateway")) {
             log_notice("Using gateway symbols: ...");
             controller_model->vtable.create = __model_gw_create__;
             controller_model->vtable.step = __model_gw_step__;
@@ -94,7 +98,7 @@ int controller_load_models(SimulationSpec* sim)
         hashmap_set(&adapter->models, hash_key, am);
         /* Load the Model. */
         errno = 0;
-        rc = controller_load_model(_instptr);
+        rc = controller_load_model(_instptr, sim);
         if (rc) {
             if (errno == 0) errno = EINVAL;
             log_error("controller_load_model() failed!");

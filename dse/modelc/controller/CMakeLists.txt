@@ -53,15 +53,15 @@ target_link_libraries(controller
 # Target - model runtime
 # ----------------------
 add_library(model_runtime OBJECT
-    controller_stub.c
+    controller.c
     loader.c
+    log.c
     model_function.c
     model_runtime.c
     modelc.c
     modelc_args.c
     step.c
     transform.c
-    log.c
 )
 target_compile_definitions(model_runtime
     PRIVATE

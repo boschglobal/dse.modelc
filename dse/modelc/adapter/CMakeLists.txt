@@ -74,6 +74,7 @@ add_library(adapter_loopback OBJECT
     adapter.c
     adapter_loopb.c
     index.c
+    transport/endpoint_loopb.c
 )
 target_include_directories(adapter_loopback
     PRIVATE

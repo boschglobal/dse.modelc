@@ -159,6 +159,7 @@ DLL_PRIVATE int model_configure_channel(
 
 typedef struct {
     ModelDesc model;
+
     /*  Runtime properties. */
     struct {
         /* Used by Importer. */
@@ -166,10 +167,11 @@ typedef struct {
 
         /* Used by Importer/Runtime interface. */
         const char* sim_path;
-        const char* model_name;
+        const char* model_name;  // Delimited list "a,b".
         const char* simulation_yaml;
         int         argc;
         char**      argv;
+        void*       doc_list;
 
         /* Used by the Model Runtime. */
         uint8_t log_level;

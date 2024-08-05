@@ -1,0 +1,135 @@
+@startuml
+
+package Adapter as A <<Rectangle>> {
+
+class Adapter {
+  AdapterModel
+  AdapterVTable
+  adapter_create(endpoint)
+  adapter_register(sim)
+  adapter_ready(sim)
+}
+note right of Adapter::adapter_create
+  Is this a special NOP adapter?
+endnote
+note right of Adapter::adapter_register
+  Message processing, gets initial value from simbus
+endnote
+note right of Adapter::adapter_ready
+  Simulate reception of MODEL_START
+endnote
+
+interface AdapterVTable {
+  AdapterConnect()
+  AdapterRegister()
+  AdapterReady()
+  AdapterStart()
+  AdapterExit()
+}
+note right: Solution\nNew VTable interface\n(also future support for P2P Network)\nSelected by endpoint
+
+class AdapterModel {
+  Channel
+  adapter_init_channel(name, signals)
+  adapter_get_channel(name)
+  adapter_get_signal_map(name, signals)
+}
+note right of AdapterModel::adapter_init_channel
+  Creates SignalValue objects.
+endnote
+
+
+class Channel {
+  SignalValue
+  SignalMap
+}
+
+struct SignalValue {
+  name
+  uid
+  -- signal --
+  val
+  final_val
+  bin
+}
+note right: Represents SimBus Signals
+
+class SignalMap {
+  name
+  SignalValue
+}
+
+}
+
+Adapter::AdapterModel *-- AdapterModel
+Adapter::AdapterVTable o--- AdapterVTable
+AdapterModel::Channel *-- Channel
+Channel::SignalValue *-- SignalValue
+Channel::SignalMap *-- SignalMap
+SignalMap::SignalValue --> SignalValue
+
+
+package Controller as C <<Rectangle>> {
+
+
+class Controller << (S,#FF7700) Singleton >> {
+  Adapter
+  ControllerModel
+  controller_init(endpoint)
+  controller_init_channel(name, signals)
+  controller_step(sim)
+  -- private --
+  -marshal(sim)
+}
+note left of Controller::controller_step
+  Calls marshal()
+endnote
+
+class ControllerModel {
+  ModelFunction
+  ModelVTable
+}
+
+class ModelFunction {
+  ModelFunctionChannel
+  step_size
+  marshal__model_function()
+}
+
+struct ModelFunctionChannel {
+  name
+  SignalMap
+  -- signal vector --
+  signal_name[]
+  signal_double[]
+  signal_binary[]
+  SignalTransform[]
+  -- marshal --
+  marshal__adapter2model()
+  marshal__model2adapter()
+}
+note right: Represents Model Signals
+
+interface ModelVTable {
+  ModelCreate()
+  ModelStep()
+  ModelDestroy()
+  ModelIndex()
+}
+
+}
+
+
+Controller::ControllerModel *-- ControllerModel
+Controller::Adapter o-- Adapter
+ControllerModel::ModelFunction *-- ModelFunction
+ControllerModel::ModelVTable o-- ModelVTable
+ModelFunction::ModelFunctionChannel *-- ModelFunctionChannel
+ModelFunctionChannel::SignalMap *-- SignalMap
+
+Controller::marshal ...> ModelFunctionChannel::SignalMap : acts upon
+Controller::controller_init ..> Adapter::adapter_create : calls
+Controller::controller_init_channel ..> AdapterModel::adapter_init_channel : calls
+Controller::controller_step ..> Adapter::adapter_ready : calls
+
+@enduml

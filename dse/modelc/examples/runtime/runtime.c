@@ -44,4 +44,3 @@ void model_destroy(ModelDesc* model)
     if (m->model.sim) free(m->model.sim);
     m->model.sim = NULL;
 }
-

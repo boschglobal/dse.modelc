@@ -290,6 +290,7 @@ target_link_libraries(model_runtime_lib
         flatcc_runtime
         model_api
         model_runtime
+        adapter_loopback
 )
 set(model_runtime_link_lib model_runtime_lib)
 

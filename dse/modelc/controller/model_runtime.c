@@ -9,6 +9,7 @@
 #include <time.h>
 #include <dse/clib/util/strings.h>
 #include <dse/clib/util/yaml.h>
+#include <dse/modelc/adapter/transport/endpoint.h>
 #include <dse/modelc/runtime.h>
 #include <dse/platform.h>
 #include <dse/logger.h>
@@ -115,56 +116,26 @@ RuntimeModelDesc* model_runtime_create(RuntimeModelDesc* rm)
     modelc_set_default_args(&args, NULL,
         rm->runtime.step_size ? rm->runtime.step_size : STEP_SIZE,
         rm->runtime.end_time ? rm->runtime.end_time : END_TIME);
-    args.sim_path = rm->runtime.sim_path;  /* Inject the simulation path. */
+    args.sim_path = rm->runtime.sim_path; /* Inject the simulation path. */
     modelc_parse_arguments(
         &args, rm->runtime.argc, rm->runtime.argv, "Model Loader and Stepper");
     if (args.name == NULL) log_fatal("name argument not provided!");
     if (rm->runtime.log_level) args.log_level = rm->runtime.log_level;
+    rm->runtime.doc_list = args.yaml_doc_list;
     free(simulation_yaml);
     simulation_yaml = NULL;
 
     /* Configure the Model (takes config from parsed YAML docs). */
     int rc = modelc_configure(&args, rm->model.sim);
     if (rc) exit(rc);
-    ModelInstanceSpec* mi = modelc_get_model_instance(rm->model.sim, args.name);
-    if (mi == NULL) log_fatal("ModelInstance %s not found!", args.name);
 
-    /* Loading the Model library and symbols. */
-    char* model_filename =
-        dse_path_cat(rm->runtime.sim_path, mi->model_definition.full_path);
-    __log("Loading model: %s ...", model_filename);
-    void* handle = dlopen(model_filename, RTLD_NOW | RTLD_LOCAL);
-    free(model_filename);
-    if (handle == NULL) {
-        log_error("ERROR: dlopen call failed: %s", dlerror());
-        log_fatal("Model library not loaded!");
-    }
-    ModelVTable vtable;
-    vtable.create = dlsym(handle, MODEL_CREATE_FUNC_NAME);
-    vtable.step = dlsym(handle, MODEL_STEP_FUNC_NAME);
-    vtable.destroy = dlsym(handle, MODEL_DESTROY_FUNC_NAME);
-    __log("vtable.create: %p", vtable.create);
-    __log("vtable.step: %p", vtable.step);
-    __log("vtable.destroy: %p", vtable.destroy);
-    if (vtable.create == NULL && vtable.step == NULL) {
-        log_fatal("vtable not complete!");
-    }
+    /* Set the transport to Loop-back. */
+    rm->model.sim->transport = TRANSPORT_LOOPBACK;
+    rm->model.sim->uri = strdup(TRANSPORT_LOOPBACK);
 
-    /* Call the create function of the Model. */
-    rc = modelc_model_create(rm->model.sim, mi, &vtable);
-    if (rc) {
-        log_fatal("Call: model_setup_func failed! (rc=%d)!", rc);
-    }
-    __log("mi->model_desc->vtable.create: %p", mi->model_desc->vtable.create);
-    __log("mi->model_desc->vtable.step: %p", mi->model_desc->vtable.step);
-    __log("mi->model_desc->vtable.destroy: %p", mi->model_desc->vtable.destroy);
-
-    /* Complete the RuntimeModelDesc object .*/
-    memcpy(&rm->model.vtable, &vtable, sizeof(ModelVTable));
-    rm->model.index = mi->model_desc->index;
-    rm->model.mi = mi;
-    rm->model.sv = mi->model_desc->sv;
-
+    __log("Create the Simulation Models ...");
+    rc = modelc_run(rm->model.sim, true);
+    if (rc) log_fatal("Error creating Simulation Models!");
     return rm;
 }
 
@@ -218,7 +189,9 @@ int model_runtime_step(
 
 void model_runtime_destroy(RuntimeModelDesc* rm)
 {
-    dse_yaml_destroy_doc_list(rm->model.mi->yaml_doc_list);
     modelc_exit(rm->model.sim);
+    dse_yaml_destroy_doc_list(rm->runtime.doc_list);
     __free_args(rm->runtime.argc, rm->runtime.argv);
+    free(rm->model.sim->uri);
+    rm->model.sim->uri = NULL;
 }

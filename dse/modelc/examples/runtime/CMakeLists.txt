@@ -90,6 +90,7 @@ add_library(runtime SHARED
 )
 target_include_directories(runtime
     PRIVATE
+        ${DSE_CLIB_INCLUDE_DIR}
         ../../../..
 )
 target_link_libraries(runtime

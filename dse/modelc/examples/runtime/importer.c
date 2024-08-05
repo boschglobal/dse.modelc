@@ -55,7 +55,7 @@ static void __print_sv(SignalVector* sv)
                 __log("        buffer len : %d", sv->buffer_size[i]);
                 __log("        mime_type  : %s", sv->mime_type[i]);
                 uint8_t* buffer = sv->binary[i];
-                for (uint32_t j = 0; j+16 < sv->length[i]; j += 16) {
+                for (uint32_t j = 0; j + 16 < sv->length[i]; j += 16) {
                     __log("          %02x %02x %02x %02x %02x %02x %02x %02x "
                           "%02x %02x %02x %02x %02x %02x %02x %02x",
                         buffer[j + 0], buffer[j + 1], buffer[j + 2],
@@ -76,6 +76,15 @@ static void __print_sv(SignalVector* sv)
         }
         /* Next signal vector. */
         sv++;
+    }
+}
+
+
+static void __dump_sim(SimulationSpec* sim)
+{
+    for (ModelInstanceSpec* mi = sim->instance_list; mi && mi->name; mi++) {
+        __log("Model Instance: %s", mi->name);
+        __print_sv(mi->model_desc->sv);
     }
 }
 
@@ -132,7 +141,7 @@ int main(int argc, char** argv)
         __log("Calling vtable.create() ...");
         m = vtable.create(m);
     }
-    __print_sv(m->sv);
+    __dump_sim(rm.model.sim);
 
     /* Step the model with calls to model_step(). */
     double model_time = 0.0;
@@ -144,7 +153,7 @@ int main(int argc, char** argv)
             __log("step() returned error code: %d", rc);
         }
     }
-    __print_sv(m->sv);
+    __dump_sim(rm.model.sim);
 
     /* Call model_destroy(). */
     if (vtable.destroy) {
