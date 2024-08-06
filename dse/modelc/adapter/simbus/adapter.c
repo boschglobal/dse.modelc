@@ -6,6 +6,7 @@
 #include <stdbool.h>
 #include <dse/logger.h>
 #include <dse/clib/collections/set.h>
+#include <dse/modelc/adapter/transport/endpoint.h>
 #include <dse/modelc/adapter/simbus/simbus.h>
 #include <dse/modelc/adapter/simbus/simbus_private.h>
 #include <dse/modelc/adapter/adapter.h>
@@ -20,12 +21,16 @@
 DLL_PRIVATE bool __simbus_exit_run_loop__;
 
 
-Adapter* simbus_adapter_create(void* endpoint, double bus_step_size)
+Adapter* simbus_adapter_create(Endpoint* endpoint, double bus_step_size)
 {
-    Adapter* adapter = adapter_create(endpoint);
+    /* Force the endpoint to kind SIMBUS. */
+    assert(endpoint);
+    endpoint->kind = ENDPOINT_KIND_SIMBUS;
 
+    /* Create adapter and manually create vtable. */
+    Adapter* adapter = adapter_create(endpoint);
     assert(adapter);
-    assert(adapter->vtable);
+    adapter->vtable = adapter_create_msg_vtable();
 
     /* Configure as Bus Adapter. */
     AdapterMsgVTable* v = (AdapterMsgVTable*)adapter->vtable;

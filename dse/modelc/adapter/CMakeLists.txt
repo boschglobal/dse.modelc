@@ -73,7 +73,6 @@ target_link_libraries(adapter
 add_library(adapter_loopback OBJECT
     adapter.c
     adapter_loopb.c
-    $<$<BOOL:${WIN32}>:adapter_create_msg_vtable__nop.c>
     index.c
     transport/endpoint_loopb.c
 )

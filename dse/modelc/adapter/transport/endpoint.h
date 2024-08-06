@@ -39,6 +39,7 @@ typedef void (*EndpointDisconnectFunc)(Endpoint* endpoint);
 typedef enum EndpointKind {
     ENDPOINT_KIND_MESSAGE = 0,
     ENDPOINT_KIND_LOOPBACK,
+    ENDPOINT_KIND_SIMBUS,
     __ENDPOINT_KIND_SIZE__,
 } EndpointKind;
 

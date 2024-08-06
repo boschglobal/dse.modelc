@@ -26,10 +26,6 @@ static void* _create_vtable(Endpoint* endpoint)
 {
     AdapterVTableCreate func = NULL;
 
-    if (endpoint->bus_mode) {
-        return adapter_create_msg_vtable();
-    }
-
     /* Get a handle to _this_ executable (self reference). */
     void* handle = dlopen(NULL, RTLD_LAZY);
     assert(handle);
@@ -44,6 +40,9 @@ static void* _create_vtable(Endpoint* endpoint)
         log_notice("Load endpoint create function: %s", ADAPTER_CREATE_MSG_VTABLE);
         func = dlsym(handle, ADAPTER_CREATE_MSG_VTABLE);
         break;
+    case ENDPOINT_KIND_SIMBUS:
+        /* Special case, SimBus exec will directly create its vtable. */
+        return NULL;
     default:
         log_fatal("Unsupported endpoint->kind (%d)", endpoint->kind);
     }
@@ -69,7 +68,7 @@ Adapter* adapter_create(Endpoint* endpoint)
         goto error_clean_up;
     }
     adapter->vtable = _create_vtable(endpoint);
-    if (adapter->vtable == NULL) {
+    if (adapter->vtable == NULL && endpoint->bus_mode == false) {
         log_error("adapter->vtable create failed!");
         goto error_clean_up;
     }
