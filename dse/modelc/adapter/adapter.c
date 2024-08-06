@@ -26,6 +26,10 @@ static void* _create_vtable(Endpoint* endpoint)
 {
     AdapterVTableCreate func = NULL;
 
+    if (endpoint->bus_mode) {
+        return adapter_create_msg_vtable();
+    }
+
     /* Get a handle to _this_ executable (self reference). */
     void* handle = dlopen(NULL, RTLD_LAZY);
     assert(handle);
@@ -33,11 +37,11 @@ static void* _create_vtable(Endpoint* endpoint)
     /* Select/create the adapter VTable. */
     switch (endpoint->kind) {
     case ENDPOINT_KIND_LOOPBACK:
-        log_debug("Load function handle: %s", ADAPTER_CREATE_LOOPB_VTABLE);
+        log_notice("Load endpoint create function: %s", ADAPTER_CREATE_LOOPB_VTABLE);
         func = dlsym(handle, ADAPTER_CREATE_LOOPB_VTABLE);
         break;
     case ENDPOINT_KIND_MESSAGE:
-        log_debug("Load function handle: %s", ADAPTER_CREATE_MSG_VTABLE);
+        log_notice("Load endpoint create function: %s", ADAPTER_CREATE_MSG_VTABLE);
         func = dlsym(handle, ADAPTER_CREATE_MSG_VTABLE);
         break;
     default:
@@ -46,6 +50,8 @@ static void* _create_vtable(Endpoint* endpoint)
     if (func) {
         log_debug("Call create function ...");
         return func();
+    } else {
+        log_fatal("Endpoint create function not loaded");
     }
     return NULL;
 }

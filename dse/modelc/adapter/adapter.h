@@ -155,5 +155,12 @@ DLL_PRIVATE SignalMap* adapter_get_signal_map(AdapterModel* am,
 DLL_PRIVATE void adapter_dump_debug(Adapter* adapter, SimulationSpec* sim);
 DLL_PRIVATE void adapter_model_dump_debug(AdapterModel* am, const char* name);
 
+/* adapter_msg.c */
+DLL_PUBLIC AdapterVTable* adapter_create_msg_vtable(void);
+
+/* adapter_loopb.c */
+DLL_PUBLIC AdapterVTable* adapter_create_loopb_vtable(void);
+
+
 
 #endif  // DSE_MODELC_ADAPTER_ADAPTER_H_
