@@ -36,6 +36,7 @@ RUN apt-get -y update; \
         curl \
         git \
         gnupg \
+        jq \
         less \
         lsb-release \
         make \
@@ -54,6 +55,10 @@ RUN curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor -o /
         https://download.docker.com/linux/debian \
         $(lsb_release -cs) stable" \
         | tee /etc/apt/sources.list.d/docker.list > /dev/null
+
+# Install yq using curl.
+RUN curl -L https://github.com/mikefarah/yq/releases/download/v4.20.1/yq_linux_amd64 -o /usr/local/bin/yq \
+    && chmod +x /usr/local/bin/yq
 
 RUN set -eux; \
 	apt-get -y update; \
