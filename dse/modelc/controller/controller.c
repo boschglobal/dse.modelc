@@ -37,6 +37,7 @@ void controller_destroy(void)
     if (controller->adapter) adapter_destroy(controller->adapter);
 
     free(__controller);
+    __controller = NULL;
 }
 
 
