@@ -180,6 +180,7 @@ typedef struct {
         double  step_size;
         double  end_time;
         double  step_time_correction;
+        bool    binary_signals_reset;
     } runtime;
 } RuntimeModelDesc;
 

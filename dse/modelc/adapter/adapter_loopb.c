@@ -255,6 +255,7 @@ static int adapter_loopb_model_ready(AdapterModel* am)
                     &sc->vector.buffer_size[*sc_index], sv->bin, sv->bin_size);
                 log_simbus("    SignalValue: %u = <binary> (len=%u) [name=%s]",
                     sv->uid, sv->bin_size, sv->name);
+                /* Indicate the binary object was consumed. */
                 sv->bin_size = 0;
             } else if (sv->val != sv->final_val) {
                 sc->vector.scalar[*sc_index] = sv->final_val;
@@ -377,4 +378,30 @@ SimbusVectorIndex simbus_vector_lookup(
         }
     }
     return index;
+}
+
+
+static int _binary_reset(void* map_item, void* data)
+{
+    UNUSED(data);
+
+    SimbusChannel* sc = map_item;
+    if (sc) {
+        for (uint32_t i = 0; i < sc->vector.count; i++) {
+            sc->vector.length[i] = 0;
+        }
+    }
+    return 0;
+}
+
+void simbus_vector_binary_reset(SimulationSpec* sim)
+{
+    assert(sim);
+    Controller* controller = controller_object_ref();
+    assert(controller);
+    assert(controller->adapter);
+    if (controller->adapter->vtable == NULL) return;
+
+    AdapterLoopbVTable* v = (AdapterLoopbVTable*)controller->adapter->vtable;
+    hashmap_iterator(&v->channels, _binary_reset, false, NULL);
 }

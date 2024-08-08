@@ -50,6 +50,7 @@ DLL_PUBLIC void simbus_adapter_run(Adapter* adapter);
 /* adapter_loopb.c (in parent directory) */
 DLL_PUBLIC SimbusVectorIndex simbus_vector_lookup(
     SimulationSpec* sim, const char* vname, const char* sname);
+DLL_PUBLIC void simbus_vector_binary_reset(SimulationSpec* sim);
 
 
 #endif  // DSE_MODELC_ADAPTER_SIMBUS_SIMBUS_H_
