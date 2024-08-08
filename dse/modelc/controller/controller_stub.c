@@ -59,6 +59,12 @@ int controller_step(SimulationSpec* sim)
     return 0;
 }
 
+int controller_step_phased(SimulationSpec* sim)
+{
+    UNUSED(sim);
+    return 0;
+}
+
 void controller_stop(void)
 {
     return;

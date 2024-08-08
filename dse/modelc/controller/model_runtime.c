@@ -132,6 +132,8 @@ RuntimeModelDesc* model_runtime_create(RuntimeModelDesc* rm)
     /* Set the transport to Loop-back. */
     rm->model.sim->transport = TRANSPORT_LOOPBACK;
     rm->model.sim->uri = strdup(TRANSPORT_LOOPBACK);
+    rm->model.sim->mode_loopback = true;
+
 
     __log("Create the Simulation Models ...");
     rc = modelc_run(rm->model.sim, true);

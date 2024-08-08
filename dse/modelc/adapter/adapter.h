@@ -144,6 +144,8 @@ DLL_PRIVATE void     adapter_connect(
         Adapter* adapter, SimulationSpec* sim, int retry_count);
 DLL_PRIVATE void     adapter_register(Adapter* adapter, SimulationSpec* sim);
 DLL_PRIVATE int      adapter_ready(Adapter* adapter, SimulationSpec* sim);
+DLL_PRIVATE int      adapter_model_ready(Adapter* adapter, SimulationSpec* sim);
+DLL_PRIVATE int      adapter_model_start(Adapter* adapter, SimulationSpec* sim);
 DLL_PRIVATE void     adapter_exit(Adapter* adapter, SimulationSpec* sim);
 DLL_PRIVATE void     adapter_interrupt(Adapter* adapter);
 DLL_PRIVATE void     adapter_destroy_adapter_model(AdapterModel* am);

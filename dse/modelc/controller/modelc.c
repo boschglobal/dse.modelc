@@ -545,8 +545,11 @@ int modelc_sync(SimulationSpec* sim)
      * to models simulation environemnt _which_ model functions should run as
      * well as the start and stop times from the next step. */
     errno = 0;
-    int rc = controller_step(sim);
-    return rc;
+    if (sim->mode_loopback) {
+        return controller_step_phased(sim);
+    } else {
+        return controller_step(sim);
+    }
 }
 
 

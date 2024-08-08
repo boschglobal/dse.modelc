@@ -95,6 +95,7 @@ DLL_PRIVATE ModelFunction* controller_get_model_function(
 DLL_PRIVATE void controller_run(SimulationSpec* sim);
 DLL_PRIVATE void controller_bus_ready(SimulationSpec* sim);
 DLL_PRIVATE int  controller_step(SimulationSpec* sim);
+DLL_PRIVATE int  controller_step_phased(SimulationSpec* sim);
 
 DLL_PRIVATE void controller_stop(void);
 DLL_PRIVATE void controller_dump_debug(void);

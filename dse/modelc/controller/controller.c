@@ -270,6 +270,42 @@ int controller_step(SimulationSpec* sim)
 }
 
 
+int controller_step_phased(SimulationSpec* sim)
+{
+    assert(__controller);
+    Controller* controller = __controller;
+    assert(controller->adapter);
+    Adapter* adapter = controller->adapter;
+    int rc;
+
+    /* Pull data from SimBus. */
+    rc = adapter_model_start(adapter, sim);  /* Causes time to progress. */
+    if (rc) return rc;
+    marshal(sim, MARSHAL_ADAPTER2MODEL);
+
+    /* Model callbacks.
+     * These notify the model of the _next_ start and stop time, which the
+     * model should use for its "async" execution. After that execution the
+     * model will call modelc_controller_sync() which will call this method
+     * to update the SimBus based on those start/end times. */
+    double end_time = sim->end_time;
+    double model_time = sim->end_time;
+    rc = sim_step_models(sim, &model_time);
+    if (rc) return rc;
+
+    /* End condition? */
+    if (end_time > 0 && end_time < model_time) return 1;
+
+    /* Push data to SimBus. */
+    marshal(sim, MARSHAL_MODEL2ADAPTER);
+    rc = adapter_model_ready(adapter, sim);
+    if (rc) return rc;
+
+    /* Otherwise, return 0 indicating that do_step was successful. */
+    return 0;
+}
+
+
 void controller_run(SimulationSpec* sim)
 {
     assert(sim);

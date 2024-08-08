@@ -82,6 +82,8 @@ typedef struct SimulationSpec {
     ModelInstanceSpec* instance_list;
     /* The simulation is in a different location (i.e. not the CWD). */
     const char*        sim_path;
+    /* Operational properties needed for loopback operation. */
+    bool               mode_loopback;
 } SimulationSpec;
 
 

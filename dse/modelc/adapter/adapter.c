@@ -221,24 +221,34 @@ void adapter_register(Adapter* adapter, SimulationSpec* sim)
 }
 
 
-int adapter_ready(Adapter* adapter, SimulationSpec* sim)
+int adapter_model_ready(Adapter* adapter, SimulationSpec* sim)
 {
     assert(sim);
     assert(adapter);
     assert(adapter->vtable);
+    int rc = 0;
 
     /* Send Notify message (ModelReady).
 
        A single Notify message will be constructed with all SV's from all
        Models included.
     */
-    int rc = 0;
     for (ModelInstanceSpec* mi = sim->instance_list; mi && mi->name; mi++) {
         ModelInstancePrivate* mip = mi->private;
         AdapterModel*         am = mip->adapter_model;
         if (adapter->vtable->ready) rc |= adapter->vtable->ready(am);
     }
     if (rc != 0) log_error("Adapter ready error (%d)", rc);
+    return rc;
+}
+
+
+int adapter_model_start(Adapter* adapter, SimulationSpec* sim)
+{
+    assert(sim);
+    assert(adapter);
+    assert(adapter->vtable);
+    int rc = 0;
 
     /* Wait for Notify message (ModelStart).
 
@@ -251,6 +261,22 @@ int adapter_ready(Adapter* adapter, SimulationSpec* sim)
         if (adapter->vtable->start) rc |= adapter->vtable->start(am);
     }
     if (rc != 0) log_error("Adapter start error (%d)", rc);
+    return rc;
+}
+
+
+int adapter_ready(Adapter* adapter, SimulationSpec* sim)
+{
+    assert(sim);
+    assert(adapter);
+    assert(adapter->vtable);
+    int rc = 0;
+
+    /* Send Notify message (ModelReady). */
+    rc = adapter_model_ready(adapter, sim);
+
+    /* Wait for Notify message (ModelStart). */
+    rc |= adapter_model_start(adapter, sim);
 
     return rc;
 }
