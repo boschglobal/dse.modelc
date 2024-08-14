@@ -43,6 +43,7 @@ RUN dpkg --add-architecture i386; \
         gdb \
         jq \
         less \
+        libc6-i386 \
         libc6-x32 \
         libx32stdc++6 \
         redis-tools \

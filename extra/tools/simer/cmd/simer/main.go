@@ -21,7 +21,8 @@ var (
 	redisPath     = flag.String("redis", "redis-server", "path to redis-server executable")
 	simbusPath    = flag.String("simbus", "simbus", "path to SimBus executable (set to \"\" to disable)")
 	modelcPath    = flag.String("modelc", "modelc", "path to ModelC executable")
-	modelcX32Path = flag.String("modelcX32", "modelc32", "path to ModelC x32 executable")
+	modelcX32Path = flag.String("modelcX32", "modelc32_x86", "path to ModelC x32 executable")
+	modelcI386Path = flag.String("modelcI386", "modelc32_i386", "path to ModelC i386 executable")
 )
 
 func main() {
@@ -47,7 +48,7 @@ func main() {
 	if c := simer.SimbusCommand(index, *simbusPath, flags); c != nil {
 		cmds = append(cmds, c)
 	}
-	cmds = append(cmds, simer.ModelCommandList(index, *modelcPath, *modelcX32Path, flags)...)
+	cmds = append(cmds, simer.ModelCommandList(index, *modelcPath, *modelcX32Path, *modelcI386Path, flags)...)
 
 	// Start and run the session.
 	var s session.Session

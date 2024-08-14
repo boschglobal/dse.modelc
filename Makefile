@@ -109,8 +109,15 @@ simer:
 	fi
 	@if [ ${PACKAGE_ARCH} = "linux-x86" ]; then \
 		cp dse/modelc/build/_out/bin/modelc extra/tools/simer/build/stage/bin/modelc32 ;\
+		cp dse/modelc/build/_out/bin/modelc extra/tools/simer/build/stage/bin/modelc32_x86 ;\
 		cp dse/modelc/build/_out/lib/mcl_model.so extra/tools/simer/build/stage/lib32/mcl_model.so ;\
-		cp dse/modelc/build/_out/examples/simer/lib/libcounter.so extra/tools/simer/build/stage/lib32/libcounter.so ;\
+		cp dse/modelc/build/_out/lib/mcl_model.so extra/tools/simer/build/stage/lib32/mcl_model_x86.so ;\
+		cp dse/modelc/build/_out/examples/simer/lib/libcounter.so extra/tools/simer/build/stage/lib32/libcounter_x86.so ;\
+	fi
+	@if [ ${PACKAGE_ARCH} = "linux-i386" ]; then \
+		cp dse/modelc/build/_out/bin/modelc extra/tools/simer/build/stage/bin/modelc32_i386 ;\
+		cp dse/modelc/build/_out/lib/mcl_model.so extra/tools/simer/build/stage/lib32/mcl_model_i386.so ;\
+		cp dse/modelc/build/_out/examples/simer/lib/libcounter.so extra/tools/simer/build/stage/lib32/libcounter_i386.so ;\
 	fi
 
 .PHONY: docker

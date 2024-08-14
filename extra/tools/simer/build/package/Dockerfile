@@ -83,6 +83,7 @@ RUN set -eux; \
         gdbserver \
         jq \
         less \
+		libc6-i386 \
         libc6-x32 \
         libx32stdc++6 \
 		tmux \

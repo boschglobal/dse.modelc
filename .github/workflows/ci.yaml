@@ -26,6 +26,7 @@ jobs:
         package_arch:
           - linux-amd64
           - linux-x86
+          - linux-i386
           - windows-x64
           - windows-x86
     container:
@@ -136,6 +137,7 @@ jobs:
         package_arch:
           - linux-amd64
           - linux-x86
+          - linux-i386
           - windows-x64
           - windows-x86
     steps:
@@ -297,20 +299,33 @@ jobs:
         with:
           name: ${{ env.package_name }}-linux-x86-sandbox
           path: sandbox/ModelC-linux-x86-sandbox
+      - uses: actions/download-artifact@v3
+        with:
+          name: ${{ env.package_name }}-linux-i386-sandbox
+          path: sandbox/ModelC-linux-i386-sandbox
 
       - name: Sandbox
         run: |
           (cd sandbox/${{ env.package_name }}-linux-amd64-sandbox; tar xzf sandbox_out.tar.gz)
           (cd sandbox/${{ env.package_name }}-linux-x86-sandbox; tar xzf sandbox_out.tar.gz)
+          (cd sandbox/${{ env.package_name }}-linux-i386-sandbox; tar xzf sandbox_out.tar.gz)
           mkdir -p extra/tools/simer/build/stage/bin
           mkdir -p extra/tools/simer/build/stage/lib
           mkdir -p extra/tools/simer/build/stage/lib32
-          cp sandbox/${{ env.package_name }}-linux-amd64-sandbox/${{ env.build_dir }}/_out/bin/simbus extra/tools/simer/build/stage/bin/simbus ;\
-          cp sandbox/${{ env.package_name }}-linux-amd64-sandbox/${{ env.build_dir }}/_out/bin/modelc extra/tools/simer/build/stage/bin/modelc ;\
-          cp sandbox/${{ env.package_name }}-linux-amd64-sandbox/${{ env.build_dir }}/_out/lib/mcl_model.so extra/tools/simer/build/stage/lib/mcl_model.so ;\
-          cp -r sandbox/${{ env.package_name }}-linux-amd64-sandbox/${{ env.build_dir }}/_out/licenses -t extra/tools/simer/build/stage ;\
-          cp sandbox/${{ env.package_name }}-linux-x86-sandbox/${{ env.build_dir }}/_out/bin/modelc extra/tools/simer/build/stage/bin/modelc32 ;\
-          cp sandbox/${{ env.package_name }}-linux-x86-sandbox/${{ env.build_dir }}/_out/lib/mcl_model.so extra/tools/simer/build/stage/lib32/mcl_model.so ;\
+
+          cp sandbox/${{ env.package_name }}-linux-amd64-sandbox/${{ env.build_dir }}/_out/bin/simbus extra/tools/simer/build/stage/bin/simbus
+          cp sandbox/${{ env.package_name }}-linux-amd64-sandbox/${{ env.build_dir }}/_out/bin/modelc extra/tools/simer/build/stage/bin/modelc
+          cp sandbox/${{ env.package_name }}-linux-amd64-sandbox/${{ env.build_dir }}/_out/lib/mcl_model.so extra/tools/simer/build/stage/lib/mcl_model.so
+
+          cp sandbox/${{ env.package_name }}-linux-x86-sandbox/${{ env.build_dir }}/_out/bin/modelc extra/tools/simer/build/stage/bin/modelc32
+          cp sandbox/${{ env.package_name }}-linux-x86-sandbox/${{ env.build_dir }}/_out/bin/modelc extra/tools/simer/build/stage/bin/modelc32_x86
+          cp sandbox/${{ env.package_name }}-linux-x86-sandbox/${{ env.build_dir }}/_out/lib/mcl_model.so extra/tools/simer/build/stage/lib32/mcl_model.so
+          cp sandbox/${{ env.package_name }}-linux-x86-sandbox/${{ env.build_dir }}/_out/lib/mcl_model.so extra/tools/simer/build/stage/lib32/mcl_model_x86.so
+
+          cp sandbox/${{ env.package_name }}-linux-i386-sandbox/${{ env.build_dir }}/_out/bin/modelc extra/tools/simer/build/stage/bin/modelc32_i386
+          cp sandbox/${{ env.package_name }}-linux-i386-sandbox/${{ env.build_dir }}/_out/lib/mcl_model.so extra/tools/simer/build/stage/lib32/mcl_model_i386.so
+
+          cp -r sandbox/${{ env.package_name }}-linux-amd64-sandbox/${{ env.build_dir }}/_out/licenses -t extra/tools/simer/build/stage
           ls -R extra/tools/simer/build/stage
 
       - name: Build and push

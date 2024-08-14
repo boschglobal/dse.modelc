@@ -152,7 +152,7 @@ func findModelDoc(docMap map[string][]kind.KindDoc, modelName string) (*kind.Kin
 	return nil, false
 }
 
-func ModelCommandList(docMap map[string][]kind.KindDoc, modelcPath string, modelcX32Path string, flags Flags) []*session.Command {
+func ModelCommandList(docMap map[string][]kind.KindDoc, modelcPath string, modelcX32Path string, modelcI386Path string, flags Flags) []*session.Command {
 	cmds := []*session.Command{}
 
 	slog.Debug("Build Model commands...")
@@ -170,7 +170,7 @@ func ModelCommandList(docMap map[string][]kind.KindDoc, modelcPath string, model
 			// Stacked is a special case, emit/return the single command.
 			if stackSpec.Runtime != nil && stackSpec.Runtime.Stacked != nil && *stackSpec.Runtime.Stacked {
 				slog.Debug(("Build stacked command"))
-				cmd := stackedModelCmd(&stackDoc, modelcPath, modelcX32Path, flags, docMap)
+				cmd := stackedModelCmd(&stackDoc, modelcPath, modelcX32Path, modelcI386Path, flags, docMap)
 				cmds = append(cmds, cmd)
 				continue // Next stack.
 			}
@@ -197,6 +197,8 @@ func ModelCommandList(docMap map[string][]kind.KindDoc, modelcPath string, model
 				progPath := modelcPath
 				if model.Runtime != nil && model.Runtime.X32 != nil && *model.Runtime.X32 {
 					progPath = modelcX32Path
+				} else if model.Runtime != nil && model.Runtime.I386 != nil && *model.Runtime.I386 {
+					progPath = modelcI386Path
 				}
 				cmd := buildModelCmd(model.Name, progPath, yamlFiles, calculateEnv(stackSpec, &model, flags), flags)
 				slog.Info(fmt.Sprintf("Model: name=%s, stack=%s", model.Name, stackDoc.Metadata.Name))
@@ -211,7 +213,7 @@ func ModelCommandList(docMap map[string][]kind.KindDoc, modelcPath string, model
 	return cmds
 }
 
-func stackedModelCmd(stackDoc *kind.KindDoc, modelcPath string, modelcX32Path string, flags Flags, docMap map[string][]kind.KindDoc) *session.Command {
+func stackedModelCmd(stackDoc *kind.KindDoc, modelcPath string, modelcX32Path string, modelcI386Path string, flags Flags, docMap map[string][]kind.KindDoc) *session.Command {
 	stackSpec := stackDoc.Spec.(*schema_kind.StackSpec)
 	instanceName := []string{}
 	modelName := []string{}
@@ -236,6 +238,8 @@ func stackedModelCmd(stackDoc *kind.KindDoc, modelcPath string, modelcX32Path st
 		// Run as 32bit process?
 		if model.Runtime != nil && model.Runtime.X32 != nil && *model.Runtime.X32 {
 			progPath = modelcX32Path
+		} else if model.Runtime != nil && model.Runtime.I386 != nil && *model.Runtime.I386 {
+			progPath = modelcI386Path
 		}
 		// Collate the environment.
 		modelEnv := calculateEnv(stackSpec, &model, flags)
