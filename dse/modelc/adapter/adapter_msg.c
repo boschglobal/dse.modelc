@@ -25,6 +25,7 @@ typedef struct notify_spec_t {
     notify(NotifyMessage_table_t) message;
     flatcc_builder_t* builder;
     struct timespec   notifyrecv_ts;
+    AdapterModel*     last_am;
 } notify_spec_t;
 
 
@@ -75,6 +76,9 @@ static int notify_encode_sv(void* value, void* data)
     flatcc_builder_t* builder = notify_data->builder;
     assert(builder);
 
+    log_simbus("Notify/ModelReady --> [...]");
+    log_simbus("    model_time=%f", am->model_time);
+
     msgpack_sbuffer sbuf;
     msgpack_packer  pk;
     msgpack_sbuffer_init(&sbuf);
@@ -113,6 +117,7 @@ static int notify_encode_model(void* value, void* data)
     assert(builder);
 
     flatbuffers_uint32_vec_push(builder, &am->model_uid);
+    notify_data->last_am = am;
 
     return 0;
 }
@@ -267,9 +272,8 @@ static int adapter_msg_register(AdapterModel* am)
 }
 
 
-static int adapter_msg_model_ready(AdapterModel* am)
+static int adapter_msg_model_ready(Adapter* adapter)
 {
-    Adapter*          adapter = am->adapter;
     AdapterMsgVTable* v = (AdapterMsgVTable*)adapter->vtable;
     flatcc_builder_t* builder = &(v->builder);
     notify_spec_t     notify_data = {
@@ -278,9 +282,6 @@ static int adapter_msg_model_ready(AdapterModel* am)
     };
 
     flatcc_builder_reset(builder);
-
-    log_simbus("Notify/ModelReady --> [...]");
-    log_simbus("    model_time=%f", am->model_time);
 
     /* SignalVector vector. */
     notify(SignalVector_vec_start(builder));
@@ -293,6 +294,8 @@ static int adapter_msg_model_ready(AdapterModel* am)
     hashmap_iterator(&adapter->models, notify_encode_model, true, &notify_data);
     flatbuffers_uint32_vec_ref_t model_uids =
         flatbuffers_uint32_vec_end(builder);
+    AdapterModel* am = notify_data.last_am;
+    if (am == NULL) return 0;
 
     /* NotifyMessage message. */
     notify(NotifyMessage_start(builder));
@@ -310,10 +313,8 @@ static int adapter_msg_model_ready(AdapterModel* am)
 }
 
 
-static int adapter_msg_model_start(AdapterModel* am)
+static int adapter_msg_model_start(Adapter* adapter)
 {
-    Adapter* adapter = am->adapter;
-
     /* Wait on Notify. Notify will contain all channel/signal values.
      * Indicated by parameters channel_name and message_type being NULL/0. */
     log_debug("adapter_ready: wait on Notify ...");
@@ -326,26 +327,6 @@ static int adapter_msg_model_start(AdapterModel* am)
 
         /* Handle specific error conditions. */
         if (rc == ETIME) return rc; /* TIMEOUT */
-    }
-
-    if (0) {
-        /* Wait on ModelStart from all channels (and handle SignalValue,
-         * ParameterValue) */
-        uint32_t start_counter = 0;
-        log_debug("adapter_ready: wait on ModelStart ...");
-        while (start_counter < am->channels_length) {
-            const char* msg_channel_name = NULL;
-            bool        found = false;
-            int         rc = wait_message(adapter, &msg_channel_name,
-                        ns(MessageType_ModelStart), 0, &found);
-            if (rc != 0) {
-                log_error("wait_message returned %d", rc);
-
-                /* Handle specific error conditions. */
-                if (rc == ETIME) return rc; /* TIMEOUT */
-            }
-            if (found) start_counter++;
-        }
     }
 
     return 0;

@@ -32,8 +32,8 @@ Adapter Interface
 typedef int (*AdapterConnect)(
     AdapterModel* am, SimulationSpec* sim, int retry_count);
 typedef int (*AdapterRegister)(AdapterModel* am);
-typedef int (*AdapterReady)(AdapterModel* am);
-typedef int (*AdapterStart)(AdapterModel* am);
+typedef int (*AdapterReady)(Adapter* adapter);
+typedef int (*AdapterStart)(Adapter* adapter);
 typedef int (*AdapterExit)(AdapterModel* am);
 typedef void (*AdapterDestroy)(Adapter* a);
 
@@ -162,7 +162,6 @@ DLL_PUBLIC AdapterVTable* adapter_create_msg_vtable(void);
 
 /* adapter_loopb.c */
 DLL_PUBLIC AdapterVTable* adapter_create_loopb_vtable(void);
-
 
 
 #endif  // DSE_MODELC_ADAPTER_ADAPTER_H_

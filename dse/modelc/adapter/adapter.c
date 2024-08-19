@@ -33,11 +33,13 @@ static void* _create_vtable(Endpoint* endpoint)
     /* Select/create the adapter VTable. */
     switch (endpoint->kind) {
     case ENDPOINT_KIND_LOOPBACK:
-        log_notice("Load endpoint create function: %s", ADAPTER_CREATE_LOOPB_VTABLE);
+        log_notice(
+            "Load endpoint create function: %s", ADAPTER_CREATE_LOOPB_VTABLE);
         func = dlsym(handle, ADAPTER_CREATE_LOOPB_VTABLE);
         break;
     case ENDPOINT_KIND_MESSAGE:
-        log_notice("Load endpoint create function: %s", ADAPTER_CREATE_MSG_VTABLE);
+        log_notice(
+            "Load endpoint create function: %s", ADAPTER_CREATE_MSG_VTABLE);
         func = dlsym(handle, ADAPTER_CREATE_MSG_VTABLE);
         break;
     case ENDPOINT_KIND_SIMBUS:
@@ -226,17 +228,18 @@ int adapter_model_ready(Adapter* adapter, SimulationSpec* sim)
     assert(sim);
     assert(adapter);
     assert(adapter->vtable);
-    int rc = 0;
+    int rc = EINVAL;
 
     /* Send Notify message (ModelReady).
 
        A single Notify message will be constructed with all SV's from all
        Models included.
+
+       Use the first instance to get a handle for the ready() method.
     */
-    for (ModelInstanceSpec* mi = sim->instance_list; mi && mi->name; mi++) {
-        ModelInstancePrivate* mip = mi->private;
-        AdapterModel*         am = mip->adapter_model;
-        if (adapter->vtable->ready) rc |= adapter->vtable->ready(am);
+    ModelInstanceSpec* mi = sim->instance_list;
+    if (mi && mi->name) {
+        if (adapter->vtable->ready) rc = adapter->vtable->ready(adapter);
     }
     if (rc != 0) log_error("Adapter ready error (%d)", rc);
     return rc;
@@ -248,17 +251,18 @@ int adapter_model_start(Adapter* adapter, SimulationSpec* sim)
     assert(sim);
     assert(adapter);
     assert(adapter->vtable);
-    int rc = 0;
+    int rc = EINVAL;
 
     /* Wait for Notify message (ModelStart).
 
        Currently only a single Notify message will be received, and that
        will update all model instances.
+
+       Use the first instance to get a handle for the ready() method.
     */
-    for (ModelInstanceSpec* mi = sim->instance_list; mi && mi->name; mi++) {
-        ModelInstancePrivate* mip = mi->private;
-        AdapterModel*         am = mip->adapter_model;
-        if (adapter->vtable->start) rc |= adapter->vtable->start(am);
+    ModelInstanceSpec* mi = sim->instance_list;
+    if (mi && mi->name) {
+        if (adapter->vtable->start) rc = adapter->vtable->start(adapter);
     }
     if (rc != 0) log_error("Adapter start error (%d)", rc);
     return rc;

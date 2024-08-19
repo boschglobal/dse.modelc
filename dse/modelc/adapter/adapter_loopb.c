@@ -224,15 +224,14 @@ static int _resolve_bus(void* _sc, void* _)
     return 0;
 }
 
-static int adapter_loopb_model_ready(AdapterModel* am)
+
+static int ready_update_sv(void* value, void* data)
 {
+    UNUSED(data);
+    AdapterModel*       am = value;
     Adapter*            adapter = am->adapter;
     AdapterLoopbVTable* v = (AdapterLoopbVTable*)adapter->vtable;
 
-    if (v->state != ADAPTER_STATE_READY) {
-        v->state = ADAPTER_STATE_READY;
-        hashmap_iterator(&v->channels, _resolve_bus, false, NULL);
-    }
     log_simbus("Notify/ModelReady --> [...]");
     log_simbus("    model_time=%f", am->model_time);
 
@@ -269,18 +268,29 @@ static int adapter_loopb_model_ready(AdapterModel* am)
 }
 
 
-static int adapter_loopb_model_start(AdapterModel* am)
+static int adapter_loopb_model_ready(Adapter* adapter)
 {
+    AdapterLoopbVTable* v = (AdapterLoopbVTable*)adapter->vtable;
+
+    if (v->state != ADAPTER_STATE_READY) {
+        v->state = ADAPTER_STATE_READY;
+        hashmap_iterator(&v->channels, _resolve_bus, false, NULL);
+    }
+
+    hashmap_iterator(&adapter->models, ready_update_sv, true, NULL);
+    return 0;
+}
+
+
+static int notify_update_sv(void* value, void* data)
+{
+    UNUSED(data);
+    AdapterModel*       am = value;
     Adapter*            adapter = am->adapter;
     AdapterLoopbVTable* v = (AdapterLoopbVTable*)adapter->vtable;
 
-    if (v->state != ADAPTER_STATE_START) {
-        v->state = ADAPTER_STATE_START;
-    }
-
     /* Progress time. */
     am->stop_time = am->model_time + v->step_size;
-
     log_simbus("Notify/ModelStart <-- [%u]", am->model_uid);
     log_simbus("    model_uid=%u", am->model_uid);
     log_simbus("    model_time=%f", am->model_time);
@@ -316,6 +326,18 @@ static int adapter_loopb_model_start(AdapterModel* am)
         }
     }
 
+    return 0;
+}
+
+static int adapter_loopb_model_start(Adapter* adapter)
+{
+    AdapterLoopbVTable* v = (AdapterLoopbVTable*)adapter->vtable;
+
+    if (v->state != ADAPTER_STATE_START) {
+        v->state = ADAPTER_STATE_START;
+    }
+
+    hashmap_iterator(&adapter->models, notify_update_sv, true, NULL);
     return 0;
 }
 
