@@ -168,7 +168,7 @@ typedef struct {
         const char* runtime_model;
 
         /* Used by Importer/Runtime interface. */
-        const char* sim_path;
+        char*       sim_path;
         const char* model_name;  // Delimited list "a,b".
         const char* simulation_yaml;
         int         argc;

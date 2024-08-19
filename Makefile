@@ -163,6 +163,7 @@ cleanall:
 	docker ps --filter status=dead --filter status=exited -aq | xargs -r docker rm -v
 	docker images -qf dangling=true | xargs -r docker rmi
 	docker volume ls -qf dangling=true | xargs -r docker volume rm
+	docker images -q */*/$(NAMESPACE)-simer | xargs -r docker rmi
 
 .PHONY: oss
 oss:
