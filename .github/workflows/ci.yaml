@@ -74,7 +74,7 @@ jobs:
           make package
           tar -czf sandbox_out.tar.gz -C . ${{ env.build_dir }}/_out
 
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         with:
           name: ${{ env.package_name }}-${{ matrix.package_arch }}-package
           path: |
@@ -82,7 +82,7 @@ jobs:
             ${{ env.build_dir }}/_dist/${{ env.package_name }}-${{ env.PACKAGE_VERSION }}-${{ matrix.package_arch }}.zip
           retention-days: 1
 
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         with:
           name: ${{ env.package_name }}-${{ matrix.package_arch }}-sandbox
           path: |
