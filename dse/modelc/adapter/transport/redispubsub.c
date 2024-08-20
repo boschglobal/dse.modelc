@@ -261,7 +261,7 @@ int32_t redispubsub_start(Endpoint* endpoint)
         if (redis_ep->sub_ctx) {
             redisAsyncContext* _ctx = redis_ep->sub_ctx;
             if (_ctx->err) {
-                log_notice("Connection error: %s", _ctx->err);
+                log_notice("Connection error: %s", _ctx->errstr);
                 redisAsyncFree(redis_ep->sub_ctx);
                 redis_ep->sub_ctx = NULL;
             } else {
