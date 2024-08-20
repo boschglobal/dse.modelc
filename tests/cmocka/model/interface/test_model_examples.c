@@ -200,6 +200,7 @@ void test_model__benchmark(void** state)
         (char*)"--name=" BENCHMARK_INST_NAME,
         (char*)"--logger=5",  // 1=debug, 5=QUIET (commit with 5!)
         (char*)"data/simulation.yaml",
+        (char*)"data/signalgroup.yaml",
         (char*)"data/model.yaml",
     };
     SimMock* mock = *state = simmock_alloc(inst_names, ARRAY_SIZE(inst_names));

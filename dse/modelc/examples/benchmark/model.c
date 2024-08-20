@@ -51,7 +51,10 @@ ModelDesc* model_create(ModelDesc* model)
         m->signal_change = atoi(getenv("SIGNAL_CHANGE"));
     }
     m->change_seed = _get_seed();
-    log_notice("seed value: %d", m->change_seed);
+
+    log_notice("signal count  : %d", m->model.sv->count);
+    log_notice("signal change : %d", m->signal_change);
+    log_notice("seed value    : %d", m->change_seed);
 
     /* Return the extended object. */
     return (ModelDesc*)m;
@@ -64,7 +67,7 @@ int model_step(ModelDesc* model, double* model_time, double stop_time)
     for (SignalVector* sv = m->model.sv; sv->name; sv++) {
         uint32_t count =
             _get_signal_change(sv, m->signal_change, &m->change_seed);
-        log_info("Signal count is : %d", count);
+        log_info("Signal change count is : %d", count);
         for (size_t i = 0; i < count; i++) {
             sv->scalar[i] += 1.2;
         }

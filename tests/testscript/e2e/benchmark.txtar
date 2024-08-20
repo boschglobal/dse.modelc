@@ -1,0 +1,165 @@
+env NAME=benchmark_inst_1
+env SIM=dse/modelc/build/_out/examples/benchmark
+env DEFAULT_INSTANCE_COUNT=4
+env DEFAULT_SIGNAL_COUNT=5
+env DEFAULT_SIGNAL_CHANGE=2
+env DEFAULT_END_TIME=0.040
+env DEFAULT_TRANSPORT=redispubsub
+env DEFAULT_TRANSPORT_URI=redis://localhost:6379
+env DEFAULT_STACKED=true
+
+
+# SETUP: generate yaml files
+exec sh -e $WORK/gen_yaml.sh
+
+exists /repo/$SIM/data/simulation.yaml
+exists /repo/$SIM/data/signal_group.yaml
+exec cat /repo/$SIM/data/simulation.yaml
+exec cat /repo/$SIM/data/signal_group.yaml
+
+
+# BENCHMARK: minimal example model
+exec sh -e $WORK/run_benchmark.sh
+
+stdout 'Name: benchmark_inst_1'
+stdout 'name         : data_channel'
+stdout 'signal count  :'
+stdout 'signal change :'
+stdout 'seed value    :'
+stdout 'Run the Simulation ...'
+stdout 'ModelRegister --> \[data_channel\]'
+stdout 'SignalIndex --> \[data_channel\]'
+stdout 'SignalIndex <-- \[data_channel\]'
+stdout 'Notify/ModelReady --> \[...\]'
+stdout 'SignalVector --> \[data_channel:41\]'
+stdout 'Notify/ModelStart <-- \[41\]'
+stdout 'SignalVector <-- \[data_channel\]'
+stdout 'Signal change count is :'
+stdout 'ModelExit --> \[data_channel\]'
+stdout 'Controller exit ...'
+
+
+
+-- gen_yaml.sh --
+############
+# Parameters
+############
+INSTANCE_COUNT="${INSTANCE_COUNT:-${DEFAULT_INSTANCE_COUNT}}"
+SIGNAL_COUNT="${SIGNAL_COUNT:-${DEFAULT_SIGNAL_COUNT}}"
+SIGNAL_CHANGE="${SIGNAL_CHANGE:-${DEFAULT_SIGNAL_CHANGE}}"
+TRANSPORT="${TRANSPORT:-${DEFAULT_TRANSPORT}}"
+TRANSPORT_URI="${TRANSPORT_URI:-${DEFAULT_TRANSPORT_URI}}"
+STACKED="${STACKED:-${DEFAULT_STACKED}}"
+
+
+#################
+# Simulation YAML
+#################
+output_sim_file="/repo/$SIM/data/simulation.yaml"
+echo "Modifying Simulation YAML file ..."
+cat <<EOL > "$output_sim_file"
+---
+kind: Stack
+metadata:
+  name: benchmark_stack
+spec:
+  connection:
+    transport:
+      $TRANSPORT:
+        uri: $TRANSPORT_URI
+        timeout: 60
+  runtime:
+    stacked: $STACKED
+  models:
+    - name: simbus
+      model:
+        name: simbus
+      channels:
+        - name: data_channel
+          expectedModelCount: $INSTANCE_COUNT
+EOL
+
+echo "Generate model instances ..."
+for i in $(seq 1 "$INSTANCE_COUNT"); do
+    uid=$((40 + i)) # Generate unique UID starting from 41
+    # Append each model instance
+    yq eval -i "
+        .spec.models += [
+        {
+            \"name\": \"benchmark_inst_$i\",
+            \"uid\": $uid,
+            \"model\": { \"name\": \"Benchmark\" },
+            \"runtime\": {
+                \"env\": {
+                    \"SIGNAL_CHANGE\" : \"$SIGNAL_CHANGE\"
+                },
+                \"files\": [\"data/signal_group.yaml\"]
+            },
+            \"channels\": [
+            {
+                \"name\": \"data_channel\",
+                \"alias\": \"data\"
+            }
+            ]
+        }
+    ]
+    " "$output_sim_file"
+done
+
+
+###################
+# SimBus Model YAML
+###################
+cat <<EOL >> "$output_sim_file"
+---
+kind: Model
+metadata:
+  name: simbus
+EOL
+
+
+##################
+# SignalGroup YAML
+##################
+output_file="/repo/$SIM/data/signal_group.yaml"
+PREFIX_COUNT="${PREFIX_COUNT:-10}"
+POSTFIX_COUNT="${POSTFIX_COUNT:-10}"
+
+generate_random_string() {
+    tr -dc 'A-Za-z' </dev/urandom | head -c "$1"
+}
+
+echo "Generating initial signal group file ..."
+cat <<EOL > "$output_file"
+---
+kind: SignalGroup
+metadata:
+  name: data
+  labels:
+    channel: data
+spec:
+  signals:
+EOL
+
+echo "Generating signals ..."
+for i in $(seq 1 "$SIGNAL_COUNT"); do
+    signal_name="$(generate_random_string "$PREFIX_COUNT")_${i}_$(generate_random_string "$POSTFIX_COUNT")"
+    yq eval -i ".spec.signals += [{\"signal\": \"$signal_name\"}]" "$output_file"
+done
+
+
+
+-- run_benchmark.sh --
+SIMER="${SIMER:-ghcr.io/boschglobal/dse-simer:latest}"
+END_TIME="${END_TIME:-${DEFAULT_END_TIME}}"
+docker run --name simer -i --rm -v $ENTRYDIR/$SIM:/sim \
+    $SIMER -valgrind $NAME \
+        -env $NAME:SIMBUS_LOGLEVEL=2 \
+        -endtime $END_TIME \
+        | tee benchmark_output.txt
+
+# Extract the statistics section and save it to a separate file
+benchmark_statistics="/repo/$SIM/data/benchmark_statistics.txt"
+sed -n '/Profile\/Benchmark Data:/,$p' benchmark_output.txt \
+    | sed 's/\x1B\[[0-9;]*[a-zA-Z]//g' \
+    > "$benchmark_statistics"

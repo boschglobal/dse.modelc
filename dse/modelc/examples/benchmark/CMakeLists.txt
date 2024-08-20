@@ -41,6 +41,7 @@ install(
     FILES
         model.yaml
         simulation.yaml
+        signalgroup.yaml
     DESTINATION
         ${MODEL_PATH}/data
     COMPONENT

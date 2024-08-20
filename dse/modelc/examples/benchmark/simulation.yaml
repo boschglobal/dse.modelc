@@ -12,17 +12,52 @@ spec:
       redispubsub:
         uri: redis://localhost:6379
         timeout: 60
+  runtime:
+    stacked: true
   models:
     - name: simbus
       model:
         name: simbus
       channels:
         - name: data_channel
-          expectedModelCount: 1
+          expectedModelCount: 4
     - name: benchmark_inst
       uid: 42
       model:
         name: Benchmark
+      runtime:
+        files:
+          - data/signal_group.yaml
+      channels:
+        - name: data_channel
+          alias: data
+    - name: benchmark_inst_2
+      uid: 43
+      model:
+        name: Benchmark
+      runtime:
+        files:
+          - data/signal_group.yaml
+      channels:
+        - name: data_channel
+          alias: data
+    - name: benchmark_inst_3
+      uid: 44
+      model:
+        name: Benchmark
+      runtime:
+        files:
+          - data/signal_group.yaml
+      channels:
+        - name: data_channel
+          alias: data
+    - name: benchmark_inst_4
+      uid: 45
+      model:
+        name: Benchmark
+      runtime:
+        files:
+          - data/signal_group.yaml
       channels:
         - name: data_channel
           alias: data
@@ -30,12 +65,3 @@ spec:
 kind: Model
 metadata:
   name: simbus
----
-kind: SignalGroup
-metadata:
-  name: data
-  labels:
-    channel: data
-spec:
-  signals:
-    - signal: counter

@@ -66,6 +66,7 @@ TESTSCRIPT_E2E_FILES = \
 	$(TESTSCRIPT_E2E_DIR)/mstep.txtar \
 	$(TESTSCRIPT_E2E_DIR)/transport.txtar \
 	$(TESTSCRIPT_E2E_DIR)/runtime.txtar \
+	$(TESTSCRIPT_E2E_DIR)/benchmark.txtar
 
 #	$(TESTSCRIPT_E2E_DIR)/gateway.txtar \
 
@@ -164,6 +165,7 @@ cleanall:
 	docker images -qf dangling=true | xargs -r docker rmi
 	docker volume ls -qf dangling=true | xargs -r docker volume rm
 	docker images -q */*/$(NAMESPACE)-simer | xargs -r docker rmi
+	docker images -q */*/$(NAMESPACE)-testscript | xargs -r docker rmi
 
 .PHONY: oss
 oss:
