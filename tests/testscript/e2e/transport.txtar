@@ -1,5 +1,5 @@
-env NAME=minimal_inst
-env SIM=dse/modelc/build/_out/examples/minimal
+env NAME=binary_inst
+env SIM=dse/modelc/build/_out/examples/binary
 
 
 # TEST: redispubsub
@@ -11,7 +11,8 @@ exec sh -e $WORK/test.sh
 stderr 'Using Valgrind'
 stdout 'Transport: redispubsub'
 stdout 'URI: redis://localhost:6379'
-stdout 'SignalValue: 2628574755 = 4.000000 \[name=counter\]'
+stdout 'SignalValue: 2628574755 = 46.000000 \[name=counter\]'
+stdout 'Message \(message\) : count is 46'
 
 
 # TEST: redis
@@ -23,7 +24,8 @@ exec sh -e $WORK/test.sh
 stderr 'Using Valgrind'
 stdout 'Transport: redis'
 stdout 'URI: redis://localhost:6379'
-stdout 'SignalValue: 2628574755 = 4.000000 \[name=counter\]'
+stdout 'SignalValue: 2628574755 = 46.000000 \[name=counter\]'
+stdout 'Message \(message\) : count is 46'
 
 
 # TEST: redisasync
@@ -35,7 +37,8 @@ exec sh -e $WORK/test.sh
 stderr 'Using Valgrind'
 stdout 'Transport: redis'
 stdout 'URI: redisasync://localhost:6379'
-stdout 'SignalValue: 2628574755 = 4.000000 \[name=counter\]'
+stdout 'SignalValue: 2628574755 = 46.000000 \[name=counter\]'
+stdout 'Message \(message\) : count is 46'
 
 
 # TEST: loopback
@@ -47,7 +50,8 @@ exec sh -e $WORK/test-loopback.sh
 stderr 'Using Valgrind'
 stdout 'Transport: loopback'
 stdout 'URI: loopback'
-stdout 'SignalValue: 2628574755 = 4.000000 \[name=counter\]'
+stdout 'SignalValue: 2628574755 = 46.000000 \[name=counter\]'
+stdout 'Message \(message\) : count is 46'
 
 
 -- test.sh --
