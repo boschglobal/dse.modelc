@@ -60,6 +60,14 @@ static void _redis__async_connect(const redisAsyncContext* c, int status)
     redis_ep->actx_connecting = 0;
 }
 
+static void _check_free_reply(redisReply* reply)
+{
+    if (reply && reply->type == REDIS_REPLY_ERROR) {
+        log_error("REDIS_REPLY_ERROR : %s", reply->str);
+    }
+    freeReplyObject(reply);
+}
+
 
 Endpoint* redis_connect(const char* path, const char* hostname, int32_t port,
     uint32_t model_uid, bool bus_mode, double recv_timeout, bool async)
@@ -202,7 +210,7 @@ void* redis_create_channel(Endpoint* endpoint, const char* channel_name)
     if (hashmap_get(&endpoint->endpoint_channels, channel_name) == NULL) {
         hashmap_set(
             &endpoint->endpoint_channels, channel_name, (void*)channel_name);
-        log_notice("    Endpoint Channel : %s\n", channel_name);
+        log_notice("    Endpoint Channel : %s", channel_name);
     }
 
     /* Return the created object, to the caller (which will be an Adapter). */
@@ -220,7 +228,7 @@ int32_t redis_start(Endpoint* endpoint)
     /* Setup the Push/Pull Key (remove previous state). */
     redisReply* _ =
         redisCommand(redis_ep->ctx, "DEL %s", redis_ep->pull.endpoint);
-    freeReplyObject(_);
+    _check_free_reply(_);
     if (endpoint->bus_mode) {
         /* PUSH are Models, handled by hash. */
         /* PULL is SimBus.*/
@@ -288,7 +296,7 @@ int32_t redis_send_fbs(Endpoint* endpoint, void* endpoint_channel, void* buffer,
             sbuf.size);
         redisReply* _ = redisCommand(redis_ep->ctx, "LPUSH %s %b",
             push_desc->endpoint, (void*)sbuf.data, (size_t)sbuf.size);
-        freeReplyObject(_);
+        _check_free_reply(_);
     } else {
         if (endpoint->bus_mode) {
             /* Sending a Notify Message to each model. */
@@ -307,7 +315,7 @@ int32_t redis_send_fbs(Endpoint* endpoint, void* endpoint_channel, void* buffer,
                     redisReply* _ = redisCommand(redis_ep->ctx, "LPUSH %s %b",
                         push_desc->endpoint, (void*)sbuf.data,
                         (size_t)sbuf.size);
-                    freeReplyObject(_);
+                    _check_free_reply(_);
                 }
             }
             for (uint32_t _ = 0; _ < count; _++)
@@ -325,7 +333,7 @@ int32_t redis_send_fbs(Endpoint* endpoint, void* endpoint_channel, void* buffer,
             } else {
                 redisReply* _ = redisCommand(redis_ep->ctx, "LPUSH %s %b",
                     push_desc->endpoint, (void*)sbuf.data, (size_t)sbuf.size);
-                freeReplyObject(_);
+                _check_free_reply(_);
             }
         }
     }

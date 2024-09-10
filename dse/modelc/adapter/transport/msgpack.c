@@ -86,7 +86,7 @@ int32_t mp_decode_fbs(char* msg, int msg_len, uint8_t** buffer,
     static char msg_ind[10];
     assert(obj.via.str.size < 10);
     strncpy(msg_ind, obj.via.str.ptr, obj.via.str.size);
-    msg_ind[obj.via.str.size + 1] = '\0';
+    msg_ind[obj.via.str.size] = '\0';
     /* Object[1]: channel name (string) */
     ret = msgpack_unpacker_next(&unpacker, &unpacked);
     if (ret != MSGPACK_UNPACK_SUCCESS) {
@@ -102,7 +102,7 @@ int32_t mp_decode_fbs(char* msg, int msg_len, uint8_t** buffer,
         static char ch_name[100];
         assert(obj.via.str.size < 100);
         strncpy(ch_name, obj.via.str.ptr, obj.via.str.size);
-        ch_name[obj.via.str.size + 1] = '\0';
+        ch_name[obj.via.str.size] = '\0';
         const char* _ = hashmap_get(&endpoint->endpoint_channels, ch_name);
         assert(_);         /* Channel name should be known. */
         *channel_name = _; /* Return the const char* version of ch_name. */
