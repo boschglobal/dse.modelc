@@ -51,7 +51,7 @@ typedef struct ModelInstanceSpec {
     void* private;
 
     /* Reserved. */
-    uint64_t __reserved__[4];
+    uint64_t __reserved__[8];
 } ModelInstanceSpec;
 
 
@@ -70,6 +70,9 @@ typedef struct SimulationSpec {
     const char*        sim_path;
     /* Operational properties needed for loopback operation. */
     bool               mode_loopback;
+
+    /* Reserved. */
+    uint64_t __reserved__[4];
 } SimulationSpec;
 
 
@@ -96,6 +99,9 @@ typedef struct ModelCArguments {
     uint32_t    steps;
     /* The simulation is in a different location (i.e. not the CWD). */
     const char* sim_path;
+
+    /* Reserved. */
+    uint64_t __reserved__[4];
 } ModelCArguments;
 
 
@@ -145,7 +151,7 @@ DLL_PRIVATE int model_configure_channel(ModelInstanceSpec* model_instance,
 #define MODEL_RUNTIME_STEP_FUNC_NAME    "model_runtime_step"
 #define MODEL_RUNTIME_DESTROY_FUNC_NAME "model_runtime_destroy"
 
-typedef struct {
+typedef struct RuntimeModelDesc {
     ModelDesc model;
 
     /*  Runtime properties. */
@@ -168,6 +174,9 @@ typedef struct {
         double  step_time_correction;
         bool    binary_signals_reset;
     } runtime;
+
+    /* Reserved. */
+    uint64_t __reserved__[8];
 } RuntimeModelDesc;
 
 DLL_PUBLIC RuntimeModelDesc* model_runtime_create(RuntimeModelDesc* model);

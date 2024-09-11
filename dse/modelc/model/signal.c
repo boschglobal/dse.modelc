@@ -25,14 +25,9 @@ extern void ncodec_trace_destroy(NCodecInstance* nc);
 
 __attribute__((unused)) static void __compile_time_checks(void)
 {
-/* Compile-time type size check. Get actual size with:
- *    char (*___)[sizeof(SignalVector)] = 1;
- */
-#if __SIZEOF_POINTER__ == 8
+    // Compile-time type size check. Get actual size with:
+    // char (*___)[sizeof(SignalVector)] = 1;
     _Static_assert(sizeof(SignalVector) == 256, "Compatibility FAIL!");
-#else
-    _Static_assert(sizeof(SignalVector) == 168, "Compatibility FAIL!");
-#endif
 }
 
 

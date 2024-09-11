@@ -159,7 +159,7 @@ typedef struct ModelDesc {
     ModelVTable vtable;
 
     /* Reserved. */
-    uint64_t __reserved__[2];
+    uint64_t __reserved__[4];
 } ModelDesc;
 
 

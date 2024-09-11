@@ -16,14 +16,9 @@
 
 __attribute__((unused)) static void __compile_time_checks(void)
 {
-/* Compile-time type size check. Get actual size with:
- *    char (*___)[sizeof(ModelGatewayDesc)] = 1;
- */
-#if __SIZEOF_POINTER__ == 8
+    // Compile-time type size check. Get actual size with:
+    // char(*___)[sizeof(ModelGatewayDesc)] = 1;
     _Static_assert(sizeof(ModelGatewayDesc) == 80, "Compatibility FAIL!");
-#else
-    _Static_assert(sizeof(ModelGatewayDesc) == 64, "Compatibility FAIL!");
-#endif
 }
 
 
