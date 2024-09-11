@@ -215,10 +215,10 @@ void test_model_api__binary_stream_reset(void** state)
             mock, BINARY_INST_NAME, b_checks, ARRAY_SIZE(b_checks), NULL);
         /* Inject some binary data, if reset is called, this will be ignored. */
         SignalVector* sv = mock->sv_network_tx;
-        char foobar[100] = "foobar";
+        unsigned char foobar[100] = "foobar";
         for (int j = 0; j < 2; j++) {
             signal_reset(sv, j);
-            signal_append(sv, j, foobar, strlen(foobar) + 1);
+            signal_append(sv, j, foobar, strlen((char*)foobar) + 1);
         }
         /* Step the model. */
         assert_int_equal(simmock_step(mock, true), 0);

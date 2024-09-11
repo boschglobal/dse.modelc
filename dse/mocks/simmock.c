@@ -216,7 +216,7 @@ void simmock_load(SimMock* mock)
 
         void* handle = dlopen(
             model->mi->model_definition.full_path, RTLD_NOW | RTLD_LOCAL);
-        if (handle == NULL) log_notice("ERROR: dlopen call: %s", dlerror());
+        if (handle == NULL) log_error("ERROR: dlopen call: %s", dlerror());
         assert_non_null(handle);
         model->vtable.create = dlsym(handle, MODEL_CREATE_FUNC_NAME);
         model->vtable.step = dlsym(handle, MODEL_STEP_FUNC_NAME);

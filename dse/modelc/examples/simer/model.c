@@ -33,7 +33,7 @@ ModelDesc* model_create(ModelDesc* model)
     if (getenv("COUNTER_NAME")) {
         counter_name = getenv("COUNTER_NAME");
     }
-    m->counter = m->model.index((ModelDesc*)m, "data", counter_name);
+    m->counter = signal_index((ModelDesc*)m, "data", counter_name);
     if (m->counter.scalar == NULL) log_fatal("Signal not found (%s)", counter_name);
 
     /* Set initial values. */

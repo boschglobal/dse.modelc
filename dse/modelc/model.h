@@ -5,6 +5,7 @@
 #ifndef DSE_MODELC_MODEL_H_
 #define DSE_MODELC_MODEL_H_
 
+#include <stddef.h>
 #include <stdint.h>
 #include <stdbool.h>
 
@@ -188,7 +189,6 @@ DLL_PUBLIC const char* model_instance_annotation(
 
 
 /* Signal Interface. */
-
 typedef int (*BinarySignalAppendFunc)(
     SignalVector* sv, uint32_t index, void* data, uint32_t len);
 typedef int (*BinarySignalResetFunc)(SignalVector* sv, uint32_t index);
@@ -249,8 +249,12 @@ typedef struct SignalVector {
 
 
 /* Provided by ModelC (virtual methods of SignalVectorVTable). */
+DLL_PUBLIC ModelSignalIndex signal_index(
+    ModelDesc* m, const char* vname, const char* name);
+DLL_PUBLIC int signal_read(
+    SignalVector* sv, uint32_t index, uint8_t** data, size_t* len);
 DLL_PUBLIC int signal_append(
-    SignalVector* sv, uint32_t index, void* data, uint32_t len);
+    SignalVector* sv, uint32_t index, uint8_t* data, size_t len);
 DLL_PUBLIC int         signal_reset(SignalVector* sv, uint32_t index);
 DLL_PUBLIC int         signal_release(SignalVector* sv, uint32_t index);
 DLL_PUBLIC void*       signal_codec(SignalVector* sv, uint32_t index);

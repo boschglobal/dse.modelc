@@ -584,11 +584,11 @@ NULL
 : The specified annotation was not found.
 
 */
-const char* model_annotation(ModelDesc* m, const char* name)
+const char* model_annotation(ModelDesc* model, const char* name)
 {
-    if (m && m->mi) {
+    if (model && model->mi) {
         YamlNode* a = dse_yaml_find_node(
-            m->mi->model_definition.doc, "metadata/annotations");
+            model->mi->model_definition.doc, "metadata/annotations");
         if (a) return dse_yaml_get_scalar(a, name);
     }
     return NULL;
@@ -618,10 +618,10 @@ NULL
 : The specified annotation was not found.
 
 */
-const char* model_instance_annotation(ModelDesc* m, const char* name)
+const char* model_instance_annotation(ModelDesc* model, const char* name)
 {
-    if (m && m->mi) {
-        YamlNode* a = dse_yaml_find_node(m->mi->spec, "annotations");
+    if (model && model->mi) {
+        YamlNode* a = dse_yaml_find_node(model->mi->spec, "annotations");
         if (a) return dse_yaml_get_scalar(a, name);
     }
     return NULL;

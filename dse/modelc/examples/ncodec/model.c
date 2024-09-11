@@ -20,7 +20,7 @@ typedef struct {
 
 static inline NCODEC* _index(ExtendedModelDesc* m, const char* v, const char* s)
 {
-    ModelSignalIndex idx = m->model.index((ModelDesc*)m, v, s);
+    ModelSignalIndex idx = signal_index((ModelDesc*)m, v, s);
     if (idx.binary == NULL) log_fatal("Signal not found (%s:%s)", v, s);
 
     NCODEC* nc = signal_codec(idx.sv, idx.signal);

@@ -438,6 +438,93 @@ void model_sv_destroy(SignalVector* sv)
 
 
 /**
+signal_index
+============
+
+A model may use this method to index a signal that is contained within the
+Signal Vectors of the Model Descriptor.
+
+Parameters
+----------
+model (ModelDesc*)
+: The Model Descriptor object representing an instance of this model.
+
+vname (const char*)
+: The name (alias) of the Signal Vector.
+
+name (const char*)
+: The name of the signal within the Signal Vector. When set to NULL the index
+  will match on Signal Vector (vanme) only.
+
+Returns
+-------
+ModelSignalIndex
+: An index. When valid, either the `scalar` or `binary` fields will be set to
+  a valid pointer (i.e. not NULL). When `sname` is not specified the index will
+  contain a valid pointer to a Signal Vector object only (i.e. both `scalar`
+  and `binary` will be set to NULL).
+
+*/
+ModelSignalIndex signal_index(
+    ModelDesc* model, const char* vname, const char* name)
+{
+    if (model && model->index) {
+        return model->index(model, vname, name);
+    }
+    return (ModelSignalIndex){};
+}
+
+
+/**
+signal_read
+===========
+
+Read data from the specified binary signal. Returns pointer to the internal
+binary signal buffers.
+
+Parameters
+----------
+sv (SignalVector*)
+: The Signal Vector object containing the signal.
+
+index (uint32_t)
+: Index of the signal in the Signal Vector object.
+
+data (uint8_t*)
+: Address/pointer to the data of the binary signal.
+
+len (size_t)
+: Length of the data.
+
+Returns
+-------
+0
+: The operation completed without error.
+
+-EINVAL (-22)
+: Bad arguments.
+
+<>0
+: Indicates an error condition. Inspect `errno` for additional information.
+*/
+inline int signal_read(
+    SignalVector* sv, uint32_t index, uint8_t** data, size_t* len)
+{
+    if (data == NULL || len == NULL) return -EINVAL;
+    *data = NULL;
+    *len = 0;
+
+    if (sv && index < sv->count && sv->is_binary) {
+        *data = (uint8_t*)sv->binary[index];
+        *len = (size_t)sv->length[index];
+        return 0;
+    } else {
+        return -EINVAL;
+    }
+}
+
+
+/**
 signal_append
 =============
 
@@ -452,10 +539,10 @@ sv (SignalVector*)
 index (uint32_t)
 : Index of the signal in the Signal Vector object.
 
-data (void*)
+data (uint8_t*)
 : Address/pointer to the data which should be appended to the binary signal.
 
-len (uint32_t)
+len (size_t)
 : Length of the provided data buffer being appended.
 
 Returns
@@ -473,11 +560,11 @@ Returns
 : Indicates an error condition. Inspect `errno` for additional information.
 */
 inline int signal_append(
-    SignalVector* sv, uint32_t index, void* data, uint32_t len)
+    SignalVector* sv, uint32_t index, uint8_t* data, size_t len)
 {
     if (sv && index < sv->count && sv->is_binary) {
         if (sv->vtable.append) {
-            return sv->vtable.append(sv, index, data, len);
+            return sv->vtable.append(sv, index, (void*)data, len);
         } else {
             return -ENOSYS;
         }
