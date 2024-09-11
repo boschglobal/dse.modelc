@@ -140,14 +140,14 @@ static int adapter_msg_connect(
          channel_index++) {
         Channel* ch = _get_channel_byindex(am, channel_index);
 
-        /* ModelRegister (without 'create') */
-        flatcc_builder_reset(builder);
-        ns(ModelRegister_start)(builder);
-        ns(ModelRegister_step_size_add)(builder, sim->step_size);
-        message =
-            ns(MessageType_as_ModelRegister(ns(ModelRegister_end)(builder)));
         int rc = 0;
         for (int i = 0; i < retry_count; i++) {
+            /* ModelRegister (without 'create') */
+            flatcc_builder_reset(builder);
+            ns(ModelRegister_start)(builder);
+            ns(ModelRegister_step_size_add)(builder, sim->step_size);
+            message =
+                ns(MessageType_as_ModelRegister(ns(ModelRegister_end)(builder)));
             log_simbus("ModelRegister --> [%s]", ch->name);
             log_simbus("    model_uid=%d", am->model_uid);
             log_simbus("    step_size=%f", sim->step_size);
