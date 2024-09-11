@@ -30,6 +30,7 @@ type Flags struct {
 
 	EnvModifier listFlag
 
-	Gdb      string
-	Valgrind string
+	Gdb       string
+	GdbServer string
+	Valgrind  string
 }

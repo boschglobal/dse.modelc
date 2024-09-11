@@ -185,8 +185,7 @@ int32_t wait_message(Adapter* adapter, const char**    channel_name,
 
 NOTE: the message will already be encoded to the builder object on the
 adapter->vtable, therefore, this function should only be called once per
-message (i.e. send_all should be unwound to a for loop with a
-flacc_builder_reset() call on each loop ... or a buffer memcpy).
+message.
  */
 int32_t send_message(Adapter* adapter, void* endpoint_channel,
     uint32_t model_uid, ns(MessageType_union_ref_t) message, bool ack)

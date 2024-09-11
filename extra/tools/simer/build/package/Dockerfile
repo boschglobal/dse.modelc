@@ -80,6 +80,7 @@ RUN set -eux; \
         bash \
         ca-certificates \
         curl \
+		gdb \
         gdbserver \
         jq \
         less \

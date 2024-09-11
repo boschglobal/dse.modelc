@@ -109,8 +109,10 @@ func SimbusCommand(docMap map[string][]kind.KindDoc, simbusPath string, flags Fl
 				if model.Runtime != nil && model.Runtime.Files != nil {
 					yamlFiles = append(yamlFiles, *model.Runtime.Files...)
 				}
+				// Base command.
+				yamlFiles = removeDuplicate(yamlFiles)
+				path, args := processCmdModifiers("simbus", simbusPath, flags)
 				// Arguments.
-				args := []string{}
 				//args = append(args, "--help")
 				//args = append(args, "--logger", "2")
 				if flags.Transport != "" {
@@ -125,7 +127,7 @@ func SimbusCommand(docMap map[string][]kind.KindDoc, simbusPath string, flags Fl
 				}
 				cmd := session.Command{
 					Name: "SimBus",
-					Prog: simbusPath,
+					Prog: path,
 					Args: append(args, yamlFiles...),
 					Env:  calculateEnv(stackSpec, &model, flags),
 				}
@@ -266,14 +268,21 @@ func removeDuplicate[T comparable](s []T) []T {
 	})
 }
 
-func buildModelCmd(name string, path string, yamlFiles []string, env map[string]string, flags Flags) *session.Command {
-
-	yamlFiles = removeDuplicate(yamlFiles)
+func processCmdModifiers(name string, path string, flags Flags) (string, []string) {
 	args := []string{}
-
-	// Command modifiers.
 	if len(flags.Gdb) != 0 {
 		if slices.Contains(strings.Split(name, ","), flags.Gdb) == true {
+			// Prefix 'path' with the GDB command and options.
+			gdbArgs := []string{
+				"--eval-command=run",
+				"--args",
+			}
+			args = append(args, gdbArgs...)
+			args = append(args, path)
+			path = "/usr/bin/gdb"
+		}
+	} else if len(flags.GdbServer) != 0 {
+		if slices.Contains(strings.Split(name, ","), flags.GdbServer) == true {
 			// Run model 'name' via gdbserver.
 			args = append(args, "localhost:2159", path)
 			path = "/usr/bin/gdbserver"
@@ -291,6 +300,13 @@ func buildModelCmd(name string, path string, yamlFiles []string, env map[string]
 			path = "/usr/bin/valgrind"
 		}
 	}
+	return path, args
+}
+
+func buildModelCmd(name string, path string, yamlFiles []string, env map[string]string, flags Flags) *session.Command {
+
+	yamlFiles = removeDuplicate(yamlFiles)
+	path, args := processCmdModifiers(name, path, flags)
 
 	// Continue building the command.
 	args = append(args, "--name", name)

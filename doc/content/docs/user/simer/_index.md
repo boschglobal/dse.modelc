@@ -316,7 +316,7 @@ $ docker pull ghcr.io/boschglobal/dse-simer:2.0
 ```bash
 # Define a shell function (or add to .profile file).
 $ export SIMER_IMAGE=ghcr.io/boschglobal/dse-simer:latest
-$ simer() { ( cd "$1" && shift && docker run -it --rm -v $(pwd):/sim -p 2159:2159 $SIMER_IMAGE "$@"; ) }
+$ simer() { ( if test -d "$1"; then cd "$1" && shift; fi && docker run -it --rm -v $(pwd):/sim -p 2159:2159 $SIMER_IMAGE "$@"; ) }
 
 # Run the simulation.
 $ simer dse/modelc/build/_out/examples/minimal -endtime 0.04
@@ -336,6 +336,7 @@ Examples:
   simer -stack minimal_stack -endtime 0.1 -logger 2
   simer -stepsize 0.0005 -endtime 0.005 -transport redis -uri redis://redis:6379
   simer -tmux -endtime 0.02
+  simer -gdb simbus -tmux -endtime 0.004 -logger 2 -timeout 5
 
 Flags:
   -endtime *flag.float64Value
@@ -343,11 +344,15 @@ Flags:
   -env *simer.listFlag
         environment modifier, in format '-env MODEL:NAME=VAL'
   -gdb *flag.stringValue
+        run this model instance via GDB, use CSL in format '-gdb simbus,model'
+  -gdbserver *flag.stringValue
         attach this model instance to GDB server
   -logger *flag.intValue
         log level (select between 0..4) (3)
+  -modelcI386 *flag.stringValue
+        path to ModelC i386 executable (/usr/local/bin/modelc32_i386)
   -modelcX32 *flag.stringValue
-        path to ModelC x32 executable (modelc32)
+        path to ModelC x32 executable (/usr/local/bin/modelc32_x86)
   -stack *flag.stringValue
         run the named simulation stack(s)
   -stepsize *flag.float64Value
@@ -361,7 +366,7 @@ Flags:
   -uri *flag.stringValue
         SimBus connection URI (redis://localhost:6379)
   -valgrind *flag.stringValue
-        run this model instance via Valgrind
+        run this model instance via Valgrind, use CSL in format '-valgrind simbus,model'
 ```
 
 
@@ -423,15 +428,32 @@ Finally, use:
 : Detach from the _tmux_ session (__and exit the simulation!__).
 
 
-### GDB Debugging
+### GDB Debug
+
+#### GDB
+
+Models (and the SimBus) running in a simulation can be run under GDB to facilitate
+interactive debugging. This method of debugging requires the use of the Tmux
+interface.
+
+```bash
+# Start the simulation with the SimBus running under GDB.
+$ simer dse/modelc/build/_out/examples/gdb -tmux -gdb simbus -endtime 0.04  -timeout 5
+
+# Start the simulation with a model and the SimBus running under GDB.
+$ simer dse/modelc/build/_out/examples/gdb -tmux -gdb simbus,gdb_inst -endtime 0.04  -timeout 5
+```
+
+
+#### GDB Server (remote)
 
 Models running in a simulation can be debugged with GDB by indicating which model
-is being debugged via the option `-gdb`, and then connecting a GDB instance to
+is being debugged via the option `-gdbserver`, and then connecting a GDB instance to
 that model running "remotely" in the Simer simulation.
 
 ```bash
 # Start the simulation and indicate the Model being debugged.
-$ simer dse/modelc/build/_out/examples/gdb -endtime 0.04 -tmux -gdb gdb_inst
+$ simer dse/modelc/build/_out/examples/gdb -endtime 0.04 -tmux -gdbserver gdb_inst
 
 # Start GDB (in a second terminal), and connect to the simulation.
 $ gdb dse/modelc/build/_out/bin/modelc
@@ -448,6 +470,9 @@ $ gdb dse/modelc/build/_out/bin/modelc
 
 Channel
 : Represents a grouping of signals which are exchanged between models.
+
+GDB
+: A tool for debugging software and investigating bugs (typically segmentation faults).
 
 Manifest
 : A simulation project definition format which is used to define and build a simulation package.

@@ -25,6 +25,7 @@ Examples:
   simer -stack minimal_stack -endtime 0.1 -logger 2
   simer -stepsize 0.0005 -endtime 0.005 -transport redis -uri redis://redis:6379
   simer -tmux -endtime 0.02
+  simer -gdb simbus -tmux -endtime 0.004 -logger 2 -timeout 5
 
 Flags:
 `
@@ -61,8 +62,9 @@ func parseFlags() {
 
 	flag.Var(&flags.EnvModifier, "env", "environment modifier, in format '-env MODEL:NAME=VAL'")
 
-	flag.StringVar(&flags.Gdb, "gdb", "", "attach this model instance to GDB server")
-	flag.StringVar(&flags.Valgrind, "valgrind", "", "run this model instance via Valgrind")
+	flag.StringVar(&flags.Gdb, "gdb", "", "run this model instance via GDB, use CSL in format '-gdb simbus,model'")
+	flag.StringVar(&flags.GdbServer, "gdbserver", "", "attach this model instance to GDB server")
+	flag.StringVar(&flags.Valgrind, "valgrind", "", "run this model instance via Valgrind, use CSL in format '-valgrind simbus,model'")
 
 	flag.Parse()
 	if flagSpecified("transport") == false {
