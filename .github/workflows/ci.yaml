@@ -251,7 +251,7 @@ jobs:
           outputs: type=docker,dest=/tmp/${{ matrix.container }}.tar
 
       - name: Upload image artifact
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v4
         with:
           name: image_${{ matrix.container }}
           path: /tmp/${{ matrix.container }}.tar
@@ -341,7 +341,7 @@ jobs:
           outputs: type=docker,dest=/tmp/simer.tar
 
       - name: Upload image artifact
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v4
         with:
           name: image_simer
           path: /tmp/simer.tar
