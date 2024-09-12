@@ -58,9 +58,10 @@ static int _signal_group_match_handler(
 }
 
 static const char* _signal_annotation(ModelInstanceSpec* mi, SignalVector* sv,
-    const char* signal, const char* name)
+    const char* signal, const char* name, void** node)
 {
     const char* value = NULL;
+    if (node) *node = NULL;
 
     /* Set the search vars. */
     __signal_match = NULL;
@@ -80,6 +81,9 @@ static const char* _signal_annotation(ModelInstanceSpec* mi, SignalVector* sv,
     if (__signal_match) {
         YamlNode* n = dse_yaml_find_node(__signal_match->data, "annotations");
         value = dse_yaml_get_scalar(n, name);
+        if (node && value) {
+            *node = dse_yaml_find_node(n, name);
+        }
         free(__signal_match);
         __signal_match = NULL;
     }
@@ -90,28 +94,32 @@ static const char* _signal_annotation(ModelInstanceSpec* mi, SignalVector* sv,
 
 static const char* __signal_group_annotation_name;
 static const char* __signal_group_annotation_value;
+static YamlNode*   __signal_group_annotation_node;
 
 static int _sg_annotation_search_match_handler(
     ModelInstanceSpec* model_instance, SchemaObject* object)
 {
     UNUSED(model_instance);
 
+    const char* name = __signal_group_annotation_name;
     YamlNode*   n = dse_yaml_find_node(object->doc, "metadata/annotations");
-    const char* value = dse_yaml_get_scalar(n, __signal_group_annotation_name);
+    const char* value = dse_yaml_get_scalar(n, name);
     if (value) {
         /* Match found, return +ve to stop search. */
         __signal_group_annotation_value = value;
+        __signal_group_annotation_node = dse_yaml_find_node(n, name);
         return 1;
     }
     return 0; /* Continue search. */
 }
 
 static const char* _signal_group_annotation(
-    ModelInstanceSpec* mi, SignalVector* sv, const char* name)
+    ModelInstanceSpec* mi, SignalVector* sv, const char* name, void** node)
 {
     /* Set the search vars. */
     __signal_group_annotation_name = name;
     __signal_group_annotation_value = NULL;
+    __signal_group_annotation_node = NULL;
 
     /* Search over the schema objects. */
     ChannelSpec*          cs = model_build_channel_spec(mi, sv->name);
@@ -125,6 +133,7 @@ static const char* _signal_group_annotation(
 
     /* If the search was successful (first match wins), the value will be set.
      */
+    if (node) *node = (void*)__signal_group_annotation_node;
     return __signal_group_annotation_value;
 }
 
@@ -203,20 +212,21 @@ static int __binary_release(SignalVector* sv, uint32_t index)
 }
 
 static const char* __annotation_get(
-    SignalVector* sv, uint32_t index, const char* name)
+    SignalVector* sv, uint32_t index, const char* name, void** node)
 {
     assert(sv);
     assert(sv->mi);
 
-    return _signal_annotation(sv->mi, sv, sv->signal[index], name);
+    return _signal_annotation(sv->mi, sv, sv->signal[index], name, node);
 }
 
-static const char* __group_annotation_get(SignalVector* sv, const char* name)
+static const char* __group_annotation_get(
+    SignalVector* sv, const char* name, void** node)
 {
     assert(sv);
     assert(sv->mi);
 
-    return _signal_group_annotation(sv->mi, sv, name);
+    return _signal_group_annotation(sv->mi, sv, name, node);
 }
 
 static void* __binary_codec(SignalVector* sv, uint32_t index)
@@ -274,7 +284,8 @@ static int _add_sv(void* _mfc, void* _sv_data)
         for (uint32_t i = 0; i < current_sv->count; i++) {
             current_sv->mime_type[i] = DEFAULT_BINARY_MIME_TYPE;
             const char* mt;
-            mt = current_sv->vtable.annotation(current_sv, i, "mime_type");
+            mt =
+                current_sv->vtable.annotation(current_sv, i, "mime_type", NULL);
             if (mt) current_sv->mime_type[i] = mt;
         }
         /* NCodec. */
@@ -641,7 +652,8 @@ Returns
 <>0
 : Indicates an error condition. Inspect `errno` for additional information.
 */
-inline int signal_reset_called(SignalVector* sv, uint32_t index, bool* reset_called)
+inline int signal_reset_called(
+    SignalVector* sv, uint32_t index, bool* reset_called)
 {
     if (reset_called == NULL) return -EINVAL;
 
@@ -811,11 +823,11 @@ Example (Code Usage)
 >}}
 */
 inline const char* signal_annotation(
-    SignalVector* sv, uint32_t index, const char* name)
+    SignalVector* sv, uint32_t index, const char* name, void** node)
 {
     if (sv && index < sv->count) {
         if (sv->vtable.annotation) {
-            return sv->vtable.annotation(sv, index, name);
+            return sv->vtable.annotation(sv, index, name, node);
         } else {
             errno = ENOSYS;
             return NULL;
@@ -850,11 +862,12 @@ NULL
 : The requested annotation was not found, inspect `errno` for additional
 information..
 */
-inline const char* signal_group_annotation(SignalVector* sv, const char* name)
+inline const char* signal_group_annotation(
+    SignalVector* sv, const char* name, void** node)
 {
     if (sv) {
         if (sv->vtable.group_annotation) {
-            return sv->vtable.group_annotation(sv, name);
+            return sv->vtable.group_annotation(sv, name, node);
         } else {
             errno = ENOSYS;
             return NULL;

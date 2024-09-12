@@ -331,19 +331,28 @@ void test_signal__annotations(void** state)
 
     /* Check annotations. */
     const char* value;
+    YamlNode* node = NULL;
 
-    value = signal_annotation(sv, 0, "name");
+    value = signal_annotation(sv, 0, "name", NULL);
     assert_non_null(value);
     assert_string_equal(value, "binary_foo");
-    value = signal_annotation(sv, 0, "mime_type");
+    value = signal_annotation(sv, 0, "mime_type", NULL);
     assert_null(value);
+    value = signal_annotation(sv, 0, "mime_type", (void**)&node);
+    assert_null(value);
+    assert_null(node);
 
-    value = signal_annotation(sv, 1, "name");
+    value = signal_annotation(sv, 1, "name", NULL);
     assert_non_null(value);
     assert_string_equal(value, "binary_bar");
-    value = signal_annotation(sv, 1, "mime_type");
+    value = signal_annotation(sv, 1, "mime_type", NULL);
     assert_non_null(value);
     assert_string_equal(value, "application/custom-stream");
+    value = signal_annotation(sv, 1, "mime_type", (void**)&node);
+    assert_non_null(value);
+    assert_non_null(node);
+    assert_string_equal(value, "application/custom-stream");
+    assert_string_equal(node->scalar, "application/custom-stream");
 }
 
 
@@ -364,12 +373,20 @@ void test_signal__group_annotations(void** state)
 
     /* Check annotations. */
     const char* value;
+    YamlNode* node = NULL;
 
-    value = signal_group_annotation(sv, "vector_name");
+    value = signal_group_annotation(sv, "vector_name", NULL);
     assert_non_null(value);
+    value = signal_group_annotation(sv, "vector_name", (void**)&node);
+    assert_non_null(value);
+    assert_non_null(node);
+
     assert_string_equal(value, "network_vector");
-    value = signal_group_annotation(sv, "missing");
+    value = signal_group_annotation(sv, "missing", NULL);
     assert_null(value);
+    value = signal_group_annotation(sv, "missing", (void**)&node);
+    assert_null(value);
+    assert_null(node);
 }
 
 
