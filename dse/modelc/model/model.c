@@ -23,11 +23,13 @@ __attribute__((unused)) static void __compile_time_checks(void)
     // char(*___)[sizeof(ModelDesc)] = 1;
     // char(*___)[sizeof(ModelCArguments)] = 1;
     // char(*___)[sizeof(RuntimeModelDesc)] = 1;
+#if __SIZEOF_POINTER__ == 8
     _Static_assert(sizeof(SimulationSpec) == 104, "Compatibility FAIL!");
     _Static_assert(sizeof(ModelInstanceSpec) == 160, "Compatibility FAIL!");
     _Static_assert(sizeof(ModelDesc) == 112, "Compatibility FAIL!");
     _Static_assert(sizeof(ModelCArguments) == 160, "Compatibility FAIL!");
     _Static_assert(sizeof(RuntimeModelDesc) == 272, "Compatibility FAIL!");
+#endif
 }
 
 

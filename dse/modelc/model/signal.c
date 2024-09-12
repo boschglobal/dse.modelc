@@ -27,7 +27,9 @@ __attribute__((unused)) static void __compile_time_checks(void)
 {
     // Compile-time type size check. Get actual size with:
     // char (*___)[sizeof(SignalVector)] = 1;
+#if __SIZEOF_POINTER__ == 8
     _Static_assert(sizeof(SignalVector) == 256, "Compatibility FAIL!");
+#endif
 }
 
 
