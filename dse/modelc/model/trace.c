@@ -45,6 +45,7 @@ static void _trace_log(
     NCodecTraceData*  td = nc->private;
     NCodecCanMessage* msg = m;
     static char       b[NCT_BUFFER_LEN];
+    static char       bus_identifier[NCT_BUSID_LEN];
 
     /* Setup bus identifier (on first call). */
     if (strlen(td->bus_identifier) == 0) {
@@ -62,6 +63,12 @@ static void _trace_log(
 
     /* Format and write the log. */
     memset(b, 0, NCT_BUFFER_LEN);
+    if (strcmp(direction, "RX") == 0) {
+        snprintf(bus_identifier, NCT_BUSID_LEN, "%d:%d:%d",
+            msg->sender.bus_id, msg->sender.node_id, msg->sender.interface_id);
+    } else {
+        strncpy(bus_identifier, td->bus_identifier, NCT_BUSID_LEN);
+    }
     if (msg->len <= 16) {
         // Short form log.
         for (uint32_t i = 0; i < msg->len; i++) {
@@ -86,7 +93,7 @@ static void _trace_log(
         }
     }
     log_notice("(%s) %.6f [%s] %s %02x %d %d :%s", td->model_inst_name,
-        *td->simulation_time, td->bus_identifier, direction, msg->frame_id,
+        *td->simulation_time, bus_identifier, direction, msg->frame_id,
         msg->frame_type, msg->len, b);
 }
 
