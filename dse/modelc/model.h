@@ -5,6 +5,7 @@
 #ifndef DSE_MODELC_MODEL_H_
 #define DSE_MODELC_MODEL_H_
 
+#include <stddef.h>
 #include <stdint.h>
 #include <stdbool.h>
 
@@ -137,21 +138,28 @@ typedef void (*ModelDestroy)(ModelDesc* m);
 typedef ModelSignalIndex (*ModelIndex)(
     ModelDesc* m, const char* vname, const char* sname);
 
-
 typedef struct ModelVTable {
     ModelCreate  create;
     ModelStep    step;
     ModelDestroy destroy;
     ModelIndex   index;
+
+    /* Reserved (space for 2 function pointers). */
+    void* __reserved__[2];
 } ModelVTable;
 
 
 typedef struct ModelDesc {
-    ModelVTable        vtable;
     ModelIndex         index;
     SimulationSpec*    sim;
     ModelInstanceSpec* mi;
     SignalVector*      sv;
+
+    /* Model Function Table. */
+    ModelVTable vtable;
+
+    /* Reserved. */
+    uint64_t __reserved__[4];
 } ModelDesc;
 
 
@@ -181,16 +189,15 @@ DLL_PUBLIC const char* model_instance_annotation(
 
 
 /* Signal Interface. */
-
 typedef int (*BinarySignalAppendFunc)(
     SignalVector* sv, uint32_t index, void* data, uint32_t len);
 typedef int (*BinarySignalResetFunc)(SignalVector* sv, uint32_t index);
 typedef int (*BinarySignalReleaseFunc)(SignalVector* sv, uint32_t index);
 typedef void* (*BinarySignalCodecFunc)(SignalVector* sv, uint32_t index);
 typedef const char* (*SignalAnnotationGetFunc)(
-    SignalVector* sv, uint32_t index, const char* name);
+    SignalVector* sv, uint32_t index, const char* name, void** node);
 typedef const char* (*SignalGroupAnnotationGetFunc)(
-    SignalVector* sv, const char* name);
+    SignalVector* sv, const char* name, void** node);
 
 
 typedef struct SignalVectorVTable {
@@ -200,53 +207,63 @@ typedef struct SignalVectorVTable {
     SignalAnnotationGetFunc      annotation;
     BinarySignalCodecFunc        codec;
     SignalGroupAnnotationGetFunc group_annotation;
+
+    /* Reserved (space for 2 function pointers). */
+    void* __reserved__[2];
 } SignalVectorVTable;
 
 
 typedef struct SignalVector {
-    const char*  name;
-    const char*  alias;
-    const char*  function_name;
-    bool         is_binary;
+    const char* name;
+    const char* alias;
+
+    /* Reference data. */
+    const char*        function_name;
+    ModelInstanceSpec* mi;
+    void*              index;     /* Hashmap object, index on `signal`. */
+    void*              index_uid; /* Hashmap object, index on `uid`. */
+
     /* Vector representation of Signals (each with _count_ elements). */
     uint32_t     count;
-    const char** signal; /* Signal name. */
-    union {              /* Signal value. */
-        struct {
-            double* scalar;
-        };
-        struct {
-            void**       binary;
-            uint32_t*    length;      /* Length of binary object. */
-            uint32_t*    buffer_size; /* Size of allocated buffer. */
-            const char** mime_type;
-            void**       ncodec;       /* Network Codec objects. */
-            bool*        reset_called; /* Indicate that reset() was called. */
-        };
+    const char** signal; /* Signal names. */
+    bool         is_binary;
+    struct {
+        /* Scalar signals (is_binary == false). */
+        double* scalar;
     };
-    /* Helper functions. */
-    BinarySignalAppendFunc  append;
-    BinarySignalResetFunc   reset;
-    BinarySignalReleaseFunc release;
-    SignalAnnotationGetFunc annotation;
-    BinarySignalCodecFunc   codec;
-    /* Reference data. */
-    ModelInstanceSpec*      mi;
-    void*                   index; /* Hashmap object, index on `signal`. */
+    struct {
+        /* Binary signals (is_binary == true). */
+        void**       binary;
+        uint32_t*    length;      /* Length of binary object. */
+        uint32_t*    buffer_size; /* Size of allocated buffer. */
+        const char** mime_type;
+        void**       ncodec;       /* Network Codec objects. */
+        bool*        reset_called; /* Indicate that reset() was called. */
+    };
 
-    /* TODO: Replace with SignalVectorVTable at next minor version bump. */
-    SignalGroupAnnotationGetFunc group_annotation;
+    /* Helper functions. */
+    SignalVectorVTable vtable;
+
+    /* Reserved. */
+    uint64_t __reserved__[8];
 } SignalVector;
 
 
 /* Provided by ModelC (virtual methods of SignalVectorVTable). */
+DLL_PUBLIC ModelSignalIndex signal_index(
+    ModelDesc* m, const char* vname, const char* name);
+DLL_PUBLIC int signal_read(
+    SignalVector* sv, uint32_t index, uint8_t** data, size_t* len);
 DLL_PUBLIC int signal_append(
-    SignalVector* sv, uint32_t index, void* data, uint32_t len);
-DLL_PUBLIC int         signal_reset(SignalVector* sv, uint32_t index);
+    SignalVector* sv, uint32_t index, uint8_t* data, size_t len);
+DLL_PUBLIC int signal_reset(SignalVector* sv, uint32_t index);
+DLL_PUBLIC int signal_reset_called(
+    SignalVector* sv, uint32_t index, bool* reset_called);
 DLL_PUBLIC int         signal_release(SignalVector* sv, uint32_t index);
 DLL_PUBLIC void*       signal_codec(SignalVector* sv, uint32_t index);
 DLL_PUBLIC const char* signal_annotation(
-    SignalVector* sv, uint32_t index, const char* name);
-
+    SignalVector* sv, uint32_t index, const char* name, void** node);
+DLL_PUBLIC const char* signal_group_annotation(
+    SignalVector* sv, const char* name, void** node);
 
 #endif  // DSE_MODELC_MODEL_H_

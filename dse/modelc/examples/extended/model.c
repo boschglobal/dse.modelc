@@ -22,7 +22,7 @@ typedef struct {
 
 static inline double* _index(ExtendedModelDesc* m, const char* v, const char* s)
 {
-    ModelSignalIndex idx = m->model.index((ModelDesc*)m, v, s);
+    ModelSignalIndex idx = signal_index((ModelDesc*)m, v, s);
     if (idx.scalar == NULL) log_fatal("Signal not found (%s:%s)", v, s);
     return idx.scalar;
 }

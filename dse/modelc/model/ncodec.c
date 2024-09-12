@@ -23,7 +23,7 @@ typedef struct __BinarySignalStream {
 } __BinarySignalStream;
 
 
-static size_t stream_read(NCODEC* nc, uint8_t** data, size_t* len, int pos_op)
+static size_t stream_read(NCODEC* nc, uint8_t** data, size_t* len, int32_t pos_op)
 {
     NCodecInstance* _nc = (NCodecInstance*)nc;
     if (_nc == NULL || _nc->stream == NULL) return -ENOSTR;
@@ -65,13 +65,13 @@ static size_t stream_write(NCODEC* nc, uint8_t* data, size_t len)
     /* Write from current pos (i.e. truncate). */
     if (_s->pos > s_len) _s->pos = s_len;
     _s->sv->length[_s->idx] = _s->pos;
-    _s->sv->append(_s->sv, _s->idx, data, len);
+    signal_append(_s->sv, _s->idx, data, len);
     _s->pos += len;
 
     return len;
 }
 
-static int64_t stream_seek(NCODEC* nc, size_t pos, int op)
+static int64_t stream_seek(NCODEC* nc, size_t pos, int32_t op)
 {
     NCodecInstance* _nc = (NCodecInstance*)nc;
     if (_nc && _nc->stream) {
@@ -116,7 +116,7 @@ static int64_t stream_tell(NCODEC* nc)
     return -ENOSTR;
 }
 
-static int stream_eof(NCODEC* nc)
+static int32_t stream_eof(NCODEC* nc)
 {
     NCodecInstance* _nc = (NCodecInstance*)nc;
     if (_nc && _nc->stream) {
@@ -128,7 +128,7 @@ static int stream_eof(NCODEC* nc)
     return 1;
 }
 
-static int stream_close(NCODEC* nc)
+static int32_t stream_close(NCODEC* nc)
 {
     UNUSED(nc);
 

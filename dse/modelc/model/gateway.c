@@ -14,9 +14,20 @@
 #define UNUSED(x) ((void)x)
 
 
+__attribute__((unused)) static void __compile_time_checks(void)
+{
+    // Compile-time type size check. Get actual size with:
+    // char(*___)[sizeof(ModelGatewayDesc)] = 1;
+#if __SIZEOF_POINTER__ == 8
+    _Static_assert(sizeof(ModelGatewayDesc) == 80, "Compatibility FAIL!");
+#endif
+}
+
+
 /* Gateway Model Functions
  * These represent the Model Interface of the Gateway. */
-DLL_PRIVATE int __model_gw_step__(ModelDesc* model, double* model_time, double stop_time)
+DLL_PRIVATE int __model_gw_step__(
+    ModelDesc* model, double* model_time, double stop_time)
 {
     UNUSED(model);
     *model_time = stop_time;

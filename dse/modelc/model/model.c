@@ -15,6 +15,24 @@
 #include <dse/modelc/schema.h>
 
 
+__attribute__((unused)) static void __compile_time_checks(void)
+{
+    // Compile-time type size check. Get actual size with:
+    // char(*___)[sizeof(SimulationSpec)] = 1;
+    // char(*___)[sizeof(ModelInstanceSpec)] = 1;
+    // char(*___)[sizeof(ModelDesc)] = 1;
+    // char(*___)[sizeof(ModelCArguments)] = 1;
+    // char(*___)[sizeof(RuntimeModelDesc)] = 1;
+#if __SIZEOF_POINTER__ == 8
+    _Static_assert(sizeof(SimulationSpec) == 104, "Compatibility FAIL!");
+    _Static_assert(sizeof(ModelInstanceSpec) == 160, "Compatibility FAIL!");
+    _Static_assert(sizeof(ModelDesc) == 112, "Compatibility FAIL!");
+    _Static_assert(sizeof(ModelCArguments) == 160, "Compatibility FAIL!");
+    _Static_assert(sizeof(RuntimeModelDesc) == 272, "Compatibility FAIL!");
+#endif
+}
+
+
 #define VECTOR_TYPE_BINARY_STR "binary"
 
 
@@ -256,9 +274,11 @@ model_instance (ModelInstanceSpec*)
 : The Model Instance object (provided via the `model_setup()` function of the
   Model API).
 
-channel_desc (ModelChannelDesc*)
-: A channel descriptor object which defines the Channel and Model Function names
-  which should be configured.
+name (const char*)
+: Channel name (or alias).
+
+function_name (const char*)
+: Model Function name.
 
 Returns
 -------
@@ -269,23 +289,21 @@ Returns
 : An error occurred during the registration of the Channel.
 
 */
-int model_configure_channel(
-    ModelInstanceSpec* model_instance, ModelChannelDesc* channel_desc)
+int model_configure_channel(ModelInstanceSpec* model_instance, const char* name,
+    const char* function_name)
 {
-    assert(channel_desc);
     assert(model_instance);
 
     /* Determine the channel configuration. */
-    log_notice("Configure Channel: %s", channel_desc->name);
-    ChannelSpec* channel_spec =
-        model_build_channel_spec(model_instance, channel_desc->name);
+    log_notice("Configure Channel: %s", name);
+    ChannelSpec* channel_spec = model_build_channel_spec(model_instance, name);
     if (channel_spec == NULL) return 1;
     log_notice("  Channel Name: %s", channel_spec->name);
     log_notice("  Channel Alias: %s", channel_spec->alias);
 
     /* Get an MFC object. */
-    ModelFunctionChannel* mfc = _get_mfc(
-        model_instance, channel_desc->function_name, channel_spec->name);
+    ModelFunctionChannel* mfc =
+        _get_mfc(model_instance, function_name, channel_spec->name);
     if (mfc == NULL) {
         free(channel_spec);
         return 1;
@@ -294,11 +312,8 @@ int model_configure_channel(
     /* Already configured? Then return.*/
     if (mfc->signal_names && mfc->signal_count) {
         // Enforce that only one signal vector is set, no matter what.
-        if (mfc->signal_value_double)
-            channel_desc->vector_double = mfc->signal_value_double;
-        else if (mfc->signal_value_binary)
-            channel_desc->vector_binary = mfc->signal_value_binary;
-        else {
+        if (mfc->signal_value_double == NULL &&
+            mfc->signal_value_binary == NULL) {
             log_error("Already configured channel did not have initialised "
                       "signal vector!");
             free(channel_spec);
@@ -306,7 +321,6 @@ int model_configure_channel(
         }
         log_notice(
             "Previously configured channel detected: %s", channel_spec->name);
-        channel_desc->signal_count = mfc->signal_count;
         free(channel_spec);
         return 0;
     }
@@ -329,8 +343,7 @@ int model_configure_channel(
         signal_list.length);
     if (vector_type == MODEL_VECTOR_DOUBLE) {
         mfc->signal_value_double = calloc(signal_list.length, sizeof(double));
-        channel_desc->vector_double = mfc->signal_value_double;
-        log_debug("%p", channel_desc->vector_double);
+        log_debug("%p", mfc->signal_value_double);
     } else if (vector_type == MODEL_VECTOR_BINARY) {
         /* Allocate the binary vectors. */
         mfc->signal_value_binary = calloc(signal_list.length, sizeof(void*));
@@ -340,21 +353,15 @@ int model_configure_channel(
             calloc(signal_list.length, sizeof(uint32_t));
         mfc->signal_value_binary_reset_called =
             calloc(signal_list.length, sizeof(bool));
-        /* Set the references to those vectors (in the Channel Desc).*/
-        channel_desc->vector_binary = mfc->signal_value_binary;
-        channel_desc->vector_binary_size = mfc->signal_value_binary_size;
-        channel_desc->vector_binary_buffer_size =
-            mfc->signal_value_binary_buffer_size;
     } else {
         log_error("Unsupported signal vector type! No signals available for "
                   "channel!");
-        channel_desc->signal_count = 0;
         return 1;
     }
 
     /* MFC is owner and should free. */
-    mfc->signal_count = channel_desc->signal_count = signal_list.length;
-    mfc->signal_names = channel_desc->signal_names = signal_list.names;
+    mfc->signal_count = signal_list.length;
+    mfc->signal_names = signal_list.names;
     mfc->signal_transform = signal_list.transform;
 
     /* Brutal, eh? */
@@ -579,11 +586,11 @@ NULL
 : The specified annotation was not found.
 
 */
-const char* model_annotation(ModelDesc* m, const char* name)
+const char* model_annotation(ModelDesc* model, const char* name)
 {
-    if (m && m->mi) {
+    if (model && model->mi) {
         YamlNode* a = dse_yaml_find_node(
-            m->mi->model_definition.doc, "metadata/annotations");
+            model->mi->model_definition.doc, "metadata/annotations");
         if (a) return dse_yaml_get_scalar(a, name);
     }
     return NULL;
@@ -613,10 +620,10 @@ NULL
 : The specified annotation was not found.
 
 */
-const char* model_instance_annotation(ModelDesc* m, const char* name)
+const char* model_instance_annotation(ModelDesc* model, const char* name)
 {
-    if (m && m->mi) {
-        YamlNode* a = dse_yaml_find_node(m->mi->spec, "annotations");
+    if (model && model->mi) {
+        YamlNode* a = dse_yaml_find_node(model->mi->spec, "annotations");
         if (a) return dse_yaml_get_scalar(a, name);
     }
     return NULL;

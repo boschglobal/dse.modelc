@@ -216,7 +216,7 @@ void simmock_load(SimMock* mock)
 
         void* handle = dlopen(
             model->mi->model_definition.full_path, RTLD_NOW | RTLD_LOCAL);
-        if (handle == NULL) log_notice("ERROR: dlopen call: %s", dlerror());
+        if (handle == NULL) log_error("ERROR: dlopen call: %s", dlerror());
         assert_non_null(handle);
         model->vtable.create = dlsym(handle, MODEL_CREATE_FUNC_NAME);
         model->vtable.step = dlsym(handle, MODEL_STEP_FUNC_NAME);
@@ -270,11 +270,7 @@ static SignalVector* __stub_sv(SignalVector* sv)
     stub_sv->mi = sv->mi;
     stub_sv->count = sv->count;
     stub_sv->is_binary = sv->is_binary;
-    stub_sv->annotation = sv->annotation;
-    stub_sv->append = sv->append;
-    stub_sv->release = sv->release;
-    stub_sv->reset = sv->reset;
-    stub_sv->codec = sv->codec;
+    stub_sv->vtable = sv->vtable;
 
     stub_sv->signal = calloc(stub_sv->count, sizeof(const char*));
     stub_sv->binary = calloc(stub_sv->count, sizeof(void*));
@@ -409,10 +405,10 @@ int simmock_step(SimMock* mock, bool assert_rc)
     /* Copy simmock->binary_tx to simmock->binary_rx */
     if (mock->sv_network_rx && mock->sv_network_tx) {
         for (uint32_t i = 0; i < mock->sv_network_tx->count; i++) {
-            mock->sv_network_rx->reset(mock->sv_network_rx, i);
-            mock->sv_network_rx->append(mock->sv_network_rx, i,
+            mock->sv_network_rx->vtable.reset(mock->sv_network_rx, i);
+            mock->sv_network_rx->vtable.append(mock->sv_network_rx, i,
                 mock->sv_network_tx->binary[i], mock->sv_network_tx->length[i]);
-            mock->sv_network_tx->reset(mock->sv_network_tx, i);
+            mock->sv_network_tx->vtable.reset(mock->sv_network_tx, i);
         }
     }
 
@@ -429,8 +425,8 @@ int simmock_step(SimMock* mock, bool assert_rc)
         /* Copy binary from simmock->binary_rx. */
         if (mock->sv_network_rx && mock->sv_network_tx) {
             for (uint32_t i = 0; i < mock->sv_network_tx->count; i++) {
-                model->sv_network->reset(model->sv_network, i);
-                model->sv_network->append(model->sv_network, i,
+                model->sv_network->vtable.reset(model->sv_network, i);
+                model->sv_network->vtable.append(model->sv_network, i,
                     mock->sv_network_rx->binary[i],
                     mock->sv_network_rx->length[i]);
                 model->sv_network->reset_called[i] = false;
@@ -442,7 +438,7 @@ int simmock_step(SimMock* mock, bool assert_rc)
                 if (model->sv_network->reset_called[i] == false) {
                     model->sv_network->length[i] = 0;
                 }
-                mock->sv_network_tx->append(mock->sv_network_tx, i,
+                mock->sv_network_tx->vtable.append(mock->sv_network_tx, i,
                     model->sv_network->binary[i], model->sv_network->length[i]);
             }
         }
@@ -459,7 +455,7 @@ int simmock_step(SimMock* mock, bool assert_rc)
         /* Copy binary to simmock->binary_tx. */
         if (mock->sv_network_rx && mock->sv_network_tx) {
             for (uint32_t i = 0; i < mock->sv_network_tx->count; i++) {
-                mock->sv_network_tx->append(mock->sv_network_tx, i,
+                mock->sv_network_tx->vtable.append(mock->sv_network_tx, i,
                     model->sv_network->binary[i], model->sv_network->length[i]);
             }
         }
@@ -664,7 +660,7 @@ void simmock_frame_check(SimMock* mock, const char* model_name,
     NCODEC*       nc = NULL;
     for (uint32_t idx = 0; idx < sv->count; idx++) {
         if (strcmp(sv->signal[idx], sig_name) == 0) {
-            nc = sv->codec(sv, idx);
+            nc = sv->vtable.codec(sv, idx);
             break;
         }
     }
@@ -738,7 +734,7 @@ void simmock_write_frame(SignalVector* sv, const char* sig_name, uint8_t* data,
     NCODEC* nc = NULL;
     for (uint32_t idx = 0; idx < sv->count; idx++) {
         if (strcmp(sv->signal[idx], sig_name) == 0) {
-            nc = sv->codec(sv, idx);
+            nc = sv->vtable.codec(sv, idx);
             break;
         }
     }
@@ -793,7 +789,7 @@ uint32_t simmock_read_frame(
     NCODEC* nc = NULL;
     for (uint32_t idx = 0; idx < sv->count; idx++) {
         if (strcmp(sv->signal[idx], sig_name) == 0) {
-            nc = sv->codec(sv, idx);
+            nc = sv->vtable.codec(sv, idx);
             break;
         }
     }
@@ -917,7 +913,7 @@ void simmock_print_network_frames(SimMock* mock, int level)
         log_at(level, " Model Instance: %s", model->name);
         SignalVector* sv = model->sv_network;
         for (uint32_t idx = 0; idx < sv->count; idx++) {
-            NCODEC*         nc = sv->codec(sv, idx);
+            NCODEC*         nc = sv->vtable.codec(sv, idx);
             NCodecInstance* _nc = (NCodecInstance*)nc;
             if (nc == NULL) continue;
             char* node_id_save = __get_ncodec_node_id(nc);

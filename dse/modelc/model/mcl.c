@@ -9,6 +9,19 @@
 #include <dse/clib/data/marshal.h>
 #include <dse/modelc/mcl.h>
 
+
+__attribute__((unused)) static void __compile_time_checks(void)
+{
+    // Compile-time type size check. Get actual size with:
+    // char(*___)[sizeof(MclDesc)] = 1;
+    // char(*___)[sizeof(MarshalSignalMap)] = 1;
+#if __SIZEOF_POINTER__ == 8
+    _Static_assert(sizeof(MclDesc) == 272, "Compatibility FAIL!");
+    _Static_assert(sizeof(MarshalSignalMap) == 56, "Compatibility FAIL!");
+#endif
+}
+
+
 /**
 mcl_create
 ==========
@@ -116,7 +129,8 @@ int32_t mcl_load(MclDesc* model)
             size_t count = hashlist_length(&msm_list);
             model->msm = calloc(count + 1, sizeof(MarshalSignalMap));
             for (uint32_t i = 0; i < count; i++) {
-                memcpy(&model->msm[i], hashlist_at(&msm_list, i), sizeof(MarshalSignalMap));
+                memcpy(&model->msm[i], hashlist_at(&msm_list, i),
+                    sizeof(MarshalSignalMap));
                 free(hashlist_at(&msm_list, i));
             }
             hashlist_destroy(&msm_list);
@@ -187,7 +201,7 @@ int32_t mcl_step(MclDesc* model, double end_time)
     double model_stop_time;
     double model_current_time;
     double mcl_epsilon = 0.0;
-    int rc;
+    int    rc;
 
     if (model && model->vtable.step) {
         /* Calculate epsilon value (if necessary). */
@@ -216,11 +230,11 @@ int32_t mcl_step(MclDesc* model, double end_time)
             /* Model stop time past Simulation stop time. */
             if (model_stop_time > end_time + mcl_epsilon) return 0;
 
-            log_trace("Step the FMU Model: %f %f (%f) %f",
-                model_current_time, model_stop_time,
-                (model_stop_time + mcl_epsilon), end_time);
+            log_trace("Step the FMU Model: %f %f (%f) %f", model_current_time,
+                model_stop_time, (model_stop_time + mcl_epsilon), end_time);
 
-            rc = model->vtable.step(model, &model_current_time, model_stop_time);
+            rc =
+                model->vtable.step(model, &model_current_time, model_stop_time);
             model->model_time = model_current_time;
         } while (model_stop_time + mcl_epsilon < end_time);
 

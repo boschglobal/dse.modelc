@@ -19,11 +19,11 @@ int model_step(ModelDesc* m, double* model_time, double stop_time)
 
                 // Example use of object functions.
                 void* data = strdup("foo");
-                sv->reset(sv, i);
-                sv->append(sv, i, data, strlen("foo"));
+                signal_reset(sv, i);
+                signal_append(sv, i, data, strlen("foo"));
                 free(data);
-                sv->release(sv, i);
-                const char* mime_type = sv->annotation(sv, i, "mime_type");
+                signal_release(sv, i);
+                const char* mime_type = signal_annotation(sv, i, "mime_type", NULL);
                 if (mime_type) log_debug("    annotation : %s", mime_type);
             } else {
                 log_debug("  scalar : %s", sv->scalar[i]);

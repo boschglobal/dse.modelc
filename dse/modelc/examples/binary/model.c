@@ -12,7 +12,7 @@
 typedef struct {
     SignalVector* sv;
     uint32_t      index;
-    char*         buffer;
+    uint8_t*      buffer;
     uint32_t      buffer_size;
 } BinarySignalDesc;
 
@@ -32,7 +32,7 @@ typedef struct {
 static inline double* _index_scalar(
     ExtendedModelDesc* m, const char* v, const char* s)
 {
-    ModelSignalIndex idx = m->model.index((ModelDesc*)m, v, s);
+    ModelSignalIndex idx = signal_index((ModelDesc*)m, v, s);
     if (idx.scalar == NULL) log_fatal("Signal not found (%s:%s)", v, s);
     return idx.scalar;
 }
@@ -41,7 +41,7 @@ static inline double* _index_scalar(
 static inline BinarySignalDesc _index_binary(
     ExtendedModelDesc* m, const char* v, const char* s)
 {
-    ModelSignalIndex idx = m->model.index((ModelDesc*)m, v, s);
+    ModelSignalIndex idx = signal_index((ModelDesc*)m, v, s);
     if (idx.binary == NULL) log_fatal("Signal not found (%s:%s)", v, s);
 
     BinarySignalDesc ret = {
@@ -74,7 +74,7 @@ ModelDesc* model_create(ModelDesc* model)
 
 static inline int _format_message(BinarySignalDesc* b, int v)
 {
-    return snprintf(b->buffer, b->buffer_size, "count is %d", v);
+    return snprintf((char*)b->buffer, b->buffer_size, "count is %d", v);
 }
 
 int model_step(ModelDesc* model, double* model_time, double stop_time)
@@ -82,22 +82,24 @@ int model_step(ModelDesc* model, double* model_time, double stop_time)
     ExtendedModelDesc* m = (ExtendedModelDesc*)model;
 
     /* Print the binary signal. */
+    uint8_t* buffer;
+    size_t len;
+    signal_read(m->binary.message.sv, m->binary.message.index, &buffer, &len);
     log_info("Message (%s) : %s",
-        m->binary.message.sv->signal[m->binary.message.index],
-        m->binary.message.sv->binary[m->binary.message.index]);
+        m->binary.message.sv->signal[m->binary.message.index], buffer);
 
     /* Scalar signals. */
     *(m->scalars.counter) += 1;
     /* Binary signals. */
-    int len = _format_message(&(m->binary.message), (int)*(m->scalars.counter));
-    if (len >= (int)(m->binary.message.buffer_size - 1)) {
+    len = _format_message(&(m->binary.message), (int)*(m->scalars.counter));
+    if (len >= (m->binary.message.buffer_size - 1)) {
         m->binary.message.buffer = realloc(m->binary.message.buffer, len + 1);
         m->binary.message.buffer_size = len + 1;
         _format_message(&(m->binary.message), (int)*(m->scalars.counter));
     }
-    m->binary.message.sv->reset(m->binary.message.sv, m->binary.message.index);
-    m->binary.message.sv->append(m->binary.message.sv, m->binary.message.index,
-        m->binary.message.buffer, strlen(m->binary.message.buffer) + 1);
+    signal_reset(m->binary.message.sv, m->binary.message.index);
+    signal_append(m->binary.message.sv, m->binary.message.index,
+        m->binary.message.buffer, strlen((char*)m->binary.message.buffer) + 1);
 
     *model_time = stop_time;
     return 0;

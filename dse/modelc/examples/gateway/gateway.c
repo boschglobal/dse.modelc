@@ -57,11 +57,11 @@ int main(int argc, char** argv)
                         sv->name, i, sv->length[i], sv->buffer_size[i],
                         sv->binary[i], sv->signal[i]);
                     /* Exchange/update the gateway signal. */
-                    char buffer[100];
-                    snprintf(buffer, sizeof(buffer), "st=%f,index=%d",
+                    uint8_t buffer[100];
+                    snprintf((char*)buffer, sizeof(buffer), "st=%f,index=%d",
                         model_time, i);
-                    sv->reset(sv, i);
-                    sv->append(sv, i, buffer, strlen(buffer) + 1);
+                    signal_reset(sv, i);
+                    signal_append(sv, i, buffer, strlen((char*)buffer) + 1);
                 }
             } else {
                 /* Scalar vector. */

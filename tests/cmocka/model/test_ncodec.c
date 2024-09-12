@@ -107,13 +107,13 @@ void test_ncodec__ncodec_open(void** state)
     }
 
     /* Check the ncodec objects. */
-    assert_null(sv->codec(sv, 0));
-    assert_null(sv->codec(sv, 1));
-    assert_non_null(sv->codec(sv, 2));
+    assert_null(signal_codec(sv, 0));
+    assert_null(signal_codec(sv, 1));
+    assert_non_null(signal_codec(sv, 2));
     assert_null(sv->ncodec[0]);
     assert_null(sv->ncodec[1]);
     assert_non_null(sv->ncodec[2]);
-    assert_ptr_equal(sv->codec(sv, 2), sv->ncodec[2]);
+    assert_ptr_equal(signal_codec(sv, 2), sv->ncodec[2]);
 }
 
 
@@ -132,8 +132,8 @@ void test_ncodec__read_empty(void** state)
         /* Next signal vector. */
         sv++;
     }
-    assert_non_null(sv->codec(sv, 2));
-    NCODEC* nc = sv->codec(sv, 2);
+    assert_non_null(signal_codec(sv, 2));
+    NCODEC* nc = signal_codec(sv, 2);
 
     /* First read. */
     memset(&msg, 0, sizeof(NCodecCanMessage));
@@ -144,7 +144,7 @@ void test_ncodec__read_empty(void** state)
 
     /* Read after reset. */
     memset(&msg, 0, sizeof(NCodecCanMessage));
-    sv->reset(sv, 2);
+    signal_reset(sv, 2);
     len = ncodec_read(nc, &msg);
     assert_int_equal(len, -ENOMSG);
     assert_int_equal(msg.len, 0);
@@ -152,7 +152,7 @@ void test_ncodec__read_empty(void** state)
 
     /* Read after release. */
     memset(&msg, 0, sizeof(NCodecCanMessage));
-    sv->release(sv, 2);
+    signal_release(sv, 2);
     len = ncodec_read(nc, &msg);
     assert_int_equal(len, -ENOMSG);
     assert_int_equal(msg.len, 0);
@@ -176,14 +176,14 @@ void test_ncodec__network_stream(void** state)
     }
 
     /* Check the ncodec objects. */
-    assert_non_null(sv->codec(sv, 2));
+    assert_non_null(signal_codec(sv, 2));
     assert_non_null(sv->ncodec[2]);
-    assert_ptr_equal(sv->codec(sv, 2), sv->ncodec[2]);
+    assert_ptr_equal(signal_codec(sv, 2), sv->ncodec[2]);
 
     /* Use the codec object with the ncodec library. */
     const char* greeting = "Hello World";
-    NCODEC*     nc = sv->codec(sv, 2);
-    sv->reset(sv, 2);
+    NCODEC*     nc = signal_codec(sv, 2);
+    signal_reset(sv, 2);
     rc = ncodec_write(nc, &(struct NCodecCanMessage){ .frame_id = 42,
                               .buffer = (uint8_t*)greeting,
                               .len = strlen(greeting) });
@@ -202,14 +202,17 @@ void test_ncodec__network_stream(void** state)
     //     buffer[i+4], buffer[i+5], buffer[i+6], buffer[i+7]);
 
     /* Read the message back. */
-    sv->release(sv, 2);
-    sv->append(sv, 2, buffer, len);
+    signal_release(sv, 2);
+    signal_append(sv, 2, buffer, len);
     NCodecCanMessage msg = {};
     len = ncodec_read(nc, &msg);
     assert_int_equal(len, strlen(greeting));
     assert_int_equal(msg.len, strlen(greeting));
     assert_non_null(msg.buffer);
     assert_memory_equal(msg.buffer, greeting, strlen(greeting));
+    assert_int_equal(msg.sender.bus_id, 1);
+    assert_int_equal(msg.sender.node_id, 8);
+    assert_int_equal(msg.sender.interface_id, 3);
 }
 
 
@@ -229,16 +232,16 @@ void test_ncodec__truncate(void** state)
     }
 
     /* Check the ncodec objects. */
-    assert_non_null(sv->codec(sv, 2));
+    assert_non_null(signal_codec(sv, 2));
     assert_non_null(sv->ncodec[2]);
-    assert_ptr_equal(sv->codec(sv, 2), sv->ncodec[2]);
+    assert_ptr_equal(signal_codec(sv, 2), sv->ncodec[2]);
 
     /* Use the codec object with the ncodec library. */
     const char*     greeting = "Hello World";
-    NCODEC*         nc = sv->codec(sv, 2);
+    NCODEC*         nc = signal_codec(sv, 2);
     NCodecInstance* _nc = (NCodecInstance*)nc;
 
-    sv->reset(sv, 2);
+    signal_reset(sv, 2);
     rc = ncodec_write(nc, &(struct NCodecCanMessage){ .frame_id = 42,
                               .buffer = (uint8_t*)greeting,
                               .len = strlen(greeting) });
@@ -274,8 +277,8 @@ void test_ncodec__config(void** state)
         /* Next signal vector. */
         sv++;
     }
-    assert_non_null(sv->codec(sv, 2));
-    NCODEC* nc = sv->codec(sv, 2);
+    assert_non_null(signal_codec(sv, 2));
+    NCODEC* nc = signal_codec(sv, 2);
     ncodec_truncate(nc);  // ModelC calls reset() internally.
 
     /* Adjust the node_id. */
@@ -319,13 +322,13 @@ void test_ncodec__call_sequence(void** state)
     }
 
     /* Check the ncodec objects. */
-    assert_non_null(sv->codec(sv, 2));
+    assert_non_null(signal_codec(sv, 2));
     assert_non_null(sv->ncodec[2]);
-    assert_ptr_equal(sv->codec(sv, 2), sv->ncodec[2]);
+    assert_ptr_equal(signal_codec(sv, 2), sv->ncodec[2]);
 
     /* Initial conditions. */
     const char* greeting = "Hello World";
-    NCODEC*         nc = sv->codec(sv, 2);
+    NCODEC*         nc = signal_codec(sv, 2);
 
     assert_int_equal(0, ncodec_seek(nc, 0, NCODEC_SEEK_END));
     assert_int_equal(0, ncodec_tell(nc));
