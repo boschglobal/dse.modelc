@@ -255,7 +255,9 @@ DLL_PUBLIC int signal_read(
     SignalVector* sv, uint32_t index, uint8_t** data, size_t* len);
 DLL_PUBLIC int signal_append(
     SignalVector* sv, uint32_t index, uint8_t* data, size_t len);
-DLL_PUBLIC int         signal_reset(SignalVector* sv, uint32_t index);
+DLL_PUBLIC int signal_reset(SignalVector* sv, uint32_t index);
+DLL_PUBLIC int signal_reset_called(
+    SignalVector* sv, uint32_t index, bool* reset_called);
 DLL_PUBLIC int         signal_release(SignalVector* sv, uint32_t index);
 DLL_PUBLIC void*       signal_codec(SignalVector* sv, uint32_t index);
 DLL_PUBLIC const char* signal_annotation(

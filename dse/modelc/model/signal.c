@@ -613,6 +613,48 @@ inline int signal_reset(SignalVector* sv, uint32_t index)
 
 
 /**
+signal_reset_called
+===================
+
+Indicate if reset has been called, and thusly its contained data consumed
+(by the caller).
+
+Parameters
+----------
+sv (SignalVector*)
+: The Signal Vector object containing the signal.
+
+index (uint32_t)
+: Index of the signal in the Signal Vector object.
+
+reset_called (bool*)
+: (out) The reset_called value of the specified binary signal.
+
+Returns
+-------
+0
+: The operation completed without error.
+
+-EINVAL (-22)
+: Bad arguments.
+
+<>0
+: Indicates an error condition. Inspect `errno` for additional information.
+*/
+inline int signal_reset_called(SignalVector* sv, uint32_t index, bool* reset_called)
+{
+    if (reset_called == NULL) return -EINVAL;
+
+    if (sv && index < sv->count && sv->is_binary) {
+        *reset_called = sv->reset_called[index];
+        return 0;
+    } else {
+        return -EINVAL;
+    }
+}
+
+
+/**
 signal_release
 ==============
 

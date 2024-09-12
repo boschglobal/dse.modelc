@@ -92,15 +92,15 @@ static int test_teardown(void** state)
 typedef struct IndexTC {
     const char* v;
     const char* s;
-    bool is_binary;
-    uint32_t vi;
-    uint32_t si;
+    bool        is_binary;
+    uint32_t    vi;
+    uint32_t    si;
 } IndexTC;
 
 void test_signal__index(void** state)
 {
-    ModelCMock* mock = *state;
-    ModelDesc* m = mock->mi->model_desc;
+    ModelCMock*   mock = *state;
+    ModelDesc*    m = mock->mi->model_desc;
     SignalVector* sv_save = mock->mi->model_desc->sv;
 
     assert_non_null(m);
@@ -108,7 +108,7 @@ void test_signal__index(void** state)
 
     /* find the indexes. */
     SignalVector* sv = sv_save;
-    uint32_t scalar_index = 0;
+    uint32_t      scalar_index = 0;
     while (sv && sv->name) {
         if (strcmp(sv->name, "scalar") == 0) break;
         /* Next signal vector. */
@@ -125,10 +125,26 @@ void test_signal__index(void** state)
     }
 
     IndexTC tc[] = {
-        { .v = "scalar_vector", .s = "scalar_foo", .vi = scalar_index, .si = 0, .is_binary = false },
-        { .v = "scalar_vector", .s = "scalar_bar", .vi = scalar_index, .si = 1, .is_binary = false },
-        { .v = "binary_vector", .s = "binary_foo", .vi = binary_index, .si = 0, .is_binary = true },
-        { .v = "binary_vector", .s = "binary_bar", .vi = binary_index, .si = 1, .is_binary = true },
+        { .v = "scalar_vector",
+            .s = "scalar_foo",
+            .vi = scalar_index,
+            .si = 0,
+            .is_binary = false },
+        { .v = "scalar_vector",
+            .s = "scalar_bar",
+            .vi = scalar_index,
+            .si = 1,
+            .is_binary = false },
+        { .v = "binary_vector",
+            .s = "binary_foo",
+            .vi = binary_index,
+            .si = 0,
+            .is_binary = true },
+        { .v = "binary_vector",
+            .s = "binary_bar",
+            .vi = binary_index,
+            .si = 1,
+            .is_binary = true },
     };
     // Check the test cases.
     for (size_t i = 0; i < ARRAY_SIZE(tc); i++) {
@@ -182,14 +198,17 @@ void test_signal__scalar(void** state)
         "scalar_bar",
     };
     for (uint32_t i = 0; i < sv->count; i++) {
+        bool reset_called = false;
         double test_val = i * 10.0 + 5;
         assert_string_equal(sv->signal[i], expected_names[i]);
         assert_double_equal(sv->scalar[i], 0.0, DBL_EPSILON);
         /* Toggle the value. */
         sv->scalar[i] = test_val;
-        signal_reset(sv, i);                    /* NOP */
-        signal_release(sv, i);                  /* NOP */
-        signal_append(sv, i, (void*)"1234", 4); /* NOP */
+        signal_reset_called(sv, i, &reset_called); /* NOP */
+        signal_reset(sv, i);                       /* NOP */
+        signal_reset_called(sv, i, &reset_called); /* NOP */
+        signal_release(sv, i);                     /* NOP */
+        signal_append(sv, i, (void*)"1234", 4);    /* NOP */
         assert_double_equal(sv->scalar[i], test_val, DBL_EPSILON);
     }
 }
@@ -238,11 +257,12 @@ void test_signal__binary(void** state)
     };
     for (uint32_t i = 0; i < sv->count; i++) {
         unsigned char* test_val = (unsigned char*)strdup(sv->signal[i]);
-        uint32_t test_val_len = strlen((char*)test_val) + 1;
+        uint32_t       test_val_len = strlen((char*)test_val) + 1;
         assert_string_equal(sv->signal[i], expected_names[i]);
         assert_string_equal(sv->mime_type[i], expected_mime_types[i]);
         uint8_t* buffer;
-        size_t buffer_len;
+        size_t   buffer_len;
+        bool reset_called = false;
         /* Check the value. */
         signal_read(sv, i, &buffer, &buffer_len);
         assert_null(buffer);
@@ -251,7 +271,11 @@ void test_signal__binary(void** state)
         assert_int_equal(sv->length[i], 0);
         assert_int_equal(sv->buffer_size[i], 0);
         assert_false(sv->reset_called[i]);
+        signal_reset_called(sv, i, &reset_called);
+        assert_false(reset_called);
         signal_reset(sv, i);
+        signal_reset_called(sv, i, &reset_called);
+        assert_true(reset_called);
         /* Append to the value. */
         signal_append(sv, i, test_val, test_val_len);
         assert_non_null(sv->binary[i]);
@@ -262,7 +286,11 @@ void test_signal__binary(void** state)
         assert_string_equal((char*)buffer, (char*)test_val);
         assert_int_equal(buffer_len, test_val_len);
         /* Reset the value. */
+        signal_reset_called(sv, i, &reset_called);
+        assert_true(reset_called);
         signal_reset(sv, i);
+        signal_reset_called(sv, i, &reset_called);
+        assert_true(reset_called);
         assert_true(sv->reset_called[i]);
         assert_non_null(sv->binary[i]);
         assert_int_equal(sv->length[i], 0);
@@ -357,6 +385,7 @@ void test_signal__binary_echo(void** state)
 
     SignalVector* sv_save = mock->mi->model_desc->sv;
     assert_int_equal(_sv_count(sv_save), 2);
+    bool reset_called;
 
     /* Use the "binary" signal vector. */
     SignalVector* sv = sv_save;
@@ -374,7 +403,7 @@ void test_signal__binary_echo(void** state)
     assert_false(sv->reset_called[0]);
     assert_false(sv->reset_called[1]);
     unsigned char* test_val = (unsigned char*)strdup(sv->signal[0]);
-    uint32_t test_val_len = strlen((char*)test_val) + 1;
+    uint32_t       test_val_len = strlen((char*)test_val) + 1;
 
 
     /* Append to one signal. */
@@ -384,22 +413,28 @@ void test_signal__binary_echo(void** state)
     __log_level__ = _loglevel_save;
     assert_int_equal(sv->length[0], test_val_len);
     assert_int_equal(sv->length[1], 0);
-    assert_false(sv->reset_called[0]);
-    assert_false(sv->reset_called[1]);
+    signal_reset_called(sv, 0, &reset_called);
+    assert_false(reset_called);
+    signal_reset_called(sv, 1, &reset_called);
+    assert_false(reset_called);
 
     /* Call reset. */
     signal_reset(sv, 0);
     assert_int_equal(sv->length[0], 0);
     assert_int_equal(sv->length[1], 0);
-    assert_true(sv->reset_called[0]);
-    assert_false(sv->reset_called[1]);
+    signal_reset_called(sv, 0, &reset_called);
+    assert_true(reset_called);
+    signal_reset_called(sv, 1, &reset_called);
+    assert_false(reset_called);
 
     /* Append again. */
     signal_append(sv, 0, test_val, test_val_len);
     assert_int_equal(sv->length[0], test_val_len);
     assert_int_equal(sv->length[1], 0);
-    assert_true(sv->reset_called[0]);
-    assert_false(sv->reset_called[1]);
+    signal_reset_called(sv, 0, &reset_called);
+    assert_true(reset_called);
+    signal_reset_called(sv, 1, &reset_called);
+    assert_false(reset_called);
 
     /* Cleanup. */
     free(test_val);
