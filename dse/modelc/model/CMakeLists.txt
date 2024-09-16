@@ -47,6 +47,7 @@ target_link_libraries(dse_ncodec
 # Target - model_api (API Called from Models)
 # ------------------
 add_library(model_api OBJECT
+    $<$<BOOL:${UNIX}>:checks.c>
     gateway.c
     mcl.c
     model.c

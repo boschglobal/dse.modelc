@@ -15,39 +15,6 @@
 #include <dse/modelc/schema.h>
 
 
-__attribute__((unused)) static void __compile_time_checks(void)
-{
-    // Compile-time type size check. Get actual size with:
-    // char(*___)[sizeof(SimulationSpec)] = 1;
-    // char(*___)[sizeof(ModelInstanceSpec)] = 1;
-    // char(*___)[sizeof(ModelDesc)] = 1;
-    // char(*___)[sizeof(ModelCArguments)] = 1;
-    // char(*___)[sizeof(RuntimeModelDesc)] = 1;
-
-#if defined(__x86_64__)
-    #if __SIZEOF_POINTER__ == 8
-    _Static_assert(sizeof(SimulationSpec) == 104, "Compatibility FAIL!");
-    _Static_assert(sizeof(ModelInstanceSpec) == 160, "Compatibility FAIL!");
-    _Static_assert(sizeof(ModelDesc) == 112, "Compatibility FAIL!");
-    _Static_assert(sizeof(ModelCArguments) == 160, "Compatibility FAIL!");
-    _Static_assert(sizeof(RuntimeModelDesc) == 272, "Compatibility FAIL!");
-    #else
-    _Static_assert(sizeof(SimulationSpec) == 88, "Compatibility FAIL!");
-    _Static_assert(sizeof(ModelInstanceSpec) == 112, "Compatibility FAIL!");
-    _Static_assert(sizeof(ModelDesc) == 72, "Compatibility FAIL!");
-    _Static_assert(sizeof(ModelCArguments) == 120, "Compatibility FAIL!");
-    _Static_assert(sizeof(RuntimeModelDesc) == 200, "Compatibility FAIL!");
-    #endif
-#elif defined(__i386__)
-    _Static_assert(sizeof(SimulationSpec) == 80, "Compatibility FAIL!");
-    _Static_assert(sizeof(ModelInstanceSpec) == 112, "Compatibility FAIL!");
-    _Static_assert(sizeof(ModelDesc) == 72, "Compatibility FAIL!");
-    _Static_assert(sizeof(ModelCArguments) == 112, "Compatibility FAIL!");
-    _Static_assert(sizeof(RuntimeModelDesc) == 196, "Compatibility FAIL!");
-#endif
-}
-
-
 #define VECTOR_TYPE_BINARY_STR "binary"
 
 

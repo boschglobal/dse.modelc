@@ -10,27 +10,6 @@
 #include <dse/modelc/mcl.h>
 
 
-__attribute__((unused)) static void __compile_time_checks(void)
-{
-    // Compile-time type size check. Get actual size with:
-    // char(*___)[sizeof(MclDesc)] = 1;
-    // char(*___)[sizeof(MarshalSignalMap)] = 1;
-
-#if defined(__x86_64__)
-    #if __SIZEOF_POINTER__ == 8
-    _Static_assert(sizeof(MclDesc) == 272, "Compatibility FAIL!");
-    _Static_assert(sizeof(MarshalSignalMap) == 56, "Compatibility FAIL!");
-    #else
-    _Static_assert(sizeof(MclDesc) == 176, "Compatibility FAIL!");
-    _Static_assert(sizeof(MarshalSignalMap) == 28, "Compatibility FAIL!");
-    #endif
-#elif defined(__i386__)
-    _Static_assert(sizeof(MclDesc) == 176, "Compatibility FAIL!");
-    _Static_assert(sizeof(MarshalSignalMap) == 28, "Compatibility FAIL!");
-#endif
-}
-
-
 /**
 mcl_create
 ==========
