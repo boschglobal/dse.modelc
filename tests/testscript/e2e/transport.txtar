@@ -23,6 +23,7 @@ exec sh -e $WORK/test.sh
 
 stderr 'Using Valgrind'
 stdout 'Transport: redis'
+! stdout 'Transport: redispubsub'
 stdout 'URI: redis://localhost:6379'
 stdout 'SignalValue: 2628574755 = 46.000000 \[name=counter\]'
 stdout 'Message \(message\) : count is 46'
@@ -36,6 +37,7 @@ exec sh -e $WORK/test.sh
 
 stderr 'Using Valgrind'
 stdout 'Transport: redis'
+! stdout 'Transport: redispubsub'
 stdout 'URI: redisasync://localhost:6379'
 stdout 'SignalValue: 2628574755 = 46.000000 \[name=counter\]'
 stdout 'Message \(message\) : count is 46'
