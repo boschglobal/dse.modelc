@@ -117,10 +117,10 @@ RuntimeModelDesc* model_runtime_create(RuntimeModelDesc* rm)
         rm->runtime.step_size ? rm->runtime.step_size : STEP_SIZE,
         rm->runtime.end_time ? rm->runtime.end_time : END_TIME);
     args.sim_path = rm->runtime.sim_path; /* Inject the simulation path. */
+    if (rm->runtime.log_level) args.log_level = rm->runtime.log_level;
     modelc_parse_arguments(
         &args, rm->runtime.argc, rm->runtime.argv, "Model Loader and Stepper");
     if (args.name == NULL) log_fatal("name argument not provided!");
-    if (rm->runtime.log_level) args.log_level = rm->runtime.log_level;
     rm->runtime.doc_list = args.yaml_doc_list;
     free(simulation_yaml);
     simulation_yaml = NULL;
