@@ -225,10 +225,6 @@ int32_t redis_start(Endpoint* endpoint)
     RedisEndpoint* redis_ep = (RedisEndpoint*)endpoint->private;
     assert(redis_ep->ctx);
 
-    /* Setup the Push/Pull Key (remove previous state). */
-    redisReply* _ =
-        redisCommand(redis_ep->ctx, "DEL %s", redis_ep->pull.endpoint);
-    _check_free_reply(_);
     if (endpoint->bus_mode) {
         /* PUSH are Models, handled by hash. */
         /* PULL is SimBus.*/
