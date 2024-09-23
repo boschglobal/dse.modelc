@@ -56,6 +56,7 @@ PACKAGE_PATH = $(NAMESPACE)/dist
 
 ###############
 ## Test Parameters.
+export HOST_DOCKER_WORKSPACE ?= $(shell pwd -P)
 export TESTSCRIPT_E2E_DIR ?= tests/testscript/e2e
 TESTSCRIPT_E2E_FILES = \
 	$(TESTSCRIPT_E2E_DIR)/minimal.txtar \
@@ -192,11 +193,11 @@ ifeq ($(PACKAGE_ARCH), linux-amd64)
 	do \
 		echo "Running E2E Test: $$t" ;\
 		docker run -i --rm \
-			-e ENTRYDIR=$$(pwd) \
+			-e ENTRYDIR=$(HOST_DOCKER_WORKSPACE) \
 			-v /var/run/docker.sock:/var/run/docker.sock \
-			-v $$(pwd):/repo \
+			-v $(HOST_DOCKER_WORKSPACE):/repo \
 			$(TESTSCRIPT_IMAGE) \
-				-e ENTRYDIR=$$(pwd) \
+				-e ENTRYDIR=$(HOST_DOCKER_WORKSPACE) \
 				-e SIMER=$(SIMER_IMAGE) \
 				$$t ;\
 	done;

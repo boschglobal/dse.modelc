@@ -74,7 +74,7 @@ jobs:
           make package
           tar -czf sandbox_out.tar.gz -C . ${{ env.build_dir }}/_out
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v3
         with:
           name: ${{ env.package_name }}-${{ matrix.package_arch }}-package
           path: |
@@ -82,7 +82,7 @@ jobs:
             ${{ env.build_dir }}/_dist/${{ env.package_name }}-${{ env.PACKAGE_VERSION }}-${{ matrix.package_arch }}.zip
           retention-days: 1
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v3
         with:
           name: ${{ env.package_name }}-${{ matrix.package_arch }}-sandbox
           path: |
@@ -92,18 +92,22 @@ jobs:
   test_e2e:
     runs-on: [ubuntu-latest]
     needs: [build, runtimes, tools]
+    container:
+      image: ghcr.io/boschglobal/dse-testscript:latest
+      volumes:
+        - /var/run/docker.sock:/var/run/docker.sock
     steps:
       - uses: actions/checkout@v4
         with:
           ref: ${{ github.event.pull_request.head.sha }}
 
       - name: Download artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v3
         with:
           name: image_simer
           path: /tmp
       - name: Download artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v3
         with:
           name: image_testscript
           path: /tmp
@@ -114,7 +118,7 @@ jobs:
           docker load --input /tmp/testscript.tar
           docker image ls -a
 
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v3
         with:
           name: ${{ env.package_name }}-linux-amd64-sandbox
           path: .
@@ -124,8 +128,13 @@ jobs:
           tar xzf sandbox_out.tar.gz
           find ${{ env.build_dir }}/_out -type f -name '*' -exec ls -sh --color=auto {} \;
 
+      - name: Set environment
+        run: |
+          echo "HOST_DOCKER_WORKSPACE=${{ github.workspace }}" >> $GITHUB_ENV
+
       - name: Test
         run: |
+          export HOST_DOCKER_WORKSPACE=${{ env.HOST_DOCKER_WORKSPACE }}
           make test_e2e
 
   publish:
@@ -160,7 +169,7 @@ jobs:
         run: |
           echo "PACKAGE_VERSION=${{ fromJSON(steps.package_meta.outputs.json).labels['org.opencontainers.image.version'] }}" >> $GITHUB_ENV
 
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v3
         with:
           name: ${{ env.package_name }}-${{ matrix.package_arch }}-package
           path: ${{ env.build_dir }}/_dist
@@ -190,7 +199,7 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Download artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v3
         with:
           name: image_${{ matrix.container }}
           path: /tmp
@@ -251,7 +260,7 @@ jobs:
           outputs: type=docker,dest=/tmp/${{ matrix.container }}.tar
 
       - name: Upload image artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v3
         with:
           name: image_${{ matrix.container }}
           path: /tmp/${{ matrix.container }}.tar
@@ -291,15 +300,15 @@ jobs:
         run: |
           echo "PACKAGE_VERSION=${{ fromJSON(steps.meta.outputs.json).labels['org.opencontainers.image.version'] }}" >> $GITHUB_ENV
 
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v3
         with:
           name: ${{ env.package_name }}-linux-amd64-sandbox
           path: sandbox/ModelC-linux-amd64-sandbox
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v3
         with:
           name: ${{ env.package_name }}-linux-x86-sandbox
           path: sandbox/ModelC-linux-x86-sandbox
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v3
         with:
           name: ${{ env.package_name }}-linux-i386-sandbox
           path: sandbox/ModelC-linux-i386-sandbox
@@ -341,7 +350,7 @@ jobs:
           outputs: type=docker,dest=/tmp/simer.tar
 
       - name: Upload image artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v3
         with:
           name: image_simer
           path: /tmp/simer.tar
@@ -392,7 +401,7 @@ jobs:
         run: |
           echo "PACKAGE_VERSION=${{ fromJSON(steps.meta.outputs.json).labels['org.opencontainers.image.version'] }}" >> $GITHUB_ENV
 
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v3
         with:
           name: ${{ env.package_name }}-${{ matrix.arch }}-sandbox
           path: .
