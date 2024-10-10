@@ -73,6 +73,36 @@ static int test_setup(void** state)
 }
 
 
+static int test_setup_internal(void** state)
+{
+    ModelCMock* mock = calloc(1, sizeof(ModelCMock));
+    assert_non_null(mock);
+
+    int             rc;
+    ModelCArguments args;
+    char*           argv[] = {
+        (char*)"test_internal",
+        (char*)"--name=internal",
+        (char*)"resources/model/internal.yaml",
+    };
+
+    modelc_set_default_args(&args, "test", 0.005, 0.005);
+    args.log_level = __log_level__;
+    modelc_parse_arguments(&args, ARRAY_SIZE(argv), argv, "Signal");
+    rc = modelc_configure(&args, &mock->sim);
+    assert_int_equal(rc, 0);
+    mock->mi = modelc_get_model_instance(&mock->sim, args.name);
+    assert_non_null(mock->mi);
+    ModelVTable vtable = { .step = _sv_nop };
+    rc = modelc_model_create(&mock->sim, mock->mi, &vtable);
+    assert_int_equal(rc, 0);
+
+    /* Return the mock. */
+    *state = mock;
+    return 0;
+}
+
+
 static int test_teardown(void** state)
 {
     ModelCMock* mock = *state;
@@ -458,6 +488,58 @@ void test_signal__binary_echo(void** state)
 }
 
 
+typedef struct InternalTC {
+    const char* s;
+    bool internal;
+} InternalTC;
+
+void test_signal__internal(void** state)
+{
+    ModelCMock* mock = *state;
+    ModelDesc*    m = mock->mi->model_desc;
+    SignalVector* sv_save = mock->mi->model_desc->sv;
+
+    assert_non_null(m);
+    assert_non_null(m->index);
+
+    /* find the indexes. */
+    SignalVector* sv = sv_save;
+    while (sv && sv->name) {
+        if (strcmp(sv->name, "scalar") == 0) break;
+        /* Next signal vector. */
+        sv++;
+    }
+
+    InternalTC tc[] = {
+        { .s = "one", .internal = false, },
+        { .s = "two", .internal = false, },
+        { .s = "three", .internal = false, },
+        { .s = "four", .internal = true, },
+        { .s = "five", .internal = false, },
+        { .s = "six", .internal = true, },
+        { .s = "seven", .internal = false, },
+        { .s = "eight", .internal = false, },
+    };
+    // Check the test cases.
+    for (size_t i = 0; i < ARRAY_SIZE(tc); i++) {
+        ModelSignalIndex msi = signal_index(m, "scalar_vector", tc[i].s);
+        if (tc[i].internal == false) {
+            /* Signal should exist. */
+            if (msi.sv == NULL) assert_string_equal(tc[i].s, "should NOT be internal");
+            assert_non_null(msi.sv);
+            assert_non_null(msi.scalar);
+            assert_null(msi.binary);
+        } else {
+            /* Signal should NOT exist. */
+            if (msi.sv) assert_string_equal(tc[i].s, "should be internal");
+            assert_null(msi.sv);
+            assert_null(msi.scalar);
+            assert_null(msi.binary);
+        }
+    }
+}
+
+
 int run_signal_tests(void)
 {
     void* s = test_setup;
@@ -470,6 +552,7 @@ int run_signal_tests(void)
         cmocka_unit_test_setup_teardown(test_signal__annotations, s, t),
         cmocka_unit_test_setup_teardown(test_signal__group_annotations, s, t),
         cmocka_unit_test_setup_teardown(test_signal__binary_echo, s, t),
+        cmocka_unit_test_setup_teardown(test_signal__internal, test_setup_internal, t),
     };
 
     return cmocka_run_group_tests_name("SIGNAL", tests, NULL, NULL);

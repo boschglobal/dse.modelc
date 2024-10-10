@@ -1,0 +1,56 @@
+---
+kind: Stack
+metadata:
+  name: stack
+spec:
+  connection:
+    transport:
+      redispubsub:
+        uri: redis://redis:6379
+        timeout: 60
+  models:
+    - name: internal
+      uid: 42
+      model:
+        name: Internal
+      channels:
+        - name: scalar
+          alias: scalar_vector
+---
+kind: Model
+metadata:
+  name: Internal
+spec:
+  runtime:
+    dynlib:
+      - os: linux
+        arch: amd64
+        path: lib/model.so
+  channels:
+    - alias: scalar_vector
+      selectors:
+        channel: scalar
+---
+kind: SignalGroup
+metadata:
+  name: test_signal_internal
+  labels:
+    channel: scalar
+spec:
+  signals:
+    - signal: one
+    - signal: two
+      internal: false
+    - signal: three
+      internal: 0
+    - signal: four
+      internal: true
+    - signal: five
+      internal: 1
+    - signal: six
+      internal: on
+    - signal: seven
+      internal: two
+    - signal: eight
+      internal: off
+      

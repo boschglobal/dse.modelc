@@ -133,6 +133,14 @@ static int _signal_group_match_handler(
             &index, schema_signal_object_generator);
         if (so == NULL) break;
         if (so->signal) {
+            /* Internal signals are skipped. */
+            bool internal = false;
+            dse_yaml_get_bool(so->data, "internal", &internal);
+            if (internal) {
+                free(so);
+                continue;
+            }
+            
             /* Signals are taken in parsing order. */
             hashlist_append(&__handler_signal_list, (void*)so->signal);
 

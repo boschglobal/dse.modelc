@@ -174,6 +174,7 @@ install(TARGETS test_model)
 install(
     FILES
         model/gateway.yaml
+        model/internal.yaml
         model/ncodec.yaml
         model/signal.yaml
         model/transform.yaml
