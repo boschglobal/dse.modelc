@@ -48,9 +48,10 @@ spec:
     - signal: five
       internal: 1
     - signal: six
+      # yamllint disable-line rule:truthy
       internal: on
     - signal: seven
       internal: two
     - signal: eight
+      # yamllint disable-line rule:truthy
       internal: off
-      

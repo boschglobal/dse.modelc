@@ -140,7 +140,7 @@ static int _signal_group_match_handler(
                 free(so);
                 continue;
             }
-            
+
             /* Signals are taken in parsing order. */
             hashlist_append(&__handler_signal_list, (void*)so->signal);
 
