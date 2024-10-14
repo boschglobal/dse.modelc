@@ -186,6 +186,7 @@ DLL_PUBLIC ModelSignalIndex model_index_(
 DLL_PUBLIC const char* model_annotation(ModelDesc* m, const char* name);
 DLL_PUBLIC const char* model_instance_annotation(
     ModelDesc* m, const char* name);
+DLL_PUBLIC char* model_expand_vars(ModelDesc* m, const char* source);
 
 
 /* Signal Interface. */

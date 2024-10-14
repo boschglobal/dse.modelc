@@ -3,6 +3,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 #include <stdlib.h>
+#include <ctype.h>
 #include <errno.h>
 #include <assert.h>
 #include <dse/testing.h>
@@ -16,6 +17,8 @@
 
 
 #define VECTOR_TYPE_BINARY_STR "binary"
+#define VARNAME_MAXLEN         250
+#define EXPAND_VAR_MAXLEN      1023
 
 
 typedef struct __signal_list_t {
@@ -617,4 +620,103 @@ const char* model_instance_annotation(ModelDesc* model, const char* name)
         if (a) return dse_yaml_get_scalar(a, name);
     }
     return NULL;
+}
+
+
+/**
+model_expand_vars
+=================
+
+Expand environment variables in a string according to typical shell
+variable expansion (i.e ${FOO} or ${BAR:-default}). Environment variables
+are searched first with the Model Instance Name prefixed to the variable
+name with a "__" delimiter (i.e. "INSTANCE_NAME__ENVAR"), and then if no
+match is found, the search is repated with only the provied variable name.
+
+> Note: Variables are converted to upper case before searching the environment.
+
+Parameters
+----------
+model (ModelDesc*)
+: The Model Descriptor object representing an instance of this model.
+
+source (const char*)
+: The string containing environment variables to expand.
+
+Returns
+-------
+char*
+: String with environment variables expanded. Caller to free.
+*/
+char* model_expand_vars(ModelDesc* m, const char* source)
+{
+    char* source_copy = strdup(source);
+    char* haystack = source_copy;
+    char* result = calloc(EXPAND_VAR_MAXLEN + 1, sizeof(char));
+
+    while (haystack) {
+        /* Search for START. */
+        char* _var = strstr(haystack, "${");
+        if (_var == NULL) {
+            strncat(result, haystack, EXPAND_VAR_MAXLEN - strlen(result));
+            break;
+        }
+        /* Copy any preceding chars to the result. */
+        *_var = '\0';
+        strncat(result, haystack, EXPAND_VAR_MAXLEN - strlen(result));
+        /* Search for END. */
+        _var += 2;
+        char* _var_end = strstr(_var, "}");
+        if (_var_end == NULL) {
+            /* Did not find the end, GIGO. */
+            strncat(result, haystack, EXPAND_VAR_MAXLEN - strlen(result));
+            break;
+        }
+        *_var_end = '\0';
+        haystack = _var_end + 1; /* Setup for next iteration. */
+
+        /* Does the VAR have a DEFAULT? */
+        char* _def = strstr(_var, ":-");
+        if (_def) {
+            *_def = '\0';
+            _def += 2;
+        }
+        /* Do the lookup. */
+        char* _env_val = NULL;
+        char  _v[VARNAME_MAXLEN] = {};
+        if (m && m->mi && m->mi->name) {
+            /* Search with Model Instance Name as prefix to VAR. */
+            snprintf(_v, VARNAME_MAXLEN, "%s__%s", m->mi->name, _var);
+            for (char* p = _v; *p; p++) {
+                *p = toupper(*p);
+            }
+            _env_val = getenv(_v);
+        } else {
+            /* Bad ModeDesc object, disable the first search. */
+            _env_val = NULL;
+        }
+        if (_env_val) {
+            /* Match on VAR with prefix. */
+            strncat(result, _env_val, EXPAND_VAR_MAXLEN - strlen(result));
+        } else {
+            /* Search with VAR only. */
+            snprintf(_v, VARNAME_MAXLEN, "%s", _var);
+            for (char* p = _v; *p; p++) {
+                *p = toupper(*p);
+            }
+            _env_val = getenv(_v);
+            if (_env_val) {
+                /* Match on VAR. */
+                strncat(result, _env_val, EXPAND_VAR_MAXLEN - strlen(result));
+            } else if (_def) {
+                /* No match, use default. */
+                strncat(result, _def, EXPAND_VAR_MAXLEN - strlen(result));
+            } else {
+                /* No match, no default, GIGO. Use original var/case. */
+                strncat(result, _var, EXPAND_VAR_MAXLEN - strlen(result));
+            }
+        }
+    }
+    free(source_copy);
+    return result; /* Caller to free. */
 }
