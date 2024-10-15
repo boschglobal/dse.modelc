@@ -104,7 +104,7 @@ typedef struct ModelDesc {
     ModelInstanceSpec* mi;
     SignalVector* sv;
     ModelVTable vtable;
-    uint64_t [2] __reserved__;
+    uint64_t [4] __reserved__;
 }
 ```
 
@@ -141,11 +141,12 @@ typedef struct SignalVector {
     const char* function_name;
     ModelInstanceSpec* mi;
     void* index;
+    void* index_uid;
     uint32_t count;
     const char** signal;
     _Bool is_binary;
     SignalVectorVTable vtable;
-    uint64_t [9] __reserved__;
+    uint64_t [8] __reserved__;
 }
 ```
 
@@ -243,6 +244,31 @@ files or allocated memory).
 model (ModelDesc*)
 : The Model Descriptor object representing an instance of this model.
 
+
+
+
+### model_expand_vars
+
+Expand environment variables in a string according to typical shell
+variable expansion (i.e ${FOO} or ${BAR:-default}). Environment variables
+are searched first with the Model Instance Name prefixed to the variable
+name with a "__" delimiter (i.e. "INSTANCE_NAME__ENVAR"), and then if no
+match is found, the search is repated with only the provied variable name.
+
+> Note: Variables are converted to upper case before searching the environment.
+
+#### Parameters
+
+model (ModelDesc*)
+: The Model Descriptor object representing an instance of this model.
+
+source (const char*)
+: The string containing environment variables to expand.
+
+#### Returns
+
+char*
+: String with environment variables expanded. Caller to free.
 
 
 
@@ -394,10 +420,10 @@ sv (SignalVector*)
 index (uint32_t)
 : Index of the signal in the Signal Vector object.
 
-data (void*)
+data (uint8_t*)
 : Address/pointer to the data which should be appended to the binary signal.
 
-len (uint32_t)
+len (size_t)
 : Length of the provided data buffer being appended.
 
 #### Returns
@@ -491,6 +517,66 @@ information..
 
 
 
+### signal_index
+
+A model may use this method to index a signal that is contained within the
+Signal Vectors of the Model Descriptor.
+
+#### Parameters
+
+model (ModelDesc*)
+: The Model Descriptor object representing an instance of this model.
+
+vname (const char*)
+: The name (alias) of the Signal Vector.
+
+name (const char*)
+: The name of the signal within the Signal Vector. When set to NULL the index
+  will match on Signal Vector (vanme) only.
+
+#### Returns
+
+ModelSignalIndex
+: An index. When valid, either the `scalar` or `binary` fields will be set to
+  a valid pointer (i.e. not NULL). When `sname` is not specified the index will
+  contain a valid pointer to a Signal Vector object only (i.e. both `scalar`
+  and `binary` will be set to NULL).
+
+
+
+
+### signal_read
+
+Read data from the specified binary signal. Returns pointer to the internal
+binary signal buffers.
+
+#### Parameters
+
+sv (SignalVector*)
+: The Signal Vector object containing the signal.
+
+index (uint32_t)
+: Index of the signal in the Signal Vector object.
+
+data (uint8_t*)
+: Address/pointer to the data of the binary signal.
+
+len (size_t)
+: Length of the data.
+
+#### Returns
+
+0
+: The operation completed without error.
+
+-EINVAL (-22)
+: Bad arguments.
+
+<>0
+: Indicates an error condition. Inspect `errno` for additional information.
+
+
+
 ### signal_release
 
 Release the resources allocated to a binary signal (e.g. free the buffer).
@@ -542,6 +628,35 @@ index (uint32_t)
 
 -ENOSYS (-88)
 : The called function is not available.
+
+<>0
+: Indicates an error condition. Inspect `errno` for additional information.
+
+
+
+### signal_reset_called
+
+Indicate if reset has been called, and thusly its contained data consumed
+(by the caller).
+
+#### Parameters
+
+sv (SignalVector*)
+: The Signal Vector object containing the signal.
+
+index (uint32_t)
+: Index of the signal in the Signal Vector object.
+
+reset_called (bool*)
+: (out) The reset_called value of the specified binary signal.
+
+#### Returns
+
+0
+: The operation completed without error.
+
+-EINVAL (-22)
+: Bad arguments.
 
 <>0
 : Indicates an error condition. Inspect `errno` for additional information.

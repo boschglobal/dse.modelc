@@ -43,6 +43,8 @@ typedef struct ModelCArguments {
     int timeout_set_by_cli;
     int log_level_set_by_cli;
     int steps;
+    const char* sim_path;
+    int [4] __reserved__;
 }
 ```
 
@@ -70,7 +72,17 @@ typedef struct ModelInstanceSpec {
     void* spec;
     void* yaml_doc_list;
     void* private;
-    int [4] __reserved__;
+    int [8] __reserved__;
+}
+```
+
+### RuntimeModelDesc
+
+```c
+typedef struct RuntimeModelDesc {
+    int model;
+    struct (anonymous struct at dse/modelc/runtime.h:158:5) runtime;
+    int [8] __reserved__;
 }
 ```
 
@@ -85,6 +97,9 @@ typedef struct SimulationSpec {
     double step_size;
     double end_time;
     ModelInstanceSpec* instance_list;
+    const char* sim_path;
+    int mode_loopback;
+    int [4] __reserved__;
 }
 ```
 
@@ -107,6 +122,10 @@ performed (in seconds).
 
 Execute a simulation step with the provided step size for all model
 functions of the given model instance.
+
+The AdapterModel properties are normally set from a Start Message, however
+when the SimBus is mocked (or not present) then the `stop_time` needs to be
+set. `model_time` is set in the call to `step_model()`.
 
 #### Parameters
 
