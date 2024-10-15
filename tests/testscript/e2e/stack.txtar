@@ -1,0 +1,196 @@
+# Operate from the WORKDIR (allocated by caller, i.e. docker command).
+cd $WORKDIR
+env SIM=sim
+mkdir $SIM/lib $SIM/data
+cp $REPODIR/dse/modelc/build/_out/examples/simer/lib/libcounter.so $SIM/lib/libcounter.so
+cp $REPODIR/dse/modelc/build/_out/examples/simer/data/model.yaml $SIM/data/model.yaml
+cp $WORK/simulation.yaml $SIM/data/simulation.yaml
+
+
+# TEST: redispubsub
+env SIMBUS_TRANSPORT=redispubsub
+env SIMBUS_URI=redis://localhost:6379
+env
+exec ls -R $SIM
+exec ls -R $WORK
+
+exec sh -e $WORK/test.sh
+
+stderr 'Using Valgrind'
+stdout 'Transport: redispubsub'
+stdout 'URI: redis://localhost:6379'
+stdout 'signal_count : 3'
+stdout 'uid=182894383, val=204.000000, final_val=204.000000, name=counter_A'
+stdout 'uid=199672002, val=304.000000, final_val=304.000000, name=counter_B'
+stdout 'uid=216449621, val=404.000000, final_val=404.000000, name=counter_C'
+stdout 'counter counter_A = 205.000000'
+stdout 'counter counter_B = 305.000000'
+stdout 'counter counter_C = 405.000000'
+
+
+# TEST: redis
+env SIMBUS_TRANSPORT=redis
+env SIMBUS_URI=redis://localhost:6379
+env
+exec ls -R $SIM
+exec ls -R $WORK
+
+exec sh -e $WORK/test.sh
+
+stderr 'Using Valgrind'
+stdout 'Transport: redis'
+! stdout 'Transport: redispubsub'
+stdout 'URI: redis://localhost:6379'
+stdout 'signal_count : 3'
+stdout 'uid=182894383, val=204.000000, final_val=204.000000, name=counter_A'
+stdout 'uid=199672002, val=304.000000, final_val=304.000000, name=counter_B'
+stdout 'uid=216449621, val=404.000000, final_val=404.000000, name=counter_C'
+stdout 'counter counter_A = 205.000000'
+stdout 'counter counter_B = 305.000000'
+stdout 'counter counter_C = 405.000000'
+
+
+# TEST: redisasync
+env SIMBUS_TRANSPORT=redis
+env SIMBUS_URI=redisasync://localhost:6379
+env
+exec ls -R $SIM
+exec ls -R $WORK
+
+exec sh -e $WORK/test.sh
+
+stderr 'Using Valgrind'
+stdout 'Transport: redis'
+! stdout 'Transport: redispubsub'
+stdout 'URI: redisasync://localhost:6379'
+stdout 'signal_count : 3'
+stdout 'uid=182894383, val=204.000000, final_val=204.000000, name=counter_A'
+stdout 'uid=199672002, val=304.000000, final_val=304.000000, name=counter_B'
+stdout 'uid=216449621, val=404.000000, final_val=404.000000, name=counter_C'
+stdout 'counter counter_A = 205.000000'
+stdout 'counter counter_B = 305.000000'
+stdout 'counter counter_C = 405.000000'
+
+
+# TEST: loopback
+env SIMBUS_TRANSPORT=loopback
+env SIMBUS_URI=loopback
+env
+exec ls -R $SIM
+exec ls -R $WORK
+
+exec sh -e $WORK/test-loopback.sh
+
+stderr 'Using Valgrind'
+stdout 'Transport: loopback'
+stdout 'URI: loopback'
+stdout 'signal_count : 3'
+stdout 'uid=182894383, val=204.000000, final_val=204.000000, name=counter_A'
+stdout 'uid=199672002, val=304.000000, final_val=304.000000, name=counter_B'
+stdout 'uid=216449621, val=404.000000, final_val=404.000000, name=counter_C'
+stdout 'counter counter_A = 205.000000'
+stdout 'counter counter_B = 305.000000'
+stdout 'counter counter_C = 405.000000'
+
+
+-- test.sh --
+SIMER="${SIMER:-ghcr.io/boschglobal/dse-simer:latest}"
+docker run --name simer -i --rm -v $ENTRYWORKDIR/$SIM:/sim \
+    $SIMER -valgrind counter_A \
+        -env simbus:SIMBUS_TRANSPORT=$SIMBUS_TRANSPORT \
+        -env simbus:SIMBUS_URI=$SIMBUS_URI \
+        -env counter_A:SIMBUS_TRANSPORT=$SIMBUS_TRANSPORT \
+        -env counter_A:SIMBUS_URI=$SIMBUS_URI \
+        -env counter_B:SIMBUS_TRANSPORT=$SIMBUS_TRANSPORT \
+        -env counter_B:SIMBUS_URI=$SIMBUS_URI \
+        -env counter_C:SIMBUS_TRANSPORT=$SIMBUS_TRANSPORT \
+        -env counter_C:SIMBUS_URI=$SIMBUS_URI \
+        -env simbus:SIMBUS_LOGLEVEL=2
+
+
+-- test-loopback.sh --
+SIMER="${SIMER:-ghcr.io/boschglobal/dse-simer:latest}"
+docker run --name simer -i --rm -v $ENTRYWORKDIR/$SIM:/sim \
+    $SIMER -valgrind counter_A -simbus="" \
+        -env counter_A:SIMBUS_TRANSPORT=$SIMBUS_TRANSPORT \
+        -env counter_A:SIMBUS_URI=$SIMBUS_URI \
+        -env counter_B:SIMBUS_TRANSPORT=$SIMBUS_TRANSPORT \
+        -env counter_B:SIMBUS_URI=$SIMBUS_URI \
+        -env counter_C:SIMBUS_TRANSPORT=$SIMBUS_TRANSPORT \
+        -env counter_C:SIMBUS_URI=$SIMBUS_URI \
+        -env counter_C:SIMBUS_LOGLEVEL=2
+
+
+-- simulation.yaml --
+---
+kind: Stack
+metadata:
+  name: stacked
+spec:
+  connection:
+    transport:
+      redis:
+        uri: redis://localhost:6379
+        timeout: 5
+  runtime:
+    env:
+      SIMBUS_LOGLEVEL: 4
+    stacked: true
+  models:
+    - name: simbus
+      model:
+        name: simbus
+      runtime:
+        env:
+          SIMBUS_LOGLEVEL: 2
+      channels:
+        - name: data_channel
+          expectedModelCount: 3
+    - name: counter_A
+      uid: 42
+      model:
+        name: Counter
+      runtime:
+        env:
+          COUNTER_NAME: counter_A
+          COUNTER_VALUE: 200
+      channels:
+        - name: data_channel
+          alias: data
+    - name: counter_B
+      uid: 43
+      model:
+        name: Counter
+      runtime:
+        env:
+          COUNTER_NAME: counter_B
+          COUNTER_VALUE: 300
+      channels:
+        - name: data_channel
+          alias: data
+    - name: counter_C
+      uid: 44
+      model:
+        name: Counter
+      runtime:
+        env:
+          COUNTER_NAME: counter_C
+          COUNTER_VALUE: 400
+      channels:
+        - name: data_channel
+          alias: data
+---
+kind: SignalGroup
+metadata:
+  name: data
+  labels:
+    side: data
+spec:
+  signals:
+    - signal: counter_A
+    - signal: counter_B
+    - signal: counter_C
+---
+kind: Model
+metadata:
+  name: simbus

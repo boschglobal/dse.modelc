@@ -66,6 +66,7 @@ TESTSCRIPT_E2E_FILES = \
 	$(TESTSCRIPT_E2E_DIR)/ncodec.txtar \
 	$(TESTSCRIPT_E2E_DIR)/mstep.txtar \
 	$(TESTSCRIPT_E2E_DIR)/transport.txtar \
+	$(TESTSCRIPT_E2E_DIR)/stack.txtar \
 	$(TESTSCRIPT_E2E_DIR)/runtime.txtar \
 	$(TESTSCRIPT_E2E_DIR)/benchmark.txtar
 
@@ -189,15 +190,22 @@ do-test_cmocka-run:
 do-test_testscript-e2e:
 # Test debug; add '-v' to Testscript command (e.g. $(TESTSCRIPT_IMAGE) -v \).
 ifeq ($(PACKAGE_ARCH), linux-amd64)
+	@-docker kill simer
 	@set -eu; for t in $(TESTSCRIPT_E2E_FILES) ;\
 	do \
 		echo "Running E2E Test: $$t" ;\
+		export ENTRYWORKDIR=$$(mktemp -d) ;\
 		docker run -i --rm \
-			-e ENTRYDIR=$(HOST_DOCKER_WORKSPACE) \
+			-e ENTRYHOSTDIR=$(HOST_DOCKER_WORKSPACE) \
+			-e ENTRYWORKDIR=$${ENTRYWORKDIR} \
 			-v /var/run/docker.sock:/var/run/docker.sock \
 			-v $(HOST_DOCKER_WORKSPACE):/repo \
+			-v $${ENTRYWORKDIR}:/workdir \
 			$(TESTSCRIPT_IMAGE) \
-				-e ENTRYDIR=$(HOST_DOCKER_WORKSPACE) \
+				-e ENTRYHOSTDIR=$(HOST_DOCKER_WORKSPACE) \
+				-e ENTRYWORKDIR=$${ENTRYWORKDIR} \
+				-e REPODIR=/repo \
+				-e WORKDIR=/workdir \
 				-e SIMER=$(SIMER_IMAGE) \
 				$$t ;\
 	done;
@@ -237,4 +245,3 @@ super-linter:
 		--env VALIDATE_MARKDOWN=true \
 		--env VALIDATE_YAML=true \
 		ghcr.io/super-linter/super-linter:slim-v6
-

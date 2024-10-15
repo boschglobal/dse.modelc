@@ -53,20 +53,20 @@ stdout '\(ncodec_inst\) 0.001500 \[1:24:3\] RX 3eb 1 29 :'
 
 -- test.sh --
 SIMER="${SIMER:-ghcr.io/boschglobal/dse-simer:latest}"
-docker run --name simer -i --rm -v $ENTRYDIR/$SIM:/sim \
+docker run --name simer -i --rm -v $ENTRYHOSTDIR/$SIM:/sim \
     $SIMER -valgrind $NAME \
         -env $NAME:SIMBUS_LOGLEVEL=2
 
 -- test_trace_wildcard.sh --
 SIMER="${SIMER:-ghcr.io/boschglobal/dse-simer:latest}"
-docker run --name simer -i --rm -v $ENTRYDIR/$SIM:/sim \
+docker run --name simer -i --rm -v $ENTRYHOSTDIR/$SIM:/sim \
     $SIMER -valgrind $NAME \
         -env $NAME:SIMBUS_LOGLEVEL=4 \
         -env $NAME:NCODEC_TRACE_CAN_1=*
 
 -- test_trace_framelist.sh --
 SIMER="${SIMER:-ghcr.io/boschglobal/dse-simer:latest}"
-docker run --name simer -i --rm -v $ENTRYDIR/$SIM:/sim \
+docker run --name simer -i --rm -v $ENTRYHOSTDIR/$SIM:/sim \
     $SIMER -valgrind $NAME \
         -env $NAME:SIMBUS_LOGLEVEL=4 \
         -env $NAME:NCODEC_TRACE_CAN_1=0x3ea,0x3eb

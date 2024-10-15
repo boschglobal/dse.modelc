@@ -16,5 +16,5 @@ stdout 'SignalValue: 2628574755 = 4.000000 \[name=counter\]'
 
 -- test.sh --
 SIMER="${SIMER:-ghcr.io/boschglobal/dse-simer:latest}"
-docker run --name simer -i --rm -v $ENTRYDIR/$SIM:/sim \
-    $SIMER -valgrind $NAME -env $NAME:SIMBUS_LOGLEVEL=2
+docker run --name simer -i --rm -v $ENTRYHOSTDIR/$SIM:/sim \
+    $SIMER -valgrind $NAME -env $NAME:SIMBUS_LOGLEVEL=2 -logger 2

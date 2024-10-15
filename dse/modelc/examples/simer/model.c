@@ -18,7 +18,7 @@ at runtime via environment variables:
 */
 
 typedef struct {
-    ModelDesc model;
+    ModelDesc        model;
     ModelSignalIndex counter;
 } ExtendedModelDesc;
 
@@ -29,17 +29,18 @@ ModelDesc* model_create(ModelDesc* model)
     memcpy(m, model, sizeof(ModelDesc));
 
     /* Identify the counter this model will increment. */
-    const char* counter_name = "counter";
-    if (getenv("COUNTER_NAME")) {
-        counter_name = getenv("COUNTER_NAME");
-    }
+    char* counter_name =
+        model_expand_vars((ModelDesc*)m, "${COUNTER_NAME:-counter_A}");
     m->counter = signal_index((ModelDesc*)m, "data", counter_name);
-    if (m->counter.scalar == NULL) log_fatal("Signal not found (%s)", counter_name);
+    if (m->counter.scalar == NULL)
+        log_fatal("Signal not found (%s)", counter_name);
+    free(counter_name);
 
     /* Set initial values. */
-    if (getenv("COUNTER_VALUE")) {
-        *(m->counter.scalar) = atoi(getenv("COUNTER_VALUE"));
-    }
+    char* counter_value =
+        model_expand_vars((ModelDesc*)m, "${COUNTER_VALUE:-0}");
+    *(m->counter.scalar) = atoi(counter_value);
+    free(counter_value);
 
     /* Return the extended object. */
     return (ModelDesc*)m;

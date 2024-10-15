@@ -58,7 +58,7 @@ stdout 'Message \(message\) : count is 46'
 
 -- test.sh --
 SIMER="${SIMER:-ghcr.io/boschglobal/dse-simer:latest}"
-docker run --name simer -i --rm -v $ENTRYDIR/$SIM:/sim \
+docker run --name simer -i --rm -v $ENTRYHOSTDIR/$SIM:/sim \
     $SIMER -valgrind $NAME \
         -env simbus:SIMBUS_TRANSPORT=$SIMBUS_TRANSPORT \
         -env simbus:SIMBUS_URI=$SIMBUS_URI \
@@ -69,7 +69,7 @@ docker run --name simer -i --rm -v $ENTRYDIR/$SIM:/sim \
 
 -- test-loopback.sh --
 SIMER="${SIMER:-ghcr.io/boschglobal/dse-simer:latest}"
-docker run --name simer -i --rm -v $ENTRYDIR/$SIM:/sim \
+docker run --name simer -i --rm -v $ENTRYHOSTDIR/$SIM:/sim \
     $SIMER -valgrind $NAME -simbus="" \
         -env $NAME:SIMBUS_TRANSPORT=$SIMBUS_TRANSPORT \
         -env $NAME:SIMBUS_URI=$SIMBUS_URI \

@@ -28,7 +28,7 @@ stdout 'Importer: Calling vtable.destroy\(\)'
 -- test.sh --
 SIMER="${SIMER:-ghcr.io/boschglobal/dse-simer:latest}"
 docker run --name simer -i --rm \
-    -v $ENTRYDIR/$SIM:/sim \
+    -v $ENTRYHOSTDIR/$SIM:/sim \
     --entrypoint="" $SIMER \
     valgrind -q --leak-check=yes --error-exitcode=808 \
     bin/importer lib/libruntime.so sim data/simulation.yaml target_inst
