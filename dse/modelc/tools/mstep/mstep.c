@@ -174,7 +174,8 @@ int main(int argc, char** argv)
                         }
                     }
                 }
-                for (int i = 0; i < len; i++) free(keys[i]);
+                for (int i = 0; i < len; i++)
+                    free(keys[i]);
                 free(keys);
                 hashmap_destroy(&samples.sample->values);
                 free(samples.sample);

@@ -1,9 +1,9 @@
 #include <dse/testing.h>
 #include <dse/mocks/simmock.h>
 
-#define SIG_task_init_done  1
-#define SIG_task_5_active   2
-#define SIG_task_5_counter  6
+#define SIG_task_init_done 1
+#define SIG_task_5_active  2
+#define SIG_task_5_counter 6
 
 void test_network__signal_check(void** state)
 {
@@ -20,6 +20,7 @@ void test_network__signal_check(void** state)
             { .index = SIG_task_5_counter, .value = 0.0 },
         };
         simmock_print_scalar_signals(mock, LOG_DEBUG);
-        simmock_signal_check(mock, "network_inst", s_checks, ARRAY_SIZE(s_checks), NULL);
+        simmock_signal_check(
+            mock, "network_inst", s_checks, ARRAY_SIZE(s_checks), NULL);
     }
 }

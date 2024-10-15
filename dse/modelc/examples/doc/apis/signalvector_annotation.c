@@ -7,7 +7,8 @@ ModelDesc* model_create(ModelDesc* m)
 
     if (idx.scalar) {
         /* Set initial value. */
-        const char* v = signal_annotation(idx.sv, idx.signal, "initial_value", NULL);
+        const char* v =
+            signal_annotation(idx.sv, idx.signal, "initial_value", NULL);
         if (v) *(idx.scalar) = atoi(v);
     }
 

@@ -64,8 +64,8 @@ static void _trace_log(
     /* Format and write the log. */
     memset(b, 0, NCT_BUFFER_LEN);
     if (strcmp(direction, "RX") == 0) {
-        snprintf(bus_identifier, NCT_BUSID_LEN, "%d:%d:%d",
-            msg->sender.bus_id, msg->sender.node_id, msg->sender.interface_id);
+        snprintf(bus_identifier, NCT_BUSID_LEN, "%d:%d:%d", msg->sender.bus_id,
+            msg->sender.node_id, msg->sender.interface_id);
     } else {
         strncpy(bus_identifier, td->bus_identifier, NCT_BUSID_LEN);
     }

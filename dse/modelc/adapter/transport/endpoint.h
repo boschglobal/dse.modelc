@@ -34,6 +34,8 @@ typedef int32_t (*EndpointRecvFbsFunc)(Endpoint* endpoint,
     const char** channel_name, uint8_t** buffer, uint32_t* buffer_length);
 typedef void (*EndpointInterruptFunc)(Endpoint* endpoint);
 typedef void (*EndpointDisconnectFunc)(Endpoint* endpoint);
+typedef void (*EndpointRegisterNotifyUid)(
+    Endpoint* endpoint, uint32_t notify_uid);
 
 
 typedef enum EndpointKind {
@@ -58,6 +60,7 @@ typedef struct Endpoint {
     EndpointRecvFbsFunc       recv_fbs;
     EndpointInterruptFunc     interrupt;
     EndpointDisconnectFunc    disconnect;
+    EndpointRegisterNotifyUid register_notify_uid;
 
     /* Channel storage container. */
     HashMap endpoint_channels;

@@ -16,6 +16,7 @@ void test_network__frame_check(void** state)
             { .frame_id = 0x1f5u, .offset = 4, .value = 0x02 },
         };
         simmock_print_network_frames(mock, LOG_DEBUG);
-        simmock_frame_check(mock, "network_inst", "can_bus", f_checks, ARRAY_SIZE(f_checks));
+        simmock_frame_check(
+            mock, "network_inst", "can_bus", f_checks, ARRAY_SIZE(f_checks));
     }
 }

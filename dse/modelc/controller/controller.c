@@ -277,10 +277,10 @@ int controller_step_phased(SimulationSpec* sim)
     Controller* controller = __controller;
     assert(controller->adapter);
     Adapter* adapter = controller->adapter;
-    int rc;
+    int      rc;
 
     /* Pull data from SimBus. */
-    rc = adapter_model_start(adapter, sim);  /* Causes time to progress. */
+    rc = adapter_model_start(adapter, sim); /* Causes time to progress. */
     if (rc) return rc;
     marshal(sim, MARSHAL_ADAPTER2MODEL);
 

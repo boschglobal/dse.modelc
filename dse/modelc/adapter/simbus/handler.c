@@ -733,9 +733,18 @@ void simbus_handle_message(Adapter* adapter, const char* channel_name,
         ns(ModelRegister_table_t) t =
             ns(ChannelMessage_message(channel_message));
         log_simbus("ModelRegister <-- [%s]", channel->name);
-        log_simbus("    model_uid=%d", model_uid);
         log_simbus("    step_size=%f", ns(ModelRegister_step_size(t)));
+        log_simbus("    model_uid=%d", model_uid);
+        log_simbus("    notify_uid=%d", ns(ModelRegister_notify_uid(t)));
         log_simbus("    token=%d", token);
+
+        Endpoint* endpoint = adapter->endpoint;
+        if (endpoint && endpoint->register_notify_uid) {
+            uint32_t notify_uid = ns(ModelRegister_notify_uid(t));
+            if (notify_uid) {
+                endpoint->register_notify_uid(endpoint, notify_uid);
+            }
+        }
 
         /* Count the number of ModelRegisters. Keep in mind that this message
         will be sent from a model on all channels, therefore the number of

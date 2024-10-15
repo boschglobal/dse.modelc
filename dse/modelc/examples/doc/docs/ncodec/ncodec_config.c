@@ -5,7 +5,7 @@
 
 void configure_codec(ModelDesc* m, SignalVector* sv, uint32_t idx)
 {
-    NCODEC* nc = sv->vtable.codec(sv, idx);
+    NCODEC*     nc = sv->vtable.codec(sv, idx);
     const char* node_id = NULL;
     for (int i = 0; i >= 0; i++) {
         NCodecConfigItem nci = ncodec_stat(nc, &i);
@@ -18,8 +18,8 @@ void configure_codec(ModelDesc* m, SignalVector* sv, uint32_t idx)
         node_id = model_instance_annotation(m, "node_id");
         if (node_id == NULL) log_fatal("No node_id configuration found!");
         ncodec_config(nc, (struct NCodecConfigItem){
-                                 .name = "node_id",
-                                 .value = node_id,
-                             });
+                              .name = "node_id",
+                              .value = node_id,
+                          });
     }
 }

@@ -13,11 +13,11 @@
 #include <dse/logger.h>
 
 
-#define MCL_CHANNEL   "mcl_channel"
+#define MCL_CHANNEL "mcl_channel"
 
 
 typedef struct {
-    ModelDesc model;
+    ModelDesc        model;
     /* MCL Properties. */
     MclInstanceDesc* mcl_instance;
 } MclExtendedModelDesc;
@@ -26,7 +26,7 @@ typedef struct {
 static int __mcl_execute(ModelDesc* model, MclStrategyAction action)
 {
     MclExtendedModelDesc* m = (MclExtendedModelDesc*)model;
-    MclInstanceDesc* mcl_instance = m->mcl_instance;
+    MclInstanceDesc*      mcl_instance = m->mcl_instance;
     assert(mcl_instance->strategy);
     assert(mcl_instance->strategy->execute_func);
 
@@ -42,7 +42,7 @@ ModelDesc* model_create(ModelDesc* model)
     memcpy(m, model, sizeof(ModelDesc));
     ModelInstanceSpec* mi = m->model.mi;
 
-     /* Load the MCL dll's. */
+    /* Load the MCL dll's. */
     log_debug("Load the MCL(s) ...");
     errno = 0;
     int rc = mcl_mk1_loadlib(mi);
@@ -96,9 +96,9 @@ ModelDesc* model_create(ModelDesc* model)
 int model_step(ModelDesc* model, double* model_time, double stop_time)
 {
     MclExtendedModelDesc* m = (MclExtendedModelDesc*)model;
-    MclInstanceDesc* mcl_instance = m->mcl_instance;
+    MclInstanceDesc*      mcl_instance = m->mcl_instance;
     assert(mcl_instance);
-    //assert(mcl_instance->channel);
+    // assert(mcl_instance->channel);
     assert(mcl_instance->strategy);
     assert(mcl_instance->strategy->mcl_instance);
 
@@ -122,8 +122,8 @@ int model_step(ModelDesc* model, double* model_time, double stop_time)
 void model_destroy(ModelDesc* model)
 {
     MclExtendedModelDesc* m = (MclExtendedModelDesc*)model;
-    ModelInstanceSpec* mi = m->model.mi;
-    MclInstanceDesc* mcl_instance = m->mcl_instance;
+    ModelInstanceSpec*    mi = m->model.mi;
+    MclInstanceDesc*      mcl_instance = m->mcl_instance;
     assert(mcl_instance->strategy);
     assert(mcl_instance->strategy->mcl_instance);
 

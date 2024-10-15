@@ -42,9 +42,10 @@ typedef struct SimbusVectorIndex {
 
 
 /* adapter.c */
-DLL_PUBLIC Adapter* simbus_adapter_create(Endpoint* endpoint, double bus_step_size);
-DLL_PUBLIC void     simbus_adapter_init_channel(
-        AdapterModel* am, const char* channel_name, uint32_t expected_model_count);
+DLL_PUBLIC Adapter* simbus_adapter_create(
+    Endpoint* endpoint, double bus_step_size);
+DLL_PUBLIC void simbus_adapter_init_channel(
+    AdapterModel* am, const char* channel_name, uint32_t expected_model_count);
 DLL_PUBLIC void simbus_adapter_run(Adapter* adapter);
 
 /* adapter_loopb.c (in parent directory) */

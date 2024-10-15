@@ -23,7 +23,8 @@ typedef struct __BinarySignalStream {
 } __BinarySignalStream;
 
 
-static size_t stream_read(NCODEC* nc, uint8_t** data, size_t* len, int32_t pos_op)
+static size_t stream_read(
+    NCODEC* nc, uint8_t** data, size_t* len, int32_t pos_op)
 {
     NCodecInstance* _nc = (NCodecInstance*)nc;
     if (_nc == NULL || _nc->stream == NULL) return -ENOSTR;

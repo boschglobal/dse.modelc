@@ -45,9 +45,15 @@ typedef struct RedisEndpoint {
     int                reply_errno;
 
     /* Endpoints. */
-    HashMap      push_hash; /* Used in bus_mode, push to Models. */
+    HashMap      push_hash;        /* Used in bus_mode, push to Models. */
+    HashMap      notify_push_hash; /* Used in bus_mode, For notify only. */
+    HashMap      pull_hash;
     RedisKeyDesc push;
     RedisKeyDesc pull;
+
+    int     pull_argc;
+    char**  pull_argv;
+    size_t* pull_argvlen;
 } RedisEndpoint;
 
 
@@ -64,5 +70,8 @@ DLL_PRIVATE int32_t redis_recv_fbs(Endpoint* endpoint,
     const char** channel_name, uint8_t** buffer, uint32_t* buffer_length);
 DLL_PRIVATE void    redis_interrupt(Endpoint* endpoint);
 DLL_PRIVATE void    redis_disconnect(Endpoint* endpoint);
+DLL_PRIVATE void    redis_register_notify_uid(
+       Endpoint* endpoint, uint32_t notify_uid);
+
 
 #endif  // DSE_MODELC_ADAPTER_TRANSPORT_REDIS_H_

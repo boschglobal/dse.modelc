@@ -146,11 +146,14 @@ static int adapter_msg_connect(
             flatcc_builder_reset(builder);
             ns(ModelRegister_start)(builder);
             ns(ModelRegister_step_size_add)(builder, sim->step_size);
-            message =
-                ns(MessageType_as_ModelRegister(ns(ModelRegister_end)(builder)));
+            ns(ModelRegister_model_uid_add)(builder, am->model_uid);
+            ns(ModelRegister_notify_uid_add)(builder, sim->uid);
+            message = ns(
+                MessageType_as_ModelRegister(ns(ModelRegister_end)(builder)));
             log_simbus("ModelRegister --> [%s]", ch->name);
-            log_simbus("    model_uid=%d", am->model_uid);
             log_simbus("    step_size=%f", sim->step_size);
+            log_simbus("    model_uid=%d", am->model_uid);
+            log_simbus("    notify_uid=%d", sim->uid);
             rc = send_message(
                 adapter, ch->endpoint_channel, am->model_uid, message, true);
             if (rc == 0) break;

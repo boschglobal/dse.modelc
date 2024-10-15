@@ -27,7 +27,7 @@ __attribute__((unused)) static void __compile_time_checks(void)
     // char (*___)[sizeof(SignalVector)] = 1;
 
 #if defined(__x86_64__)
-    #if __SIZEOF_POINTER__ == 8
+#if __SIZEOF_POINTER__ == 8
     _Static_assert(sizeof(ModelGatewayDesc) == 80, "Compatibility FAIL!");
     _Static_assert(sizeof(MclDesc) == 272, "Compatibility FAIL!");
     _Static_assert(sizeof(MarshalSignalMap) == 56, "Compatibility FAIL!");
@@ -37,7 +37,7 @@ __attribute__((unused)) static void __compile_time_checks(void)
     _Static_assert(sizeof(ModelCArguments) == 160, "Compatibility FAIL!");
     _Static_assert(sizeof(RuntimeModelDesc) == 272, "Compatibility FAIL!");
     _Static_assert(sizeof(SignalVector) == 256, "Compatibility FAIL!");
-    #else
+#else
     _Static_assert(sizeof(MclDesc) == 176, "Compatibility FAIL!");
     _Static_assert(sizeof(MarshalSignalMap) == 28, "Compatibility FAIL!");
     _Static_assert(sizeof(ModelGatewayDesc) == 64, "Compatibility FAIL!");
@@ -47,7 +47,7 @@ __attribute__((unused)) static void __compile_time_checks(void)
     _Static_assert(sizeof(ModelCArguments) == 120, "Compatibility FAIL!");
     _Static_assert(sizeof(RuntimeModelDesc) == 200, "Compatibility FAIL!");
     _Static_assert(sizeof(SignalVector) == 160, "Compatibility FAIL!");
-    #endif
+#endif
 #elif defined(__i386__)
     _Static_assert(sizeof(ModelGatewayDesc) == 60, "Compatibility FAIL!");
     _Static_assert(sizeof(MclDesc) == 176, "Compatibility FAIL!");

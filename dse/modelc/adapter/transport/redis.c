@@ -32,17 +32,13 @@ static void redis_endpoint_destroy(Endpoint* endpoint)
             redisAsyncFree(redis_ep->async_ctx);
             if (redis_ep->base) event_base_free(redis_ep->base);
         }
-        /* Release the redis_ep->push_hash hashmap. */
-        char**   keys = hashmap_keys(&redis_ep->push_hash);
-        uint32_t count = hashmap_number_keys(redis_ep->push_hash);
-        for (uint32_t i = 0; i < count; i++) {
-            RedisKeyDesc* _ = hashmap_get(&redis_ep->push_hash, keys[i]);
-            free(_);
-        }
-        hashmap_destroy(&redis_ep->push_hash);
-        for (uint32_t _ = 0; _ < count; _++)
-            free(keys[_]);
-        free(keys);
+        /* Pull args. */
+        free(redis_ep->pull_argv);
+        free(redis_ep->pull_argvlen);
+        /* Release the hashmaps. */
+        hashmap_destroy_ext(&redis_ep->push_hash, NULL, NULL);
+        hashmap_destroy_ext(&redis_ep->notify_push_hash, NULL, NULL);
+        hashmap_destroy_ext(&redis_ep->pull_hash, NULL, NULL);
         /* Free the Redis endpoint. */
         free(endpoint->private);
     }
@@ -68,6 +64,8 @@ static void _check_free_reply(redisReply* reply)
     freeReplyObject(reply);
 }
 
+static void _update_pull_cmd(RedisEndpoint* redis_ep);
+
 
 Endpoint* redis_connect(const char* path, const char* hostname, int32_t port,
     uint32_t model_uid, bool bus_mode, double recv_timeout, bool async)
@@ -87,6 +85,7 @@ Endpoint* redis_connect(const char* path, const char* hostname, int32_t port,
     endpoint->recv_fbs = redis_recv_fbs;
     endpoint->interrupt = redis_interrupt;
     endpoint->disconnect = redis_disconnect;
+    endpoint->register_notify_uid = redis_register_notify_uid;
     rc = hashmap_init_alt(&endpoint->endpoint_channels, 16, NULL);
     if (rc) {
         log_error("Hashmap init failed for endpoint->endpoint_channels!");
@@ -107,6 +106,18 @@ Endpoint* redis_connect(const char* path, const char* hostname, int32_t port,
     rc = hashmap_init_alt(&redis_ep->push_hash, 16, NULL);
     if (rc) {
         log_error("Hashmap init failed for redis_ep->push_hash!");
+        if (errno == 0) errno = rc;
+        goto error_clean_up;
+    }
+    rc = hashmap_init_alt(&redis_ep->notify_push_hash, 16, NULL);
+    if (rc) {
+        log_error("Hashmap init failed for redis_ep->notify_push_hash!");
+        if (errno == 0) errno = rc;
+        goto error_clean_up;
+    }
+    rc = hashmap_init_alt(&redis_ep->pull_hash, 16, NULL);
+    if (rc) {
+        log_error("Hashmap init failed for redis_ep->pull_hash!");
         if (errno == 0) errno = rc;
         goto error_clean_up;
     }
@@ -175,7 +186,11 @@ Endpoint* redis_connect(const char* path, const char* hostname, int32_t port,
     /* Configure the Endpoint. */
     if (endpoint->bus_mode) {
         /* SimBus. Push EP are allocated/assigned in Hash. */
-        snprintf(redis_ep->pull.endpoint, MAX_KEY_SIZE, "dse.simbus");
+        RedisKeyDesc* pull_desc = calloc(1, sizeof(RedisKeyDesc));
+        assert(pull_desc);
+        snprintf(pull_desc->endpoint, MAX_KEY_SIZE, "dse.simbus");
+        hashmap_set(&redis_ep->pull_hash, "simbus", pull_desc);
+        _update_pull_cmd(redis_ep);
         /* Log the Endpoint information. */
         log_notice("  Endpoint: ");
         log_notice("    Model UID: %i", endpoint->uid);
@@ -183,13 +198,11 @@ Endpoint* redis_connect(const char* path, const char* hostname, int32_t port,
     } else {
         /* Model. */
         snprintf(redis_ep->push.endpoint, MAX_KEY_SIZE, "dse.simbus");
-        snprintf(redis_ep->pull.endpoint, MAX_KEY_SIZE, "dse.model.%d",
-            endpoint->uid);
         /* Log the Endpoint information. */
         log_notice("  Endpoint: ");
         log_notice("    Model UID: %i", endpoint->uid);
         log_notice("    Push Endpoint: %s", redis_ep->push.endpoint);
-        log_notice("    Pull Endpoint: %s", redis_ep->pull.endpoint);
+        _update_pull_cmd(redis_ep);
     }
 
     return endpoint;
@@ -197,6 +210,29 @@ Endpoint* redis_connect(const char* path, const char* hostname, int32_t port,
 error_clean_up:
     redis_endpoint_destroy(endpoint);
     return NULL;
+}
+
+
+void redis_register_notify_uid(Endpoint* endpoint, uint32_t notify_uid)
+{
+    assert(endpoint);
+    assert(endpoint->private);
+    RedisEndpoint* redis_ep = (RedisEndpoint*)endpoint->private;
+
+    if (endpoint->bus_mode && notify_uid) {
+        /* Locate the push key from the hash. */
+        RedisKeyDesc* push_desc = NULL;
+        char          hash_key[DESC_KEY_LEN];
+        snprintf(hash_key, DESC_KEY_LEN - 1, "%d", notify_uid);
+        push_desc = hashmap_get(&redis_ep->notify_push_hash, hash_key);
+        if (push_desc) return;
+
+        /* Create a new entry (will be a Model Push). */
+        push_desc = calloc(1, sizeof(RedisKeyDesc));
+        assert(push_desc);
+        snprintf(push_desc->endpoint, MAX_KEY_SIZE, "dse.model.%d", notify_uid);
+        hashmap_set(&redis_ep->notify_push_hash, hash_key, push_desc);
+    }
 }
 
 
@@ -273,6 +309,75 @@ static RedisKeyDesc* _get_push_key(Endpoint* endpoint, uint32_t model_uid)
     return key_desc;
 }
 
+static int _add_pull_key(void* _key, void* _endpoint)
+{
+    char*          key = _key;
+    RedisEndpoint* redis_ep = _endpoint;
+
+    redis_ep->pull_argv[redis_ep->pull_argc] = key;
+    redis_ep->pull_argvlen[redis_ep->pull_argc] = strlen(key);
+    redis_ep->pull_argc += 1;
+
+    return 0;
+}
+
+static void _update_pull_cmd(RedisEndpoint* redis_ep)
+{
+    redis_ep->pull.endpoint[0] = '\0';
+    redis_ep->pull_argc = 0;
+    free(redis_ep->pull_argv);
+    free(redis_ep->pull_argvlen);
+
+    size_t ep_count = hashmap_number_keys(redis_ep->pull_hash);
+    redis_ep->pull_argv = calloc((2 + ep_count), sizeof(*redis_ep->pull_argv));
+    redis_ep->pull_argvlen =
+        calloc((2 + ep_count), sizeof(*redis_ep->pull_argvlen));
+
+    /* PULL Command. */
+    redis_ep->pull_argv[0] = (char*)"BRPOP";
+    redis_ep->pull_argvlen[0] = strlen("BRPOP");
+    redis_ep->pull_argc += 1;
+    /* PULL Keys. */
+    hashmap_iterator(&redis_ep->pull_hash, _add_pull_key, false, redis_ep);
+    /* PULL Timeout. */
+    if (redis_ep->major_ver >= 6) {
+        redis_ep->pull_argv[redis_ep->pull_argc] = (char*)"1.0";
+        redis_ep->pull_argvlen[redis_ep->pull_argc] = strlen("1.0");
+    } else {
+        redis_ep->pull_argv[redis_ep->pull_argc] = (char*)"1";
+        redis_ep->pull_argvlen[redis_ep->pull_argc] = strlen("1");
+    }
+    redis_ep->pull_argc += 1;
+}
+
+static void _update_pull_key(Endpoint* endpoint, uint32_t model_uid)
+{
+    assert(endpoint);
+    assert(endpoint->private);
+    RedisEndpoint* redis_ep = (RedisEndpoint*)endpoint->private;
+
+    /* Model pull only. */
+    if (endpoint->bus_mode) return;
+    if (model_uid == 0) return;
+
+    /* Locate the pull key from the hash. */
+    RedisKeyDesc* pull_desc = NULL;
+    char          hash_key[DESC_KEY_LEN];
+    snprintf(hash_key, DESC_KEY_LEN - 1, "%d", model_uid);
+    pull_desc = hashmap_get(&redis_ep->pull_hash, hash_key);
+    if (pull_desc) return;
+
+    /* Add a new entry, and update the pull endpoint command. */
+    pull_desc = calloc(1, sizeof(RedisKeyDesc));
+    assert(pull_desc);
+    snprintf(pull_desc->endpoint, MAX_KEY_SIZE, "dse.model.%d", model_uid);
+    hashmap_set(&redis_ep->pull_hash, hash_key, pull_desc);
+    _update_pull_cmd(redis_ep);
+
+    log_notice("    Pull Endpoint: %s", pull_desc->endpoint);
+}
+
+
 int32_t redis_send_fbs(Endpoint* endpoint, void* endpoint_channel, void* buffer,
     uint32_t buffer_length, uint32_t model_uid)
 {
@@ -280,6 +385,8 @@ int32_t redis_send_fbs(Endpoint* endpoint, void* endpoint_channel, void* buffer,
     assert(endpoint->private);
     RedisEndpoint* redis_ep = (RedisEndpoint*)endpoint->private;
     int            rc = 0;
+
+    _update_pull_key(endpoint, model_uid);
 
     /* Construct the message payload. */
     const char*     channel_name = endpoint_channel;
@@ -295,12 +402,18 @@ int32_t redis_send_fbs(Endpoint* endpoint, void* endpoint_channel, void* buffer,
         _check_free_reply(_);
     } else {
         if (endpoint->bus_mode) {
+            HashMap* push_hash;
+            if (model_uid == 0) {
+                push_hash = &redis_ep->notify_push_hash;
+            } else {
+                push_hash = &redis_ep->push_hash;
+            }
+
             /* Sending a Notify Message to each model. */
-            char**   keys = hashmap_keys(&redis_ep->push_hash);
-            uint32_t count = hashmap_number_keys(redis_ep->push_hash);
+            char**   keys = hashmap_keys(push_hash);
+            uint32_t count = hashmap_number_keys((*push_hash));
             for (uint32_t i = 0; i < count; i++) {
-                RedisKeyDesc* push_desc =
-                    hashmap_get(&redis_ep->push_hash, keys[i]);
+                RedisKeyDesc* push_desc = hashmap_get(push_hash, keys[i]);
                 log_trace("Redis send: endpoint:%s, length: %d",
                     push_desc->endpoint, sbuf.size);
                 if (redis_ep->async_ctx) {
@@ -400,23 +513,17 @@ int32_t redis_recv_fbs(Endpoint* endpoint, const char** channel_name,
         /* Timed receive for 1 second (at a time). Normally no performance hit
          * in doing this loop as we expect messages on a shorter time frame.
          */
+        log_trace("Redis recv: endpoint:%s", redis_ep->pull.endpoint);
         if (redis_ep->async_ctx) {
-            if (redis_ep->major_ver >= 6) {
-                redisAsyncCommand(redis_ep->async_ctx, _redis_async_brpop,
-                    redis_ep, "BRPOP %s %f", redis_ep->pull.endpoint, 1.0);
-            } else {
-                redisAsyncCommand(redis_ep->async_ctx, _redis_async_brpop,
-                    redis_ep, "BRPOP %s %d", redis_ep->pull.endpoint, 1);
-            }
+            redisAsyncCommandArgv(redis_ep->async_ctx, _redis_async_brpop,
+                redis_ep, redis_ep->pull_argc,
+                (const char**)redis_ep->pull_argv,
+                (const size_t*)redis_ep->pull_argvlen);
             event_base_dispatch(redis_ep->base);
         } else {
-            if (redis_ep->major_ver >= 6) {
-                reply = redisCommand(
-                    redis_ep->ctx, "BRPOP %s %f", redis_ep->pull.endpoint, 1.0);
-            } else {
-                reply = redisCommand(
-                    redis_ep->ctx, "BRPOP %s %d", redis_ep->pull.endpoint, 1);
-            }
+            reply = redisCommandArgv(redis_ep->ctx, redis_ep->pull_argc,
+                (const char**)redis_ep->pull_argv,
+                (const size_t*)redis_ep->pull_argvlen);
             if (reply->type == REDIS_REPLY_ERROR) {
                 log_debug("REDIS_REPLY_ERROR : %s", reply->str);
             }

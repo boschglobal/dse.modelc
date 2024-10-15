@@ -12,7 +12,6 @@
 #include <dse/modelc/controller/model_private.h>
 
 
-
 int controller_register_model_function(
     ModelInstanceSpec* model_instance, ModelFunction* model_function)
 {

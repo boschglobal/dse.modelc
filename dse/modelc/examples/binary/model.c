@@ -83,7 +83,7 @@ int model_step(ModelDesc* model, double* model_time, double stop_time)
 
     /* Print the binary signal. */
     uint8_t* buffer;
-    size_t len;
+    size_t   len;
     signal_read(m->binary.message.sv, m->binary.message.index, &buffer, &len);
     log_info("Message (%s) : %s",
         m->binary.message.sv->signal[m->binary.message.index], buffer);

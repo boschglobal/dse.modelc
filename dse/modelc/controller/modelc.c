@@ -481,9 +481,6 @@ int modelc_run(SimulationSpec* sim, bool run_async)
     assert(sim);
     errno = 0;
 
-    /* Set the default UID. */
-    if (sim->uid == 0 && sim->instance_list) sim->uid = sim->instance_list->uid;
-
     /* Create Endpoint object. */
     log_notice("Create the Endpoint object ...");
     Endpoint* endpoint = _create_endpoint(sim);
@@ -491,17 +488,25 @@ int modelc_run(SimulationSpec* sim, bool run_async)
         log_fatal("Could not create endpoint!");
     }
 
-    /* Setup UIDs. */
+    /* Setup Sim UID. */
     if (sim->uid == 0) sim->uid = endpoint->uid;
-    int                inst_counter = 0;
-    ModelInstanceSpec* _instptr = sim->instance_list;
-    while (_instptr && _instptr->name) {
+    for (ModelInstanceSpec* _instptr = sim->instance_list;
+         _instptr && _instptr->name; _instptr++) {
+        if (_instptr->uid) {
+            /* Set Sim UID to that of the first specified Model. */
+            sim->uid = _instptr->uid;
+            break;
+        }
+    }
+    log_debug("sim->uid = %d", sim->uid);
+    /* Setup Model UIDs. */
+    int inst_counter = 0;
+    for (ModelInstanceSpec* _instptr = sim->instance_list;
+         _instptr && _instptr->name; _instptr++) {
         /* Generate a UID for this Model. */
         uint32_t _uid = (inst_counter * 10000) + sim->uid;
         if (_instptr->uid == 0) _instptr->uid = _uid;
         log_debug("mi[%d]->uid = %d", inst_counter, _instptr->uid);
-        /* Next instance? */
-        _instptr++;
         inst_counter++;
     }
 

@@ -38,8 +38,8 @@ static int _do_step_func(void* _mf, void* _step_data)
         }
     }
 
-    double         model_time = step_data->model_time;
-    int            rc = md->vtable.step(md, &model_time, step_data->stop_time);
+    double model_time = step_data->model_time;
+    int    rc = md->vtable.step(md, &model_time, step_data->stop_time);
     if (rc)
         log_error(
             "Model Function %s:%s (rc=%d)", step_data->mi->name, mf->name, rc);
