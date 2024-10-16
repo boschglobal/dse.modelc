@@ -342,11 +342,13 @@ func calculateEnv(stack *schema_kind.StackSpec, model *schema_kind.ModelInstance
 	}
 	if model != nil && model.Runtime != nil && model.Runtime.Env != nil {
 		for k, v := range *model.Runtime.Env {
-			env[k] = v
-			if *stack.Runtime.Stacked {
+			if stack.Runtime != nil && stack.Runtime.Stacked != nil && *stack.Runtime.Stacked {
 				// For stacked models, add additional ENVAR prefixed with Model Name.
 				key := strings.ToUpper(fmt.Sprintf("%s__%s", model.Name, k))
 				env[key] = v
+			} else {
+				// Set the var.
+				env[k] = v
 			}
 		}
 	}
@@ -357,15 +359,22 @@ func calculateEnv(stack *schema_kind.StackSpec, model *schema_kind.ModelInstance
 			continue
 		}
 		k := strings.SplitN(m[0], ":", 2)
-		if len(k) != 2 {
-			continue
-		}
-		if model.Name == k[0] {
-			env[k[1]] = m[1]
-			if stack.Runtime != nil && *stack.Runtime.Stacked {
-				// For stacked models, add additional ENVAR prefixed with Model Name.
+		switch len(k) {
+		case 1:
+			// Apply ENVAR.
+			env[k[0]] = m[1]
+		case 2:
+			// Named ENVAR, apply to instance or stack.
+			if model.Name != k[0] {
+				continue
+			}
+			if stack.Runtime != nil && stack.Runtime.Stacked != nil && *stack.Runtime.Stacked {
+				// Stacked, set with name prefix.
 				key := strings.ToUpper(fmt.Sprintf("%s__%s", model.Name, k[1]))
 				env[key] = m[1]
+			} else {
+				// Set the var.
+				env[k[1]] = m[1]
 			}
 		}
 	}
