@@ -18,10 +18,10 @@ var (
 	tmux   = flag.Bool("tmux", false, "run simulation with TMUX user interface")
 	logger = flag.Int("logger", 3, "log level (select between 0..4)")
 	// Binary flags (adjusted only during development).
-	redisPath     = flag.String("redis", "redis-server", "path to redis-server executable")
-	simbusPath    = flag.String("simbus", "/usr/local/bin/simbus", "path to SimBus executable (set to \"\" to disable)")
-	modelcPath    = flag.String("modelc", "/usr/local/bin/modelc", "path to ModelC executable")
-	modelcX32Path = flag.String("modelcX32", "/usr/local/bin/modelc32_x86", "path to ModelC x32 executable")
+	redisPath      = flag.String("redis", "redis-server", "path to redis-server executable")
+	simbusPath     = flag.String("simbus", "/usr/local/bin/simbus", "path to SimBus executable (set to \"\" to disable)")
+	modelcPath     = flag.String("modelc", "/usr/local/bin/modelc", "path to ModelC executable")
+	modelcX32Path  = flag.String("modelcX32", "/usr/local/bin/modelc32_x86", "path to ModelC x32 executable")
 	modelcI386Path = flag.String("modelcI386", "/usr/local/bin/modelc32_i386", "path to ModelC i386 executable")
 )
 

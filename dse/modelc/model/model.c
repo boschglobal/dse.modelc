@@ -138,7 +138,7 @@ static int _signal_group_match_handler(
         if (so->signal) {
             /* Internal signals are skipped. */
             bool internal = false;
-            dse_yaml_get_bool(so->data, "internal", &internal);
+            dse_yaml_get_bool(so->data, "annotations/internal", &internal);
             if (internal) {
                 free(so);
                 continue;

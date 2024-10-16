@@ -40,18 +40,25 @@ spec:
   signals:
     - signal: one
     - signal: two
-      internal: false
+      annotations:
+        internal: false
     - signal: three
-      internal: 0
+      annotations:
+        internal: 0
     - signal: four
-      internal: true
+      annotations:
+        internal: true
     - signal: five
-      internal: 1
+      annotations:
+        internal: 1
     - signal: six
-      # yamllint disable-line rule:truthy
-      internal: on
+      annotations:
+        # yamllint disable-line rule:truthy
+        internal: on
     - signal: seven
-      internal: two
+      annotations:
+        internal: two
     - signal: eight
-      # yamllint disable-line rule:truthy
-      internal: off
+      annotations:
+        # yamllint disable-line rule:truthy
+        internal: off

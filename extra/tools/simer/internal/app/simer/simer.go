@@ -56,7 +56,7 @@ func IndexYamlFiles(path string) map[string][]kind.KindDoc {
 
 	index := map[string][]kind.KindDoc{}
 
-	slog.Info(fmt.Sprintf("Kind Docs (YAML):"))
+	slog.Info("Kind Docs (YAML):")
 	for _, doc := range kindDocs {
 		slog.Info(fmt.Sprintf("kind: %s; name=%s (%s)", doc.Kind, doc.Metadata.Name, doc.File))
 
@@ -93,7 +93,7 @@ func SimbusCommand(docMap map[string][]kind.KindDoc, simbusPath string, flags Fl
 			slog.Debug(fmt.Sprintf("  %s", stackDoc.Metadata.Name))
 			// All or only some stacks?
 			if flags.Stack != "" {
-				if slices.Contains(flags.StackList, stackDoc.Metadata.Name) == false {
+				if slices.Contains(flags.StackList, stackDoc.Metadata.Name) {
 					continue
 				}
 			}
@@ -164,7 +164,7 @@ func ModelCommandList(docMap map[string][]kind.KindDoc, modelcPath string, model
 			slog.Debug(fmt.Sprintf("  %s", stackDoc.Metadata.Name))
 			// All or only some stacks?
 			if flags.Stack != "" {
-				if slices.Contains(flags.StackList, stackDoc.Metadata.Name) == false {
+				if slices.Contains(flags.StackList, stackDoc.Metadata.Name) {
 					continue // Next stack.
 				}
 			}
@@ -271,7 +271,7 @@ func removeDuplicate[T comparable](s []T) []T {
 func processCmdModifiers(name string, path string, flags Flags) (string, []string) {
 	args := []string{}
 	if len(flags.Gdb) != 0 {
-		if slices.Contains(strings.Split(name, ","), flags.Gdb) == true {
+		if slices.Contains(strings.Split(name, ","), flags.Gdb) {
 			// Prefix 'path' with the GDB command and options.
 			gdbArgs := []string{
 				"--eval-command=run",
@@ -282,13 +282,13 @@ func processCmdModifiers(name string, path string, flags Flags) (string, []strin
 			path = "/usr/bin/gdb"
 		}
 	} else if len(flags.GdbServer) != 0 {
-		if slices.Contains(strings.Split(name, ","), flags.GdbServer) == true {
+		if slices.Contains(strings.Split(name, ","), flags.GdbServer) {
 			// Run model 'name' via gdbserver.
 			args = append(args, "localhost:2159", path)
 			path = "/usr/bin/gdbserver"
 		}
 	} else if len(flags.Valgrind) != 0 {
-		if slices.Contains(strings.Split(name, ","), flags.Valgrind) == true {
+		if slices.Contains(strings.Split(name, ","), flags.Valgrind) {
 			// Prefix 'path' with the valgrind command and options.
 			valgrindArgs := []string{
 				"--track-origins=yes",

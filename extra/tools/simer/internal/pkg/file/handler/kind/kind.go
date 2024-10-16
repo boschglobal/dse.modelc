@@ -61,9 +61,9 @@ type KindDoc struct {
 	File     string
 	Kind     string `yaml:"kind"`
 	Metadata struct {
-		Name        string            `yaml:"name"`
+		Name        string                 `yaml:"name"`
 		Annotations map[string]interface{} `yaml:"annotations"`
-		Labels      map[string]string `yaml:"labels"`
+		Labels      map[string]string      `yaml:"labels"`
 	} `yaml:"metadata"`
 	Spec interface{} `yaml:"-"`
 }
