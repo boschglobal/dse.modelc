@@ -343,9 +343,14 @@ func calculateEnv(stack *schema_kind.StackSpec, model *schema_kind.ModelInstance
 	if model != nil && model.Runtime != nil && model.Runtime.Env != nil {
 		for k, v := range *model.Runtime.Env {
 			if stack.Runtime != nil && stack.Runtime.Stacked != nil && *stack.Runtime.Stacked {
-				// For stacked models, add additional ENVAR prefixed with Model Name.
-				key := strings.ToUpper(fmt.Sprintf("%s__%s", model.Name, k))
-				env[key] = v
+				if model.Name == "simbus" {
+					// For simbus, directly set the var.
+					env[k] = v
+				} else {
+					// Stacked, set with name prefix.
+					key := strings.ToUpper(fmt.Sprintf("%s__%s", model.Name, k))
+					env[key] = v
+				}
 			} else {
 				// Set the var.
 				env[k] = v
@@ -369,9 +374,14 @@ func calculateEnv(stack *schema_kind.StackSpec, model *schema_kind.ModelInstance
 				continue
 			}
 			if stack.Runtime != nil && stack.Runtime.Stacked != nil && *stack.Runtime.Stacked {
-				// Stacked, set with name prefix.
-				key := strings.ToUpper(fmt.Sprintf("%s__%s", model.Name, k[1]))
-				env[key] = m[1]
+				if model.Name == "simbus" {
+					// For simbus, directly set the var.
+					env[k[1]] = m[1]
+				} else {
+					// Stacked, set with name prefix.
+					key := strings.ToUpper(fmt.Sprintf("%s__%s", model.Name, k[1]))
+					env[key] = m[1]
+				}
 			} else {
 				// Set the var.
 				env[k[1]] = m[1]

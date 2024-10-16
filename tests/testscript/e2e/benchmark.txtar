@@ -154,7 +154,7 @@ SIMER="${SIMER:-ghcr.io/boschglobal/dse-simer:latest}"
 END_TIME="${END_TIME:-${DEFAULT_END_TIME}}"
 docker run --name simer -i --rm -v $ENTRYHOSTDIR/$SIM:/sim \
     $SIMER -valgrind $NAME \
-        -env $NAME:SIMBUS_LOGLEVEL=2 \
+        -env SIMBUS_LOGLEVEL=2 \
         -endtime $END_TIME \
         | tee benchmark_output.txt
 

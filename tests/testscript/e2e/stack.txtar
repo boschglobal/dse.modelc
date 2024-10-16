@@ -1,4 +1,3 @@
-# Operate from the WORKDIR (allocated by caller, i.e. docker command).
 cd $WORKDIR
 env SIM=sim
 mkdir $SIM/lib $SIM/data
@@ -96,29 +95,19 @@ stdout 'counter counter_C = 405.000000'
 -- test.sh --
 SIMER="${SIMER:-ghcr.io/boschglobal/dse-simer:latest}"
 docker run --name simer -i --rm -v $ENTRYWORKDIR/$SIM:/sim \
-    $SIMER -valgrind counter_A \
-        -env simbus:SIMBUS_TRANSPORT=$SIMBUS_TRANSPORT \
-        -env simbus:SIMBUS_URI=$SIMBUS_URI \
-        -env counter_A:SIMBUS_TRANSPORT=$SIMBUS_TRANSPORT \
-        -env counter_A:SIMBUS_URI=$SIMBUS_URI \
-        -env counter_B:SIMBUS_TRANSPORT=$SIMBUS_TRANSPORT \
-        -env counter_B:SIMBUS_URI=$SIMBUS_URI \
-        -env counter_C:SIMBUS_TRANSPORT=$SIMBUS_TRANSPORT \
-        -env counter_C:SIMBUS_URI=$SIMBUS_URI \
+    $SIMER -valgrind counter_A -logger 2 \
+        -env SIMBUS_TRANSPORT=$SIMBUS_TRANSPORT \
+        -env SIMBUS_URI=$SIMBUS_URI \
         -env simbus:SIMBUS_LOGLEVEL=2
 
 
 -- test-loopback.sh --
 SIMER="${SIMER:-ghcr.io/boschglobal/dse-simer:latest}"
 docker run --name simer -i --rm -v $ENTRYWORKDIR/$SIM:/sim \
-    $SIMER -valgrind counter_A -simbus="" \
-        -env counter_A:SIMBUS_TRANSPORT=$SIMBUS_TRANSPORT \
-        -env counter_A:SIMBUS_URI=$SIMBUS_URI \
-        -env counter_B:SIMBUS_TRANSPORT=$SIMBUS_TRANSPORT \
-        -env counter_B:SIMBUS_URI=$SIMBUS_URI \
-        -env counter_C:SIMBUS_TRANSPORT=$SIMBUS_TRANSPORT \
-        -env counter_C:SIMBUS_URI=$SIMBUS_URI \
-        -env counter_C:SIMBUS_LOGLEVEL=2
+    $SIMER -valgrind counter_A -logger 2 -simbus="" \
+        -env SIMBUS_TRANSPORT=$SIMBUS_TRANSPORT \
+        -env SIMBUS_URI=$SIMBUS_URI \
+        -env SIMBUS_LOGLEVEL=2
 
 
 -- simulation.yaml --
