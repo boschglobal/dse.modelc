@@ -15,6 +15,9 @@ __attribute__((unused)) static void __compile_time_checks(void)
     // char(*___)[sizeof(ModelGatewayDesc)] = 1;
 
     // char(*___)[sizeof(MclDesc)] = 1;
+    // char(*___)[sizeof(MarshalGroup)] = 1;
+    // char(*___)[sizeof(MarshalStruct)] = 1;
+    // char(*___)[sizeof(MarshalMapSpec)] = 1;
     // char(*___)[sizeof(MarshalSignalMap)] = 1;
 
     // Compile-time type size check. Get actual size with:
@@ -29,8 +32,11 @@ __attribute__((unused)) static void __compile_time_checks(void)
 #if defined(__x86_64__)
 #if __SIZEOF_POINTER__ == 8
     _Static_assert(sizeof(ModelGatewayDesc) == 80, "Compatibility FAIL!");
-    _Static_assert(sizeof(MclDesc) == 272, "Compatibility FAIL!");
-    _Static_assert(sizeof(MarshalSignalMap) == 56, "Compatibility FAIL!");
+    _Static_assert(sizeof(MclDesc) == 296, "Compatibility FAIL!");
+    _Static_assert(sizeof(MarshalGroup) == 128, "Compatibility FAIL!");
+    _Static_assert(sizeof(MarshalStruct) == 128, "Compatibility FAIL!");
+    _Static_assert(sizeof(MarshalMapSpec) == 88, "Compatibility FAIL!");
+    _Static_assert(sizeof(MarshalSignalMap) == 112, "Compatibility FAIL!");
     _Static_assert(sizeof(SimulationSpec) == 104, "Compatibility FAIL!");
     _Static_assert(sizeof(ModelInstanceSpec) == 160, "Compatibility FAIL!");
     _Static_assert(sizeof(ModelDesc) == 112, "Compatibility FAIL!");

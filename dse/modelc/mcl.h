@@ -86,14 +86,19 @@ typedef struct MclDesc {
     double      model_time_correction;
     /* References for Signal Vector marshalling. */
     struct {
-        size_t*      count;
+        size_t       count;
         const char** signal;
-        double**     scalar;
+        union {
+            double* scalar;
+            void**  binary;
+        };
+        uint32_t*    binary_len;
+        MarshalKind* kind;
     } source;
     MarshalSignalMap* msm;  // NULL terminated list
 
     /* Reserved. */
-    uint64_t __reserved__[3];
+    uint64_t __reserved__[4];
 } MclDesc;
 
 

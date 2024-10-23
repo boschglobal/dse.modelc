@@ -58,6 +58,79 @@ model (ModelDesc*)
 extern void mcl_destroy(MclDesc* model);
 
 
+static void _match_block(MclDesc* model, HashList* msm_list, size_t offset,
+    size_t count, MarshalKind kind)
+{
+    if (count == 0) return;
+
+    /* Construct the source references. */
+    MarshalMapSpec source;
+    switch (kind) {
+    case MARSHAL_KIND_PRIMITIVE:
+        source = (MarshalMapSpec){
+            .count = count,
+            .is_binary = false,
+            .signal = &model->source.signal[offset],
+            .scalar = &model->source.scalar[offset],
+        };
+        break;
+    case MARSHAL_KIND_BINARY:
+        source = (MarshalMapSpec){
+            .count = count,
+            .is_binary = true,
+            .signal = &model->source.signal[offset],
+            .binary = &model->source.binary[offset],
+            .binary_len = &model->source.binary_len[offset],
+        };
+        break;
+    default:
+        return;
+    }
+
+    for (SignalVector* sv = model->model.sv; sv && sv->name; sv++) {
+        if (sv->is_binary != source.is_binary) continue;
+        /* Construct the signal reference. */
+        MarshalMapSpec signal;
+        if (sv->is_binary) {
+            signal = (MarshalMapSpec){
+                .name = sv->name,
+                .count = sv->count,
+                .is_binary = true,
+                .signal = sv->signal,
+                .binary = sv->binary,
+                .binary_len = sv->length,
+                .binary_buffer_size = sv->buffer_size,
+            };
+        } else {
+            signal = (MarshalMapSpec){
+                .name = sv->name,
+                .count = sv->count,
+                .signal = sv->signal,
+                .scalar = sv->scalar,
+            };
+        }
+        /* Generate the map. */
+        errno = 0;
+        MarshalSignalMap* msm =
+            marshal_generate_signalmap(signal, source, NULL, sv->is_binary);
+        if (errno != 0) {
+            if (msm) free(msm);
+            return;
+        }
+        hashlist_append(msm_list, msm);
+
+        /* Logging. */
+        log_notice("FMU <-> SignalVector mapping for: %s", msm->name);
+        for (uint32_t i = 0; i < msm->count; i++) {
+            log_notice("  Variable: %s (%d) <-> %s (%d)",
+                sv->signal[msm->signal.index[i]], msm->signal.index[i],
+                model->source.signal[msm->source.index[i]],
+                msm->source.index[i]);
+        }
+    }
+}
+
+
 /**
 mcl_load
 ========
@@ -86,42 +159,27 @@ int32_t mcl_load(MclDesc* model)
             HashList msm_list;
             hashlist_init(&msm_list, 64);
 
-            MarshalMapSpec source = {
-                .count = *model->source.count,
-                .scalar = model->source.scalar,
-                .signal = model->source.signal,
-            };
-            for (SignalVector* sv = model->model.sv; sv && sv->name; sv++) {
-                MarshalMapSpec signal = {
-                    .count = sv->count,
-                    .name = sv->name,
-                    .scalar = &(sv->scalar),
-                    .signal = sv->signal,
-                };
-                MarshalSignalMap* msm = marshal_generate_signalmap(
-                    signal, source, NULL, sv->is_binary);
-                if (errno != 0) return errno;
-                hashlist_append(&msm_list, msm);
-
-                /* Logging. */
-                log_notice("FMU <-> SignalVector mapping for: %s", msm->name);
-                for (uint32_t i = 0; i < msm->count; i++) {
-                    log_notice("  Variable: %s (%d) <-> %s (%d)",
-                        sv->signal[msm->signal.index[i]], msm->signal.index[i],
-                        model->source.signal[msm->source.index[i]],
-                        msm->source.index[i]);
+            /* Parse the source for blocks of similar Kind. */
+            MarshalKind kind = MARSHAL_KIND_NONE;
+            size_t      offset = 0;
+            size_t      count = 0;
+            for (size_t i = 0; i < model->source.count; i++) {
+                if (model->source.kind[i] != kind) {
+                    /* New block detected, emit the previous block. */
+                    _match_block(model, &msm_list, offset, count, kind);
+                    /* Setup for the new block (this item). */
+                    offset = i;
+                    count = 1;
+                    kind = model->source.kind[i];
+                } else {
+                    /* Current block. */
+                    count++;
                 }
             }
-
+            _match_block(model, &msm_list, offset, count, kind);
             /* Convert to a NTL. */
-            size_t count = hashlist_length(&msm_list);
-            model->msm = calloc(count + 1, sizeof(MarshalSignalMap));
-            for (uint32_t i = 0; i < count; i++) {
-                memcpy(&model->msm[i], hashlist_at(&msm_list, i),
-                    sizeof(MarshalSignalMap));
-                free(hashlist_at(&msm_list, i));
-            }
-            hashlist_destroy(&msm_list);
+            model->msm =
+                hashlist_ntl(&msm_list, sizeof(MarshalSignalMap), true);
         }
 
         return model->vtable.load(model);
