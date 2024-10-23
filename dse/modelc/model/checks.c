@@ -44,8 +44,11 @@ __attribute__((unused)) static void __compile_time_checks(void)
     _Static_assert(sizeof(RuntimeModelDesc) == 272, "Compatibility FAIL!");
     _Static_assert(sizeof(SignalVector) == 256, "Compatibility FAIL!");
 #else
-    _Static_assert(sizeof(MclDesc) == 176, "Compatibility FAIL!");
-    _Static_assert(sizeof(MarshalSignalMap) == 28, "Compatibility FAIL!");
+    _Static_assert(sizeof(MclDesc) == 192, "Compatibility FAIL!");
+    _Static_assert(sizeof(MarshalGroup) == 88, "Compatibility FAIL!");
+    _Static_assert(sizeof(MarshalStruct) == 88, "Compatibility FAIL!");
+    _Static_assert(sizeof(MarshalMapSpec) == 64, "Compatibility FAIL!");
+    _Static_assert(sizeof(MarshalSignalMap) == 72, "Compatibility FAIL!");
     _Static_assert(sizeof(ModelGatewayDesc) == 64, "Compatibility FAIL!");
     _Static_assert(sizeof(SimulationSpec) == 88, "Compatibility FAIL!");
     _Static_assert(sizeof(ModelInstanceSpec) == 112, "Compatibility FAIL!");
@@ -56,8 +59,11 @@ __attribute__((unused)) static void __compile_time_checks(void)
 #endif
 #elif defined(__i386__)
     _Static_assert(sizeof(ModelGatewayDesc) == 60, "Compatibility FAIL!");
-    _Static_assert(sizeof(MclDesc) == 176, "Compatibility FAIL!");
-    _Static_assert(sizeof(MarshalSignalMap) == 28, "Compatibility FAIL!");
+    _Static_assert(sizeof(MclDesc) == 192, "Compatibility FAIL!");
+    _Static_assert(sizeof(MarshalGroup) == 84, "Compatibility FAIL!");
+    _Static_assert(sizeof(MarshalStruct) ==84, "Compatibility FAIL!");
+    _Static_assert(sizeof(MarshalMapSpec) == 60, "Compatibility FAIL!");
+    _Static_assert(sizeof(MarshalSignalMap) == 72, "Compatibility FAIL!");
     _Static_assert(sizeof(SimulationSpec) == 80, "Compatibility FAIL!");
     _Static_assert(sizeof(ModelInstanceSpec) == 112, "Compatibility FAIL!");
     _Static_assert(sizeof(ModelDesc) == 72, "Compatibility FAIL!");
