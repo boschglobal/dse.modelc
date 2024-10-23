@@ -93,7 +93,7 @@ func SimbusCommand(docMap map[string][]kind.KindDoc, simbusPath string, flags Fl
 			slog.Debug(fmt.Sprintf("  %s", stackDoc.Metadata.Name))
 			// All or only some stacks?
 			if flags.Stack != "" {
-				if slices.Contains(flags.StackList, stackDoc.Metadata.Name) {
+				if !slices.Contains(flags.StackList, stackDoc.Metadata.Name) {
 					continue
 				}
 			}
@@ -164,7 +164,7 @@ func ModelCommandList(docMap map[string][]kind.KindDoc, modelcPath string, model
 			slog.Debug(fmt.Sprintf("  %s", stackDoc.Metadata.Name))
 			// All or only some stacks?
 			if flags.Stack != "" {
-				if slices.Contains(flags.StackList, stackDoc.Metadata.Name) {
+				if !slices.Contains(flags.StackList, stackDoc.Metadata.Name) {
 					continue // Next stack.
 				}
 			}
