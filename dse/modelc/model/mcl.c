@@ -120,9 +120,9 @@ static void _match_block(MclDesc* model, HashList* msm_list, size_t offset,
         hashlist_append(msm_list, msm);
 
         /* Logging. */
-        log_notice("FMU <-> SignalVector mapping for: %s", msm->name);
+        log_notice("SignalVector <-> MCL mapping for: %s", msm->name);
         for (uint32_t i = 0; i < msm->count; i++) {
-            log_notice("  Variable: %s (%d) <-> %s (%d)",
+            log_notice("  Signal: %s (%d) <-> %s (%d)",
                 sv->signal[msm->signal.index[i]], msm->signal.index[i],
                 model->source.signal[msm->source.index[i]],
                 msm->source.index[i]);
@@ -250,6 +250,15 @@ int32_t mcl_step(MclDesc* model, double end_time)
     int    rc;
 
     if (model && model->vtable.step) {
+        /* Reset binary signals. */
+        for (SignalVector* sv = model->model.sv; sv && sv->name; sv++) {
+            if (sv->is_binary) {
+                for (uint32_t i = 0; i < sv->count; i++) {
+                    signal_reset(sv, i);
+                }
+            }
+        }
+
         /* Calculate epsilon value (if necessary). */
         if (model->step_size) mcl_epsilon = model->step_size * 0.01;
 
@@ -282,6 +291,9 @@ int32_t mcl_step(MclDesc* model, double end_time)
             rc =
                 model->vtable.step(model, &model_current_time, model_stop_time);
             model->model_time = model_current_time;
+
+            // FIXME: when MCL Target is stepped multiple times, it will be
+            // necessary to marshal in binary signals after each step.
         } while (model_stop_time + mcl_epsilon < end_time);
 
         return rc;
