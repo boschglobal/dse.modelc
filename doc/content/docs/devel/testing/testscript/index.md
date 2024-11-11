@@ -1,6 +1,6 @@
 ---
 title: "Testing with Testscript"
-linkTitle: "Testing Testscript"
+linkTitle: "Testscript"
 draft: false
 tags:
 - Developer

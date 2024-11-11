@@ -1,6 +1,6 @@
 ---
 title: "Testing with CMocka"
-linkTitle: "Testing CMocka"
+linkTitle: "CMocka"
 draft: false
 tags:
 - Developer
@@ -115,7 +115,7 @@ $ make test
 ...
 ```
 
-More information about using GDB is available at [Model C Debug Techniques]({{< relref "docs/devel/modelc_debug.md" >}}).
+More information about using GDB is available at [Model C Debug Techniques]({{< relref "docs/devel/debug/modelc" >}}).
 
 
 

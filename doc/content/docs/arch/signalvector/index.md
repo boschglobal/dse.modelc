@@ -198,5 +198,5 @@ int model_function(ModelInstanceSpec* mi)
   * [NCodec Model](https://github.com/boschglobal/dse.modelc/tree/main/dse/modelc/examples/ncodec)
   * [Transform Model](https://github.com/boschglobal/dse.modelc/tree/main/dse/modelc/examples/transform)
 * Binary Codecs:
-  * [Network Codec]({{< relref "docs/devel/modelc_ncodec/index.md" >}}) from DSE Model C which implements a stream interface to the Network Codec API by using binary signals and associated MIME type annotations.
+  * [Network Codec]({{< relref "docs/devel/ncodec" >}}) from DSE Model C which implements a stream interface to the Network Codec API by using binary signals and associated MIME type annotations.
   * [Network Codec API](https://github.com/boschglobal/dse.standards/tree/main/dse/ncodec) generalised codec library with an example binary stream implementation.

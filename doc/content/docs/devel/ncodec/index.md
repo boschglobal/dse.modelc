@@ -1,10 +1,12 @@
 ---
 title: "Model C with Network Codec"
-linkTitle: "ModelC NCodec"
+linkTitle: "Network Codec"
 draft: false
 tags:
 - Developer
 - ModelC
+- NCodec
+- Codec
 github_repo: "https://github.com/boschglobal/dse.modelc"
 github_subdir: "doc"
 ---

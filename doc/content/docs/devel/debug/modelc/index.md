@@ -1,6 +1,6 @@
 ---
 title: "Model C Debug Techniques"
-linkTitle: "ModelC Debug"
+linkTitle: "ModelC"
 draft: false
 tags:
 - Developer

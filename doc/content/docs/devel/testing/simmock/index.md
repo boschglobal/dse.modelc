@@ -1,6 +1,6 @@
 ---
 title: "Testing Models with SimMock"
-linkTitle: "Testing Models"
+linkTitle: "SimMock"
 draft: false
 tags:
 - Developer
@@ -28,7 +28,7 @@ Model Developer is able to easily develop CMocka Testcases which:
 <details>
 <summary>network/test_network.c</summary>
 
-{{< readfile file="../../examples/modelc/mocks/network/test_network.c" code="true" lang="c" >}}
+{{< readfile file="../../../examples/modelc/mocks/network/test_network.c" code="true" lang="c" >}}
 
 </details>
 
@@ -36,4 +36,4 @@ Model Developer is able to easily develop CMocka Testcases which:
 
 ## References and Further Reading
 
-* [Testing with CMocka]({{< relref "docs/devel/modelc_cmocka/index.md" >}})
+* [Testing with CMocka]({{< relref "docs/devel/testing/cmocka" >}})
