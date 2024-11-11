@@ -11,12 +11,20 @@
 #include <dse/modelc/model.h>
 
 
-/**
-Model Compatibility Library
-===========================
+#ifndef DLL_PUBLIC
+#define DLL_PUBLIC __attribute__((visibility("default")))
+#endif
+#ifndef DLL_PRIVATE
+#define DLL_PRIVATE __attribute__((visibility("hidden")))
+#endif
 
-A Model Compatibility Library provides an interface for operating foreign
-models.
+
+/**
+Model Compatibility Library API
+===============================
+
+A Model Compatibility Library provides an interface for supporting 3rd-party
+model interfaces in a DSE Simulation.
 
 
 Component Diagram
@@ -24,11 +32,40 @@ Component Diagram
 <div hidden>
 
 ```
-@startuml mcl-component
+@startuml mcl-interface
 
-title Model Compatibility Library
+skinparam nodesep 55
+skinparam ranksep 40
 
-TODO
+title MCL Interface
+
+component "Model" as m1
+component "Model" as m2
+interface "SimBus" as SBif
+m1 -left-> SBif
+m2 -right-> SBif
+
+
+package "MCL" {
+        component "Runtime" as ModelC
+        component "MCL" as Mcl
+        interface "ModelVTable" as MVt
+        interface "MclVTable" as MclVt
+        component "MCL Lib" as MclLib
+}
+
+
+MclLib -up- MclVt
+MclLib -up- MVt
+
+SBif <-down- ModelC
+MVt )-up- ModelC
+MclVt )-up- Mcl
+
+component "Model" as MclModel
+interface "Model I/F" as ModelIf
+MclModel -up- ModelIf
+ModelIf )-up- MclLib
 
 center footer Dynamic Simulation Environment
 
@@ -37,13 +74,7 @@ center footer Dynamic Simulation Environment
 
 </div>
 
-![](mcl-component.png)
-
-
-Example
--------
-
-{{< readfile file="examples/mcl_api.c" code="true" lang="c" >}}
+![](mcl-interface.png)
 
 */
 
@@ -101,8 +132,6 @@ typedef struct MclDesc {
     uint64_t __reserved__[4];
 } MclDesc;
 
-
-/** MCL API */
 
 /* Implemented by an MCL. */
 DLL_PUBLIC MclDesc* mcl_create(ModelDesc* m);

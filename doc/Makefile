@@ -68,7 +68,7 @@ DOC_TITLE_simmock := "SimMock API Reference"
 
 
 # Targets
-DOC_C_MODULES := gateway model runtime schema simmock
+DOC_C_MODULES := gateway mcl model runtime schema simmock
 #DOC_C_MODULES :=  model
 
 .PHONY: examples
