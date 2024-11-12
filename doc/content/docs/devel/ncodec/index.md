@@ -1,6 +1,7 @@
 ---
 title: "Model C with Network Codec"
-linkTitle: "Network Codec"
+linkTitle: "NCodec"
+weight: 600
 draft: false
 tags:
 - Developer
