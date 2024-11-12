@@ -16,7 +16,7 @@ The Dynamic Simulation Environment (DSE) presents models with a simple vector in
 - **scalar** : Internally represented as a 64bit storage container (double). These values are transparently exchanged between models. Models may cast/convert these scalar values to other types as required.
 - **binary** : Binary strings, which may container embedded NULL values, can be exchanged between models. Additionally a binary signal may be annotated with a _MIME type_ which describes the content of a binary signal.
 
-{{% alert title="Tip" color="info" %}} Binary signals with an associated MIME type may be supported by a [Network Codec]({{< relref "docs/devel/modelc_ncodec/index.md" >}}) which has an API that simplifies interactions with binary data and can be used to realise network simulations (e.g. CAN bus messaging). {{% /alert %}}
+{{% alert title="Tip" color="info" %}} Binary signals with an associated MIME type may be supported by a [Network Codec]({{< relref "docs/devel/ncodec" >}}) which has an API that simplifies interactions with binary data and can be used to realise network simulations (e.g. CAN bus messaging). {{% /alert %}}
 
 
 ## Scalar Signal Vector
