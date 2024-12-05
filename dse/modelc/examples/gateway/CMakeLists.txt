@@ -72,16 +72,28 @@ target_link_libraries(gateway
     PRIVATE
         $<$<BOOL:${WIN32}>:ws2_32>
     PUBLIC
-        -Wl,--whole-archive
+        -Wl,--whole-archive,--export-dynamic
         ${modelc_link_lib}
         -Wl,--no-whole-archive
 )
-install(TARGETS gateway RUNTIME
+install(
+    TARGETS
+        gateway
     DESTINATION
         ${EXE_PATH}/bin
     COMPONENT
         gateway_model
 )
+if(WIN32)
+install(
+    TARGETS
+        modelc_shared_lib
+    DESTINATION
+        ${EXE_PATH}/bin
+    COMPONENT
+        gateway_model
+)
+endif()
 install(
     FILES
         gateway.yaml

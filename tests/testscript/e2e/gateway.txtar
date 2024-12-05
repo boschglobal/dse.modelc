@@ -2,27 +2,37 @@
 env NAME=gateway_inst
 env SIM=dse/modelc/build/_out/examples/gateway
 
-# Start the Gateway.
-exec ls -R /repo/$SIM
-#exec /repo/$SIM/bin/gateway 0.0005 0.002 /repo/$SIM/data/gateway.yaml &
-
 # Run the Simulation.
 exec sh -e $WORK/test.sh
 
-# Check results.
-stdout 'Run the Simulation ...'
+stdout 'Using gateway symbols: ...'
+stdout 'Setup for async Simulation Model run ...'
+stdout 'Call symbol: model_destroy ...'
 stdout 'Controller exit ...'
 
 stdout '\[0.000000\] binary\[0\] = <0:0>\(null\) \(binary_foo\)'
 stdout '\[0.000000\] binary\[1\] = <0:0>\(null\) \(binary_bar\)'
-stdout '\[0.020000\] binary\[0\] = <20:20>st=0.015000,index=0 \(binary_foo\)'
-stdout '\[0.020000\] binary\[1\] = <20:20>st=0.015000,index=1 \(binary_bar\)'
+stdout '\[0.002000\] binary\[0\] = <20:20>st=0.001500,index=0 \(binary_foo\)'
+stdout '\[0.002000\] binary\[1\] = <20:20>st=0.001500,index=1 \(binary_bar\)'
 stdout '\[0.000000\] scalar\[0\] = 0.000000 \(scalar_foo\)'
 stdout '\[0.000000\] scalar\[1\] = 0.000000 \(scalar_bar\)'
-stdout '\[0.020000\] scalar\[0\] = 16.000000 \(scalar_foo\)'
-stdout '\[0.020000\] scalar\[1\] = 32.000000 \(scalar_bar\)'
+stdout '\[0.002000\] scalar\[0\] = 16.000000 \(scalar_foo\)'
+stdout '\[0.002000\] scalar\[1\] = 32.000000 \(scalar_bar\)'
 
 -- test.sh --
 SIMER="${SIMER:-ghcr.io/boschglobal/dse-simer:latest}"
-docker run --name simer -i --rm -v $ENTRYHOSTDIR/$SIM:/sim \
-    $SIMER -env simbus:SIMBUS_LOGLEVEL=2 -timeout 5
+
+docker run --name gateway -i --rm \
+    -v $ENTRYHOSTDIR/$SIM:/sim \
+    --env SIMBUS_LOGLEVEL=3 \
+    --network=host \
+    --entrypoint="" \
+    $SIMER \
+        bash -c "valgrind -q --leak-check=yes --error-exitcode=808 bin/gateway 0.0005 0.0020 data/gateway.yaml" &
+
+docker run --name simer -i --rm \
+    -v $ENTRYHOSTDIR/$SIM:/sim \
+    --network=host \
+    $SIMER \
+        -env simbus:SIMBUS_LOGLEVEL=4 \
+        -timeout 5
