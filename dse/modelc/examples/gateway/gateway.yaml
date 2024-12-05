@@ -1,22 +1,18 @@
+# Copyright 2024 Robert Bosch GmbH
+#
+# SPDX-License-Identifier: Apache-2.0
+
 ---
 kind: Stack
 metadata:
-  name: stack
+  name: remote
 spec:
   connection:
     transport:
-      redispubsub:
+      redis:
         uri: redis://localhost:6379
         timeout: 60
   models:
-    - name: simbus
-      model:
-        name: simbus
-      channels:
-        - name: scalar
-          expectedModelCount: 1
-        - name: binary
-          expectedModelCount: 1
     - name: gateway
       uid: 42
       model:
@@ -30,10 +26,6 @@ spec:
           alias: binary_vector
           selectors:
             channel: binary
----
-kind: Model
-metadata:
-  name: simbus
 ---
 kind: Model
 metadata:
