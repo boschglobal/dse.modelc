@@ -161,6 +161,10 @@ Endpoint* redis_connect(const char* path, const char* hostname, int32_t port,
 
     /* Redis Version. */
     redisReply* reply = redisCommand(redis_ep->ctx, "INFO");
+    if (reply == NULL) {
+        log_error("Connection lost: redisCommand returned NULL object");
+        goto error_clean_up;
+    }
     if (reply->type == REDIS_REPLY_STRING) {
         char* v = strstr(reply->str, REDIS_VERSION_FIELD);
         if (v) {
@@ -175,6 +179,10 @@ Endpoint* redis_connect(const char* path, const char* hostname, int32_t port,
 
     /* Model UID. */
     reply = redisCommand(redis_ep->ctx, "CLIENT ID");
+    if (reply == NULL) {
+        log_error("Connection lost: redisCommand returned NULL object");
+        goto error_clean_up;
+    }
     redis_ep->client_id = reply->integer;
     freeReplyObject(reply);
     if (model_uid) {
@@ -460,10 +468,10 @@ static void _redis_async_brpop(redisAsyncContext* c, void* r, void* privdata)
     redisReply*    reply = r;
     RedisEndpoint* redis_ep = privdata;
 
-    if (reply->type == REDIS_REPLY_ERROR) {
+    if (reply && reply->type == REDIS_REPLY_ERROR) {
         log_debug("REDIS_REPLY_ERROR : %s", reply->str);
     }
-    if (reply->type == REDIS_REPLY_ARRAY && reply->elements == 2) {
+    if (reply && reply->type == REDIS_REPLY_ARRAY && reply->elements == 2) {
         redis_ep->reply_len = reply->element[1]->len;
         if (redis_ep->reply_len > redis_ep->reply_alloc_size) {
             free(redis_ep->reply_str);
@@ -473,7 +481,7 @@ static void _redis_async_brpop(redisAsyncContext* c, void* r, void* privdata)
         memcpy(
             redis_ep->reply_str, reply->element[1]->str, redis_ep->reply_len);
     } else {
-        if (reply->type == REDIS_REPLY_NIL) errno = ETIMEDOUT;
+        if (reply && reply->type == REDIS_REPLY_NIL) errno = ETIMEDOUT;
         if (errno == 0) errno = ENODATA;
         redis_ep->reply_errno = errno;
     }
@@ -524,14 +532,14 @@ int32_t redis_recv_fbs(Endpoint* endpoint, const char** channel_name,
             reply = redisCommandArgv(redis_ep->ctx, redis_ep->pull_argc,
                 (const char**)redis_ep->pull_argv,
                 (const size_t*)redis_ep->pull_argvlen);
-            if (reply->type == REDIS_REPLY_ERROR) {
+            if (reply && reply->type == REDIS_REPLY_ERROR) {
                 log_debug("REDIS_REPLY_ERROR : %s", reply->str);
             }
-            if (reply->type == REDIS_REPLY_ARRAY && reply->elements == 2) {
+            if (reply && reply->type == REDIS_REPLY_ARRAY && reply->elements == 2) {
                 redis_ep->reply_len = reply->element[1]->len;
                 redis_ep->reply_str = reply->element[1]->str;
             } else {
-                if (reply->type == REDIS_REPLY_NIL) errno = ETIMEDOUT;
+                if (reply && reply->type == REDIS_REPLY_NIL) errno = ETIMEDOUT;
                 if (errno == 0) errno = ENODATA;
                 redis_ep->reply_errno = errno;
                 freeReplyObject(reply);

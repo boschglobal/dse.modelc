@@ -147,6 +147,10 @@ Endpoint* redispubsub_connect(const char* path, const char* hostname,
     /* Model UID. */
     redisReply* reply;
     reply = redisCommand(redis_ep->ctx, "CLIENT ID");
+    if (reply == NULL) {
+        log_error("Connection lost: redisCommand return NULL object");
+        goto error_clean_up;
+    }
     redis_ep->client_id = reply->integer;
     freeReplyObject(reply);
     if (model_uid) {
@@ -369,10 +373,13 @@ int32_t redispubsub_send_fbs(Endpoint* endpoint, void* endpoint_channel,
             redisReply* reply;
             reply = redisCommand(redis_ep->ctx, "PUBLISH %s %b", ch->pub_key,
                 buffer, (size_t)buffer_length);
+            if (reply == NULL) {
+                log_notice("Connection lost: redisCommand returned NULL object");
+            }
             log_trace("redispubsub_send_fbs: message sent");
             log_trace("redispubsub_send_fbs:     channel=%s", ch->pub_key);
             log_trace("redispubsub_send_fbs:     clients=%lld", reply->integer);
-            if (reply->integer == 0) {
+            if (reply && reply->integer == 0) {
                 log_notice("redispubsub_send_fbs: no clients received message!"
                            " channel=%s",
                     ch->pub_key);
@@ -394,9 +401,12 @@ int32_t redispubsub_send_fbs(Endpoint* endpoint, void* endpoint_channel,
         reply = redisCommand(redis_ep->ctx, "PUBLISH %s %b",
             endpoint->bus_mode ? NOTIFY_MODEL_KEY : NOTIFY_SIMBUS_KEY, buffer,
             (size_t)buffer_length);
+        if (reply == NULL) {
+            log_notice("Connection lost: redisCommand returned NULL object");
+        }
         log_trace("redispubsub_send_fbs: message sent");
         log_trace("redispubsub_send_fbs:     clients=%lld", reply->integer);
-        if (reply->integer == 0) {
+        if (reply && reply->integer == 0) {
             log_notice("redispubsub_send_fbs: no clients received message!");
         }
         freeReplyObject(reply);
@@ -490,11 +500,11 @@ void redispubsub_on_message(
     assert(redis_ep->sub_ctx);
 
     /* Check the message. */
-    if (reply->type != REDIS_REPLY_ARRAY && reply->elements >= 2) {
+    if (reply && reply->type != REDIS_REPLY_ARRAY && reply->elements >= 2) {
         log_trace("redispubsub_on_message: bad message");
         return;
     }
-    if (strcmp("message", reply->element[0]->str) == 0) {
+    if (reply && (strcmp("message", reply->element[0]->str) == 0)) {
         /* Message is processed below. Indicate the SUBSCRIBE is activated. */
         redis_ep->sub_active = true;
     } else {
@@ -513,7 +523,7 @@ void redispubsub_on_message(
 
     /* Process the message: channel in [1] and FBS in [2]. */
     log_trace("redispubsub_on_message: message arrived");
-    if (reply->type == REDIS_REPLY_ARRAY && reply->elements == 3) {
+    if (reply && reply->type == REDIS_REPLY_ARRAY && reply->elements == 3) {
         log_trace(
             "redispubsub_on_message:     channel=%s", reply->element[1]->str);
         log_trace("redispubsub_on_message:     length=%d",
