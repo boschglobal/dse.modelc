@@ -97,6 +97,7 @@ endif()
 install(
     FILES
         gateway.yaml
+        simulation.yaml
     DESTINATION
         ${EXE_PATH}/data
     COMPONENT
