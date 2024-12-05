@@ -68,9 +68,10 @@ TESTSCRIPT_E2E_FILES = \
 	$(TESTSCRIPT_E2E_DIR)/transport.txtar \
 	$(TESTSCRIPT_E2E_DIR)/stack.txtar \
 	$(TESTSCRIPT_E2E_DIR)/runtime.txtar \
+ifneq ($(CI), true)
 	$(TESTSCRIPT_E2E_DIR)/gateway.txtar \
+endif
 	$(TESTSCRIPT_E2E_DIR)/benchmark.txtar
-
 
 
 ifneq ($(CI), true)
