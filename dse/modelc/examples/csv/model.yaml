@@ -1,0 +1,27 @@
+# Copyright 2024 Robert Bosch GmbH
+#
+# SPDX-License-Identifier: Apache-2.0
+
+---
+kind: Model
+metadata:
+  name: Csv
+spec:
+  runtime:
+    dynlib:
+      - os: linux
+        arch: amd64
+        path: lib/libcsv.so
+      - os: linux
+        arch: x86
+        path: lib/libcsv.so
+      - os: windows
+        arch: x64
+        path: lib/libcsv.dll
+      - os: windows
+        arch: x86
+        path: lib/libcsv.dll
+  channels:
+    - alias: scalar
+      selectors:
+        channel: scalar_channel

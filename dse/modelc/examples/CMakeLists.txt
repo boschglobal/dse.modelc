@@ -5,6 +5,7 @@
 
 # Example Models.
 add_subdirectory(binary)
+add_subdirectory(csv)
 add_subdirectory(extended)
 add_subdirectory(gateway)
 add_subdirectory(gdb)

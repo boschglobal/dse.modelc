@@ -1,0 +1,26 @@
+env NAME=csv_inst
+env SIM=dse/modelc/build/_out/examples/csv
+
+
+# TEST: csv example model
+exec sh -e $WORK/test.sh
+
+stderr 'Using Valgrind'
+stdout 'Load YAML File: data/simulation.yaml'
+stdout 'Loading symbol: model_create ... ok'
+stdout 'Loading symbol: model_step ... ok'
+stdout 'Loading symbol: model_destroy ... ok'
+stdout 'Run the Simulation ...'
+stdout 'Controller exit ...'
+stdout 'SignalValue: 3289118412 = 1.300000 \[name=A\]'
+stdout 'SignalValue: 3339451269 = 2.300000 \[name=B\]'
+stdout 'SignalValue: 3322673650 = -3.300000 \[name=C\]'
+
+-- test.sh --
+SIMER="${SIMER:-ghcr.io/boschglobal/dse-simer:latest}"
+docker run --name simer -i --rm \
+    -v $ENTRYHOSTDIR/$SIM:/sim \
+    $SIMER \
+        -valgrind $NAME \
+        -env $NAME:SIMBUS_LOGLEVEL=2 \
+        -logger 2

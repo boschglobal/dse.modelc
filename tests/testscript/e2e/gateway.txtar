@@ -35,5 +35,5 @@ docker run --name simer -i --rm \
     --network=host \
     $SIMER \
         -env simbus:SIMBUS_LOGLEVEL=4 \
-        -stack local
+        -stack local \
         -timeout 5
