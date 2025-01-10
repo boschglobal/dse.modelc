@@ -145,7 +145,17 @@ typedef struct SignalVector {
     uint32_t count;
     const char** signal;
     _Bool is_binary;
-    SignalVectorVTable vtable;
+    struct {
+        double* scalar;
+    };
+    struct {
+        void** binary;
+        uint32_t* length;
+        uint32_t* buffer_size;
+        const char** mime_type;
+        void** ncodec;
+        _Bool* reset_called;
+    } vtable;
     uint64_t [8] __reserved__;
 }
 ```

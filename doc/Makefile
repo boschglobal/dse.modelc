@@ -105,5 +105,19 @@ $(DOC_C_MODULES):
 		$(DSE_PLANTUML_IMAGE) \
 			-tpng  $$(basename $(DOC_OUTPUT_$@))
 
+
+
+###############
+## Plant UML
+MD_DOCS := $(shell find content/docs -name "*.md")
+
+.PHONY: generate_images
+generate_images: $(MD_DOCS)
+	docker run -it --rm \
+		--volume $$(pwd):/tmp/repo \
+		--workdir /tmp/repo \
+		$(DSE_PLANTUML_IMAGE) \
+			-tpng  $^
+
 .PHONY: generate
-generate: index examples $(DOC_C_MODULES)
+generate: index examples $(DOC_C_MODULES) generate_images

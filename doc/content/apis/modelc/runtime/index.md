@@ -81,7 +81,20 @@ typedef struct ModelInstanceSpec {
 ```c
 typedef struct RuntimeModelDesc {
     int model;
-    struct (anonymous struct at dse/modelc/runtime.h:158:5) runtime;
+    struct {
+        const char* runtime_model;
+        char* sim_path;
+        const char* model_name;
+        const char* simulation_yaml;
+        int argc;
+        char** argv;
+        void* doc_list;
+        int log_level;
+        double step_size;
+        double end_time;
+        double step_time_correction;
+        int binary_signals_reset;
+    } runtime;
     int [8] __reserved__;
 }
 ```

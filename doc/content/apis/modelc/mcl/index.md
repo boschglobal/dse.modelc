@@ -74,7 +74,15 @@ typedef struct MclDesc {
     double step_size;
     double model_time;
     double model_time_correction;
-    struct (anonymous struct at dse/modelc/mcl.h:119:5) source;
+    struct {
+        int count;
+        const char** signal;
+        struct {
+            double* scalar;
+            void** binary;
+        } binary_len;
+        int* kind;
+    } source;
     int* msm;
     uint64_t [4] __reserved__;
 }
