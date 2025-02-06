@@ -72,7 +72,7 @@ spec:
 
 <div hidden>
 
-```
+```text
 @startuml transport-loopback
 skinparam nodesep 55
 skinparam ranksep 40
@@ -93,7 +93,7 @@ frame "Stack (single process)" {
 
 </div>
 
-![](transport-loopback.png)
+![loopback](transport-loopback.png)
 
 
 The `loopback` transport implements a limited SimBus algorithm which makes it possible to
@@ -117,7 +117,7 @@ suitable for particular deployment scenarios and when developing models.
 
 <div hidden>
 
-```
+```text
 @startuml transport-redis
 skinparam nodesep 55
 skinparam ranksep 40
@@ -136,7 +136,7 @@ sb <-down-> red
 
 </div>
 
-![](transport-redis.png)
+![redis](transport-redis.png)
 
 
 The `redis` transport is recommended for connecting models in a simulation. It uses blocking
@@ -155,7 +155,7 @@ Redis commands and simple data types to implement a message exchange mechanism.
 
 <div hidden>
 
-```
+```text
 @startuml transport-redisasync
 skinparam nodesep 55
 skinparam ranksep 40
@@ -174,7 +174,7 @@ sb <-down-> red
 
 </div>
 
-![](transport-redisasync.png)
+![redisasync](transport-redisasync.png)
 
 
 An experimental transport which uses and asynchronous Redis library. The performance was
@@ -193,7 +193,7 @@ slower than expected; its still fast, however the `redis` transport is faster; a
 
 <div hidden>
 
-```
+```text
 @startuml transport-redispubsub
 skinparam nodesep 55
 skinparam ranksep 40
@@ -212,7 +212,7 @@ sb <-down-> red
 
 </div>
 
-![](transport-redispubsub.png)
+![redispubsub](transport-redispubsub.png)
 
 
 The `redispubsub` transport is the original, and reference, implementaion. Migration to the

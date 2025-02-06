@@ -18,7 +18,8 @@ extern uint8_t __log_level__; /* LOG_ERROR LOG_INFO LOG_DEBUG LOG_TRACE */
 extern int run_gateway_tests(void);
 extern int run_signal_tests(void);
 extern int run_transform_tests(void);
-extern int run_ncodec_tests(void);
+extern int run_ncodec_can_tests(void);
+extern int run_ncodec_pdu_tests(void);
 
 
 int main()
@@ -29,6 +30,7 @@ int main()
     rc |= run_gateway_tests();
     rc |= run_signal_tests();
     rc |= run_transform_tests();
-    rc |= run_ncodec_tests();
+    rc |= run_ncodec_can_tests();
+    rc |= run_ncodec_pdu_tests();
     return rc;
 }

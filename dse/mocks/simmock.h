@@ -152,6 +152,10 @@ void simmock_write_frame(SignalVector* sv, const char* sig_name, uint8_t* data,
     size_t len, uint32_t frame_id, uint8_t frame_type);
 uint32_t simmock_read_frame(
     SignalVector* sv, const char* sig_name, uint8_t* data, size_t len);
+void simmock_write_pdu(SignalVector* sv, const char* sig_name, uint8_t* data,
+    size_t len, uint32_t id);
+uint32_t simmock_read_pdu(
+    SignalVector* sv, const char* sig_name, uint8_t* data, size_t len);
 void simmock_free(SimMock* mock);
 
 

@@ -40,9 +40,12 @@ spec:
     - signal: can_bus
       annotations:
         mime_type: application/x-automotive-bus; interface=stream; type=frame; bus=can; schema=fbs; bus_id=1; node_id=2; interface_id=3
+    - signal: pdu_exc
+      annotations:
+        mime_type: application/x-automotive-bus; interface=stream; type=pdu; schema=fbs; swc_id=4; ecu_id=5
 ```
 
-Additional configuration information is available [here](https://github.com/boschglobal/dse.standards/blob/main/dse/ncodec/libs/automotive-bus/README.md). Especially the behaviour of `bus_id`,`node_id`and `interface_id` configuration items are described.
+Additional configuration information is available [here](https://github.com/boschglobal/dse.standards/blob/main/dse/ncodec/libs/automotive-bus/README.md). Especially the behaviour of `bus_id`,`node_id`, `interface_id`, `swc_id` and `ecu_id` configuration items are described.
 
 Configuration items can also be set at runtime with the `ncodec_config()` API as the following example shows:
 
@@ -54,7 +57,7 @@ Configuration items can also be set at runtime with the `ncodec_config()` API as
 The ModelC runtime can enable tracing for selected (or all) frames being sent or received by a Model Instance. This tracing is enabled via environment variables.
 
 
-#### Example Trace
+#### Example Trace for CAN
 
 For the Binary Signal described by the following MIMEtype:
 
@@ -72,6 +75,28 @@ or
 <pre>
 NCODEC_TRACE_<b>CAN_1</b>=<b>*</b> modelc --name=ncodec_inst ...
 </pre>
+
+
+
+#### Example Trace for PDU
+
+For the Binary Signal described by the following MIMEtype:
+
+<pre>application/x-automotive-bus; interface=stream; <b>type=pdu</b>; schema=fbs; <b>swc_id=4</b>; ecu_id=5</pre>
+
+
+The ModelC command would be (setting the environment variable directly):
+
+<pre>
+NCODEC_TRACE_<b>PDU_4</b>=<b>0x3ea,0x3eb</b> modelc --name=ncodec_inst ...
+</pre>
+
+or
+
+<pre>
+NCODEC_TRACE_<b>PDU_4</b>=<b>*</b> modelc --name=ncodec_inst ...
+</pre>
+
 
 
 ### Usage in Model Code

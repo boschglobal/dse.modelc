@@ -46,6 +46,31 @@ static char* __get_ncodec_node_id(NCODEC* nc)
     return node_id;
 }
 
+static void __set_ncodec_swc_id(NCODEC* nc, char* swc_id)
+{
+    assert_non_null(nc);
+    ncodec_config(nc, (struct NCodecConfigItem){
+                          .name = "swc_id",
+                          .value = swc_id,
+                      });
+}
+
+static char* __get_ncodec_swc_id(NCODEC* nc)
+{
+    assert_non_null(nc);
+    int   index = 0;
+    char* swc_id = NULL;
+    while (index >= 0) {
+        NCodecConfigItem ci = ncodec_stat(nc, &index);
+        if (strcmp(ci.name, "swc_id") == 0) {
+            if (ci.value) swc_id = strdup(ci.value);
+            return swc_id;
+        }
+        index++;
+    }
+    return swc_id;
+}
+
 
 /**
 simmock_alloc
@@ -812,6 +837,122 @@ uint32_t simmock_read_frame(
         if (length > len) length = len;
         memcpy(data, msg.buffer, length);
         return msg.frame_id;
+    } else {
+        for (size_t i = 0; i < len; i++)
+            data[i] = 0x55; /* Mark the return buffer with junk. */
+        return 0;
+    }
+}
+
+
+/**
+simmock_write_pdu
+=================
+
+Write a PDU, using the associated NCodec object, to the specified
+binary signal.
+
+Parameters
+----------
+sv (SignalVector*)
+: A Signal Vector object.
+
+sig_name (const char*)
+: The name of the binary signal where PDUs should be written.
+
+data (uint8_t*)
+: Array of data to write (in the PDU).
+
+len (size_t)
+: Length of the data array.
+
+id (uint32_t)
+: The PDU ID associated with the data.
+*/
+void simmock_write_pdu(SignalVector* sv, const char* sig_name, uint8_t* data,
+    size_t len, uint32_t id)
+{
+    assert_non_null(sv);
+    assert_true(sv->is_binary);
+    NCODEC* nc = NULL;
+    for (uint32_t idx = 0; idx < sv->count; idx++) {
+        if (strcmp(sv->signal[idx], sig_name) == 0) {
+            nc = sv->vtable.codec(sv, idx);
+            break;
+        }
+    }
+    assert_non_null(nc);
+
+    /* Write a PDU with modified swc_id, so the PDU is not filtered. */
+    char* swc_id_save = __get_ncodec_swc_id(nc);
+    __set_ncodec_swc_id(nc, (char*)"4242");
+    ncodec_write(nc,
+        &(struct NCodecPdu){ .id = id, .payload_len = len, .payload = data });
+    ncodec_flush(nc);
+    __set_ncodec_swc_id(nc, swc_id_save);
+    free(swc_id_save);
+}
+
+/**
+simmock_read_pdu
+================
+
+Read a PDU, using the associated NCodec object, from the specified
+binary signal.
+
+Parameters
+----------
+sv (SignalVector*)
+: A Signal Vector object.
+
+sig_name (const char*)
+: The name of the binary signal where PDUs should be written.
+
+data (uint8_t*)
+: Array for the read data. The data is preallocated by the caller.
+
+len (size_t)
+: Length of the data array.
+
+Returns
+-------
+uint32_t
+: The PDU ID associated with the read data.
+
+0
+: No PDU was found in the specified binary signal.
+*/
+uint32_t simmock_read_pdu(
+    SignalVector* sv, const char* sig_name, uint8_t* data, size_t len)
+{
+    assert_non_null(sv);
+    assert_true(sv->is_binary);
+    NCODEC* nc = NULL;
+    for (uint32_t idx = 0; idx < sv->count; idx++) {
+        if (strcmp(sv->signal[idx], sig_name) == 0) {
+            nc = sv->vtable.codec(sv, idx);
+            break;
+        }
+    }
+    assert_non_null(nc);
+    NCodecInstance* _nc = (NCodecInstance*)nc;
+    char*           swc_id_save = __get_ncodec_swc_id(nc);
+    NCodecPdu       pdu = {};
+    int             rlen = 0;
+
+    /* Read a PDU with modified swc_id, so the PDU is not filtered. */
+    __set_ncodec_swc_id(nc, (char*)"4242");
+    _nc->stream->seek(nc, 0, NCODEC_SEEK_SET);
+    rlen = ncodec_read(nc, &pdu);
+    __set_ncodec_swc_id(nc, swc_id_save);
+    free(swc_id_save);
+
+    /* Process the message. */
+    if (rlen > 0) {
+        uint32_t length = pdu.payload_len;
+        if (length > len) length = len;
+        memcpy(data, pdu.payload, length);
+        return pdu.id;
     } else {
         for (size_t i = 0; i < len; i++)
             data[i] = 0x55; /* Mark the return buffer with junk. */

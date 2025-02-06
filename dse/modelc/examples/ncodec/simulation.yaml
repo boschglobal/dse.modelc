@@ -18,13 +18,23 @@ spec:
         name: simbus
       channels:
         - name: binary_channel
-          expectedModelCount: 1
-    - name: ncodec_inst
+          expectedModelCount: 2
+    - name: ncodec_can
       uid: 42
       annotations:
         node_id: 24
       model:
-        name: NCodec
+        name: NCodec_CAN
+      channels:
+        - name: binary_channel
+          alias: binary
+    - name: ncodec_pdu
+      uid: 74
+      annotations:
+        swc_id: 47
+        ecu_id: 4
+      model:
+        name: NCodec_PDU
       channels:
         - name: binary_channel
           alias: binary
@@ -44,5 +54,9 @@ spec:
   signals:
     - signal: can
       annotations:
-        # Note that the mime_type may also include the node_id parameter.
+        # Note that the mime_type may also include the node_id parameter (in this example its specified by Model Annotations).
         mime_type: 'application/x-automotive-bus; interface=stream; type=frame; bus=can; schema=fbs; bus_id=1; interface_id=3'
+    - signal: pdu
+      annotations:
+        # Note that the mime_type must include swc_id to enable filtering. Otherwise, both the swc_id and ecu_id parameters may be set via Model Annotations (in this example).
+        mime_type: 'application/x-automotive-bus; interface=stream; type=pdu; schema=fbs; swc_id=47'

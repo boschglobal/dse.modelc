@@ -13,7 +13,7 @@ project(ModelC_Model_API)
 # =======
 
 FetchContent_Declare(automotive-bus-schema
-    URL https://github.com/boschglobal/automotive-bus-schema/releases/download/v1.0.3/automotive-bus-schema.tar.gz
+    URL https://github.com/boschglobal/automotive-bus-schema/releases/download/v1.0.5/automotive-bus-schema.tar.gz
 )
 FetchContent_MakeAvailable(automotive-bus-schema)
 set(SCHEMAS_SOURCE_DIR ${automotive-bus-schema_SOURCE_DIR}/flatbuffers/c)
@@ -28,6 +28,7 @@ add_library(dse_ncodec OBJECT
     ${DSE_NCODEC_SOURCE_DIR}/codec.c
     ${DSE_NCODEC_SOURCE_DIR}/libs/automotive-bus/codec.c
     ${DSE_NCODEC_SOURCE_DIR}/libs/automotive-bus/frame_can_fbs.c
+    ${DSE_NCODEC_SOURCE_DIR}/libs/automotive-bus/pdu_fbs.c
 )
 target_include_directories(dse_ncodec
     PRIVATE

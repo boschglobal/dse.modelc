@@ -404,6 +404,35 @@ uint32_t
 
 
 
+### simmock_read_pdu
+
+Read a PDU, using the associated NCodec object, from the specified
+binary signal.
+
+#### Parameters
+
+sv (SignalVector*)
+: A Signal Vector object.
+
+sig_name (const char*)
+: The name of the binary signal where PDUs should be written.
+
+data (uint8_t*)
+: Array for the read data. The data is preallocated by the caller.
+
+len (size_t)
+: Length of the data array.
+
+#### Returns
+
+uint32_t
+: The PDU ID associated with the read data.
+
+0
+: No PDU was found in the specified binary signal.
+
+
+
 ### simmock_setup
 
 Calls the `model_setup()` function on each model and then creates Signal Vectors
@@ -496,6 +525,30 @@ frame_id (uint32_t)
 
 frame_type (uint8_t)
 : The Frame Type associated with the frame.
+
+
+
+### simmock_write_pdu
+
+Write a PDU, using the associated NCodec object, to the specified
+binary signal.
+
+#### Parameters
+
+sv (SignalVector*)
+: A Signal Vector object.
+
+sig_name (const char*)
+: The name of the binary signal where PDUs should be written.
+
+data (uint8_t*)
+: Array of data to write (in the PDU).
+
+len (size_t)
+: Length of the data array.
+
+id (uint32_t)
+: The PDU ID associated with the data.
 
 
 

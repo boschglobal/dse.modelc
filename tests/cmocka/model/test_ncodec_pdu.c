@@ -14,7 +14,7 @@
 #define UNUSED(x)         ((void)x)
 #define ARRAY_SIZE(x)     (sizeof((x)) / sizeof((x)[0]))
 #define BUF_NODEID_OFFSET 53
-
+#define PDU_SIG_IDX       3
 
 extern uint8_t __log_level__;
 
@@ -91,7 +91,7 @@ static int test_teardown(void** state)
 }
 
 
-void test_ncodec__ncodec_open(void** state)
+void test_ncodec_pdu__ncodec_open(void** state)
 {
     ModelCMock* mock = *state;
 
@@ -109,19 +109,19 @@ void test_ncodec__ncodec_open(void** state)
     /* Check the ncodec objects. */
     assert_null(signal_codec(sv, 0));
     assert_null(signal_codec(sv, 1));
-    assert_non_null(signal_codec(sv, 2));
+    assert_non_null(signal_codec(sv, PDU_SIG_IDX));
     assert_null(sv->ncodec[0]);
     assert_null(sv->ncodec[1]);
-    assert_non_null(sv->ncodec[2]);
-    assert_ptr_equal(signal_codec(sv, 2), sv->ncodec[2]);
+    assert_non_null(sv->ncodec[PDU_SIG_IDX]);
+    assert_ptr_equal(signal_codec(sv, PDU_SIG_IDX), sv->ncodec[PDU_SIG_IDX]);
 }
 
 
-void test_ncodec__read_empty(void** state)
+void test_ncodec_pdu__read_empty(void** state)
 {
-    ModelCMock*      mock = *state;
-    size_t           len;
-    NCodecCanMessage msg;
+    ModelCMock* mock = *state;
+    size_t      len;
+    NCodecPdu   pdu;
 
     /* Use the "binary" signal vector. */
     SignalVector* sv_save = mock->mi->model_desc->sv;
@@ -132,35 +132,35 @@ void test_ncodec__read_empty(void** state)
         /* Next signal vector. */
         sv++;
     }
-    assert_non_null(signal_codec(sv, 2));
-    NCODEC* nc = signal_codec(sv, 2);
+    assert_non_null(signal_codec(sv, PDU_SIG_IDX));
+    NCODEC* nc = signal_codec(sv, PDU_SIG_IDX);
 
     /* First read. */
-    memset(&msg, 0, sizeof(NCodecCanMessage));
-    len = ncodec_read(nc, &msg);
+    memset(&pdu, 0, sizeof(NCodecPdu));
+    len = ncodec_read(nc, &pdu);
     assert_int_equal(len, -ENOMSG);
-    assert_int_equal(msg.len, 0);
-    assert_null(msg.buffer);
+    assert_int_equal(pdu.payload_len, 0);
+    assert_null(pdu.payload);
 
     /* Read after reset. */
-    memset(&msg, 0, sizeof(NCodecCanMessage));
-    signal_reset(sv, 2);
-    len = ncodec_read(nc, &msg);
+    memset(&pdu, 0, sizeof(NCodecPdu));
+    signal_reset(sv, PDU_SIG_IDX);
+    len = ncodec_read(nc, &pdu);
     assert_int_equal(len, -ENOMSG);
-    assert_int_equal(msg.len, 0);
-    assert_null(msg.buffer);
+    assert_int_equal(pdu.payload_len, 0);
+    assert_null(pdu.payload);
 
     /* Read after release. */
-    memset(&msg, 0, sizeof(NCodecCanMessage));
-    signal_release(sv, 2);
-    len = ncodec_read(nc, &msg);
+    memset(&pdu, 0, sizeof(NCodecPdu));
+    signal_release(sv, PDU_SIG_IDX);
+    len = ncodec_read(nc, &pdu);
     assert_int_equal(len, -ENOMSG);
-    assert_int_equal(msg.len, 0);
-    assert_null(msg.buffer);
+    assert_int_equal(pdu.payload_len, 0);
+    assert_null(pdu.payload);
 }
 
 
-void test_ncodec__network_stream(void** state)
+void test_ncodec_pdu__network_stream(void** state)
 {
     ModelCMock* mock = *state;
     int         rc;
@@ -176,47 +176,48 @@ void test_ncodec__network_stream(void** state)
     }
 
     /* Check the ncodec objects. */
-    assert_non_null(signal_codec(sv, 2));
-    assert_non_null(sv->ncodec[2]);
-    assert_ptr_equal(signal_codec(sv, 2), sv->ncodec[2]);
+    assert_non_null(signal_codec(sv, PDU_SIG_IDX));
+    assert_non_null(sv->ncodec[PDU_SIG_IDX]);
+    assert_ptr_equal(signal_codec(sv, PDU_SIG_IDX), sv->ncodec[PDU_SIG_IDX]);
 
     /* Use the codec object with the ncodec library. */
-    const char* greeting = "Hello World";
-    NCODEC*     nc = signal_codec(sv, 2);
-    signal_reset(sv, 2);
-    rc = ncodec_write(nc, &(struct NCodecCanMessage){ .frame_id = 42,
-                              .buffer = (uint8_t*)greeting,
-                              .len = strlen(greeting) });
+    const char* greeting = "Hello PDU World";
+    NCODEC*     nc = signal_codec(sv, PDU_SIG_IDX);
+    signal_reset(sv, PDU_SIG_IDX);
+    rc = ncodec_write(nc, &(struct NCodecPdu){
+                              .id = 42,
+                              .payload = (uint8_t*)greeting,
+                              .payload_len = strlen(greeting),
+                              .swc_id = 88  // bypass RX filter.
+                          });
     assert_int_equal(rc, strlen(greeting));
     size_t len = ncodec_flush(nc);
-    assert_int_equal(len, 0x66);
-    assert_int_equal(len, sv->length[2]);
+    assert_int_equal(len, 0x5a);
+    assert_int_equal(len, sv->length[PDU_SIG_IDX]);
 
-    /* Copy message, keeping the content, modify the node_id. */
+    /* Copy message, keeping the content. */
     uint8_t buffer[1024];
-    memcpy(buffer, sv->binary[2], len);
-    buffer[BUF_NODEID_OFFSET] = 8;
+    memcpy(buffer, sv->binary[PDU_SIG_IDX], len);
     // for (uint32_t i = 0; i< buffer_len;i+=8) printf("%02x %02x %02x %02x %02x
     // %02x %02x %02x\n",
     //     buffer[i+0], buffer[i+1], buffer[i+2], buffer[i+3],
     //     buffer[i+4], buffer[i+5], buffer[i+6], buffer[i+7]);
 
     /* Read the message back. */
-    signal_release(sv, 2);
-    signal_append(sv, 2, buffer, len);
-    NCodecCanMessage msg = {};
-    len = ncodec_read(nc, &msg);
+    signal_release(sv, PDU_SIG_IDX);
+    signal_append(sv, PDU_SIG_IDX, buffer, len);
+    NCodecPdu pdu = {};
+    len = ncodec_read(nc, &pdu);
     assert_int_equal(len, strlen(greeting));
-    assert_int_equal(msg.len, strlen(greeting));
-    assert_non_null(msg.buffer);
-    assert_memory_equal(msg.buffer, greeting, strlen(greeting));
-    assert_int_equal(msg.sender.bus_id, 1);
-    assert_int_equal(msg.sender.node_id, 8);
-    assert_int_equal(msg.sender.interface_id, 3);
+    assert_int_equal(pdu.payload_len, strlen(greeting));
+    assert_non_null(pdu.payload);
+    assert_memory_equal(pdu.payload, greeting, strlen(greeting));
+    assert_int_equal(pdu.swc_id, 88);
+    assert_int_equal(pdu.ecu_id, 5);
 }
 
 
-void test_ncodec__truncate(void** state)
+void test_ncodec_pdu__truncate(void** state)
 {
     ModelCMock* mock = *state;
     int         rc;
@@ -232,39 +233,42 @@ void test_ncodec__truncate(void** state)
     }
 
     /* Check the ncodec objects. */
-    assert_non_null(signal_codec(sv, 2));
-    assert_non_null(sv->ncodec[2]);
-    assert_ptr_equal(signal_codec(sv, 2), sv->ncodec[2]);
+    assert_non_null(signal_codec(sv, PDU_SIG_IDX));
+    assert_non_null(sv->ncodec[PDU_SIG_IDX]);
+    assert_ptr_equal(signal_codec(sv, PDU_SIG_IDX), sv->ncodec[PDU_SIG_IDX]);
 
     /* Use the codec object with the ncodec library. */
-    const char*     greeting = "Hello World";
-    NCODEC*         nc = signal_codec(sv, 2);
+    const char*     greeting = "Hello PDU World";
+    NCODEC*         nc = signal_codec(sv, PDU_SIG_IDX);
     NCodecInstance* _nc = (NCodecInstance*)nc;
 
-    signal_reset(sv, 2);
-    rc = ncodec_write(nc, &(struct NCodecCanMessage){ .frame_id = 42,
-                              .buffer = (uint8_t*)greeting,
-                              .len = strlen(greeting) });
+    signal_reset(sv, PDU_SIG_IDX);
+    rc = ncodec_write(nc, &(struct NCodecPdu){
+                              .id = 42,
+                              .payload = (uint8_t*)greeting,
+                              .payload_len = strlen(greeting),
+                              .swc_id = 88  // bypass RX filter.
+                          });
     assert_int_equal(rc, strlen(greeting));
     size_t len = ncodec_flush(nc);
-    assert_int_equal(len, 0x66);
-    assert_int_equal(len, sv->length[2]);
-    assert_int_equal(0x66, _nc->stream->tell(nc));
+    assert_int_equal(len, 0x5a);
+    assert_int_equal(len, sv->length[PDU_SIG_IDX]);
+    assert_int_equal(0x5a, _nc->stream->tell(nc));
 
     /* Truncate the NCodec, and check underlying stream/sv. */
-    uint32_t _bs = sv->buffer_size[2];
-    void*    _bin = sv->binary[2];
+    uint32_t _bs = sv->buffer_size[PDU_SIG_IDX];
+    void*    _bin = sv->binary[PDU_SIG_IDX];
     ncodec_truncate(nc);
     /* Check  sv properties. */
-    assert_int_equal(0, sv->length[2]);
-    assert_int_equal(_bs, sv->buffer_size[2]);
-    assert_ptr_equal(_bin, sv->binary[2]);
+    assert_int_equal(0, sv->length[PDU_SIG_IDX]);
+    assert_int_equal(_bs, sv->buffer_size[PDU_SIG_IDX]);
+    assert_ptr_equal(_bin, sv->binary[PDU_SIG_IDX]);
     /* Check  stream properties. */
     assert_int_equal(0, _nc->stream->tell(nc));
 }
 
 
-void test_ncodec__config(void** state)
+void test_ncodec_pdu__config(void** state)
 {
     ModelCMock* mock = *state;
 
@@ -277,37 +281,54 @@ void test_ncodec__config(void** state)
         /* Next signal vector. */
         sv++;
     }
-    assert_non_null(signal_codec(sv, 2));
-    NCODEC* nc = signal_codec(sv, 2);
+    assert_non_null(signal_codec(sv, PDU_SIG_IDX));
+    NCODEC* nc = signal_codec(sv, PDU_SIG_IDX);
     ncodec_truncate(nc);  // ModelC calls reset() internally.
 
-    /* Adjust the node_id. */
+    /* Adjust the swc_id. */
     ncodec_config(nc, (struct NCodecConfigItem){
-                          .name = "node_id",
-                          .value = "8",
+                          .name = "swc_id",
+                          .value = "88",
                       });
 
-    /* Write a message, and check the emitted node_id. */
-    const char* greeting = "Hello World";
-    ncodec_write(nc, &(struct NCodecCanMessage){ .frame_id = 42,
-                         .buffer = (uint8_t*)greeting,
-                         .len = strlen(greeting) });
+    /* Write a message, and check the emitted swc_id. */
+    const char* greeting = "Hello PDU World";
+    ncodec_write(nc, &(struct NCodecPdu){
+                         .id = 42,
+                         .payload = (uint8_t*)greeting,
+                         .payload_len = strlen(greeting),
+                         .swc_id = 88  // Should be filtered.
+                     });
     size_t len = ncodec_flush(nc);
-    assert_int_equal(len, 0x66);
-    assert_int_equal(len, sv->length[2]);
-    assert_int_equal(((uint8_t*)(sv->binary[2]))[BUF_NODEID_OFFSET], 8);
+    assert_int_equal(len, 0x5a);
+    assert_int_equal(len, sv->length[PDU_SIG_IDX]);
+
+    /* Copy message, keeping the content. */
+    uint8_t buffer[1024];
+    memcpy(buffer, sv->binary[PDU_SIG_IDX], len);
+    // for (uint32_t i = 0; i< buffer_len;i+=8) printf("%02x %02x %02x %02x %02x
+    // %02x %02x %02x\n",
+    //     buffer[i+0], buffer[i+1], buffer[i+2], buffer[i+3],
+    //     buffer[i+4], buffer[i+5], buffer[i+6], buffer[i+7]);
+
+    /* Read the message back. */
+    signal_release(sv, PDU_SIG_IDX);
+    signal_append(sv, PDU_SIG_IDX, buffer, len);
+    NCodecPdu pdu = {};
+    len = ncodec_read(nc, &pdu);
+    assert_int_equal(len, -ENOMSG);
 }
 
 
-static void _adjust_node_id(NCODEC* nc, const char* node_id)
+static void _adjust_swc_id(NCODEC* nc, const char* swc_id)
 {
     ncodec_config(nc, (struct NCodecConfigItem){
-                          .name = "node_id",
-                          .value = node_id,
+                          .name = "swc_id",
+                          .value = swc_id,
                       });
 }
 
-void test_ncodec__call_sequence(void** state)
+void test_ncodec_pdu__call_sequence(void** state)
 {
     ModelCMock* mock = *state;
 
@@ -322,25 +343,25 @@ void test_ncodec__call_sequence(void** state)
     }
 
     /* Check the ncodec objects. */
-    assert_non_null(signal_codec(sv, 2));
-    assert_non_null(sv->ncodec[2]);
-    assert_ptr_equal(signal_codec(sv, 2), sv->ncodec[2]);
+    assert_non_null(signal_codec(sv, PDU_SIG_IDX));
+    assert_non_null(sv->ncodec[PDU_SIG_IDX]);
+    assert_ptr_equal(signal_codec(sv, PDU_SIG_IDX), sv->ncodec[PDU_SIG_IDX]);
 
     /* Initial conditions. */
-    const char* greeting = "Hello World";
-    NCODEC*         nc = signal_codec(sv, 2);
+    const char* greeting = "Hello PDU World";
+    NCODEC*     nc = signal_codec(sv, PDU_SIG_IDX);
 
     assert_int_equal(0, ncodec_seek(nc, 0, NCODEC_SEEK_END));
     assert_int_equal(0, ncodec_tell(nc));
-    _adjust_node_id(nc, "42");
+    _adjust_swc_id(nc, "42");
     ncodec_truncate(nc);  // ModelC calls reset() internally.
-    size_t len = ncodec_write(nc, &(struct NCodecCanMessage){ .frame_id = 42,
-                                      .buffer = (uint8_t*)greeting,
-                                      .len = strlen(greeting) });
+    size_t len = ncodec_write(nc, &(struct NCodecPdu){ .id = 42,
+                                      .payload = (uint8_t*)greeting,
+                                      .payload_len = strlen(greeting) });
     assert_int_equal(strlen(greeting), len);
     ncodec_flush(nc);
-    _adjust_node_id(nc, "2");
-#define EXPECT_POS 0x66
+    _adjust_swc_id(nc, "4");
+#define EXPECT_POS 0x5a
     assert_int_equal(EXPECT_POS, ncodec_tell(nc));
 
     /* Read then Write. */
@@ -350,41 +371,41 @@ void test_ncodec__call_sequence(void** state)
         ncodec_seek(nc, 0, NCODEC_SEEK_SET);
         assert_int_equal(0, ncodec_tell(nc));
         /* Read - consume the stream. */
-        NCodecCanMessage msg = {};
-        size_t           len = ncodec_read(nc, &msg);
+        NCodecPdu pdu = {};
+        size_t    len = ncodec_read(nc, &pdu);
         assert_int_equal(strlen(greeting), len);
         /* Truncate - reset the stream. */
         ncodec_truncate(nc);
         assert_int_equal(0, ncodec_tell(nc));
         assert_int_equal(0, ncodec_seek(nc, 0, NCODEC_SEEK_END));
         assert_int_equal(0, ncodec_tell(nc));
-        /* Write and Flush - write to stream (spoof node_id). */
-        _adjust_node_id(nc, "42");
-        len = ncodec_write(nc, &(struct NCodecCanMessage){ .frame_id = 42,
-                                   .buffer = (uint8_t*)greeting,
-                                   .len = strlen(greeting) });
+        /* Write and Flush - write to stream (spoof swc_id). */
+        _adjust_swc_id(nc, "42");
+        len = ncodec_write(nc, &(struct NCodecPdu){ .id = 42,
+                                   .payload = (uint8_t*)greeting,
+                                   .payload_len = strlen(greeting) });
         assert_int_equal(strlen(greeting), len);
         ncodec_flush(nc);
-        _adjust_node_id(nc, "2");
+        _adjust_swc_id(nc, "4");
         assert_int_equal(EXPECT_POS, ncodec_tell(nc));
         assert_int_equal(EXPECT_POS, ncodec_seek(nc, 0, NCODEC_SEEK_END));
     }
 }
 
 
-int run_ncodec_tests(void)
+int run_ncodec_pdu_tests(void)
 {
     void* s = test_setup;
     void* t = test_teardown;
 
     const struct CMUnitTest tests[] = {
-        cmocka_unit_test_setup_teardown(test_ncodec__ncodec_open, s, t),
-        cmocka_unit_test_setup_teardown(test_ncodec__read_empty, s, t),
-        cmocka_unit_test_setup_teardown(test_ncodec__network_stream, s, t),
-        cmocka_unit_test_setup_teardown(test_ncodec__truncate, s, t),
-        cmocka_unit_test_setup_teardown(test_ncodec__config, s, t),
-        cmocka_unit_test_setup_teardown(test_ncodec__call_sequence, s, t),
+        cmocka_unit_test_setup_teardown(test_ncodec_pdu__ncodec_open, s, t),
+        cmocka_unit_test_setup_teardown(test_ncodec_pdu__read_empty, s, t),
+        cmocka_unit_test_setup_teardown(test_ncodec_pdu__network_stream, s, t),
+        cmocka_unit_test_setup_teardown(test_ncodec_pdu__truncate, s, t),
+        cmocka_unit_test_setup_teardown(test_ncodec_pdu__config, s, t),
+        cmocka_unit_test_setup_teardown(test_ncodec_pdu__call_sequence, s, t),
     };
 
-    return cmocka_run_group_tests_name("NCODEC", tests, NULL, NULL);
+    return cmocka_run_group_tests_name("NCODEC PDU", tests, NULL, NULL);
 }

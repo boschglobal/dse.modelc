@@ -48,7 +48,11 @@ spec:
       annotations:
         name: no_stream
         mime_type: application/custom-stream
-    - signal: stream
+    - signal: stream_can
       annotations:
-        name: stream
+        name: stream_can
         mime_type: application/x-automotive-bus; interface=stream; type=frame; bus=can; schema=fbs; bus_id=1; node_id=2; interface_id=3
+    - signal: stream_pdu
+      annotations:
+        name: stream_pdu
+        mime_type: application/x-automotive-bus; interface=stream; type=pdu; schema=fbs; swc_id=4; ecu_id=5

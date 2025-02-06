@@ -229,28 +229,28 @@ void test_model__benchmark(void** state)
 }
 
 
-#define NCODEC_INST_NAME      "ncodec_inst"
-#define NCODEC_SIGNAL_COUNTER 0
-#define NCODEC_SIGNAL_MESSAGE 0
-#define CAN_FRAME_LENGTH 64
+#define NCODEC_CAN_INST_NAME      "ncodec_can"
+#define NCODEC_CAN_SIGNAL_COUNTER 0
+#define NCODEC_CAN_SIGNAL_MESSAGE 0
+#define CAN_FRAME_LENGTH          64
 
-void test_model__ncodec(void** state)
+void test_model__ncodec_can(void** state)
 {
     chdir("../../../../dse/modelc/build/_out/examples/ncodec");
 
     const char* inst_names[] = {
-        NCODEC_INST_NAME,
+        NCODEC_CAN_INST_NAME,
     };
     char* argv[] = {
         (char*)"test_model_interface",
-        (char*)"--name=" NCODEC_INST_NAME,
+        (char*)"--name=" NCODEC_CAN_INST_NAME,
         (char*)"--logger=5",  // 1=debug, 5=QUIET (commit with 5!)
         (char*)"data/simulation.yaml",
         (char*)"data/model.yaml",
     };
     SimMock* mock = *state = simmock_alloc(inst_names, ARRAY_SIZE(inst_names));
     simmock_configure(mock, argv, ARRAY_SIZE(argv), ARRAY_SIZE(inst_names));
-    ModelMock* model = simmock_find_model(mock, NCODEC_INST_NAME);
+    ModelMock* model = simmock_find_model(mock, NCODEC_CAN_INST_NAME);
     simmock_load(mock);
     simmock_load_model_check(model, true, true, false);
     simmock_setup(mock, NULL, "binary_channel");
@@ -278,6 +278,55 @@ void test_model__ncodec(void** state)
 }
 
 
+#define NCODEC_PDU_INST_NAME      "ncodec_pdu"
+#define NCODEC_PDU_SIGNAL_COUNTER 0
+#define NCODEC_PDU_SIGNAL_MESSAGE 0
+#define PDU_LENGTH                64
+
+void test_model__ncodec_pdu(void** state)
+{
+    chdir("../../../../dse/modelc/build/_out/examples/ncodec");
+
+    const char* inst_names[] = {
+        NCODEC_PDU_INST_NAME,
+    };
+    char* argv[] = {
+        (char*)"test_model_interface",
+        (char*)"--name=" NCODEC_PDU_INST_NAME,
+        (char*)"--logger=5",  // 1=debug, 5=QUIET (commit with 5!)
+        (char*)"data/simulation.yaml",
+        (char*)"data/model.yaml",
+    };
+    SimMock* mock = *state = simmock_alloc(inst_names, ARRAY_SIZE(inst_names));
+    simmock_configure(mock, argv, ARRAY_SIZE(argv), ARRAY_SIZE(inst_names));
+    ModelMock* model = simmock_find_model(mock, NCODEC_PDU_INST_NAME);
+    simmock_load(mock);
+    simmock_load_model_check(model, true, true, false);
+    simmock_setup(mock, NULL, "binary_channel");
+
+    /* Initial value. */
+    int counter = 1001; /* Will be id for looped back PDUs. */
+
+    simmock_print_binary_signals(mock, LOG_DEBUG);
+    /* T0 */
+    assert_int_equal(simmock_step(mock, true), 0);
+    /* T1 ... Tn */
+    for (uint32_t i = 0; i < 4; i++) {
+        // Check the RX (sent in previous step by the Model).
+        uint8_t  rx_data[PDU_LENGTH] = {};
+        uint32_t id =
+            simmock_read_pdu(model->sv_network, "pdu", rx_data, PDU_LENGTH);
+        log_debug("PDU %d : %s", id, rx_data);
+        assert_int_equal(id, counter);
+        assert_string_equal((char*)rx_data, "Hello World! from swc_id=47");
+        /* Step the model. */
+        assert_int_equal(simmock_step(mock, true), 0);
+        simmock_print_binary_signals(mock, LOG_DEBUG);
+        counter++;
+    }
+}
+
+
 int run_model_examples_tests(void)
 {
     void* s = test_setup;
@@ -289,7 +338,8 @@ int run_model_examples_tests(void)
         cmocka_unit_test_setup_teardown(test_model__minimal, s, t),
         cmocka_unit_test_setup_teardown(test_model__extended, s, t),
         cmocka_unit_test_setup_teardown(test_model__binary, s, t),
-        cmocka_unit_test_setup_teardown(test_model__ncodec, s, t),
+        cmocka_unit_test_setup_teardown(test_model__ncodec_can, s, t),
+        cmocka_unit_test_setup_teardown(test_model__ncodec_pdu, s, t),
 #ifndef _WIN32
         cmocka_unit_test_setup_teardown(test_model__benchmark, s, t),
 #endif

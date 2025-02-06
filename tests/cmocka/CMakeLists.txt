@@ -78,6 +78,7 @@ set(DSE_NCODEC_SOURCE_FILES
     ${DSE_NCODEC_SOURCE_DIR}/codec.c
     ${DSE_NCODEC_SOURCE_DIR}/libs/automotive-bus/codec.c
     ${DSE_NCODEC_SOURCE_DIR}/libs/automotive-bus/frame_can_fbs.c
+    ${DSE_NCODEC_SOURCE_DIR}/libs/automotive-bus/pdu_fbs.c
 )
 set(DSE_NCODEC_INCLUDE_DIR "${DSE_NCODEC_SOURCE_DIR}/../..")
 
@@ -85,7 +86,7 @@ set(DSE_NCODEC_INCLUDE_DIR "${DSE_NCODEC_SOURCE_DIR}/../..")
 # External Project - Automotive Bus Schema
 # ----------------------------------------
 FetchContent_Declare(automotive-bus-schema
-    URL https://github.com/boschglobal/automotive-bus-schema/releases/download/v1.0.3/automotive-bus-schema.tar.gz
+    URL https://github.com/boschglobal/automotive-bus-schema/releases/download/v1.0.5/automotive-bus-schema.tar.gz
 )
 FetchContent_MakeAvailable(automotive-bus-schema)
 set(SCHEMAS_SOURCE_DIR ${automotive-bus-schema_SOURCE_DIR}/flatbuffers/c)
@@ -135,7 +136,8 @@ set(DSE_MODELC_INCLUDE_DIR "${DSE_MODELC_SOURCE_DIR}/../..")
 add_executable(test_model
     model/__test__.c
     model/test_gateway.c
-    model/test_ncodec.c
+    model/test_ncodec_can.c
+    model/test_ncodec_pdu.c
     model/test_schema.c
     model/test_signal.c
     model/test_transform.c

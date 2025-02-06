@@ -5,22 +5,45 @@
 ---
 kind: Model
 metadata:
-  name: NCodec
+  name: NCodec_CAN
 spec:
   runtime:
     dynlib:
       - os: linux
         arch: amd64
-        path: lib/libncodec.so
+        path: lib/libncodec_can.so
       - os: linux
         arch: x86
-        path: lib/libncodec.so
+        path: lib/libncodec_can.so
       - os: windows
         arch: x64
-        path: lib/libncodec.dll
+        path: lib/libncodec_can.dll
       - os: windows
         arch: x86
-        path: lib/libncodec.dll
+        path: lib/libncodec_can.dll
+  channels:
+    - alias: binary
+      selectors:
+        channel: binary_channel
+---
+kind: Model
+metadata:
+  name: NCodec_PDU
+spec:
+  runtime:
+    dynlib:
+      - os: linux
+        arch: amd64
+        path: lib/libncodec_pdu.so
+      - os: linux
+        arch: x86
+        path: lib/libncodec_pdu.so
+      - os: windows
+        arch: x64
+        path: lib/libncodec_pdu.dll
+      - os: windows
+        arch: x86
+        path: lib/libncodec_pdu.dll
   channels:
     - alias: binary
       selectors:
