@@ -1,5 +1,5 @@
 ---
-title: "Transports"
+title: "Simulation Transports"
 linkTitle: "Transports"
 weight: 1010
 tags:
@@ -12,6 +12,10 @@ github_subdir: "doc"
 ---
 
 ## Overview
+
+A Simulation Transport specifies how data-exchange between Models is facilitated by a simulation
+environment. Each transport has its own specific properties and the selection of
+a transport will be determined by the planned operational deployment of a simulation.
 
 
 | Transport    | Latency | Status |
@@ -28,7 +32,7 @@ github_subdir: "doc"
 
 ### Usage
 
-A transport can be specified in a number of ways, however typically a transport will
+A simulation transport can be specified in a number of ways, however typically a transport will
 be configured in a Stack Configuration (YAML) or via an Environment Variable.
 
 
