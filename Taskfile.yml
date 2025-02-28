@@ -1,0 +1,21 @@
+---
+version: '3'
+
+vars:
+  # When running from E2E tests (i.e. Docker in Docker), the ENTRYDIR (for
+  # Docker commands) must be set to the host relative path.
+  ENTRYDIR: '{{if .SIM}}{{.ENTRYWORKDIR}}/{{.SIM}}{{else}}{{.PWD}}{{end}}'
+  # Container image specification.
+  MODELC_IMAGE: '{{.MODELC_IMAGE | default "ghcr.io/boschglobal/dse-modelc"}}'
+  IMAGE_TAG: '{{if .MODELC_TAG}}{{.MODELC_TAG}}{{else}}{{if .IMAGE_TAG}}{{.IMAGE_TAG}}{{else}}latest{{end}}{{end}}'
+
+tasks:
+
+  info:
+    run: always
+    dir: '{{.USER_WORKING_DIR}}'
+    label: dse:modelc:info
+    cmds:
+      - echo "{{.ENTRYDIR}}"
+      - echo "{{.MODELC_IMAGE}}"
+      - echo "{{.IMAGE_TAG}}"
