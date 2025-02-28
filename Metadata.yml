@@ -1,0 +1,24 @@
+---
+metadata:
+  package:
+    download: '{{.REPO}}/releases/download/v{{.TAG}}/ModelC-{{.TAG}}-{{.PLATFORM_ARCH}}.zip'
+
+  container:
+    repository: ghcr.io/boschglobal/dse-modelc
+
+  models:
+    dse.modelc.csv:
+      name: csv
+      displayName: dse.modelc.csv
+      path: examples/csv
+      workflows: []
+      platforms:
+        - linux-amd64
+        - linux-x86
+        - linux-i386
+        - windows-x64
+        - windows-x86
+      channels:
+        - alias: scalar_channel
+
+  tasks: {}
