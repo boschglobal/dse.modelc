@@ -6,7 +6,10 @@ package simer
 
 import (
 	"fmt"
+	"io/fs"
 	"log/slog"
+	"os"
+	"path/filepath"
 	"slices"
 	"strconv"
 	"strings"
@@ -18,6 +21,22 @@ import (
 
 	schema_kind "github.com/boschglobal/dse.schemas/code/go/dse/kind"
 )
+
+func listFiles(paths []string, exts []string) []string {
+	files := []string{}
+	for _, path := range paths {
+		fileSystem := os.DirFS(".")
+		fs.WalkDir(fileSystem, path, func(s string, d fs.DirEntry, e error) error {
+			slog.Debug(fmt.Sprintf("ListFiles: %s (%t, %s)", s, d.IsDir(), filepath.Ext(s)))
+			if !d.IsDir() && slices.Contains(exts, filepath.Ext(s)) {
+				files = append(files, s)
+			}
+			return nil
+		})
+	}
+
+	return files
+}
 
 func scanFiles(exts []string) []string {
 	files := []string{}
@@ -195,6 +214,9 @@ func ModelCommandList(docMap map[string][]kind.KindDoc, modelcPath string, model
 				if model.Runtime != nil && model.Runtime.Files != nil {
 					yamlFiles = append(yamlFiles, *model.Runtime.Files...)
 				}
+				if model.Runtime != nil && model.Runtime.Paths != nil {
+					yamlFiles = append(yamlFiles, listFiles(*model.Runtime.Paths, []string{".yaml", ".yml"})...)
+				}
 				// Run as 32bit process?
 				progPath := modelcPath
 				if model.Runtime != nil && model.Runtime.X32 != nil && *model.Runtime.X32 {
@@ -236,6 +258,9 @@ func stackedModelCmd(stackDoc *kind.KindDoc, modelcPath string, modelcX32Path st
 		}
 		if model.Runtime != nil && model.Runtime.Files != nil {
 			yamlFiles = append(yamlFiles, *model.Runtime.Files...)
+		}
+		if model.Runtime != nil && model.Runtime.Paths != nil {
+			yamlFiles = append(yamlFiles, listFiles(*model.Runtime.Paths, []string{".yaml", ".yml"})...)
 		}
 		// Run as 32bit process?
 		if model.Runtime != nil && model.Runtime.X32 != nil && *model.Runtime.X32 {

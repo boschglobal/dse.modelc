@@ -1,0 +1,33 @@
+---
+kind: SignalGroup
+metadata:
+  labels:
+    channel: signal_vector
+    model: linear
+  name: linear
+spec:
+  signals:
+    - annotations:
+        fmi_variable_causality: input
+        fmi_variable_name: input
+        fmi_variable_type: Real
+        fmi_variable_vref: "1"
+      signal: input
+    - annotations:
+        fmi_variable_causality: input
+        fmi_variable_name: factor
+        fmi_variable_type: Real
+        fmi_variable_vref: "2"
+      signal: factor
+    - annotations:
+        fmi_variable_causality: input
+        fmi_variable_name: offset
+        fmi_variable_type: Real
+        fmi_variable_vref: "3"
+      signal: offset
+    - annotations:
+        fmi_variable_causality: output
+        fmi_variable_name: output
+        fmi_variable_type: Real
+        fmi_variable_vref: "4"
+      signal: output
