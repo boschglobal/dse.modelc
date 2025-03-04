@@ -22,7 +22,7 @@ spec:
     - name: csv_inst
       uid: 42
       model:
-        name: Csv
+        name: dse.modelc.csv
       runtime:
         env:
           CSV_FILE: data/valueset.csv
