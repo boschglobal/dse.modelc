@@ -5,7 +5,7 @@
 ---
 kind: Model
 metadata:
-  name: Csv
+  name: dse.modelc.csv
 spec:
   runtime:
     dynlib:
@@ -22,6 +22,6 @@ spec:
         arch: x86
         path: lib/libcsv.dll
   channels:
-    - alias: scalar
+    - alias: signal_channel
       selectors:
-        channel: scalar_channel
+        channel: signal_vector

@@ -19,10 +19,10 @@ spec:
       name: simbus
       uid: 0
     - channels:
-        - alias: scalar_channel
+        - alias: signal_channel
           name: physical
           selectors:
-            channel: scalar_vector
+            channel: signal_vector
             model: input
       model:
         name: dse.modelc.csv
@@ -34,10 +34,10 @@ spec:
           - model/input/data
       uid: 1
     - channels:
-        - alias: scalar_channel
+        - alias: signal_channel
           name: physical
           selectors:
-            channel: scalar_vector
+            channel: signal_vector
             model: linear
         - alias: network_channel
           name: network
@@ -45,7 +45,7 @@ spec:
             channel: network_vector
             model: linear
       model:
-        name: dse.fmi.mcl
+        name: linear
       name: linear
       runtime:
         env: {}

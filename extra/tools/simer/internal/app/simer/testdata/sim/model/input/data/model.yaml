@@ -5,23 +5,23 @@
 ---
 kind: Model
 metadata:
-  name: Csv
+  name: dse.modelc.csv
 spec:
   runtime:
     dynlib:
       - os: linux
         arch: amd64
-        path: sim/model/input/lib/libcsv.so
+        path: model/input/lib/libcsv.so
       - os: linux
         arch: x86
-        path: sim/model/input/lib/libcsv.so
+        path: model/input/lib/libcsv.so
       - os: windows
         arch: x64
-        path: sim/model/input/lib/libcsv.dll
+        path: model/input/lib/libcsv.dll
       - os: windows
         arch: x86
-        path: sim/model/input/lib/libcsv.dll
+        path: model/input/lib/libcsv.dll
   channels:
-    - alias: scalar
+    - alias: signal_channel
       selectors:
-        channel: scalar_channel
+        channel: signal_vector

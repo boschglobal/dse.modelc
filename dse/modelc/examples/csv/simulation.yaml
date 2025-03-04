@@ -17,7 +17,7 @@ spec:
       model:
         name: simbus
       channels:
-        - name: scalar_channel
+        - name: physical
           expectedModelCount: 1
     - name: csv_inst
       uid: 42
@@ -27,8 +27,8 @@ spec:
         env:
           CSV_FILE: data/valueset.csv
       channels:
-        - name: scalar_channel
-          alias: scalar
+        - name: physical
+          alias: signal_channel
 ---
 kind: Model
 metadata:
@@ -36,9 +36,9 @@ metadata:
 ---
 kind: SignalGroup
 metadata:
-  name: scalar_channel
+  name: signal_vector
   labels:
-    channel: scalar_channel
+    channel: signal_vector
 spec:
   signals:
     - signal: A

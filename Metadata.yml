@@ -19,6 +19,6 @@ metadata:
         - windows-x64
         - windows-x86
       channels:
-        - alias: scalar_channel
+        - alias: signal_channel
 
   tasks: {}
