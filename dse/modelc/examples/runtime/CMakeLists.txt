@@ -71,9 +71,8 @@ target_include_directories(target
 )
 target_link_libraries(target
     PRIVATE
-        $<$<BOOL:${WIN32}>:${modelc_link_lib}>
-        $<$<BOOL:${UNIX}>:-Wl,-rpath,$ORIGIN>
         ${model_runtime_shared_lib}
+#        $<$<BOOL:${UNIX}>:-Wl,-rpath,$ORIGIN>
 )
 install(
     TARGETS
@@ -106,9 +105,10 @@ target_include_directories(runtime
 )
 target_link_libraries(runtime
     PRIVATE
-        -Wl,--whole-archive
-        ${model_runtime_static_lib}
-        -Wl,--no-whole-archive
+        $<$<BOOL:${UNIX}>:-Wl,--whole-archive>
+        $<$<BOOL:${UNIX}>:${model_runtime_static_lib}>
+        $<$<BOOL:${UNIX}>:-Wl,--no-whole-archive>
+        $<$<BOOL:${WIN32}>:${model_runtime_shared_lib}>
 )
 install(
     TARGETS
