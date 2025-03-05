@@ -2,7 +2,7 @@ env NAME=target_inst
 env SIM=dse/modelc/build/_out/examples/runtime
 
 
-# TEST: Runtime using Global Dynamic Linking
+# TEST: Runtime
 exec sh -e $WORK/test.sh
 
 stdout 'Importer: Runtime: lib/libruntime.so'
@@ -29,6 +29,11 @@ stdout 'Importer: Calling vtable.destroy\(\)'
 SIMER="${SIMER:-ghcr.io/boschglobal/dse-simer:latest}"
 docker run --name simer -i --rm \
     -v $ENTRYHOSTDIR/$SIM:/sim \
+    -e LD_PRELOAD=/sim/lib/libmodel_runtime.so \
+    -e LD_LIBRARY_PATH=/sim/lib \
     --entrypoint="" $SIMER \
-    valgrind -q --leak-check=yes --error-exitcode=808 \
+    valgrind  \
+        --leak-check=yes \
+        --gen-suppressions=yes \
+        --error-exitcode=808 \
     bin/importer lib/libruntime.so sim data/simulation.yaml target_inst

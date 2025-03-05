@@ -278,12 +278,12 @@ endif()
 
 # Model Runtime
 # -------------
-add_library(model_runtime_lib STATIC)
-set_target_properties(model_runtime_lib
+add_library(model_runtime_static_lib STATIC)
+set_target_properties(model_runtime_static_lib
     PROPERTIES
         OUTPUT_NAME model_runtime
 )
-target_link_libraries(model_runtime_lib
+target_link_libraries(model_runtime_static_lib
     PUBLIC
         clib_api
         dse_ncodec
@@ -292,7 +292,23 @@ target_link_libraries(model_runtime_lib
         model_runtime
         adapter_runtime
 )
-set(model_runtime_link_lib model_runtime_lib)
+
+add_library(model_runtime_shared_lib SHARED)
+set_target_properties(model_runtime_shared_lib
+    PROPERTIES
+        OUTPUT_NAME model_runtime
+)
+target_link_libraries(model_runtime_shared_lib
+    PUBLIC
+        clib_api
+        dse_ncodec
+        flatcc_runtime
+        model_api
+        model_runtime
+        adapter_runtime
+)
+
+set(model_runtime_shared_lib model_runtime_shared_lib)
 
 # Model C install
 # ---------------
@@ -319,7 +335,8 @@ endif()
 install(
     TARGETS
         modelc_shared_lib
-        model_runtime_lib
+        model_runtime_static_lib
+        model_runtime_shared_lib
     LIBRARY DESTINATION
         ${CMAKE_INSTALL_LIBDIR}
     COMPONENT

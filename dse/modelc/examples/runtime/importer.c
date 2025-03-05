@@ -117,7 +117,7 @@ int main(int argc, char** argv)
 
     /* Loading the Model. */
     __log("Loading runtime model: %s ...", rm.runtime.runtime_model);
-    void* handle = dlopen(rm.runtime.runtime_model, RTLD_NOW | RTLD_GLOBAL);
+    void* handle = dlopen(rm.runtime.runtime_model, RTLD_NOW | RTLD_LOCAL);
     if (handle == NULL) {
         __log("ERROR: dlopen call failed: %s", dlerror());
         __log("Model library not loaded!");
