@@ -72,11 +72,11 @@ target_include_directories(target
 target_link_libraries(target
     PRIVATE
         ${model_runtime_shared_lib}
-#        $<$<BOOL:${UNIX}>:-Wl,-rpath,$ORIGIN>
 )
 install(
     TARGETS
         target
+        model_runtime_shared_lib
     LIBRARY DESTINATION
         ${SIM_PATH}/lib
     RUNTIME DESTINATION
@@ -98,6 +98,9 @@ install(
 add_library(runtime SHARED
     runtime.c
 )
+set_target_properties(runtime PROPERTIES
+    INSTALL_RPATH "lib"
+)
 target_include_directories(runtime
     PRIVATE
         ${DSE_CLIB_INCLUDE_DIR}
@@ -105,10 +108,7 @@ target_include_directories(runtime
 )
 target_link_libraries(runtime
     PRIVATE
-        $<$<BOOL:${UNIX}>:-Wl,--whole-archive>
-        $<$<BOOL:${UNIX}>:${model_runtime_static_lib}>
-        $<$<BOOL:${UNIX}>:-Wl,--no-whole-archive>
-        $<$<BOOL:${WIN32}>:${model_runtime_shared_lib}>
+        ${model_runtime_shared_lib}
 )
 install(
     TARGETS

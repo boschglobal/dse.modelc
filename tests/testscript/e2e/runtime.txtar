@@ -29,8 +29,6 @@ stdout 'Importer: Calling vtable.destroy\(\)'
 SIMER="${SIMER:-ghcr.io/boschglobal/dse-simer:latest}"
 docker run --name simer -i --rm \
     -v $ENTRYHOSTDIR/$SIM:/sim \
-    -e LD_PRELOAD=/sim/lib/libmodel_runtime.so \
-    -e LD_LIBRARY_PATH=/sim/lib \
     --entrypoint="" $SIMER \
     valgrind  \
         --leak-check=yes \
