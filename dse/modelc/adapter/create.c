@@ -20,21 +20,17 @@ static void* _create_vtable(Endpoint* endpoint)
 {
     AdapterVTableCreate func = NULL;
 
-    /* Get a handle to _this_ executable (self reference). */
-    void* handle = dlopen(NULL, RTLD_LAZY);
-    assert(handle);
-
     /* Select/create the adapter VTable. */
     switch (endpoint->kind) {
     case ENDPOINT_KIND_LOOPBACK:
         log_notice(
             "Load endpoint create function: %s", ADAPTER_CREATE_LOOPB_VTABLE);
-        func = dlsym(handle, ADAPTER_CREATE_LOOPB_VTABLE);
+        func = adapter_create_loopb_vtable;
         break;
     case ENDPOINT_KIND_MESSAGE:
         log_notice(
             "Load endpoint create function: %s", ADAPTER_CREATE_MSG_VTABLE);
-        func = dlsym(handle, ADAPTER_CREATE_MSG_VTABLE);
+        func = adapter_create_msg_vtable;
         break;
     case ENDPOINT_KIND_SIMBUS:
         /* Special case, SimBus exec will directly create its vtable. */
