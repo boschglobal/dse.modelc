@@ -200,3 +200,53 @@ $ gdb dse/modelc/build/_out/bin/modelc
 (gdb) continue
 (gdb) bt
 ```
+
+
+## Dynamic Linking
+
+### Linux
+
+Dynamic linking on Linux can be debugged with the following commands:
+
+```bash
+# Use the runtime example.
+$ cd dse/modelc/build/_out/examples/runtime
+
+# Read the Dynamic Linking data fields.
+$ readelf -d lib/libruntime.so
+
+Dynamic section at offset 0x2df0 contains 27 entries:
+  Tag        Type                         Name/Value
+ 0x0000000000000001 (NEEDED)             Shared library: [libmodel_runtime.so]
+ 0x0000000000000001 (NEEDED)             Shared library: [libc.so.6]
+ 0x000000000000000e (SONAME)             Library soname: [libruntime.so]
+ 0x000000000000001d (RUNPATH)            Library runpath: [lib]    **** set via CMake ****
+...
+
+# Monitor the loading process:
+$ LD_DEBUG=libs bin/importer lib/libruntime.so sim data/simulation.yaml target_inst
+...
+
+# Monitor and inject a search path:
+$ LD_DEBUG=libs LD_LIBRARY_PATH=./lib bin/importer lib/libruntime.so sim data/simulation.yaml target_inst
+...
+
+```
+
+#### Adjust 'runpath' with CMake
+
+Use the `INSTALL_RPATH` target property to set the runpath. This value can be a
+list of paths: `lib:resources/lib`. Those paths would be relative to the
+working directory of the executable needing to load dynamic libraries.
+
+```cmake
+set_target_properties(runtime PROPERTIES
+    INSTALL_RPATH "lib"
+)
+```
+
+
+### Windows
+
+Windows will load dynamic linked libraries which have been placed in the
+folder as other libraries.
