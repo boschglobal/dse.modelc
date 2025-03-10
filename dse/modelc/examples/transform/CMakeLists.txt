@@ -16,7 +16,7 @@ target_include_directories(ponger
 )
 target_link_libraries(ponger
     PRIVATE
-        $<$<BOOL:${WIN32}>:${modelc_link_lib}>
+        ${modelc_shared_lib}
 )
 install(TARGETS ponger
     LIBRARY DESTINATION
@@ -35,7 +35,7 @@ target_include_directories(pingit
 )
 target_link_libraries(pingit
     PRIVATE
-        $<$<BOOL:${WIN32}>:${modelc_link_lib}>
+        ${modelc_shared_lib}
 )
 install(TARGETS pingit
     LIBRARY DESTINATION

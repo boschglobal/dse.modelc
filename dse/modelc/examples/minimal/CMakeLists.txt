@@ -16,7 +16,7 @@ target_include_directories(minimal
 )
 target_link_libraries(minimal
     PRIVATE
-        $<$<BOOL:${WIN32}>:${modelc_link_lib}>
+        ${modelc_shared_lib}
 )
 install(TARGETS minimal
     LIBRARY DESTINATION

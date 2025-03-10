@@ -42,10 +42,7 @@ target_compile_definitions(mstep
 target_link_libraries(mstep
     PRIVATE
         $<$<BOOL:${WIN32}>:ws2_32>
-    PUBLIC
-        -Wl,--whole-archive
-        ${modelc_link_lib}
-        -Wl,--no-whole-archive
+        ${modelc_shared_lib}
 )
 install(TARGETS mstep
     COMPONENT

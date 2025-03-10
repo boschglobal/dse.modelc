@@ -56,6 +56,7 @@ add_executable(gateway
 set_target_properties(gateway
     PROPERTIES
         OUTPUT_NAME gateway
+        INSTALL_RPATH "$ORIGIN:$ORIGIN/../lib"
 )
 target_include_directories(gateway
     PRIVATE
@@ -71,10 +72,7 @@ target_compile_definitions(gateway
 target_link_libraries(gateway
     PRIVATE
         $<$<BOOL:${WIN32}>:ws2_32>
-    PUBLIC
-        -Wl,--whole-archive,--export-dynamic
-        ${modelc_link_lib}
-        -Wl,--no-whole-archive
+        ${modelc_shared_lib}
 )
 install(
     TARGETS
@@ -87,7 +85,7 @@ install(
 if(WIN32)
 install(
     TARGETS
-        modelc_shared_lib
+        ${modelc_shared_lib}
     DESTINATION
         ${EXE_PATH}/bin
     COMPONENT

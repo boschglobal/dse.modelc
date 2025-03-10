@@ -26,7 +26,7 @@ target_include_directories(counter
 )
 target_link_libraries(counter
     PRIVATE
-        $<$<BOOL:${WIN32}>:${modelc_link_lib}>
+        ${modelc_shared_lib}
 )
 install(TARGETS counter
     LIBRARY DESTINATION

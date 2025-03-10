@@ -26,7 +26,7 @@ target_include_directories(extended
 )
 target_link_libraries(extended
     PRIVATE
-        $<$<BOOL:${WIN32}>:${modelc_link_lib}>
+        ${modelc_shared_lib}
 )
 install(TARGETS extended
     LIBRARY DESTINATION

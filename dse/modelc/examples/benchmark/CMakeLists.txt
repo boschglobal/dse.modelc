@@ -27,7 +27,7 @@ target_include_directories(benchmark
 )
 target_link_libraries(benchmark
     PRIVATE
-        $<$<BOOL:${WIN32}>:${modelc_link_lib}>
+        ${modelc_shared_lib}
 )
 install(TARGETS benchmark
     LIBRARY DESTINATION

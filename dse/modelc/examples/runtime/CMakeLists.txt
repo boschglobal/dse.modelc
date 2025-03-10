@@ -76,7 +76,7 @@ target_link_libraries(target
 install(
     TARGETS
         target
-        modelc_shared_lib
+        ${modelc_shared_lib}
     LIBRARY DESTINATION
         ${SIM_PATH}/lib
     RUNTIME DESTINATION
@@ -113,7 +113,7 @@ target_link_libraries(runtime
 install(
     TARGETS
         runtime
-        modelc_shared_lib
+        ${modelc_shared_lib}
     LIBRARY DESTINATION
         ${EX_PATH}/lib
     RUNTIME DESTINATION

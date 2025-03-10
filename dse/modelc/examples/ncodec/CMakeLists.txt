@@ -28,7 +28,7 @@ target_include_directories(ncodec_can
 )
 target_link_libraries(ncodec_can
     PRIVATE
-        $<$<BOOL:${WIN32}>:${modelc_link_lib}>
+        ${modelc_shared_lib}
 )
 install(TARGETS ncodec_can
     LIBRARY DESTINATION
@@ -50,7 +50,7 @@ target_include_directories(ncodec_pdu
 )
 target_link_libraries(ncodec_pdu
     PRIVATE
-        $<$<BOOL:${WIN32}>:${modelc_link_lib}>
+        ${modelc_shared_lib}
 )
 install(TARGETS ncodec_pdu
     LIBRARY DESTINATION

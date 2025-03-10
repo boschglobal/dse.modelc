@@ -26,7 +26,7 @@ target_include_directories(csv
 )
 target_link_libraries(csv
     PRIVATE
-        $<$<BOOL:${WIN32}>:${modelc_link_lib}>
+        ${modelc_shared_lib}
 )
 install(TARGETS csv
     LIBRARY DESTINATION

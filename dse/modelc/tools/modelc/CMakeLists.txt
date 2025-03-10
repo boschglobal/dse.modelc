@@ -26,6 +26,7 @@ add_executable(modelc_cli
 set_target_properties(modelc_cli
     PROPERTIES
         OUTPUT_NAME modelc
+        INSTALL_RPATH "$ORIGIN:$ORIGIN/../lib"
 )
 target_include_directories(modelc_cli
     PRIVATE
@@ -41,10 +42,7 @@ target_compile_definitions(modelc_cli
 target_link_libraries(modelc_cli
     PRIVATE
         $<$<BOOL:${WIN32}>:ws2_32>
-    PUBLIC
-        -Wl,--whole-archive
-        ${modelc_link_lib}
-        -Wl,--no-whole-archive
+        ${modelc_shared_lib}
 )
 install(TARGETS modelc_cli
     COMPONENT
