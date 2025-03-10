@@ -50,6 +50,11 @@ int main(int argc, char** argv)
     log_notice("  transport: %s", args.transport);
     log_notice("  uri: %s", args.uri);
 
+    if (args.transport && strcmp(args.transport, "loopback") == 0) {
+        log_notice("Loopback operation of SimBus not supported.");
+        exit(0);
+    }
+
     /* Create Endpoint and Adapter objects. */
     int       retry_count = 60;
     Endpoint* endpoint = NULL;
