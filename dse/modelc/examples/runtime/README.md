@@ -70,27 +70,16 @@ Load YAML File: dse/modelc/build/_out/examples/runtime/sim/data/model.yaml
 
 ## Linking Strategy
 
-### Importer using Global Dynamic Loading
+### Importer using Dynamic Loading
 
-In this scenario the Importer loads the Runtime using `dlopen()` with
-the `RTLD_GLOBAL` flag. This imports the symbols contained in the Model Runtime
-and makes those symbols available to subsequently loaded Models. The Models
-therefore depend on symbols provided by the Runtime.
+In this scenario the Runtime is loaded (by the importer) using `dlopen()` with
+flags `RTLD_NOW` and `RTLD_LOCAL`. Runtime is dynamically linked to the
+ModelC shared library (`libmodelc.so`) and this library is loaded at this point.
+Models which are _also_ dynamically linked to the ModelC shared library, when
+loaded by the Runtime, will also use the previously loaded `libmodelc.so`.
 
-![importer-global](../../../../doc/static/examples-runtime-importer-global.png)
-
-> Note: the Importer and Runtime may be located in the same compilation unit.
-
-
-### Importer using Local Dynamic Loading
-
-In this scenario the Model is loaded using `dlopen()` with flags `RTLD_LAZY`
-and `RTLD_LOCAL`. The Model then takes care to load the Model Runtime itself
-(the path to use will be provided from the Importer/Runtime, or hardcoded).
 
 ![importer-local](../../../../doc/static/examples-runtime-importer-local.png)
-
-> Note: this method has not been proven.
 
 
 ## Developer
@@ -111,4 +100,15 @@ $ valgrind -q --leak-check=yes \
     dse/modelc/build/_out/examples/runtime/sim \
     data/simulation.yaml \
     target_inst
+
+# Inspect Runtime linking.
+$ readelf -d lib/libruntime.so
+
+Dynamic section at offset 0x2df0 contains 27 entries:
+  Tag        Type                         Name/Value
+ 0x0000000000000001 (NEEDED)             Shared library: [libmodelc.so]
+ 0x0000000000000001 (NEEDED)             Shared library: [libc.so.6]
+ 0x000000000000000e (SONAME)             Library soname: [libruntime.so]
+ 0x000000000000001d (RUNPATH)            Library runpath: [lib]
+ ....
 ```

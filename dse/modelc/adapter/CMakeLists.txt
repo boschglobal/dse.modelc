@@ -67,25 +67,3 @@ target_link_libraries(adapter
         $<$<AND:$<BOOL:${WIN32}>,$<STREQUAL:${CMAKE_CXX_COMPILER_ID},"GNU">>:"-static winpthread">
         $<$<AND:$<BOOL:${WIN32}>,$<NOT:$<STREQUAL:${CMAKE_CXX_COMPILER_ID},"GNU">>>:-static pthread>
 )
-
-
-# Target - adapter runtime
-# ------------------------
-add_library(adapter_runtime OBJECT
-    adapter.c
-    adapter_loopb.c
-    create_runtime.c
-    index.c
-    transport/endpoint_loopb.c
-)
-target_include_directories(adapter_runtime
-    PRIVATE
-        ${DSE_CLIB_INCLUDE_DIR}
-        $<$<BOOL:${WIN32}>:${DLFCNWIN32_SOURCE_DIR}>
-        ../../..
-)
-target_link_libraries(adapter_runtime
-    PRIVATE
-        dl
-        m
-)

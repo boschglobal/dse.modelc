@@ -23,10 +23,6 @@ var (
 	modelcPath     = flag.String("modelc", "/usr/local/bin/modelc", "path to ModelC executable")
 	modelcX32Path  = flag.String("modelcX32", "/usr/local/bin/modelc32_x86", "path to ModelC x32 executable")
 	modelcI386Path = flag.String("modelcI386", "/usr/local/bin/modelc32_i386", "path to ModelC i386 executable")
-	// Library flags (not currently used, intended for use with LD_PRELOAD).
-	modelRuntimePath     = flag.String("modelruntime", "/usr/local/lib/libmodel_runtime.so", "path to Model Runtime shared library")
-	modelRuntimePathX32  = flag.String("modelruntimeX32", "/usr/local/lib32/libmodel_runtime_x86.so", "path to Model Runtime x32 shared library")
-	modelRuntimePathI386 = flag.String("modelruntimeI386", "/usr/local/lib32/libmodel_runtime_i386.so", "path to Model Runtime i386 shared library")
 )
 
 func main() {

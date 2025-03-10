@@ -1,24 +1,23 @@
 @startuml
 
-skinparam nodesep 40
-skinparam ranksep 40
+skinparam nodesep 60
+skinparam ranksep 60
+skinparam linetype ortho
 
 title Model Runtime: Importer Local Dynamic Loading
 
 
 [Importer] as importer
-component {
-  [Runtime] as runtime
+component Runtime as runtime {
   [Model Runtime] as modelruntime
 }
 [Model] as model
-[Model Runtime] as modelruntime_alt
+[ModelC] as modelc
 
-importer -> runtime :dlopen(LOCAL)
-modelruntime -> model :dlopen(LAZY/LOCAL)
-runtime --> modelruntime
-model ..> modelruntime_alt :dlopen(LOCAL)
-
+importer -r-> runtime :dlopen(LOCAL)
+modelruntime -r-> model :dlopen(LOCAL)
+modelruntime --> modelc :load/rpath
+model .[norank].> modelc :load/indirect
 
 center footer Dynamic Simulation Environment
 @enduml

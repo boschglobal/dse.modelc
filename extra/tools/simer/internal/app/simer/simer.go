@@ -359,10 +359,7 @@ func buildModelCmd(name string, path string, yamlFiles []string, env map[string]
 }
 
 func calculateEnv(stack *schema_kind.StackSpec, model *schema_kind.ModelInstance, flags Flags) map[string]string {
-	env := map[string]string{
-		"LD_LIBRARY_PATH": "/usr/local/lib:/usr/local/lib32",
-	}
-
+	env := map[string]string{}
 	if stack.Runtime != nil && stack.Runtime.Env != nil {
 		for k, v := range *stack.Runtime.Env {
 			env[k] = v

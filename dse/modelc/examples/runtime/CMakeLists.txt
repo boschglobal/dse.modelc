@@ -57,7 +57,7 @@ install(TARGETS importer RUNTIME
 # ----------
 # Dynamically linked to the Model Runtime. Can also be statically linked.
 # Set envars to support operation:
-#   LD_PRELOAD=<path>/libmodel_runtime.so
+#   LD_PRELOAD=<path>/libmodelc.so
 # or
 #   LD_LIBRARY_PATH=<path>
 add_library(target SHARED
@@ -71,12 +71,12 @@ target_include_directories(target
 )
 target_link_libraries(target
     PRIVATE
-        ${model_runtime_shared_lib}
+        ${modelc_shared_lib}
 )
 install(
     TARGETS
         target
-        model_runtime_shared_lib
+        modelc_shared_lib
     LIBRARY DESTINATION
         ${SIM_PATH}/lib
     RUNTIME DESTINATION
@@ -91,8 +91,8 @@ install(
 )
 
 
-# Runtime Model (implements importer interface, runs the simulation)
-# -------------
+# Runtime (implements importer interface, runs the simulation)
+# -------
 # Statically linked to the Model Runtime for demonstration purposes. Can also
 # be dynamically linked.
 add_library(runtime SHARED
@@ -108,12 +108,12 @@ target_include_directories(runtime
 )
 target_link_libraries(runtime
     PRIVATE
-        ${model_runtime_shared_lib}
+        ${modelc_shared_lib}
 )
 install(
     TARGETS
         runtime
-        model_runtime_shared_lib
+        modelc_shared_lib
     LIBRARY DESTINATION
         ${EX_PATH}/lib
     RUNTIME DESTINATION
