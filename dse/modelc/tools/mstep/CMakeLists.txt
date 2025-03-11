@@ -26,6 +26,7 @@ add_executable(mstep
 set_target_properties(mstep
     PROPERTIES
         OUTPUT_NAME mstep
+        INSTALL_RPATH "$ORIGIN:$ORIGIN/../lib"
 )
 target_include_directories(mstep
     PRIVATE
