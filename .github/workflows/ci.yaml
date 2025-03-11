@@ -321,22 +321,21 @@ jobs:
           mkdir -p extra/tools/simer/build/stage/bin
           mkdir -p extra/tools/simer/build/stage/lib
           mkdir -p extra/tools/simer/build/stage/lib32
-          mkdir -p extra/tools/simer/build/stage/lib386
+          mkdir -p extra/tools/simer/build/stage/libx32
 
           cp sandbox/${{ env.package_name }}-linux-amd64-sandbox/${{ env.build_dir }}/_out/bin/simbus extra/tools/simer/build/stage/bin/simbus
           cp sandbox/${{ env.package_name }}-linux-amd64-sandbox/${{ env.build_dir }}/_out/bin/modelc extra/tools/simer/build/stage/bin/modelc
           cp sandbox/${{ env.package_name }}-linux-amd64-sandbox/${{ env.build_dir }}/_out/lib/mcl_model.so extra/tools/simer/build/stage/lib/mcl_model.so
           cp sandbox/${{ env.package_name }}-linux-amd64-sandbox/${{ env.build_dir }}/_out/lib/libmodelc.so extra/tools/simer/build/stage/lib/libmodelc.so
 
+          cp sandbox/${{ env.package_name }}-linux-i386-sandbox/${{ env.build_dir }}/_out/bin/modelc extra/tools/simer/build/stage/bin/modelc32_i386
+          cp sandbox/${{ env.package_name }}-linux-i386-sandbox/${{ env.build_dir }}/_out/lib/mcl_model.so extra/tools/simer/build/stage/lib32/mcl_model.so
+          cp sandbox/${{ env.package_name }}-linux-i386-sandbox/${{ env.build_dir }}/_out/lib/libmodelc.so extra/tools/simer/build/stage/lib32/libmodelc.so
+
           cp sandbox/${{ env.package_name }}-linux-x86-sandbox/${{ env.build_dir }}/_out/bin/modelc extra/tools/simer/build/stage/bin/modelc32
           cp sandbox/${{ env.package_name }}-linux-x86-sandbox/${{ env.build_dir }}/_out/bin/modelc extra/tools/simer/build/stage/bin/modelc32_x86
-          cp sandbox/${{ env.package_name }}-linux-x86-sandbox/${{ env.build_dir }}/_out/lib/mcl_model.so extra/tools/simer/build/stage/lib32/mcl_model.so
-          cp sandbox/${{ env.package_name }}-linux-x86-sandbox/${{ env.build_dir }}/_out/lib/mcl_model.so extra/tools/simer/build/stage/lib32/mcl_model.so
-          cp sandbox/${{ env.package_name }}-linux-x86-sandbox/${{ env.build_dir }}/_out/lib/libmodelc.so extra/tools/simer/build/stage/lib32/libmodelc.so
-
-          cp sandbox/${{ env.package_name }}-linux-i386-sandbox/${{ env.build_dir }}/_out/bin/modelc extra/tools/simer/build/stage/bin/modelc32_i386
-          cp sandbox/${{ env.package_name }}-linux-i386-sandbox/${{ env.build_dir }}/_out/lib/mcl_model.so extra/tools/simer/build/stage/lib386/mcl_model.so
-          cp sandbox/${{ env.package_name }}-linux-i386-sandbox/${{ env.build_dir }}/_out/lib/libmodelc.so extra/tools/simer/build/stage/lib386/libmodelc.so
+          cp sandbox/${{ env.package_name }}-linux-x86-sandbox/${{ env.build_dir }}/_out/lib/mcl_model.so extra/tools/simer/build/stage/libx32/mcl_model.so
+          cp sandbox/${{ env.package_name }}-linux-x86-sandbox/${{ env.build_dir }}/_out/lib/libmodelc.so extra/tools/simer/build/stage/libx32/libmodelc.so
 
           cp -r sandbox/${{ env.package_name }}-linux-amd64-sandbox/${{ env.build_dir }}/_out/licenses -t extra/tools/simer/build/stage
           ls -R extra/tools/simer/build/stage

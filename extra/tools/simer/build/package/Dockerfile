@@ -116,11 +116,11 @@ EXPOSE 2159
 
 # Install ModelC Tools and  MCL Model
 # ===================================
-ENV LD_LIBRARY_PATH=/usr/local/lib:/usr/local/lib32:/usr/local/lib386
+ENV LD_LIBRARY_PATH=/usr/local/lib:/usr/local/lib32:/usr/local/libx32
 COPY build/stage/bin/* /usr/local/bin/
 COPY build/stage/lib/* /usr/local/lib/
 COPY build/stage/lib32/* /usr/local/lib32/
-COPY build/stage/lib386/* /usr/local/lib386/
+COPY build/stage/libx32/* /usr/local/libx32/
 
 
 # Install Simer

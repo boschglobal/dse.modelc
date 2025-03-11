@@ -38,9 +38,9 @@ $ make build simer
 
 # Modify the filesystem (of the example model) for testing.
 $ mkdir -p dse/modelc/build/_out/examples/simer/lib32
+$ mkdir -p dse/modelc/build/_out/examples/simer/libx32
 $ cp extra/tools/simer/build/stage/lib32/libcounter_x86.so dse/modelc/build/_out/examples/simer/lib32/libcounter.so
-$ cp extra/tools/simer/build/stage/lib32/libcounter_x86.so dse/modelc/build/_out/examples/simer/lib32/libcounter_x86.so
-$ cp extra/tools/simer/build/stage/lib32/libcounter_i386.so dse/modelc/build/_out/examples/simer/lib32/libcounter_i386.so
+$ cp extra/tools/simer/build/stage/lib32/libcounter_i386.so dse/modelc/build/_out/examples/simer/libx32/libcounter.so
 
 # Build the Simer container.
 $ ls extra/tools/simer/build/stage/*
