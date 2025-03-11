@@ -23,6 +23,33 @@ Model Developer is able to easily develop CMocka Testcases which:
 * Stack several Model Instances within one SimMock and confirm their interoperation.
 
 
+### ModelC Shared Library Stub
+
+When testing models directly with the SimMock it may be necessary to use a stub
+of the `modelc.so` library. The following integrations are required:
+
+<summary>tests/cmocka/Makefile</summary>
+
+```makefile
+export LD_LIBRARY_PATH=$(shell pwd)/build/_out/lib
+```
+
+<summary>tests/cmocka/CMakeLists.txt</summary>
+
+```cmake
+# Target - ModelC Stub
+# --------------------
+add_library(modelc_stub SHARED
+    ${DSE_MOCKS_SOURCE_DIR}/modelc_stub.c
+)
+set_target_properties(modelc_stub
+    PROPERTIES
+        OUTPUT_NAME modelc
+)
+install(TARGETS modelc_stub)
+```
+
+
 ### Example Test Files
 
 <details>

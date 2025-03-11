@@ -131,6 +131,18 @@ set(DSE_MODELC_INCLUDE_DIR "${DSE_MODELC_SOURCE_DIR}/../..")
 # Targets
 # =======
 
+# Target - ModelC Stub
+# --------------------
+add_library(modelc_stub SHARED
+    ${DSE_MOCKS_SOURCE_DIR}/modelc_stub.c
+)
+set_target_properties(modelc_stub
+    PROPERTIES
+        OUTPUT_NAME modelc
+)
+install(TARGETS modelc_stub)
+
+
 # Target - Model
 # ---------------
 add_executable(test_model

@@ -3,7 +3,10 @@
 # SPDX-License-Identifier: Apache-2.0
 
 export MAKE_NPROC ?= $(shell nproc)
+export LD_LIBRARY_PATH=$(shell pwd)/build/_out/lib
+
 GDB_CMD ?= valgrind -q --leak-check=yes
+# GDB_CMD ?= LD_DEBUG=libs
 # GDB_CMD ?= gdb -q -ex='set confirm on' -ex=run -ex=quit
 
 default: build
