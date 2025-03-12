@@ -11,6 +11,9 @@
 #include <dse/modelc/adapter/private.h>
 
 
+#define HASH_UID_KEY_LEN (10 + 1)
+
+
 /*
 Index related internal API
 --------------------------
@@ -29,6 +32,9 @@ void _destroy_index(Channel* channel)
         free(channel->index.map);
         channel->index.map = NULL;
     }
+    if (channel->index.uid2sv_lookup.nodes != NULL) {
+        hashmap_destroy(&channel->index.uid2sv_lookup);
+    }
 }
 
 void _generate_index(Channel* channel)
@@ -39,6 +45,14 @@ void _generate_index(Channel* channel)
     channel->index.count = hashmap_number_keys(channel->signal_values);
     channel->index.map = _get_signal_value_map(
         channel, (const char**)channel->index.names, channel->index.count);
+
+    // Allocate the UID->SV lookup.
+    if (channel->index.uid2sv_lookup.number_nodes < channel->index.count) {
+        uint64_t map_size =
+            channel->index.count ? channel->index.count : 1024;
+        hashmap_clear(&channel->index.uid2sv_lookup);
+        hashmap_init_alt(&channel->index.uid2sv_lookup, map_size, NULL);
+    }
 }
 
 void _invalidate_index(Channel* channel)
@@ -89,9 +103,20 @@ SignalValue* _find_signal_by_uid(Channel* channel, uint32_t uid)
 {
     if (uid == 0) return NULL;
 
+    /* Lookup. */
+    char key[HASH_UID_KEY_LEN];
+    snprintf(key, HASH_UID_KEY_LEN, "%i", uid);
+    SignalValue* sv = hashmap_get(&channel->index.uid2sv_lookup, key);
+    if (sv != NULL) return sv;
+
+    /* Fallback, linear search (UID is updated by Simbus messages). */
     for (unsigned int i = 0; i < channel->index.count; i++) {
-        SignalValue* sv = channel->index.map[i].signal;
-        if (sv->uid == uid) return sv;
+        sv = channel->index.map[i].signal;
+        if (sv->uid == uid) {
+            /* Add to the lookup index. */
+            hashmap_set(&channel->index.uid2sv_lookup, key, sv);
+            return sv;
+        }
     }
     return NULL;
 }

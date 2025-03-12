@@ -85,6 +85,8 @@ typedef struct Channel {
         uint32_t   hash_code;
         /* Map used by _this_ channel (contains all signals). */
         SignalMap* map;
+        /* Hashmap Lookup. */
+        HashMap    uid2sv_lookup;
     } index;
 
     /* Bus properties. */
