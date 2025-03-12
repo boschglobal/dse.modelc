@@ -12,7 +12,7 @@ SIMER_IMAGE ?= ghcr.io/boschglobal/dse-simer:latest
 ###############
 ## Docker Containers.
 DOCKER_DIRS = simbus-sa modelc modelc-x86 testscript
-TOOL_DIRS = simer
+TOOL_DIRS = simer benchmark
 
 
 ################
@@ -107,6 +107,7 @@ simer:
 	mkdir -p extra/tools/simer/build/stage/bin
 	mkdir -p extra/tools/simer/build/stage/lib
 	mkdir -p extra/tools/simer/build/stage/lib32
+	mkdir -p extra/tools/simer/build/stage/libx32
 	@if [ ${PACKAGE_ARCH} = "linux-amd64" ]; then \
 		cp dse/modelc/build/_out/bin/simbus extra/tools/simer/build/stage/bin/simbus ;\
 		cp dse/modelc/build/_out/bin/modelc extra/tools/simer/build/stage/bin/modelc ;\
@@ -138,8 +139,12 @@ docker:
 tools:
 	for d in $(TOOL_DIRS) ;\
 	do \
-		docker build -f extra/tools/$$d/build/package/Dockerfile \
-				--tag $$d:test extra/tools/$$d ;\
+		if [ -f extra/tools/$$d/build/package/Dockerfile ]; then \
+			docker build -f extra/tools/$$d/build/package/Dockerfile \
+					--tag $$d:test extra/tools/$$d ;\
+		else \
+			$(MAKE) -C extra/tools/$$d; \
+		fi \
 	done;
 
 .PHONY: test_cmocka

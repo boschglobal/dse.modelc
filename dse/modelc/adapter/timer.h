@@ -22,8 +22,8 @@ inline struct timespec get_timespec_now(void)
 inline uint64_t get_elapsedtime_us(struct timespec ref)
 {
     struct timespec now = get_timespec_now();
-    uint64_t        u_sec = (now.tv_sec * 1000000 + now.tv_sec / 1000) -
-                     (ref.tv_sec * 1000000 + ref.tv_sec / 1000);
+    uint64_t        u_sec = (now.tv_sec * 1000000 + now.tv_nsec / 1000) -
+                     (ref.tv_sec * 1000000 + ref.tv_nsec / 1000);
     return u_sec;
 }
 

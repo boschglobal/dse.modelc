@@ -1,0 +1,13 @@
+---
+kind: SignalGroup
+metadata:
+  name: data
+  labels:
+    channel: data
+spec:
+  signals:
+    - signal: counter-1
+    - signal: counter-2
+    - signal: counter-3
+    - signal: counter-4
+    - signal: counter-5

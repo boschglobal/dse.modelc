@@ -1,9 +1,0 @@
----
-kind: SignalGroup
-metadata:
-  name: data
-  labels:
-    channel: data
-spec:
-  signals:
-    - signal: counter
