@@ -15,8 +15,8 @@
 #
 # Run
 # ---
-#   $ sh dse/modelc/examples/benchmark/benchmark.sh 5 200
-#   $ sh dse/modelc/examples/benchmark/benchmark.sh 5 200 1 1
+#   $ sh dse/modelc/examples/benchmark/scripts/benchmark.sh 5 200
+#   $ sh dse/modelc/examples/benchmark/scripts/benchmark.sh 5 200 1 1
 
 
 # Input Parameters
@@ -39,7 +39,10 @@ fi
 : "${MODEL_STEPSIZE:=0.0005}"
 : "${MODEL_ENDTIME:=1.0}"
 : "${MODEL_LOGGER:=4}"
-
+: "${SIMER_IMAGE:=$DSE_SIMER_IMAGE}"
+if [ -z $SIMER_IMAGE ]; then
+    SIMER_IMAGE="simer:test"
+fi
 
 simer()
 {
@@ -51,7 +54,7 @@ simer()
          -e SIMBUS_URI=${SIMBUS_URI:-redis://localhost} \
          -p 2159:2159 \
          -p 6379:6379 \
-         $DSE_SIMER_IMAGE "$@"; ); \
+         $SIMER_IMAGE "$@"; ); \
 }
 
 conditions()
@@ -66,6 +69,7 @@ conditions()
     echo "MODEL_STEPSIZE=${MODEL_STEPSIZE}"
     echo "MODEL_ENDTIME=${MODEL_ENDTIME}"
     echo "MODEL_LOGGER=${MODEL_LOGGER}"
+    echo "SIMER_IMAGE=${SIMER_IMAGE}"
 }
 
 benchmark()

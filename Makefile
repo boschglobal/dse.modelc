@@ -84,6 +84,7 @@ ifneq ($(CI), true)
 		--env PACKAGE_ARCH=$(PACKAGE_ARCH) \
 		--env PACKAGE_VERSION=$(PACKAGE_VERSION) \
 		--env MAKE_NPROC=$(MAKE_NPROC) \
+		--env PROFILEFLAGS=$(PROFILEFLAGS) \
 		--volume $$(pwd):/tmp/repo \
 		--volume $(EXTERNAL_BUILD_DIR):$(EXTERNAL_BUILD_DIR) \
 		--volume ~/.ccache:/root/.ccache \
@@ -112,18 +113,20 @@ simer:
 		cp dse/modelc/build/_out/bin/simbus extra/tools/simer/build/stage/bin/simbus ;\
 		cp dse/modelc/build/_out/bin/modelc extra/tools/simer/build/stage/bin/modelc ;\
 		cp dse/modelc/build/_out/lib/mcl_model.so extra/tools/simer/build/stage/lib/mcl_model.so ;\
+		cp dse/modelc/build/_out/lib/libmodelc.so extra/tools/simer/build/stage/lib/libmodelc.so ;\
 		cp -r licenses -t extra/tools/simer/build/stage ;\
 	fi
 	@if [ ${PACKAGE_ARCH} = "linux-x86" ]; then \
 		cp dse/modelc/build/_out/bin/modelc extra/tools/simer/build/stage/bin/modelc32 ;\
 		cp dse/modelc/build/_out/bin/modelc extra/tools/simer/build/stage/bin/modelc32_x86 ;\
-		cp dse/modelc/build/_out/lib/mcl_model.so extra/tools/simer/build/stage/lib32/mcl_model.so ;\
-		cp dse/modelc/build/_out/lib/mcl_model.so extra/tools/simer/build/stage/lib32/mcl_model_x86.so ;\
+		cp dse/modelc/build/_out/lib/mcl_model.so extra/tools/simer/build/stage/libx32/mcl_model.so ;\
+		cp dse/modelc/build/_out/lib/libmodelc.so extra/tools/simer/build/stage/libx32/libmodelc.so ;\
 		cp dse/modelc/build/_out/examples/simer/lib/libcounter.so extra/tools/simer/build/stage/lib32/libcounter_x86.so ;\
 	fi
 	@if [ ${PACKAGE_ARCH} = "linux-i386" ]; then \
 		cp dse/modelc/build/_out/bin/modelc extra/tools/simer/build/stage/bin/modelc32_i386 ;\
 		cp dse/modelc/build/_out/lib/mcl_model.so extra/tools/simer/build/stage/lib32/mcl_model_i386.so ;\
+		cp dse/modelc/build/_out/lib/libmodelc.so extra/tools/simer/build/stage/lib32/libmodelc.so ;\
 		cp dse/modelc/build/_out/examples/simer/lib/libcounter.so extra/tools/simer/build/stage/lib32/libcounter_i386.so ;\
 	fi
 
