@@ -32,9 +32,7 @@ void _destroy_index(Channel* channel)
         free(channel->index.map);
         channel->index.map = NULL;
     }
-    if (channel->index.uid2sv_lookup.nodes != NULL) {
-        hashmap_destroy(&channel->index.uid2sv_lookup);
-    }
+    hashmap_clear(&channel->index.uid2sv_lookup);
 }
 
 void _generate_index(Channel* channel)
@@ -45,14 +43,6 @@ void _generate_index(Channel* channel)
     channel->index.count = hashmap_number_keys(channel->signal_values);
     channel->index.map = _get_signal_value_map(
         channel, (const char**)channel->index.names, channel->index.count);
-
-    // Allocate the UID->SV lookup.
-    if (channel->index.uid2sv_lookup.number_nodes < channel->index.count) {
-        uint64_t map_size =
-            channel->index.count ? channel->index.count : 1024;
-        hashmap_clear(&channel->index.uid2sv_lookup);
-        hashmap_init_alt(&channel->index.uid2sv_lookup, map_size, NULL);
-    }
 }
 
 void _invalidate_index(Channel* channel)
@@ -103,9 +93,24 @@ SignalValue* _find_signal_by_uid(Channel* channel, uint32_t uid)
 {
     if (uid == 0) return NULL;
 
-    /* Lookup. */
+    /* Convert the uid to a key.
+    Note: calling hashmap_get_by_uint32() is slower than inline code, not
+    sure why (very sensitive so must be optimisation).
+    */
     char key[HASH_UID_KEY_LEN];
-    snprintf(key, HASH_UID_KEY_LEN, "%i", uid);
+    char r[HASH_UID_KEY_LEN];
+    char *kp = key;
+    char *rp = r;
+    uint32_t v = uid;
+    while (v || rp == r) {
+        int i = v % 10;
+        v /= 10;
+        *rp++ = i+'0';
+    }
+    while (rp > r) {
+        *kp++ = *--rp;
+    }
+    *kp++ = 0;
     SignalValue* sv = hashmap_get(&channel->index.uid2sv_lookup, key);
     if (sv != NULL) return sv;
 

@@ -23,20 +23,9 @@ exec sh -e $WORK/run_benchmark.sh
 
 stdout 'Name: benchmark_inst_1'
 stdout 'name         : data_channel'
-stdout 'signal count  :'
-stdout 'signal change :'
-stdout 'seed value    :'
 stdout 'Run the Simulation ...'
-stdout 'ModelRegister --> \[data_channel\]'
-stdout 'SignalIndex --> \[data_channel\]'
-stdout 'SignalIndex <-- \[data_channel\]'
-stdout 'Notify/ModelReady --> \[...\]'
-stdout 'SignalVector --> \[data_channel:41\]'
-stdout 'Notify/ModelStart <-- \[41\]'
-stdout 'SignalVector <-- \[data_channel\]'
-stdout 'Signal change count is :'
-stdout 'ModelExit --> \[data_channel\]'
 stdout 'Controller exit ...'
+stdout '::benchmark::redispubsub;redis://localhost:6379;0.000500;0.040000;44;5;5;'
 
 
 

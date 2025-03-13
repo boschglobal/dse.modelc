@@ -21,7 +21,7 @@ spec:
       channels:
         - name: data_channel
           expectedModelCount: 4
-    - name: benchmark_inst
+    - name: benchmark_inst_1
       uid: 42
       model:
         name: Benchmark

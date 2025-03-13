@@ -185,7 +185,7 @@ void test_model__binary(void** state)
     }
 }
 
-#define BENCHMARK_INST_NAME      "benchmark_inst"
+#define BENCHMARK_INST_NAME      "benchmark_inst_1"
 #define BENCHMARK_SIGNAL_COUNTER 0
 
 void test_model__benchmark(void** state)
@@ -200,7 +200,7 @@ void test_model__benchmark(void** state)
         (char*)"--name=" BENCHMARK_INST_NAME,
         (char*)"--logger=5",  // 1=debug, 5=QUIET (commit with 5!)
         (char*)"data/simulation.yaml",
-        (char*)"data/signalgroup.yaml",
+        (char*)"data/signal_group.yaml",
         (char*)"data/model.yaml",
     };
     SimMock* mock = *state = simmock_alloc(inst_names, ARRAY_SIZE(inst_names));

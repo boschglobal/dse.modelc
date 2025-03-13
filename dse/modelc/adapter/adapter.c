@@ -74,6 +74,8 @@ static Channel* _create_channel(AdapterModel* am, const char* channel_name)
                 am->adapter->endpoint, ch->name);
         }
     }
+    /* Allocate index objects.*/
+    hashmap_init(&ch->index.uid2sv_lookup);
 
     /* Add the new Channel to the hashmap. */
     if (hashmap_set(&am->channels, ch->name, ch)) {
@@ -261,6 +263,7 @@ void adapter_destroy_adapter_model(AdapterModel* am)
             hashmap_destroy_ext(
                 &ch->signal_values, _destroy_signal_value, NULL);
             _destroy_index(ch);
+            hashmap_destroy(&ch->index.uid2sv_lookup);
             if (ch->model_register_set) {
                 set_destroy(ch->model_register_set);
                 free(ch->model_register_set);

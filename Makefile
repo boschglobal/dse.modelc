@@ -18,7 +18,7 @@ TOOL_DIRS = simer benchmark
 ################
 ## DSE Projects.
 DSE_CLIB_REPO ?= https://github.com/boschglobal/dse.clib
-DSE_CLIB_VERSION ?= 1.0.24
+DSE_CLIB_VERSION ?= 1.0.27
 export DSE_CLIB_URL ?= $(DSE_CLIB_REPO)/archive/refs/tags/v$(DSE_CLIB_VERSION).zip
 
 DSE_SCHEMA_REPO ?= https://github.com/boschglobal/dse.schemas
@@ -84,7 +84,6 @@ ifneq ($(CI), true)
 		--env PACKAGE_ARCH=$(PACKAGE_ARCH) \
 		--env PACKAGE_VERSION=$(PACKAGE_VERSION) \
 		--env MAKE_NPROC=$(MAKE_NPROC) \
-		--env PROFILEFLAGS=$(PROFILEFLAGS) \
 		--volume $$(pwd):/tmp/repo \
 		--volume $(EXTERNAL_BUILD_DIR):$(EXTERNAL_BUILD_DIR) \
 		--volume ~/.ccache:/root/.ccache \
@@ -202,6 +201,7 @@ do-test_testscript-e2e:
 # Test debug; add '-v' to Testscript command (e.g. $(TESTSCRIPT_IMAGE) -v \).
 ifeq ($(PACKAGE_ARCH), linux-amd64)
 	@-docker kill simer
+	@-docker kill gateway
 	@set -eu; for t in $(TESTSCRIPT_E2E_FILES) ;\
 	do \
 		echo "Running E2E Test: $$t" ;\
