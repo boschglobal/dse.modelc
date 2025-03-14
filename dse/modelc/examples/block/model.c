@@ -9,7 +9,7 @@
 #include <ctype.h>
 #include <assert.h>
 #define XXH_INLINE_ALL
-#include <dse/clib/data/xxHash.h>
+#include <dse/clib/data/xxhash.h>
 #include <dse/modelc/model.h>
 #include <dse/modelc/runtime.h>
 #include <dse/logger.h>
