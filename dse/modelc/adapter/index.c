@@ -97,18 +97,18 @@ SignalValue* _find_signal_by_uid(Channel* channel, uint32_t uid)
     Note: calling hashmap_get_by_uint32() is slower than inline code, not
     sure why (very sensitive so must be optimisation).
     */
-    char key[HASH_UID_KEY_LEN];
-    char r[HASH_UID_KEY_LEN];
-    char *kp = key;
-    char *rp = r;
+    char     key[HASH_UID_KEY_LEN];
+    char     tmp[HASH_UID_KEY_LEN];
+    char*    kp = key;
+    char*    tp = tmp;
     uint32_t v = uid;
-    while (v || rp == r) {
+    while (v || tp == tmp) {
         int i = v % 10;
         v /= 10;
-        *rp++ = i+'0';
+        *tp++ = i + '0';
     }
-    while (rp > r) {
-        *kp++ = *--rp;
+    while (tp > tmp) {
+        *kp++ = *--tp;
     }
     *kp++ = 0;
     SignalValue* sv = hashmap_get(&channel->index.uid2sv_lookup, key);
@@ -146,7 +146,7 @@ SignalValue* _get_signal_value_byindex(Channel* channel, uint32_t index)
 {
     _refresh_index(channel);
     assert(index < channel->index.count);
-    return _get_signal_value(channel, channel->index.names[index]);
+    return channel->index.map[index].signal;
 }
 
 SignalMap* _get_signal_value_map(

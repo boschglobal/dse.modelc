@@ -10,6 +10,9 @@
 #
 # Simulation is run stacked in a single ModelC instance.
 #
+# Note: gperf does not work with dynamic loaded libaries, therefore results
+# are only valid for SimBus and ModelC running Loopback.
+#
 # Setup
 # -----
 # Build a plain version of simbus
@@ -39,6 +42,7 @@
 : "${SIM_DIR:=dse/modelc/build/_out/examples/benchmark}"
 : "${MODEL_COUNT:=5}"
 : "${SIGNAL_COUNT:=2000}"
+: "${SIGNAL_CHANGE:=2000}"
 : "${MODEL_STEPSIZE:=0.0005}"
 : "${MODEL_ENDTIME:=1.0}"
 
@@ -52,6 +56,7 @@
 
 #: "${PROFILE_CMD=valgrind --tool=cachegrind }"
 #: "${PROFILE_CMD=valgrind --tool=callgrind }"
+#: "PROFILE_CMD=gdb -q -ex='set confirm on' -ex=run -ex=quit -args }"
 
 MODEL_NAMES="benchmark_inst_1;benchmark_inst_2;benchmark_inst_3;benchmark_inst_4;benchmark_inst_5"
 YAML_FILES="data/simulation.yaml data/signal_group.yaml data/model.yaml"
@@ -72,11 +77,16 @@ profile()
     pkill -f simbus
     redis-cli flushall
     mkdir -p $SIM_DIR/simbus
-    (cd $SIM_DIR/simbus; $SIMBUS_CMD &)
+    if [ ! $SIMBUS_TRANSPORT = "loopback" ]; then
+        (cd $SIM_DIR/simbus; $SIMBUS_CMD &)
+    fi
     (cd $SIM_DIR; $MODELC_CMD)
     pkill -f simbus
     redis-cli flushall
 }
 
+export SIMBUS_TRANSPORT=${SIMBUS_TRANSPORT}
+export SIMBUS_URI=${SIMBUS_URI}
+export SIGNAL_CHANGE=${SIGNAL_CHANGE}
 generate
 profile

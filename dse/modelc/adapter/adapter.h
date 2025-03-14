@@ -57,6 +57,7 @@ Adapter Objects
 typedef struct SignalValue {
     char*    name;
     uint32_t uid;
+    uint32_t vector_index;
     /* Double. */
     double   val;
     double   final_val;
