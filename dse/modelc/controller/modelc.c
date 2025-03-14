@@ -237,6 +237,7 @@ int modelc_configure(ModelCArguments* args, SimulationSpec* sim)
     log_notice("  End Time: %f", sim->end_time);
     log_notice("  Model Timeout: %f", sim->timeout);
     log_notice("  Sim Path: %s", sim->sim_path);
+    log_notice("  Stacked: %s", model_count > 1 ? "yes": "no");
 
     log_notice("Transport:");
     log_notice("  Transport: %s", sim->transport);

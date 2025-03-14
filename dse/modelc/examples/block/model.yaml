@@ -1,0 +1,30 @@
+# Copyright 2025 Robert Bosch GmbH
+#
+# SPDX-License-Identifier: Apache-2.0
+
+---
+kind: Model
+metadata:
+  name: Block
+spec:
+  runtime:
+    dynlib:
+      - os: linux
+        arch: amd64
+        path: lib/libblock.so
+      - os: linux
+        arch: x86
+        path: lib/libblock.so
+      - os: windows
+        arch: x64
+        path: lib/libblock.dll
+      - os: windows
+        arch: x86
+        path: lib/libblock.dll
+  channels:
+    - alias: data
+      selectors:
+        channel: data
+    - alias: checksum
+      selectors:
+        channel: checksum

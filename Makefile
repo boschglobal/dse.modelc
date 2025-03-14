@@ -18,7 +18,7 @@ TOOL_DIRS = simer benchmark
 ################
 ## DSE Projects.
 DSE_CLIB_REPO ?= https://github.com/boschglobal/dse.clib
-DSE_CLIB_VERSION ?= 1.0.27
+DSE_CLIB_VERSION ?= 1.0.28
 export DSE_CLIB_URL ?= $(DSE_CLIB_REPO)/archive/refs/tags/v$(DSE_CLIB_VERSION).zip
 
 DSE_SCHEMA_REPO ?= https://github.com/boschglobal/dse.schemas
@@ -67,6 +67,7 @@ TESTSCRIPT_E2E_FILES = \
 	$(TESTSCRIPT_E2E_DIR)/ncodec.txtar \
 	$(TESTSCRIPT_E2E_DIR)/mstep.txtar \
 	$(TESTSCRIPT_E2E_DIR)/transport.txtar \
+	$(TESTSCRIPT_E2E_DIR)/transport_block.txtar \
 	$(TESTSCRIPT_E2E_DIR)/stack.txtar \
 	$(TESTSCRIPT_E2E_DIR)/runtime.txtar \
 	$(TESTSCRIPT_E2E_DIR)/benchmark.txtar

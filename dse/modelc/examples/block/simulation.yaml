@@ -1,0 +1,110 @@
+# Copyright 2025 Robert Bosch GmbH
+#
+# SPDX-License-Identifier: Apache-2.0
+
+---
+kind: Stack
+metadata:
+  name: block_stack
+spec:
+  connection:
+    transport:
+      redispubsub:
+        uri: redis://localhost:6379
+        timeout: 60
+  models:
+    - name: simbus
+      model:
+        name: simbus
+      channels:
+        - name: data_channel
+          expectedModelCount: 4
+        - name: checksum_channel
+          expectedModelCount: 4
+    - name: block_inst_1
+      uid: 41
+      model:
+        name: Block
+      runtime:
+        env:
+          MODEL_COUNT: 4
+          MODEL_ID: 1
+        files:
+          - data/signal_group.yaml
+      channels:
+        - name: data_channel
+          alias: data
+        - name: checksum_channel
+          alias: checksum
+    - name: block_inst_2
+      uid: 42
+      model:
+        name: Block
+      runtime:
+        env:
+          MODEL_COUNT: 4
+          MODEL_ID: 2
+        files:
+          - data/signal_group.yaml
+      channels:
+        - name: data_channel
+          alias: data
+        - name: checksum_channel
+          alias: checksum
+    - name: block_inst_3
+      uid: 43
+      model:
+        name: Block
+      runtime:
+        env:
+          MODEL_COUNT: 4
+          MODEL_ID: 3
+        files:
+          - data/signal_group.yaml
+      channels:
+        - name: data_channel
+          alias: data
+        - name: checksum_channel
+          alias: checksum
+    - name: block_inst_4
+      uid: 44
+      model:
+        name: Block
+      runtime:
+        env:
+          MODEL_COUNT: 4
+          MODEL_ID: 4
+        files:
+          - data/signal_group.yaml
+      channels:
+        - name: data_channel
+          alias: data
+        - name: checksum_channel
+          alias: checksum
+  runtime:
+    stacked: true
+---
+kind: SignalGroup
+metadata:
+  name: checksum
+  labels:
+    channel: checksum
+spec:
+  signals:
+    - signal: checksum-1
+    - signal: checksum-2
+    - signal: checksum-3
+    - signal: checksum-4
+    - signal: checksum-block-1
+    - signal: checksum-block-2
+    - signal: checksum-block-3
+    - signal: checksum-block-4
+  runtime:
+    stacked: true
+---
+kind: Model
+metadata:
+  name: simbus
+spec:
+  runtime:
+    stacked: true

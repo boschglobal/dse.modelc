@@ -1,0 +1,98 @@
+env NAME=block_inst_1
+env SIM=dse/modelc/build/_out/examples/block
+exec yq -i e '.spec.runtime.stacked |= false' $REPODIR/$SIM/data/simulation.yaml
+
+
+# TEST: redispubsub
+env SIMBUS_TRANSPORT=redispubsub
+env SIMBUS_URI=redis://localhost:6379
+exec sh -e $WORK/test.sh
+
+stderr 'Using Valgrind'
+stdout 'Transport: redispubsub'
+stdout 'URI: redis://localhost:6379'
+stdout 'Stacked: no'
+stdout '1:checksum-1 = 3814679844'
+stdout '2:checksum-2 = 3814679844'
+stdout '3:checksum-3 = 3814679844'
+stdout '4:checksum-4 = 3814679844'
+
+
+# TEST: redis
+env SIMBUS_TRANSPORT=redis
+env SIMBUS_URI=redis://localhost:6379
+exec sh -e $WORK/test.sh
+
+stderr 'Using Valgrind'
+stdout 'Transport: redis'
+! stdout 'Transport: redispubsub'
+stdout 'URI: redis://localhost:6379'
+stdout 'Stacked: no'
+stdout '1:checksum-1 = 3814679844'
+stdout '2:checksum-2 = 3814679844'
+stdout '3:checksum-3 = 3814679844'
+stdout '4:checksum-4 = 3814679844'
+
+
+# TEST: redisasync
+env SIMBUS_TRANSPORT=redis
+env SIMBUS_URI=redisasync://localhost:6379
+exec sh -e $WORK/test.sh
+
+stderr 'Using Valgrind'
+stdout 'Transport: redis'
+! stdout 'Transport: redispubsub'
+stdout 'URI: redisasync://localhost:6379'
+stdout 'Stacked: no'
+stdout '1:checksum-1 = 3814679844'
+stdout '2:checksum-2 = 3814679844'
+stdout '3:checksum-3 = 3814679844'
+stdout '4:checksum-4 = 3814679844'
+
+
+# TEST: stacked
+env SIMBUS_TRANSPORT=redis
+env SIMBUS_URI=redis://localhost:6379
+exec yq -i e '.spec.runtime.stacked |= true' $REPODIR/$SIM/data/simulation.yaml
+exec sh -e $WORK/test.sh
+
+stderr 'Using Valgrind'
+stdout 'Transport: redis'
+! stdout 'Transport: redispubsub'
+stdout 'URI: redis://localhost:6379'
+stdout 'Stacked: yes'
+stdout '1:checksum-1 = 3814679844'
+stdout '2:checksum-2 = 3814679844'
+stdout '3:checksum-3 = 3814679844'
+stdout '4:checksum-4 = 3814679844'
+
+
+# TEST: loopback
+env SIMBUS_TRANSPORT=loopback
+env SIMBUS_URI=loopback
+exec sh -e $WORK/test-loopback.sh
+
+stderr 'Using Valgrind'
+stdout 'Transport: loopback'
+stdout 'URI: loopback'
+stdout 'Stacked: yes'
+stdout '1:checksum-1 = 3814679844'
+stdout '2:checksum-2 = 3814679844'
+stdout '3:checksum-3 = 3814679844'
+stdout '4:checksum-4 = 3814679844'
+
+
+-- test.sh --
+SIMER="${SIMER:-ghcr.io/boschglobal/dse-simer:latest}"
+docker run --name simer -i --rm -v $ENTRYHOSTDIR/$SIM:/sim \
+    $SIMER -valgrind $NAME \
+        -env SIMBUS_TRANSPORT=$SIMBUS_TRANSPORT \
+        -env SIMBUS_URI=$SIMBUS_URI
+
+
+-- test-loopback.sh --
+SIMER="${SIMER:-ghcr.io/boschglobal/dse-simer:latest}"
+docker run --name simer -i --rm -v $ENTRYHOSTDIR/$SIM:/sim \
+    $SIMER -valgrind $NAME -simbus="" \
+        -env SIMBUS_TRANSPORT=$SIMBUS_TRANSPORT \
+        -env SIMBUS_URI=$SIMBUS_URI
