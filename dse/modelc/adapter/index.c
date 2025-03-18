@@ -47,8 +47,10 @@ void _generate_index(Channel* channel)
 
 void _invalidate_index(Channel* channel)
 {
-    channel->index.hash_code++;  // Signal consumers of index change.
-    _destroy_index(channel);
+    if (channel->index.names != NULL) {
+        channel->index.hash_code++;  // Signal consumers of index change.
+        _destroy_index(channel);
+    }
 }
 
 void _refresh_index(Channel* channel)
@@ -88,30 +90,10 @@ Channel* _get_channel_byindex(AdapterModel* am, uint32_t index)
 Signal related internal API
 ---------------------------
 */
-
 SignalValue* _find_signal_by_uid(Channel* channel, uint32_t uid)
 {
     if (uid == 0) return NULL;
-
-    /* Convert the uid to a key.
-    Note: calling hashmap_get_by_uint32() is slower than inline code, not
-    sure why (very sensitive so must be optimisation).
-    */
-    char     key[HASH_UID_KEY_LEN];
-    char     tmp[HASH_UID_KEY_LEN];
-    char*    kp = key;
-    char*    tp = tmp;
-    uint32_t v = uid;
-    while (v || tp == tmp) {
-        int i = v % 10;
-        v /= 10;
-        *tp++ = i + '0';
-    }
-    while (tp > tmp) {
-        *kp++ = *--tp;
-    }
-    *kp++ = 0;
-    SignalValue* sv = hashmap_get(&channel->index.uid2sv_lookup, key);
+    SignalValue* sv = hashmap_get_by_hash32(&channel->index.uid2sv_lookup, uid);
     if (sv != NULL) return sv;
 
     /* Fallback, linear search (UID is updated by Simbus messages). */
@@ -119,7 +101,7 @@ SignalValue* _find_signal_by_uid(Channel* channel, uint32_t uid)
         sv = channel->index.map[i].signal;
         if (sv->uid == uid) {
             /* Add to the lookup index. */
-            hashmap_set(&channel->index.uid2sv_lookup, key, sv);
+            hashmap_set_by_hash32(&channel->index.uid2sv_lookup, uid, sv);
             return sv;
         }
     }

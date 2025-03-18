@@ -16,9 +16,10 @@ import (
 type SimulationCommand struct {
 	command.Command
 
-	outputFile string
-	modelCount int
-	stacked    bool
+	outputFile   string
+	modelCount   int
+	signalChange int
+	stacked      bool
 }
 
 func NewSimulationCommand(name string) *SimulationCommand {
@@ -30,6 +31,7 @@ func NewSimulationCommand(name string) *SimulationCommand {
 	}
 	c.FlagSet().StringVar(&c.outputFile, "output", "", "path to write generated simulation file")
 	c.FlagSet().IntVar(&c.modelCount, "count", 5, "number of models to generate")
+	c.FlagSet().IntVar(&c.signalChange, "change", 40, "number of signals to change per step")
 	c.FlagSet().BoolVar(&c.stacked, "stacked", false, "generate a stacked simulation")
 	return c
 }
@@ -94,6 +96,9 @@ func (c *SimulationCommand) Run() error {
 			Runtime: &kind.ModelInstanceRuntime{
 				Files: &[]string{
 					"data/signal_group.yaml",
+				},
+				Env: &map[string]string{
+					"SIGNAL_CHANGE": fmt.Sprintf("%d", c.signalChange),
 				},
 			},
 		}

@@ -6,6 +6,7 @@
 #include <stddef.h>
 #include <string.h>
 #include <stdlib.h>
+#include <ctype.h>
 #include <time.h>
 #include <dse/modelc/model.h>
 #include <dse/modelc/runtime.h>
@@ -56,8 +57,32 @@ typedef struct {
     uint32_t        change_seed;
     /* Profiling data. */
     struct timespec start_time;
+    uint64_t        setup_time;
     uint64_t        step_count;
 } ExtendedModelDesc;
+
+
+static inline uint32_t _get_envar(ModelDesc* m, const char* n, uint32_t val)
+{
+    char buf[50];
+
+    snprintf(buf, sizeof(buf), "%s__%s", m->mi->name, n);
+    for (size_t i = 0; i < strlen(buf); i++)
+        buf[i] = toupper(buf[i]);
+    if (getenv(buf)) {
+        val = atoi(getenv(buf));
+    } else {
+        snprintf(buf, sizeof(buf), "%s", n);
+        for (size_t i = 0; i < strlen(buf); i++)
+            buf[i] = toupper(buf[i]);
+        if (getenv(buf)) {
+            val = atoi(getenv(buf));
+        }
+    }
+    log_notice(LOG_COLOUR_LBLUE "  get_envar:%s=%u" LOG_COLOUR_NONE, buf, val);
+
+    return val;
+}
 
 
 ModelDesc* model_create(ModelDesc* model)
@@ -68,10 +93,8 @@ ModelDesc* model_create(ModelDesc* model)
     m->start_time = _get_timespec_now();
 
     /* Setup the benchmark parameters. */
-    m->signal_change = m->model.sv->count;
-    if (getenv("SIGNAL_CHANGE")) {
-        m->signal_change = atoi(getenv("SIGNAL_CHANGE"));
-    }
+    m->signal_change =
+        _get_envar((ModelDesc*)m, "SIGNAL_CHANGE", m->model.sv->count);
     m->change_seed = _get_seed();
 
     /* Return the extended object. */
@@ -82,6 +105,10 @@ ModelDesc* model_create(ModelDesc* model)
 int model_step(ModelDesc* model, double* model_time, double stop_time)
 {
     ExtendedModelDesc* m = (ExtendedModelDesc*)model;
+    if (*model_time == 0) {
+        m->setup_time = _get_elapsedtime_us(m->start_time);
+    }
+
     for (SignalVector* sv = m->model.sv; sv->name; sv++) {
         uint32_t count =
             _get_signal_change(sv, m->signal_change, &m->change_seed);
@@ -101,10 +128,11 @@ void model_destroy(ModelDesc* model)
 {
     ExtendedModelDesc* m = (ExtendedModelDesc*)model;
 
-    log_notice(LOG_COLOUR_LBLUE
-        "::benchmark::%s;%s;%.6f;%.6f;%u;%u;%u;%lu;%.3f" LOG_COLOUR_NONE,
-        m->model.sim->transport, m->model.sim->uri, m->model.sim->step_size,
-        m->model.sim->end_time, m->model.mi->uid, m->model.sv->count,
-        m->signal_change, m->step_count,
+    log_error(LOG_COLOUR_LBLUE "::benchmark:%s::%s;%s;%.6f;%.6f;%u;%u;%u;%lu;%."
+                               "3f;%.3f" LOG_COLOUR_NONE,
+        getenv("TAG"), m->model.sim->transport, m->model.sim->uri,
+        m->model.sim->step_size, m->model.sim->end_time, m->model.mi->uid,
+        m->model.sv->count, m->signal_change, m->step_count,
+        m->setup_time / 1000000.0,
         _get_elapsedtime_us(m->start_time) / 1000000.0);
 }

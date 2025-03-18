@@ -529,13 +529,8 @@ static void process_signal_index_message(
         log_simbus("    SignalLookup: %s [UID=%u]", signal_name, signal_uid);
         if (signal_uid == 0) continue;
         /* Update the Adapter signal_value array. */
-        for (unsigned int i = 0; i < channel->index.count; i++) {
-            SignalValue* sv = channel->index.map[i].signal;
-            if (strcmp(sv->name, signal_name) == 0) {
-                sv->uid = signal_uid;
-                break;
-            }
-        }
+        SignalValue* sv = hashmap_get(&channel->signal_values, signal_name);
+        if (sv) sv->uid = signal_uid;
     }
 }
 
