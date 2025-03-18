@@ -128,9 +128,11 @@ void model_destroy(ModelDesc* model)
 {
     ExtendedModelDesc* m = (ExtendedModelDesc*)model;
 
-    log_error(LOG_COLOUR_LBLUE "::benchmark:%s::%s;%s;%.6f;%.6f;%u;%u;%u;%lu;%."
+    const char* tag = "";
+    if (getenv("TAG")) tag = getenv("TAG");
+    log_notice(LOG_COLOUR_LBLUE "::benchmark:%s::%s;%s;%.6f;%.6f;%u;%u;%u;%lu;%."
                                "3f;%.3f" LOG_COLOUR_NONE,
-        getenv("TAG"), m->model.sim->transport, m->model.sim->uri,
+        tag, m->model.sim->transport, m->model.sim->uri,
         m->model.sim->step_size, m->model.sim->end_time, m->model.mi->uid,
         m->model.sv->count, m->signal_change, m->step_count,
         m->setup_time / 1000000.0,

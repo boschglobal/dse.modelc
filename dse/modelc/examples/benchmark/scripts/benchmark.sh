@@ -42,7 +42,7 @@ fi
 # ================
 : "${MODEL_STEPSIZE:=0.0005}"
 : "${MODEL_ENDTIME:=1.0}"
-: "${MODEL_LOGGER:=5}"
+: "${MODEL_LOGGER:=4}"
 : "${SIMER_IMAGE:=$DSE_SIMER_IMAGE}"
 if [ -z $SIMER_IMAGE ]; then
     SIMER_IMAGE="simer:test"
