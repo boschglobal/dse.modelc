@@ -27,8 +27,8 @@ static int controller_load_model(ModelInstanceSpec* mi, SimulationSpec* sim)
 {
     assert(mi);
     ModelInstancePrivate* mip = mi->private;
-    ControllerModel*      controller_model = mip->controller_model;
-    assert(controller_model);
+    ControllerModel*      cm = mip->controller_model;
+    assert(cm);
     const char* dynlib_filename = mi->model_definition.full_path;
 
     errno = 0;
@@ -36,31 +36,29 @@ static int controller_load_model(ModelInstanceSpec* mi, SimulationSpec* sim)
     if (dynlib_filename) {
         char* model_path = dse_path_cat(sim->sim_path, dynlib_filename);
         log_notice("Loading dynamic model: %s ...", model_path);
-        void* handle = dlopen(model_path, RTLD_NOW | RTLD_LOCAL);
+        cm->handle = dlopen(model_path, RTLD_NOW | RTLD_LOCAL);
         free(model_path);
-        if (handle == NULL) {
+        if (cm->handle == NULL) {
             log_notice("ERROR: dlopen call: %s", dlerror());
             goto error_dl;
         }
         /* Load the model interface.*/
-        controller_model->vtable.create = dlsym(handle, MODEL_CREATE_FUNC_NAME);
+        cm->vtable.create = dlsym(cm->handle, MODEL_CREATE_FUNC_NAME);
         log_notice("Loading symbol: %s ... %s", MODEL_CREATE_FUNC_NAME,
-            controller_model->vtable.create ? "ok" : "not found");
-        controller_model->vtable.step = dlsym(handle, MODEL_STEP_FUNC_NAME);
+            cm->vtable.create ? "ok" : "not found");
+        cm->vtable.step = dlsym(cm->handle, MODEL_STEP_FUNC_NAME);
         log_notice("Loading symbol: %s ... %s", MODEL_STEP_FUNC_NAME,
-            controller_model->vtable.step ? "ok" : "not found");
-        controller_model->vtable.destroy =
-            dlsym(handle, MODEL_DESTROY_FUNC_NAME);
+            cm->vtable.step ? "ok" : "not found");
+        cm->vtable.destroy = lsym(cm->handle, MODEL_DESTROY_FUNC_NAME);
         log_notice("Loading symbol: %s ... %s", MODEL_DESTROY_FUNC_NAME,
-            controller_model->vtable.destroy ? "ok" : "not found");
-
+            cm->vtable.destroy ? "ok" : "not found");
     } else {
         if (dse_yaml_find_node(
                 mi->model_definition.doc, "spec/runtime/gateway")) {
             log_notice("Using gateway symbols: ...");
-            controller_model->vtable.create = __model_gw_create__;
-            controller_model->vtable.step = __model_gw_step__;
-            controller_model->vtable.destroy = __model_gw_destroy__;
+            cm->vtable.create = __model_gw_create__;
+            cm->vtable.step = __model_gw_step__;
+            cm->vtable.destroy = __model_gw_destroy__;
         }
     }
 

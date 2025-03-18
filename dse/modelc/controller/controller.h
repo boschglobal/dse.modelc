@@ -58,6 +58,7 @@ typedef struct ModelFunction {
 typedef struct ControllerModel {
     /* Controller specific objects (placed in Model instance). */
     const char* model_dynlib_filename;
+    void*       handle;  // Handle for loaded model.
 
     /* Collection of ModelFunction, Key is Model Function name. */
     HashMap model_functions;

@@ -8,6 +8,7 @@
 #include <errno.h>
 #include <unistd.h>
 #include <string.h>
+#include <dlfcn.h>
 #include <dse/testing.h>
 #include <dse/logger.h>
 #include <dse/platform.h>
@@ -60,6 +61,7 @@ static void _destroy_model_instances(SimulationSpec* sim)
             HashMap* mf_map = &cm->model_functions;
             hashmap_iterator(mf_map, _destroy_model_function, true, NULL);
             hashmap_destroy(mf_map);
+            if (cm->handle) dlclose(cm->handle);
             free(cm);
             cm = NULL;
         }
@@ -78,6 +80,7 @@ static void _destroy_model_instances(SimulationSpec* sim)
     }
     free(sim->instance_list);
 }
+
 static char* _dse_path_cat(const char* a, const char* b)
 {
     if (a == NULL && b == NULL) return NULL;
