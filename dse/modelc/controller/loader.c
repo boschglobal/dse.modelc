@@ -49,7 +49,7 @@ static int controller_load_model(ModelInstanceSpec* mi, SimulationSpec* sim)
         cm->vtable.step = dlsym(cm->handle, MODEL_STEP_FUNC_NAME);
         log_notice("Loading symbol: %s ... %s", MODEL_STEP_FUNC_NAME,
             cm->vtable.step ? "ok" : "not found");
-        cm->vtable.destroy = lsym(cm->handle, MODEL_DESTROY_FUNC_NAME);
+        cm->vtable.destroy = dlsym(cm->handle, MODEL_DESTROY_FUNC_NAME);
         log_notice("Loading symbol: %s ... %s", MODEL_DESTROY_FUNC_NAME,
             cm->vtable.destroy ? "ok" : "not found");
     } else {
