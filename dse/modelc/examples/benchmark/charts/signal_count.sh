@@ -12,6 +12,7 @@
 
 CHART_NAME=signal_count
 MODEL_COUNT=5
+CHANGE_COUNT=200
 
 rm -f dse/modelc/examples/benchmark/charts/${CHART_NAME}.txt
 
@@ -33,7 +34,7 @@ do
     esac
     for SIGNAL_COUNT in 1000 2000 4000 8000 16000 32000
     do
-        SIGNAL_CHANGE=$(( $SIGNAL_COUNT / $MODEL_COUNT / 10 ))
+        SIGNAL_CHANGE=$(( $CHANGE_COUNT / $MODEL_COUNT ))
         sh dse/modelc/examples/benchmark/scripts/benchmark.sh \
             $MODEL_COUNT \
             $SIGNAL_COUNT \

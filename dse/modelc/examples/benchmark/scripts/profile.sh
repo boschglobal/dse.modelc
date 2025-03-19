@@ -56,7 +56,7 @@
 
 #: "${PROFILE_CMD=valgrind --tool=cachegrind }"
 #: "${PROFILE_CMD=valgrind --tool=callgrind }"
-#: "PROFILE_CMD=gdb -q -ex='set confirm on' -ex=run -ex=quit -args }"
+#: "${PROFILE_CMD=gdb -q -ex='set confirm on' -ex=run -ex=quit -args }"
 
 MODEL_NAMES="benchmark_inst_1;benchmark_inst_2;benchmark_inst_3;benchmark_inst_4;benchmark_inst_5"
 YAML_FILES="data/simulation.yaml data/signal_group.yaml data/model.yaml"

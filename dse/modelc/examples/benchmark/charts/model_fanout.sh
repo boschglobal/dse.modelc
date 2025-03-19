@@ -8,11 +8,13 @@
 # ============
 #
 # 2-D chart of constant signal throughput for increasing model count over
-# recommended topology set.
+# recommended topology set. Overall signal exchange per simulation step
+# remains constant
 
 
 CHART_NAME=model_fanout
-SIGNAL_COUNT=8000
+SIGNAL_COUNT=4000
+CHANGE_COUNT=400
 
 rm -f dse/modelc/examples/benchmark/charts/${CHART_NAME}.txt
 
@@ -32,9 +34,9 @@ do
         STACKED=0
         ;;
     esac
-    for MODEL_COUNT in 1 2 3 4 5 6 7 8 9 10
+    for MODEL_COUNT in 1 2 3 4 6 8 12 16
     do
-        SIGNAL_CHANGE=$(( $SIGNAL_COUNT / $MODEL_COUNT / 10 ))
+        SIGNAL_CHANGE=$(( $CHANGE_COUNT / $MODEL_COUNT ))
         sh dse/modelc/examples/benchmark/scripts/benchmark.sh \
             $MODEL_COUNT \
             $SIGNAL_COUNT \

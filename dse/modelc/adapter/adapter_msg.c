@@ -28,84 +28,87 @@ typedef struct notify_spec_t {
     AdapterModel*     last_am;
 } notify_spec_t;
 
-
-static void sv_delta_to_msgpack(Channel* channel, msgpack_packer* pk)
-{
-    /* First(root) Object, array, 2 elements. */
-    msgpack_pack_array(pk, 2);
-    uint32_t changed_signal_count = 0;
-    for (uint32_t i = 0; i < channel->index.count; i++) {
-        SignalValue* sv = channel->index.map[i].signal;
-        if (sv->uid == 0) continue;
-        if ((sv->val != sv->final_val) || (sv->bin && sv->bin_size)) {
-            changed_signal_count++;
-        }
-    }
-    /* 1st Object in root Array, list of UID's. */
-    msgpack_pack_array(pk, changed_signal_count);
-    for (uint32_t i = 0; i < channel->index.count; i++) {
-        SignalValue* sv = channel->index.map[i].signal;
-        if (sv->uid == 0) continue;
-        if ((sv->val != sv->final_val) || (sv->bin && sv->bin_size)) {
-            msgpack_pack_uint32(pk, sv->uid);
-        }
-    }
-    /* 2st Object in root Array, list of Values. */
-    msgpack_pack_array(pk, changed_signal_count);
-    for (uint32_t i = 0; i < channel->index.count; i++) {
-        SignalValue* sv = channel->index.map[i].signal;
-        if (sv->uid == 0) continue;
-        if (sv->bin && sv->bin_size) {
-            msgpack_pack_bin_with_body(pk, sv->bin, sv->bin_size);
-            log_simbus("    SignalWrite: %u = <binary> (len=%u) [name=%s]",
-                sv->uid, sv->bin_size, sv->name);
-            /* Indicate the binary object was consumed. */
-            sv->bin_size = 0;
-        } else if (sv->val != sv->final_val) {
-            msgpack_pack_double(pk, sv->final_val);
-            log_simbus("    SignalWrite: %u = %f [name=%s]", sv->uid,
-                sv->final_val, sv->name);
-        }
-    }
-}
-
 static int notify_encode_sv(void* value, void* data)
 {
     AdapterModel*     am = value;
     notify_spec_t*    notify_data = data;
-    flatcc_builder_t* builder = notify_data->builder;
-    assert(builder);
+    flatcc_builder_t* B = notify_data->builder;
+    assert(B);
 
     log_simbus("Notify/ModelReady --> [...]");
     log_simbus("    model_time=%f", am->model_time);
 
-    msgpack_sbuffer sbuf;
-    msgpack_packer  pk;
-    msgpack_sbuffer_init(&sbuf);
-    msgpack_packer_init(&pk, &sbuf, msgpack_sbuffer_write);
-
-    /* Called for each model, emit SV to builder vector (already started). */
+    /* Process scalar channels directly to FBS vectors. */
     for (uint32_t i = 0; i < am->channels_length; i++) {
         Channel* ch = _get_channel_byindex(am, i);
         assert(ch);
         _refresh_index(ch);
         log_simbus("SignalVector --> [%s:%u]", ch->name, am->model_uid);
 
-        msgpack_sbuffer_clear(&sbuf);
-        sv_delta_to_msgpack(ch, &pk);
+        notify(SignalVector_start(B));
+        notify(SignalVector_name_add(
+            B, flatbuffers_string_create_str(B, ch->name)));
+        notify(SignalVector_model_uid_add(B, am->model_uid));
 
-        flatbuffers_string_ref_t sv_name =
-            flatbuffers_string_create_str(builder, ch->name);
-        flatbuffers_uint8_vec_ref_t sv_msgpack_data =
-            flatbuffers_uint8_vec_create(
-                builder, (uint8_t*)sbuf.data, sbuf.size);
-        notify(SignalVector_ref_t) sv = notify(SignalVector_create(
-            builder, sv_name, am->model_uid, sv_msgpack_data));
-        notify(SignalVector_vec_push(builder, sv));
-        log_simbus("    data payload: %lu bytes", sbuf.size);
+        /* Signal UID Vector. */
+        notify(SignalVector_signal_uid_start(B));
+        uint32_t* uid_vector =
+            notify(SignalVector_signal_uid_extend(B, ch->index.count));
+        size_t changed_signal_count = 0;
+        size_t binary_signal_count = 0;
+        for (uint32_t i = 0; i < ch->index.count; i++) {
+            SignalValue* sv = ch->index.map[i].signal;
+            if (sv->uid == 0) continue;
+            if (sv->val != sv->final_val) {
+                uid_vector[changed_signal_count] = sv->uid;
+                changed_signal_count++;
+            }
+            if (sv->bin && sv->bin_size) {
+                /* Indicate that binary signals are present. */
+                binary_signal_count++;
+            }
+        }
+        notify(SignalVector_signal_uid_truncate(
+            B, ch->index.count - changed_signal_count));
+        notify(SignalVector_signal_uid_add(
+            B, notify(SignalVector_signal_uid_end(B))));
+
+        /* Signal Value Vector. */
+        notify(SignalVector_signal_value_start(B));
+        double* value_vector =
+            notify(SignalVector_signal_value_extend(B, changed_signal_count));
+        changed_signal_count = 0;
+        for (uint32_t i = 0; i < ch->index.count; i++) {
+            SignalValue* sv = ch->index.map[i].signal;
+            if (sv->uid == 0) continue;
+            if (sv->val != sv->final_val) {
+                value_vector[changed_signal_count] = sv->final_val;
+                changed_signal_count++;
+                log_simbus("    SignalWrite: %u = %f [name=%s]", sv->uid,
+                    sv->final_val, sv->name);
+            }
+        }
+        notify(SignalVector_signal_value_add(
+            B, notify(SignalVector_signal_value_end(B))));
+
+        /* Encode binary data (if present). */
+        flatbuffers_uint8_vec_ref_t sv_msgpack_data = 0;
+        if (binary_signal_count) {
+            msgpack_sbuffer sbuf;
+            msgpack_packer  pk;
+            msgpack_sbuffer_init(&sbuf);
+            msgpack_packer_init(&pk, &sbuf, msgpack_sbuffer_write);
+            sv_delta_to_msgpack_binonly(ch, &pk, "SignalWrite");
+            sv_msgpack_data =
+                flatbuffers_uint8_vec_create(B, (uint8_t*)sbuf.data, sbuf.size);
+            notify(SignalVector_data_add(B, sv_msgpack_data));
+            log_simbus("    data payload: %lu bytes", sbuf.size);
+            msgpack_sbuffer_destroy(&sbuf);
+        }
+
+        notify(SignalVector_vec_push(B, notify(SignalVector_end(B))));
     }
 
-    msgpack_sbuffer_destroy(&sbuf);
     return 0;
 }
 
@@ -113,10 +116,10 @@ static int notify_encode_model(void* value, void* data)
 {
     AdapterModel*     am = value;
     notify_spec_t*    notify_data = data;
-    flatcc_builder_t* builder = notify_data->builder;
-    assert(builder);
+    flatcc_builder_t* B = notify_data->builder;
+    assert(B);
 
-    flatbuffers_uint32_vec_push(builder, &am->model_uid);
+    flatbuffers_uint32_vec_push(B, &am->model_uid);
     notify_data->last_am = am;
 
     return 0;
@@ -133,7 +136,7 @@ static int adapter_msg_connect(
 {
     Adapter*          adapter = am->adapter;
     AdapterMsgVTable* v = (AdapterMsgVTable*)adapter->vtable;
-    flatcc_builder_t* builder = &(v->builder);
+    flatcc_builder_t* B = &(v->builder);
     ns(MessageType_union_ref_t) message;
 
     for (uint32_t channel_index = 0; channel_index < am->channels_length;
@@ -143,13 +146,13 @@ static int adapter_msg_connect(
         int rc = 0;
         for (int i = 0; i < retry_count; i++) {
             /* ModelRegister (without 'create') */
-            flatcc_builder_reset(builder);
-            ns(ModelRegister_start)(builder);
-            ns(ModelRegister_step_size_add)(builder, sim->step_size);
-            ns(ModelRegister_model_uid_add)(builder, am->model_uid);
-            ns(ModelRegister_notify_uid_add)(builder, sim->uid);
-            message = ns(
-                MessageType_as_ModelRegister(ns(ModelRegister_end)(builder)));
+            flatcc_builder_reset(B);
+            ns(ModelRegister_start)(B);
+            ns(ModelRegister_step_size_add)(B, sim->step_size);
+            ns(ModelRegister_model_uid_add)(B, am->model_uid);
+            ns(ModelRegister_notify_uid_add)(B, sim->uid);
+            message =
+                ns(MessageType_as_ModelRegister(ns(ModelRegister_end)(B)));
             log_simbus("ModelRegister --> [%s]", ch->name);
             log_simbus("    step_size=%f", sim->step_size);
             log_simbus("    model_uid=%d", am->model_uid);
@@ -171,7 +174,7 @@ static int adapter_msg_register(AdapterModel* am)
 {
     Adapter*          adapter = am->adapter;
     AdapterMsgVTable* v = (AdapterMsgVTable*)adapter->vtable;
-    flatcc_builder_t* builder = &(v->builder);
+    flatcc_builder_t* B = &(v->builder);
 
     /* SignalIndex on all channels. */
     for (uint32_t channel_index = 0; channel_index < am->channels_length;
@@ -184,7 +187,7 @@ static int adapter_msg_register(AdapterModel* am)
 
         /* SignalIndex with SignalLookup */
         log_simbus("SignalIndex --> [%s]", ch->name);
-        flatcc_builder_reset(builder);
+        flatcc_builder_reset(B);
 
         /* SignalLookups, encode into a vector */
         ns(SignalLookup_ref_t)* signal_lookup_list =
@@ -194,21 +197,21 @@ static int adapter_msg_register(AdapterModel* am)
             SignalValue* sv = _get_signal_value_byindex(ch, i);
 
             flatbuffers_string_ref_t signal_name;
-            signal_name = flatbuffers_string_create_str(builder, sv->name);
-            ns(SignalLookup_start(builder));
-            ns(SignalLookup_name_add(builder, signal_name));
-            signal_lookup_list[i] = ns(SignalLookup_end(builder));
+            signal_name = flatbuffers_string_create_str(B, sv->name);
+            ns(SignalLookup_start(B));
+            ns(SignalLookup_name_add(B, signal_name));
+            signal_lookup_list[i] = ns(SignalLookup_end(B));
             log_simbus("    SignalLookup: %s [UID=%u]", sv->name, sv->uid);
         }
         ns(SignalLookup_vec_ref_t) signal_lookup_vector;
-        ns(SignalLookup_vec_start(builder));
+        ns(SignalLookup_vec_start(B));
         for (uint32_t i = 0; i < signal_list_length; i++)
-            ns(SignalLookup_vec_push(builder, signal_lookup_list[i]));
-        signal_lookup_vector = ns(SignalLookup_vec_end(builder));
+            ns(SignalLookup_vec_push(B, signal_lookup_list[i]));
+        signal_lookup_vector = ns(SignalLookup_vec_end(B));
 
         /* Construct the final message */
         message = ns(MessageType_as_SignalIndex(
-            ns(SignalIndex_create(builder, signal_lookup_vector))));
+            ns(SignalIndex_create(B, signal_lookup_vector))));
         send_message(
             adapter, ch->endpoint_channel, am->model_uid, message, false);
         free(signal_lookup_list);
@@ -228,7 +231,7 @@ static int adapter_msg_register(AdapterModel* am)
 
         /* SignalRead */
         log_simbus("SignalRead --> [%s]", ch->name);
-        flatcc_builder_reset(builder);
+        flatcc_builder_reset(B);
 
         /* Encode the MsgPack payload: data:[ubyte] = [[SignalUID]] */
         msgpack_sbuffer sbuf;
@@ -248,10 +251,10 @@ static int adapter_msg_register(AdapterModel* am)
 
         /* Construct the final message */
         flatbuffers_uint8_vec_ref_t data_vector;
-        data_vector = flatbuffers_uint8_vec_create(
-            builder, (uint8_t*)sbuf.data, sbuf.size);
-        message = ns(MessageType_as_SignalRead(
-            ns(SignalRead_create(builder, data_vector))));
+        data_vector =
+            flatbuffers_uint8_vec_create(B, (uint8_t*)sbuf.data, sbuf.size);
+        message = ns(
+            MessageType_as_SignalRead(ns(SignalRead_create(B, data_vector))));
         send_message(
             adapter, ch->endpoint_channel, am->model_uid, message, false);
 
@@ -278,38 +281,35 @@ static int adapter_msg_register(AdapterModel* am)
 static int adapter_msg_model_ready(Adapter* adapter)
 {
     AdapterMsgVTable* v = (AdapterMsgVTable*)adapter->vtable;
-    flatcc_builder_t* builder = &(v->builder);
+    flatcc_builder_t* B = &(v->builder);
     notify_spec_t     notify_data = {
             .adapter = adapter,
-            .builder = builder,
+            .builder = B,
     };
 
-    flatcc_builder_reset(builder);
+    flatcc_builder_reset(B);
 
     /* SignalVector vector. */
-    notify(SignalVector_vec_start(builder));
+    notify(SignalVector_vec_start(B));
     hashmap_iterator(&adapter->models, notify_encode_sv, true, &notify_data);
-    notify(SignalVector_vec_ref_t) signals =
-        notify(SignalVector_vec_end(builder));
+    notify(SignalVector_vec_ref_t) signals = notify(SignalVector_vec_end(B));
 
     /* Notify model_uid vector. */
-    flatbuffers_uint32_vec_start(builder);
+    flatbuffers_uint32_vec_start(B);
     hashmap_iterator(&adapter->models, notify_encode_model, true, &notify_data);
-    flatbuffers_uint32_vec_ref_t model_uids =
-        flatbuffers_uint32_vec_end(builder);
-    AdapterModel* am = notify_data.last_am;
+    flatbuffers_uint32_vec_ref_t model_uids = flatbuffers_uint32_vec_end(B);
+    AdapterModel*                am = notify_data.last_am;
     if (am == NULL) return 0;
 
     /* NotifyMessage message. */
-    notify(NotifyMessage_start(builder));
-    notify(NotifyMessage_signals_add(builder, signals));
-    notify(NotifyMessage_model_uid_add(builder, model_uids));
-    notify(NotifyMessage_model_time_add(builder, am->model_time));
-    notify(
-        NotifyMessage_bench_model_time_ns_add(builder, am->bench_steptime_ns));
-    notify(NotifyMessage_bench_notify_time_ns_add(builder,
+    notify(NotifyMessage_start(B));
+    notify(NotifyMessage_signals_add(B, signals));
+    notify(NotifyMessage_model_uid_add(B, model_uids));
+    notify(NotifyMessage_model_time_add(B, am->model_time));
+    notify(NotifyMessage_bench_model_time_ns_add(B, am->bench_steptime_ns));
+    notify(NotifyMessage_bench_notify_time_ns_add(B,
         get_elapsedtime_ns(am->bench_notifyrecv_ts) - am->bench_steptime_ns));
-    notify(NotifyMessage_ref_t) message = notify(NotifyMessage_end(builder));
+    notify(NotifyMessage_ref_t) message = notify(NotifyMessage_end(B));
     send_notify_message(adapter, message);
 
     return 0;
@@ -340,7 +340,7 @@ static int adapter_msg_exit(AdapterModel* am)
 {
     Adapter*          adapter = am->adapter;
     AdapterMsgVTable* v = (AdapterMsgVTable*)adapter->vtable;
-    flatcc_builder_t* builder = &(v->builder);
+    flatcc_builder_t* B = &(v->builder);
     ns(MessageType_union_ref_t) message;
 
     for (uint32_t channel_index = 0; channel_index < am->channels_length;
@@ -348,8 +348,8 @@ static int adapter_msg_exit(AdapterModel* am)
         Channel* ch = _get_channel_byindex(am, channel_index);
         log_simbus("ModelExit --> [%s]", ch->name);
         /* ModelExit */
-        flatcc_builder_reset(builder);
-        message = ns(MessageType_as_ModelExit(ns(ModelExit_create(builder))));
+        flatcc_builder_reset(B);
+        message = ns(MessageType_as_ModelExit(ns(ModelExit_create(B))));
         send_message(
             adapter, ch->endpoint_channel, am->model_uid, message, false);
     }
@@ -514,6 +514,7 @@ static void process_signal_index_message(
         log_simbus("WARNING: no indexes in SignalIndex message!");
         return;
     }
+
     /* Decode the SignalLookup vector. */
     _refresh_index(channel);
     ns(SignalLookup_vec_t) vector = ns(SignalIndex_indexes(signal_index_table));
@@ -635,21 +636,41 @@ static int notify_model(void* value, void* data)
             continue;
         }
         const char* channel_name = notify(SignalVector_name(signal_vector));
+        Channel*    channel = hashmap_get(&am->channels, channel_name);
+        if (channel == NULL) continue;
+        log_simbus("SignalVector <-- [%s]", channel->name);
 
+        /* Process MsgPack encoded signal data. */
         flatbuffers_uint8_vec_t data_vector =
             notify(SignalVector_data(signal_vector));
         size_t data_length = flatbuffers_uint8_vec_len(data_vector);
-        if (data_vector == NULL) {
-            log_simbus("WARNING: signal vector data not provided!");
-            continue;
+        if (data_vector != NULL) {
+            process_signal_value_data(channel, data_vector, data_length);
+            log_simbus("    data payload: %lu bytes", data_length);
         }
-        log_simbus("    data payload: %lu bytes", data_length);
 
-        /* Process the Signal Vector*/
-        Channel* channel = hashmap_get(&am->channels, channel_name);
-        if (channel == NULL) continue;
-        log_simbus("SignalVector <-- [%s]", channel->name);
-        process_signal_value_data(channel, data_vector, data_length);
+        /* Process vector encoded signal data. */
+        flatbuffers_uint32_vec_t uid_vector =
+            notify(SignalVector_signal_uid(signal_vector));
+        size_t uid_length = flatbuffers_uint32_vec_len(uid_vector);
+        flatbuffers_double_vec_t value_vector =
+            notify(SignalVector_signal_value(signal_vector));
+        size_t value_length = flatbuffers_double_vec_len(value_vector);
+        for (size_t i = 0; i < uid_length && i < value_length; i++) {
+            uint32_t _uid = uid_vector[i];
+            double   _value = value_vector[i];
+
+            SignalValue* sv = _find_signal_by_uid(channel, _uid);
+            if ((sv == NULL) && _uid) {
+                log_simbus("WARNING: signal with uid (%u) not found!", _uid);
+                continue;
+            }
+            sv->val = _value;
+            /* Reset final_val (changes will trigger SignalWrite) */
+            sv->final_val = _value;
+            log_simbus(
+                "    SignalValue: %u = %f [name=%s]", _uid, sv->val, sv->name);
+        }
     }
 
     return 0;

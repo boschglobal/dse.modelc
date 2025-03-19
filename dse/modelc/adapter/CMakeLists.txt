@@ -32,6 +32,7 @@ add_library(adapter OBJECT
     create.c
     index.c
     message.c
+    msgpack.c
     simbus/adapter.c
     simbus/handler.c
     simbus/profile.c
