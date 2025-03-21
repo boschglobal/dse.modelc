@@ -50,46 +50,22 @@ static int notify_encode_sv(void* value, void* data)
             B, flatbuffers_string_create_str(B, ch->name)));
         notify(SignalVector_model_uid_add(B, am->model_uid));
 
-        /* Signal UID Vector. */
-        notify(SignalVector_signal_uid_start(B));
-        uint32_t* uid_vector =
-            notify(SignalVector_signal_uid_extend(B, ch->index.count));
-        size_t changed_signal_count = 0;
+        /* Signal Vector. */
         size_t binary_signal_count = 0;
+        notify(SignalVector_signal_start(B));
         for (uint32_t i = 0; i < ch->index.count; i++) {
             SignalValue* sv = ch->index.map[i].signal;
-            if (sv->uid == 0) continue;
-            if (sv->val != sv->final_val) {
-                uid_vector[changed_signal_count] = sv->uid;
-                changed_signal_count++;
+            if ((sv->val != sv->final_val) && sv->uid) {
+                notify(SignalVector_signal_push_create(B, sv->uid, sv->final_val));
+                log_simbus("    SignalWrite: %u = %f [name=%s]", sv->uid,
+                    sv->final_val, sv->name);
             }
-            if (sv->bin && sv->bin_size) {
+            if (sv->bin && sv->bin_size && sv->uid) {
                 /* Indicate that binary signals are present. */
                 binary_signal_count++;
             }
         }
-        notify(SignalVector_signal_uid_truncate(
-            B, ch->index.count - changed_signal_count));
-        notify(SignalVector_signal_uid_add(
-            B, notify(SignalVector_signal_uid_end(B))));
-
-        /* Signal Value Vector. */
-        notify(SignalVector_signal_value_start(B));
-        double* value_vector =
-            notify(SignalVector_signal_value_extend(B, changed_signal_count));
-        changed_signal_count = 0;
-        for (uint32_t i = 0; i < ch->index.count; i++) {
-            SignalValue* sv = ch->index.map[i].signal;
-            if (sv->uid == 0) continue;
-            if (sv->val != sv->final_val) {
-                value_vector[changed_signal_count] = sv->final_val;
-                changed_signal_count++;
-                log_simbus("    SignalWrite: %u = %f [name=%s]", sv->uid,
-                    sv->final_val, sv->name);
-            }
-        }
-        notify(SignalVector_signal_value_add(
-            B, notify(SignalVector_signal_value_end(B))));
+        notify(SignalVector_signal_add(B, notify(SignalVector_signal_end(B))));
 
         /* Encode binary data (if present). */
         flatbuffers_uint8_vec_ref_t sv_msgpack_data = 0;
@@ -193,6 +169,7 @@ static int adapter_msg_register(AdapterModel* am)
         ns(SignalLookup_ref_t)* signal_lookup_list =
             calloc(signal_list_length, sizeof(ns(SignalLookup_ref_t)));
 
+        _refresh_index(ch);
         for (uint32_t i = 0; i < signal_list_length; i++) {
             SignalValue* sv = _get_signal_value_byindex(ch, i);
 
@@ -240,6 +217,7 @@ static int adapter_msg_register(AdapterModel* am)
         msgpack_packer_init(&pk, &sbuf, msgpack_sbuffer_write);
         msgpack_pack_array(&pk, 1);
         msgpack_pack_array(&pk, signal_list_length);
+        _refresh_index(ch);
         for (unsigned int i = 0; i < signal_list_length; i++) {
             SignalValue* sv = _get_signal_value_byindex(ch, i);
             if (sv->uid) {
@@ -472,10 +450,10 @@ static void process_signal_value_data(
         } else {
             /* Double. */
             sv->val = _value;
-            sv->final_val =
-                _value; /* Reset final_val (changes will trigger SignalWrite) */
             log_simbus(
                 "    SignalValue: %u = %f [name=%s]", _uid, sv->val, sv->name);
+            /* Reset final_val (changes will trigger SignalWrite) */
+            sv->final_val = _value;
         }
     }
 
@@ -531,7 +509,11 @@ static void process_signal_index_message(
         if (signal_uid == 0) continue;
         /* Update the Adapter signal_value array. */
         SignalValue* sv = hashmap_get(&channel->signal_values, signal_name);
-        if (sv) sv->uid = signal_uid;
+        if (sv) {
+            sv->uid = signal_uid;
+            /* Add to the lookup index. */
+            hashmap_set_by_hash32(&channel->index.uid2sv_lookup, signal_uid, sv);
+        }
     }
 }
 
@@ -650,15 +632,12 @@ static int notify_model(void* value, void* data)
         }
 
         /* Process vector encoded signal data. */
-        flatbuffers_uint32_vec_t uid_vector =
-            notify(SignalVector_signal_uid(signal_vector));
-        size_t uid_length = flatbuffers_uint32_vec_len(uid_vector);
-        flatbuffers_double_vec_t value_vector =
-            notify(SignalVector_signal_value(signal_vector));
-        size_t value_length = flatbuffers_double_vec_len(value_vector);
-        for (size_t i = 0; i < uid_length && i < value_length; i++) {
-            uint32_t _uid = uid_vector[i];
-            double   _value = value_vector[i];
+        notify(Signal_vec_t) signal_vec = notify(SignalVector_signal(signal_vector));
+        size_t signal_length = notify(Signal_vec_len)(signal_vec);
+        for (size_t i = 0; i < signal_length; i++) {
+            notify(Signal_struct_t) signal = notify(Signal_vec_at(signal_vec, i));
+            uint32_t _uid = signal->uid;
+            double   _value = signal->value;
 
             SignalValue* sv = _find_signal_by_uid(channel, _uid);
             if ((sv == NULL) && _uid) {

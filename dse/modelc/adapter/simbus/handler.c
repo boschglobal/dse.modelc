@@ -63,7 +63,7 @@ static void process_signal_index_message(Adapter* adapter, Channel* channel,
         ns(SignalLookup_signal_uid_add(B, signal_uid));
         resp__signal_lookup_list[_vi] = ns(SignalLookup_end(B));
     }
-    _refresh_index(channel);
+    _generate_index(channel);
 
     /* Create the response Lookup vecotr. */
     log_simbus("SignalIndex --> [%s]", channel->name);
@@ -412,15 +412,13 @@ static void process_notify_signalvector(Adapter* adapter, Channel* channel,
     }
 
     /* Process vector encoded signal data. */
-    flatbuffers_uint32_vec_t uid_vector =
-        notify(SignalVector_signal_uid(signal_vector));
-    size_t uid_length = flatbuffers_uint32_vec_len(uid_vector);
-    flatbuffers_double_vec_t value_vector =
-        notify(SignalVector_signal_value(signal_vector));
-    size_t value_length = flatbuffers_double_vec_len(value_vector);
-    for (size_t i = 0; i < uid_length && i < value_length; i++) {
-        uint32_t _uid = uid_vector[i];
-        double   _value = value_vector[i];
+    notify(Signal_vec_t) signal_vec =
+        notify(SignalVector_signal(signal_vector));
+    size_t signal_length = notify(Signal_vec_len)(signal_vec);
+    for (size_t i = 0; i < signal_length; i++) {
+        notify(Signal_struct_t) signal = notify(Signal_vec_at(signal_vec, i));
+        uint32_t _uid = signal->uid;
+        double   _value = signal->value;
 
         SignalValue* sv = _find_signal_by_uid(channel, _uid);
         if ((sv == NULL) && _uid) {
@@ -470,46 +468,23 @@ static void resolve_and_notify(
             B, flatbuffers_string_create_str(B, ch->name)));
         notify(SignalVector_model_uid_add(B, am->model_uid));
 
-        /* Signal UID Vector. */
-        notify(SignalVector_signal_uid_start(B));
-        uint32_t* uid_vector =
-            notify(SignalVector_signal_uid_extend(B, ch->index.count));
-        size_t changed_signal_count = 0;
+        /* Signal Vector. */
         size_t binary_signal_count = 0;
+        notify(SignalVector_signal_start(B));
         for (uint32_t i = 0; i < ch->index.count; i++) {
             SignalValue* sv = ch->index.map[i].signal;
-            if (sv->uid == 0) continue;
-            if (sv->val != sv->final_val) {
-                uid_vector[changed_signal_count] = sv->uid;
-                changed_signal_count++;
+            if ((sv->val != sv->final_val) && sv->uid) {
+                notify(
+                    SignalVector_signal_push_create(B, sv->uid, sv->final_val));
+                log_simbus("    SignalValue: %u = %f [name=%s]", sv->uid,
+                    sv->final_val, sv->name);
             }
-            if (sv->bin && sv->bin_size) {
+            if (sv->bin && sv->bin_size && sv->uid) {
                 /* Indicate that binary signals are present. */
                 binary_signal_count++;
             }
         }
-        notify(SignalVector_signal_uid_truncate(
-            B, ch->index.count - changed_signal_count));
-        notify(SignalVector_signal_uid_add(
-            B, notify(SignalVector_signal_uid_end(B))));
-
-        /* Signal Value Vector. */
-        notify(SignalVector_signal_value_start(B));
-        double* value_vector =
-            notify(SignalVector_signal_value_extend(B, changed_signal_count));
-        changed_signal_count = 0;
-        for (uint32_t i = 0; i < ch->index.count; i++) {
-            SignalValue* sv = ch->index.map[i].signal;
-            if (sv->uid == 0) continue;
-            if (sv->val != sv->final_val) {
-                value_vector[changed_signal_count] = sv->final_val;
-                changed_signal_count++;
-                log_simbus("    SignalValue: %u = %f [name=%s]", sv->uid,
-                    sv->final_val, sv->name);
-            }
-        }
-        notify(SignalVector_signal_value_add(
-            B, notify(SignalVector_signal_value_end(B))));
+        notify(SignalVector_signal_add(B, notify(SignalVector_signal_end(B))));
 
         /* Encode binary data (if present). */
         flatbuffers_uint8_vec_ref_t sv_msgpack_data = 0;

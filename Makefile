@@ -227,11 +227,9 @@ endif
 do-clean:
 	@for d in $(SUBDIRS); do ($(MAKE) -C $$d clean ); done
 	$(MAKE) -C tests/cmocka clean
-	$(MAKE) -C tests/pytest/benchmark clean
 	rm -rf $(OSS_DIR)
 	rm -rvf *.zip
 	rm -rvf *.log
-	find . -name '__pycache__' -type d | xargs rm -fr
 
 .PHONY: do-cleanall
 do-cleanall: do-clean

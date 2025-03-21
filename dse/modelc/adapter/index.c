@@ -126,8 +126,17 @@ SignalValue* _get_signal_value(Channel* channel, const char* signal_name)
 
 SignalValue* _get_signal_value_byindex(Channel* channel, uint32_t index)
 {
-    _refresh_index(channel);
-    assert(index < channel->index.count);
+    /* PERFORMANCE: call _refresh_index() before calling this function from
+       a loop to ensure the index is recreated before accessing elements.
+
+       Calling _refresh_index() hits performance when inside the loop (i.e.
+       here in this function).
+
+        _refresh_index(channel);
+        for (uint32_t i = 0; i < ch->index.count; i++) {
+
+        }
+    */
     return channel->index.map[index].signal;
 }
 
@@ -138,8 +147,13 @@ SignalMap* _get_signal_value_map(
 
     sm = calloc(signal_count, sizeof(SignalMap));
     for (uint32_t i = 0; i < signal_count; i++) {
+        SignalValue* sv = _get_signal_value(channel, signal_name[i]);
         sm[i].name = signal_name[i];
-        sm[i].signal = _get_signal_value(channel, signal_name[i]);
+        sm[i].signal = sv;
+        /* Add to the lookup index. */
+        if (sv->uid) {
+            hashmap_set_by_hash32(&channel->index.uid2sv_lookup, sv->uid, sv);
+        }
     }
     return sm;
 }

@@ -40,6 +40,6 @@ do
             $SIGNAL_CHANGE \
             $STACKED \
             $LOOPBACK \
-            2>&1 | tee -a dse/modelc/examples/benchmark/charts/${CHART_NAME}.txt | grep ::benchmark:
+            2>&1 | tee -a dse/modelc/examples/benchmark/charts/${CHART_NAME}.txt | grep :::benchmark:
     done
 done

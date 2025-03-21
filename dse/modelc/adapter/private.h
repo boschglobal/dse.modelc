@@ -16,6 +16,7 @@
 DLL_PRIVATE void _refresh_index(Channel* channel);
 DLL_PRIVATE void _destroy_index(Channel* channel);
 DLL_PRIVATE void _invalidate_index(Channel* channel);
+DLL_PRIVATE void _generate_index(Channel* channel);
 
 DLL_PRIVATE Channel* _get_channel(AdapterModel* am, const char* channel_name);
 DLL_PRIVATE Channel* _get_channel_byindex(AdapterModel* am, uint32_t index);
