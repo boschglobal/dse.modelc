@@ -12,14 +12,30 @@ github_subdir: "doc"
 
 ## Overview
 
-The Dynamic Simulation Environment supports the construction of Distributed Simulation Topologies, as well as Single Process SImulation Topologies, using both the Simer and ModelC simulation runtimes. Additionally, the underlying messaging transport can also be implemented in any programming language or operating system.
+The Dynamic Simulation Environment provides several simulation topologies, all
+of which support distributed simulations, that may incorporate models running
+on multiple OS/Arch combinations or running in multiple simulation environments.
+
+These topologies include:
+
+* __Model Runtime__ - Stacked model instance (single process) / Loopback SimBus
+* __Stacked w. Redis__ - Stacked model instance (single process) / Redis SimBus
+* __Distributed w. Redis__ - Distributed model instances (process per model) / Redis SimBus
+* __Gateway__ - Remote simulation systems are connected with a _gateway_ model / Redis SimBus
+* __MCL__ - Foreign models are imported via a Model Compatibility Library / Loopback SimBus
+* __Realtime__ - Distributed and Stacked model instances / Loopback & Redis SimBus
+* __Embedded__ - External models and sensors and connected with a _POP_ model / TCP
+
+These topologies are supported by the Simer docker appliance (Linux) and
+ModelC runtime (Linux/Windows). The underlying messaging protocol used by the
+Dynamic Simulation Environment is implemented with Flatbuffers and may be
+implemented in any programming language or operating system.
 
 
-## Stacked
+## Model Runtime
 
-Several Models are stacked in a single model runtime.
-
-
+Several Models are stacked in a single model runtime. For example, the runtime
+may be packaged as an FMU using the FMI ModelC FMU wrapper.
 
 
 ### Stacked w. Loopback
@@ -109,7 +125,6 @@ spec:
 
 
 
-
 ### Stacked Sequential Co-Sim
 
 > Note: This is a future/planned development.
@@ -171,12 +186,15 @@ _TBD_
 
 
 
+## Stacked w. Redis
 
-## Distributed
+Several Models are stacked in a single model runtime and connect to a Redis
+based SimBus.
+
+
+## Distributed w. Redis
 
 Models are distributed in several instances of a model runtime. Model runtimes may run on several computers, use different operating systems, and execute in other Simulation Environments.
-
-
 
 
 ### Native w. Redis
@@ -284,19 +302,28 @@ spec:
 
 
 
+## Gateway
 
-### Gateway
-
-_TBD_
-
-
-## Integrated
-
-### MCL Models
-
-_TBD_
+Remote systems are connected to a simulation using a Gateway model. The Gateway
+model is implemented in the remote systems operating framework and may use
+either existing integrations (i.e. the ModelC Library) or a direct implementation
+of the Flatbuffer based DSE messaging protocol.
 
 
-### Embedded
+## MCL
 
-_TBD_
+Foreign models are imported to a simulation using a Model Compatibility Library
+which may be implemented for any model standard (e.g. FMI MCL).
+
+
+## Realtime
+
+A simulation is deployed in a realtime simulation environment (e.g. HIL) with
+a combination of distributed and stacked model instances, using a Redis based
+SimBus, to ensure consistent realtime operation.
+
+
+## Embedded
+
+External models, sensors and ECUs are connected via native protocols (e.g. TCP)
+to a _Point-of-Presence_ model running within a Simer based simulation.

@@ -46,3 +46,8 @@ do
             2>&1 | tee -a dse/modelc/examples/benchmark/charts/${CHART_NAME}.txt | grep :::benchmark:
     done
 done
+
+extra/tools/benchmark/bin/benchmark chart \
+    -title "Benchmark: Increasing Model Count" \
+    -conditions "CoSim w. step 0.5 mS (ThinkPad T16 G2, 1900 Mhz, 14 Core)" \
+    -input dse/modelc/examples/benchmark/charts/${CHART_NAME}.txt

@@ -10,6 +10,7 @@ import (
 	"os"
 
 	"github.boschdevcloud.com/fsil/fsil.go/command"
+	"github.com/boschglobal/dse.modelc/extra/tools/benchmark/internal/app/chart"
 	"github.com/boschglobal/dse.modelc/extra/tools/benchmark/internal/app/signalgroup"
 	"github.com/boschglobal/dse.modelc/extra/tools/benchmark/internal/app/simulation"
 )
@@ -18,6 +19,7 @@ var cmds = []command.CommandRunner{
 	command.NewHelpCommand("help"),
 	signalgroup.NewSignalGroupCommand("signalgroup"),
 	simulation.NewSimulationCommand("simulation"),
+	chart.NewChartCommand("chart"),
 }
 
 var usage = `
