@@ -46,5 +46,7 @@ done
 
 extra/tools/benchmark/bin/benchmark chart \
     -title "Benchmark: Increasing Signal Throughput" \
-    -conditions "CoSim w. step 0.5 mS (ThinkPad T16 G2, 1900 Mhz, 14 Core)" \
+    -conditions "4000 signals, 5 models, step size 0.5 mS (ThinkPad T16 G2, 1900 Mhz, 14 Core)" \
+    -axis_index 2 \
+    -axis_label "Signal Throughput" \
     -input dse/modelc/examples/benchmark/charts/${CHART_NAME}.txt

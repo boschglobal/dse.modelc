@@ -98,6 +98,8 @@ func (c *SimulationCommand) Run() error {
 					"data/signal_group.yaml",
 				},
 				Env: &map[string]string{
+					"MODEL_COUNT":   fmt.Sprintf("%d", c.modelCount),
+					"MODEL_ID":      fmt.Sprintf("%d", i),
 					"SIGNAL_CHANGE": fmt.Sprintf("%d", c.signalChange),
 				},
 			},

@@ -13,14 +13,6 @@
 #include <dse/logger.h>
 
 
-static uint64_t _get_seed()
-{
-    struct timeval tv;
-    gettimeofday(&tv, NULL);
-    return tv.tv_sec * (uint64_t)1000000 + tv.tv_usec;
-}
-
-
 static struct timespec _get_timespec_now(void)
 {
     struct timespec ts = {};
@@ -38,23 +30,19 @@ static uint64_t _get_elapsedtime_us(struct timespec ref)
 }
 
 
-static uint32_t _get_signal_change(
-    SignalVector* sv, uint32_t limit, uint32_t* seed)
-{
-    if (limit == 1) return limit;
-
-    uint32_t minimum = 1;
-    uint32_t maximum = (limit > sv->count) ? sv->count : limit;
-    /* 1 .. 1000 -> 1 .. rand_r(change) */
-    return (rand_r(seed) % (maximum + 1 - minimum)) + minimum;
-}
-
-
 typedef struct {
     ModelDesc       model;
-    /* Benchmark parameters. */
-    uint32_t        signal_change;
-    uint32_t        change_seed;
+
+    /* Operation Parameters */
+    uint32_t model_id;
+
+    /* Block Parameters (calculated). */
+    struct {
+        SignalVector* sv;
+        uint32_t      offset;
+        uint32_t      size;
+    } block;
+
     /* Profiling data. */
     struct timespec start_time;
     uint64_t        setup_time;
@@ -92,10 +80,20 @@ ModelDesc* model_create(ModelDesc* model)
     memcpy(m, model, sizeof(ModelDesc));
     m->start_time = _get_timespec_now();
 
-    /* Setup the benchmark parameters. */
-    m->signal_change =
-        _get_envar((ModelDesc*)m, "SIGNAL_CHANGE", m->model.sv->count);
-    m->change_seed = _get_seed();
+    /* Setup the parameters. */
+    m->model_id = _get_envar((ModelDesc*)m, "MODEL_ID", 1);
+    m->block.size = _get_envar((ModelDesc*)m, "SIGNAL_CHANGE", 5);
+    m->block.sv = m->model.sv;
+    m->block.offset = m->block.size * (m->model_id - 1);
+    if ((m->block.offset + m->block.size) > m->model.sv->count) {
+        m->block.offset = 0;
+    }
+
+     /* Document the conditions. */
+    log_notice("m->model_id %u", m->model_id);
+    log_notice("m->block.offset %u", m->block.offset);
+    log_notice("m->block.size %u", m->block.size);
+    log_notice("m->block.sv->count %u", m->block.sv->count);
 
     /* Return the extended object. */
     return (ModelDesc*)m;
@@ -109,16 +107,12 @@ int model_step(ModelDesc* model, double* model_time, double stop_time)
         m->setup_time = _get_elapsedtime_us(m->start_time);
     }
 
-    for (SignalVector* sv = m->model.sv; sv->name; sv++) {
-        uint32_t count =
-            _get_signal_change(sv, m->signal_change, &m->change_seed);
-        log_info("Signal change count is : %d", count);
-        for (size_t i = 0; i < count; i++) {
-            sv->scalar[i] += 1.2;
-        }
+    for (size_t i = 0; i < m->block.size; i++) {
+        size_t idx = m->block.offset + i;
+        m->block.sv->scalar[idx] += 1;
     }
-    m->step_count += 1;
 
+    m->step_count += 1;
     *model_time = stop_time;
     return 0;
 }
@@ -134,8 +128,8 @@ void model_destroy(ModelDesc* model)
         ":::benchmark:%s::%s;%s;%.6f;%.6f;%u;%u;%u;%lu;%."
         "3f;%.3f:::" LOG_COLOUR_NONE,
         tag, m->model.sim->transport, m->model.sim->uri,
-        m->model.sim->step_size, m->model.sim->end_time, m->model.mi->uid,
-        m->model.sv->count, m->signal_change, m->step_count,
+        m->model.sim->step_size, m->model.sim->end_time, m->model_id,
+        m->model.sv->count, m->block.size, m->step_count,
         m->setup_time / 1000000.0,
         _get_elapsedtime_us(m->start_time) / 1000000.0);
 }

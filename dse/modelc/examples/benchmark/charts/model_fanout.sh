@@ -34,7 +34,7 @@ do
         STACKED=0
         ;;
     esac
-    for MODEL_COUNT in 1 2 3 4 6 8 12 16
+    for MODEL_COUNT in 1 2 3 4 5 6 7 8 9 10
     do
         SIGNAL_CHANGE=$(( $CHANGE_COUNT / $MODEL_COUNT ))
         sh dse/modelc/examples/benchmark/scripts/benchmark.sh \
@@ -49,5 +49,7 @@ done
 
 extra/tools/benchmark/bin/benchmark chart \
     -title "Benchmark: Increasing Model Count" \
-    -conditions "CoSim w. step 0.5 mS (ThinkPad T16 G2, 1900 Mhz, 14 Core)" \
+    -conditions "4000 Signals, 400 change per step, step size 0.5 mS (ThinkPad T16 G2, 1900 Mhz, 14 Core)" \
+    -axis_index 3 \
+    -axis_label "Model Count" \
     -input dse/modelc/examples/benchmark/charts/${CHART_NAME}.txt

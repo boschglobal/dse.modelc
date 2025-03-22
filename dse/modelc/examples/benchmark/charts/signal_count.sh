@@ -47,5 +47,7 @@ done
 
 extra/tools/benchmark/bin/benchmark chart \
     -title "Benchmark: Increasing Signal Count" \
-    -conditions "CoSim w. step 0.5 mS (ThinkPad T16 G2, 1900 Mhz, 14 Core)" \
+    -conditions "200 signal change per step, 5 models, step size 0.5 mS (ThinkPad T16 G2, 1900 Mhz, 14 Core)" \
+    -axis_index 1 \
+    -axis_label "Total Signal Count" \
     -input dse/modelc/examples/benchmark/charts/${CHART_NAME}.txt

@@ -28,6 +28,8 @@ type ChartCommand struct {
 
 	title      string
 	conditions string
+	axisIndex  uint
+	axisLabel  string
 	inputFile  string
 	outputFile string
 }
@@ -41,6 +43,8 @@ func NewChartCommand(name string) *ChartCommand {
 	}
 	c.FlagSet().StringVar(&c.title, "title", "Benchmark", "chart title")
 	c.FlagSet().StringVar(&c.conditions, "conditions", "Conditions (N/A)", "chart conditions")
+	c.FlagSet().UintVar(&c.axisIndex, "axis_index", 1, "axis index from [redis_4000_200_10], index=3 -> 10")
+	c.FlagSet().StringVar(&c.axisLabel, "axis_label", "", "axis label")
 	c.FlagSet().StringVar(&c.inputFile, "input", "", "path to captured console output of benchmark simulation")
 	c.FlagSet().StringVar(&c.outputFile, "output", "", "path to write generated chart ()")
 	return c
@@ -113,8 +117,8 @@ func (c *ChartCommand) getSeries() (*chartSeries, error) {
 		lines: orderedmap.NewOrderedMap[string, []float64](),
 	}
 	for key, samples := range raw_sample.AllFromFront() {
-		s := strings.SplitN(key, `_`, 2)
-		name, sample := s[0], s[1]
+		s := strings.SplitN(key, `_`, -1)
+		name, sample := s[0], s[c.axisIndex]
 		value := func() float64 {
 			var max float64
 			for _, v := range samples {
@@ -158,7 +162,7 @@ func (c *ChartCommand) generateChart(series *chartSeries) error {
 		charts.WithLegendOpts(opts.Legend{Top: "bottom"}),
 		charts.WithYAxisOpts(opts.YAxis{Name: "Rel. to Realtime"}),
 		charts.WithXAxisOpts(opts.XAxis{
-			Name:         "(total signals / signals per step / number models)",
+			Name:         c.axisLabel,
 			NameLocation: "center",
 			NameGap:      30,
 		}),
