@@ -224,7 +224,7 @@ void test_model__benchmark(void** state)
         /* Step the model. */
         assert_int_equal(simmock_step(mock, true), 0);
         simmock_print_scalar_signals(mock, LOG_DEBUG);
-        counter += 1.2;
+        counter += 1;
     }
 }
 

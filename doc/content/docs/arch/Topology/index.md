@@ -42,7 +42,7 @@ may be packaged as an FMU using the FMI ModelC FMU wrapper.
 
 Characteristics:
 
-* Single Process - Sequential execution of models within a single process using the **ModelC** model runtime. Performance limited by CPU clock speed.
+* Single Process - Sequential execution of models within a single process using the __ModelC__ model runtime. Performance limited by CPU clock speed.
 * Co-Simulation - Phase shift for signal exchange between model steps (i.e. output to input). Phase shift is equal to one simulation step.
 * Loopback SimBus - Low latency execution with no external/network signal exchange.
 * Limited deployment - Use of Loopback SimBus means that only single process deployment is possible.
@@ -131,7 +131,7 @@ spec:
 
 Characteristics:
 
-* Single Process - Sequential execution of models within a single process using the **ModelC** model runtime. Performance limited by CPU clock speed.
+* Single Process - Sequential execution of models within a single process using the __ModelC__ model runtime. Performance limited by CPU clock speed.
 * Co-Simulation - Sequential-Co-Simulation resulting in _no_ phase shift _between_ the stacked models.
 * Limited deployment - Used to compose models from several "component" models where the resultant model does not exhibit phase shift between its input and output signals for any simulation step.
 
@@ -201,10 +201,10 @@ Models are distributed in several instances of a model runtime. Model runtimes m
 
 Characteristics:
 
-* Multi Process - Parallel execution of models using a **Simer/ModelC** model runtime. Performance limited by number of CPU Cores and Processing Nodes (e.g. VMs/Workstations).
+* Multi Process - Parallel execution of models using a __Simer/ModelC__ model runtime. Performance limited by number of CPU Cores and Processing Nodes (e.g. VMs/Workstations).
 * Co-Simulation - Phase shift for signal exchange between model steps (i.e. output to input). Phase shift is equal to one simulation step.
-* Redis w. SimBus - Low latency signal exchange when running with a **Simer** deployment, medium latency when operating cross-platform simulation (latency depends on network performance).
-* Flexible deployment - The **Simer** Container Runtime can be used for high performance, scaled, Linux deployments. The underlying model runtime **ModelC** is available for Windows deployments. Both can be combined to create distributed simulations.
+* Redis w. SimBus - Low latency signal exchange when running with a __Simer__ deployment, medium latency when operating cross-platform simulation (latency depends on network performance).
+* Flexible deployment - The __Simer__ Container Runtime can be used for high performance, scaled, Linux deployments. The underlying model runtime __ModelC__ is available for Windows deployments. Both can be combined to create distributed simulations.
 
 
 #### Sequence Diagram

@@ -25,7 +25,10 @@ stdout 'Name: benchmark_inst_1'
 stdout 'name         : data_channel'
 stdout 'Run the Simulation ...'
 stdout 'Controller exit ...'
-stdout '::benchmark:::redispubsub;redis://localhost:6379;0.000500;0.040000;44;5;2;'
+stdout '::benchmark:::redispubsub;redis://localhost:6379;0.000500;0.040000;1;5;2;'
+stdout '::benchmark:::redispubsub;redis://localhost:6379;0.000500;0.040000;2;5;2;'
+stdout '::benchmark:::redispubsub;redis://localhost:6379;0.000500;0.040000;3;5;2;'
+stdout '::benchmark:::redispubsub;redis://localhost:6379;0.000500;0.040000;4;5;2;'
 
 
 
@@ -80,6 +83,7 @@ for i in $(seq 1 "$INSTANCE_COUNT"); do
             \"model\": { \"name\": \"Benchmark\" },
             \"runtime\": {
                 \"env\": {
+                    \"MODEL_ID\" : $i,
                     \"SIGNAL_CHANGE\" : \"$SIGNAL_CHANGE\"
                 },
                 \"files\": [\"data/signal_group.yaml\"]

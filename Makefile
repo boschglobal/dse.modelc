@@ -249,7 +249,7 @@ super-linter:
 		--env RUN_LOCAL=true \
 		--env DEFAULT_BRANCH=main \
 		--env IGNORE_GITIGNORED_FILES=true \
-		--env FILTER_REGEX_EXCLUDE="(dse/mocks/examples/.*|dse/modelc/examples/doc/.*|doc/content/apis/modelc/examples/.*|doc/content/docs/examples/modelc/.*|doc/content/apis.*)" \
+		--env FILTER_REGEX_EXCLUDE="(dse/mocks/examples/.*|dse/modelc/examples/doc/.*|doc/content/apis/modelc/examples/.*|doc/content/docs/examples/modelc/.*|doc/content/apis.*|extra/tools/benchmark/vendor/.*)" \
 		--env VALIDATE_CPP=true \
 		--env VALIDATE_DOCKERFILE=true \
 		--env VALIDATE_MARKDOWN=true \
