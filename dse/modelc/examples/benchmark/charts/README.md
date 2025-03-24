@@ -22,3 +22,16 @@ $ sh dse/modelc/examples/benchmark/charts/model_fanout.sh
 $ sh dse/modelc/examples/benchmark/charts/signal_count.sh
 $ sh dse/modelc/examples/benchmark/charts/signal_throughput.sh
 ```
+
+
+## Codespaces
+
+Run scripts under/with sudo `sudo`. 
+
+
+```bash
+# Install google-chrome:
+sudo add-apt-repository ppa:xtradeb/apps -y
+sudo apt update
+sudo apt install chromium
+```

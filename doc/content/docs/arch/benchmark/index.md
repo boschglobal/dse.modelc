@@ -75,3 +75,54 @@ with optimization `-03`. Values are presented relative to realtime operation.
 
 
 ![benchmark-model-count](model_fanout.png)
+
+
+
+
+
+
+
+
+## Benchmark (Codespace 4 vCPU)
+
+Host system is a Codespace 4 core virtual machine. Reports CPU as Xeon Platinum 8370C 
+(Intel(R) Xeon(R) Platinum 8370C CPU, 2.80GHz, 4 Core, 16 GB Memory) with Linux. 
+All binaries are compiled for `amd64` architecture with optimization `-03`. 
+Values are presented relative to realtime operation.
+
+
+### Signal Count
+
+| Variable           | Value |
+| ------------------ | ----- |
+| `SIGNAL_COUNT`     | Increasing range (count = 1000 * 2^N for N=0,1,2,3,4,5) |
+| `SIGNAL_CHANGE`    | Constant at 200 signals per simulation step, distributed evenly over all models |
+| `MODEL_COUNT`      | Constant at 5 |
+
+![benchmark-signal-count](codespace4core-signal_count.png)
+
+
+### Signal Throughput
+
+| Variable           | Value |
+| ------------------ | ----- |
+| `SIGNAL_COUNT`     | Constant at 4000 |
+| `SIGNAL_CHANGE`    | Increasing range (change per model = 25 50 100 200 400 800**), distributed evenly over all models |
+| `MODEL_COUNT`      | Constant at 5 |
+
+> Note: **Represents saturation with 4000 signal changes per simulation step.
+
+
+![benchmark-signal-throughput](codespace4core-signal_throughput.png)
+
+
+### Model Count
+
+| Variable           | Value |
+| ------------------ | ----- |
+| `SIGNAL_COUNT`     | Constant at 4000 |
+| `SIGNAL_CHANGE`    | Constant at 400, distributed evenly over all models |
+| `MODEL_COUNT`      | Increasing range (count = 1 2 3 4 ...) |
+
+
+![benchmark-model-count](codespace4core-model_fanout.png)
