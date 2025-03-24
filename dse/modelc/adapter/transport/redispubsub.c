@@ -137,7 +137,7 @@ Endpoint* redispubsub_connect(const char* path, const char* hostname,
     redisContext* _ctx = (redisContext*)redis_ep->ctx;
     if (_ctx == NULL || _ctx->err) {
         if (_ctx) {
-            log_notice("Connection error: %s", _ctx->errstr);
+            log_notice("Connect retry (response was: %s)", _ctx->errstr);
         } else {
             log_error("Connection error: can't allocate Redis context");
         }
