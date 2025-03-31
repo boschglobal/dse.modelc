@@ -29,7 +29,6 @@ typedef struct SimbusVector {
 
 typedef struct SimbusChannel {
     const char*  name;
-    bool         is_binary;
     SimpleSet    signals;
     SimbusVector vector;
 } SimbusChannel;

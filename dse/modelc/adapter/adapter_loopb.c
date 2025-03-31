@@ -221,11 +221,9 @@ static int _resolve_bus(void* _sc, void* _)
     UNUSED(_);
     SimbusChannel* sc = _sc;
 
-    if (sc->is_binary) {
         for (uint32_t i = 0; i < sc->vector.count; i++) {
             sc->vector.length[i] = 0;
         }
-    }
 
     return 0;
 }
@@ -248,34 +246,26 @@ static int ready_update_sv(void* value, void* data)
         log_simbus("SignalVector --> [%s]", ch->name);
 
         _refresh_index(ch);
-        if (sc->is_binary) {
-            for (uint32_t i = 0; i < ch->index.count; i++) {
-                SignalValue* sv = _get_signal_value_byindex(ch, i);
-                assert(sv);
-                if (sv == NULL) continue;
-                if (sv->name == NULL) continue;
+        for (uint32_t i = 0; i < ch->index.count; i++) {
+            SignalValue* sv = _get_signal_value_byindex(ch, i);
+            assert(sv);
+            if (sv == NULL) continue;
+            if (sv->name == NULL) continue;
 
-                if (sv->bin && sv->bin_size) {
-                    dse_buffer_append(&sc->vector.binary[sv->vector_index],
-                        &sc->vector.length[sv->vector_index],
-                        &sc->vector.buffer_size[sv->vector_index], sv->bin,
-                        sv->bin_size);
-                    log_simbus(
-                        "    SignalValue: %u = <binary> (len=%u) [name=%s]",
-                        sv->uid, sv->bin_size, sv->name);
-                    /* Indicate the binary object was consumed. */
-                    sv->bin_size = 0;
-                }
-            }
-        } else {
-            /* Merge in changed signals. */
-            for (uint32_t i = 0; i < ch->index.count; i++) {
-                SignalValue* sv = _get_signal_value_byindex(ch, i);
-                if (sv->val != sv->final_val) {
-                    sc->vector.scalar[sv->vector_index] = sv->final_val;
-                    log_simbus("    SignalValue: %u = %f [name=%s]", sv->uid,
-                        sv->final_val, sv->name);
-                }
+            if (sv->bin && sv->bin_size) {
+                dse_buffer_append(&sc->vector.binary[sv->vector_index],
+                    &sc->vector.length[sv->vector_index],
+                    &sc->vector.buffer_size[sv->vector_index], sv->bin,
+                    sv->bin_size);
+                log_simbus(
+                    "    SignalValue: %u = <binary> (len=%u) [name=%s]",
+                    sv->uid, sv->bin_size, sv->name);
+                /* Indicate the binary object was consumed. */
+                sv->bin_size = 0;
+            } else if (sv->val != sv->final_val) {
+                sc->vector.scalar[sv->vector_index] = sv->final_val;
+                log_simbus("    SignalValue: %u = %f [name=%s]", sv->uid,
+                    sv->final_val, sv->name);
             }
         }
     }
@@ -319,39 +309,37 @@ static int notify_update_sv(void* value, void* data)
         log_simbus("SignalVector <-- [%s]", ch->name);
 
         _refresh_index(ch);
-        if (sc->is_binary) {
-            for (uint32_t i = 0; i < ch->index.count; i++) {
-                SignalValue* sv = _get_signal_value_byindex(ch, i);
-                assert(sv);
-                if (sv == NULL) continue;
-                if (sv->name == NULL) continue;
+        for (uint32_t i = 0; i < ch->index.count; i++) {
+            SignalValue* sv = _get_signal_value_byindex(ch, i);
+            assert(sv);
+            if (sv == NULL) continue;
+            if (sv->name == NULL) continue;
 
-                if (sc->vector.binary[sv->vector_index] &&
-                    sc->vector.length[sv->vector_index]) {
-                    dse_buffer_append(&sv->bin, &sv->bin_size,
-                        &sv->bin_buffer_size,
-                        sc->vector.binary[sv->vector_index],
-                        sc->vector.length[sv->vector_index]);
-                    log_simbus(
-                        "    SignalValue: %u = <binary> (len=%u) [name=%s]",
-                        sv->uid, sv->bin_size, sv->name);
-                }
-            }
-        } else {
-            if (__log_level__ <= LOG_SIMBUS) {
-                for (uint32_t i = 0; i < ch->index.count; i++) {
-                    SignalValue* sv = _get_signal_value_byindex(ch, i);
-                    if (sv->val != sc->vector.scalar[sv->vector_index]) {
-                        log_simbus("    SignalValue: %u = %f [name=%s]",
-                            sv->uid, sc->vector.scalar[sv->vector_index],
-                            sv->name);
+            if (sc->vector.binary[sv->vector_index] &&
+                sc->vector.length[sv->vector_index]) {
+                dse_buffer_append(&sv->bin, &sv->bin_size,
+                    &sv->bin_buffer_size,
+                    sc->vector.binary[sv->vector_index],
+                    sc->vector.length[sv->vector_index]);
+                log_simbus(
+                    "    SignalValue: %u = <binary> (len=%u) [name=%s]",
+                    sv->uid, sv->bin_size, sv->name);
+            } else {
+                if (__log_level__ <= LOG_SIMBUS) {
+                    for (uint32_t i = 0; i < ch->index.count; i++) {
+                        SignalValue* sv = _get_signal_value_byindex(ch, i);
+                        if (sv->val != sc->vector.scalar[sv->vector_index]) {
+                            log_simbus("    SignalValue: %u = %f [name=%s]",
+                                sv->uid, sc->vector.scalar[sv->vector_index],
+                                sv->name);
+                        }
                     }
                 }
-            }
 
-            for (uint32_t i = 0; i < ch->index.count; i++) {
-                SignalValue* sv = _get_signal_value_byindex(ch, i);
-                sv->final_val = sv->val = sc->vector.scalar[sv->vector_index];
+                for (uint32_t i = 0; i < ch->index.count; i++) {
+                    SignalValue* sv = _get_signal_value_byindex(ch, i);
+                    sv->final_val = sv->val = sc->vector.scalar[sv->vector_index];
+                }
             }
         }
     }

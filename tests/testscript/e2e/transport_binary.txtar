@@ -1,0 +1,78 @@
+env NAME=binary_inst
+env SIM=dse/modelc/build/_out/examples/binary
+
+
+# TEST: redispubsub
+env SIMBUS_TRANSPORT=redispubsub
+env SIMBUS_URI=redis://localhost:6379
+exec sh -e $WORK/test.sh
+
+stderr 'Using Valgrind'
+stdout 'Transport: redispubsub'
+stdout 'URI: redis://localhost:6379'
+stdout 'Message \(message\) : count is 43'
+stdout 'Message \(message\) : count is 44'
+stdout 'Message \(message\) : count is 45'
+stdout 'Message \(message\) : count is 46'
+
+
+# TEST: redis
+env SIMBUS_TRANSPORT=redis
+env SIMBUS_URI=redis://localhost:6379
+exec sh -e $WORK/test.sh
+
+stderr 'Using Valgrind'
+stdout 'Transport: redis'
+! stdout 'Transport: redispubsub'
+stdout 'URI: redis://localhost:6379'
+stdout 'Message \(message\) : count is 43'
+stdout 'Message \(message\) : count is 44'
+stdout 'Message \(message\) : count is 45'
+stdout 'Message \(message\) : count is 46'
+
+
+# TEST: redisasync
+env SIMBUS_TRANSPORT=redis
+env SIMBUS_URI=redisasync://localhost:6379
+exec sh -e $WORK/test.sh
+
+stderr 'Using Valgrind'
+stdout 'Transport: redis'
+! stdout 'Transport: redispubsub'
+stdout 'URI: redisasync://localhost:6379'
+stdout 'Message \(message\) : count is 43'
+stdout 'Message \(message\) : count is 44'
+stdout 'Message \(message\) : count is 45'
+stdout 'Message \(message\) : count is 46'
+
+
+# TEST: loopback
+env SIMBUS_TRANSPORT=loopback
+env SIMBUS_URI=loopback
+exec sh -e $WORK/test-loopback.sh
+
+stderr 'Using Valgrind'
+stdout 'Transport: loopback'
+stdout 'URI: loopback'
+stdout 'Message \(message\) : count is 43'
+stdout 'Message \(message\) : count is 44'
+stdout 'Message \(message\) : count is 45'
+stdout 'Message \(message\) : count is 46'
+
+
+-- test.sh --
+SIMER="${SIMER:-ghcr.io/boschglobal/dse-simer:latest}"
+docker run --name simer -i --rm -v $ENTRYHOSTDIR/$SIM:/sim \
+    $SIMER -valgrind $NAME \
+        -env SIMBUS_TRANSPORT=$SIMBUS_TRANSPORT \
+        -env SIMBUS_URI=$SIMBUS_URI \
+        -env $NAME:SIMBUS_LOGLEVEL=2
+
+
+-- test-loopback.sh --
+SIMER="${SIMER:-ghcr.io/boschglobal/dse-simer:latest}"
+docker run --name simer -i --rm -v $ENTRYHOSTDIR/$SIM:/sim \
+    $SIMER -valgrind $NAME -simbus="" \
+        -env SIMBUS_TRANSPORT=$SIMBUS_TRANSPORT \
+        -env SIMBUS_URI=$SIMBUS_URI \
+        -env $NAME:SIMBUS_LOGLEVEL=2

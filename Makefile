@@ -67,6 +67,7 @@ TESTSCRIPT_E2E_FILES = \
 	$(TESTSCRIPT_E2E_DIR)/ncodec.txtar \
 	$(TESTSCRIPT_E2E_DIR)/mstep.txtar \
 	$(TESTSCRIPT_E2E_DIR)/transport.txtar \
+	$(TESTSCRIPT_E2E_DIR)/transport_binary.txtar \
 	$(TESTSCRIPT_E2E_DIR)/transport_block.txtar \
 	$(TESTSCRIPT_E2E_DIR)/stack.txtar \
 	$(TESTSCRIPT_E2E_DIR)/runtime.txtar \
