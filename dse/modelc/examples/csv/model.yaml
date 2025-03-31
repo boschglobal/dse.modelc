@@ -15,6 +15,9 @@ spec:
       - os: linux
         arch: x86
         path: lib/libcsv.so
+      - os: linux
+        arch: i386
+        path: lib/libcsv.so
       - os: windows
         arch: x64
         path: lib/libcsv.dll
