@@ -112,12 +112,55 @@ static void _args_extract_environment(ModelCArguments* args)
 }
 
 
+#define MODEL_NAME_SEP ";,"
+
+void* modelc_find_stack(ModelCArguments* args)
+{
+    /* Locate a model instance name (the first will do). */
+    if (args->name == NULL) return NULL;
+    char* name = strdup(args->name);
+    char* lasts = NULL;
+    char* model_name = strtok_r(name, MODEL_NAME_SEP, &lasts);
+    if (model_name == NULL) {
+        free(name);
+        return NULL;
+    }
+    log_debug("Search for stack containing model instance: %s", model_name);
+
+    /* Locate the stack containing the model instance. */
+    YamlNode* doc;
+    YamlNode* node;
+    for (uint32_t i = 0; i < hashlist_length(args->yaml_doc_list); i++) {
+        doc = hashlist_at(args->yaml_doc_list, i);
+
+        /* kind is "Stack". */
+        node = dse_yaml_find_node(doc, "kind");
+        if (node == NULL || node->scalar == NULL) continue;
+        if (strcmp(node->scalar, "Stack") != 0) continue;
+
+        /* Stack contains one of the provided model instances. */
+        const char* s[] = { "name" };
+        const char* v[] = { model_name };
+        node = dse_yaml_find_node_in_seq(doc, "spec/models", s, v, 1);
+        if (node != NULL) {
+            free(name);
+            return doc;
+        }
+    }
+
+    free(name);
+    return NULL;
+}
+
+
 static void _args_extract_yaml_connection(ModelCArguments* args)
 {
-    YamlNode* c_node = dse_yaml_find_node_in_doclist(
-        args->yaml_doc_list, "Stack", "spec/connection");
-    YamlNode* t_node = dse_yaml_find_node_in_doclist(
-        args->yaml_doc_list, "Stack", "spec/connection/transport");
+    YamlNode* stack = modelc_find_stack(args);
+    if (stack == NULL) {
+        log_fatal("No stack found!");
+    }
+    YamlNode* c_node = dse_yaml_find_node(stack, "spec/connection");
+    YamlNode* t_node = dse_yaml_find_node(stack, "spec/connection/transport");
 
     /* Look for Model Timeout at spec/connection/timeout. */
     if (c_node) {

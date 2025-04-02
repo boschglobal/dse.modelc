@@ -26,7 +26,7 @@ $ sh dse/modelc/examples/benchmark/charts/signal_throughput.sh
 
 ## Codespaces
 
-Run scripts under/with sudo `sudo`. 
+Run scripts under/with sudo `sudo`.
 
 
 ```bash

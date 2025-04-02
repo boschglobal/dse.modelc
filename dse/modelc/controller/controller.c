@@ -85,22 +85,12 @@ int controller_init_channel(ModelInstanceSpec* model_instance,
 }
 
 
-typedef enum marshal_dir {
-    MARSHAL_ADAPTER2MODEL,
-    MARSHAL_MODEL2ADAPTER,
-} marshal_dir;
-typedef struct marshal_spec {
-    marshal_dir        dir;
-    ModelInstanceSpec* mi;
-} marshal_spec;
-
-
 static int __marshal__adapter2model(void* _mfc, void* _spec)
 {
-    ModelFunctionChannel* mfc = _mfc;
-    marshal_spec*         spec = _spec;
-    ModelInstancePrivate* mip = spec->mi->private;
-    AdapterModel*         am = mip->adapter_model;
+    ModelFunctionChannel*  mfc = _mfc;
+    ControllerMarshalSpec* spec = _spec;
+    ModelInstancePrivate*  mip = spec->mi->private;
+    AdapterModel*          am = mip->adapter_model;
 
     if (mfc->signal_map == NULL) {
         mfc->signal_map = adapter_get_signal_map(
@@ -111,6 +101,8 @@ static int __marshal__adapter2model(void* _mfc, void* _spec)
     if (mfc->signal_value_double) {
         controller_transform_to_model(mfc, sm);
     }
+    if (spec->dir == MARSHAL_ADAPTER2MODEL_SCALAR_ONLY) return 0;
+
     if (mfc->signal_value_binary) {
         for (uint32_t si = 0; si < mfc->signal_count; si++) {
             dse_buffer_append(&mfc->signal_value_binary[si],
@@ -128,10 +120,10 @@ static int __marshal__adapter2model(void* _mfc, void* _spec)
 }
 static int __marshal__model2adapter(void* _mfc, void* _spec)
 {
-    ModelFunctionChannel* mfc = _mfc;
-    marshal_spec*         spec = _spec;
-    ModelInstancePrivate* mip = spec->mi->private;
-    AdapterModel*         am = mip->adapter_model;
+    ModelFunctionChannel*  mfc = _mfc;
+    ControllerMarshalSpec* spec = _spec;
+    ModelInstancePrivate*  mip = spec->mi->private;
+    AdapterModel*          am = mip->adapter_model;
 
     if (mfc->signal_map == NULL) {
         mfc->signal_map = adapter_get_signal_map(
@@ -139,40 +131,51 @@ static int __marshal__model2adapter(void* _mfc, void* _spec)
     }
     SignalMap* sm = mfc->signal_map;
 
-    if (mfc->signal_value_double) {
-        controller_transform_from_model(mfc, sm);
+    if (spec->dir == MARSHAL_MODEL2ADAPTER ||
+        spec->dir == MARSHAL_MODEL2ADAPTER_SCALAR_ONLY) {
+        if (mfc->signal_value_double) {
+            controller_transform_from_model(mfc, sm);
+        }
     }
-    if (mfc->signal_value_binary) {
-        for (uint32_t si = 0; si < mfc->signal_count; si++) {
-            if (mfc->signal_value_binary_reset_called[si] == false) {
-                /* Force size to 0.
-                   Expected operation is: read, reset, write (append).
-                   If reset is not called, i.e. the Model does not consume
-                   _this_ signal, then data will be echo'ed back. If more than
-                   one model echoes data back, the SimBus may also echo back
-                   and ever increasing about of data. */
+
+    if (spec->dir == MARSHAL_MODEL2ADAPTER ||
+        spec->dir == MARSHAL_MODEL2ADAPTER_BINARY_ONLY) {
+        if (mfc->signal_value_binary) {
+            for (uint32_t si = 0; si < mfc->signal_count; si++) {
+                if (mfc->signal_value_binary_reset_called[si] == false) {
+                    /* Force size to 0.
+                    Expected operation is: read, reset, write (append).
+                    If reset is not called, i.e. the Model does not consume
+                    _this_ signal, then data will be echo'ed back. If more than
+                    one model echoes data back, the SimBus may also echo back
+                    and ever increasing about of data. */
+                    mfc->signal_value_binary_size[si] = 0;
+                }
+                dse_buffer_append(&sm[si].signal->bin, &sm[si].signal->bin_size,
+                    &sm[si].signal->bin_buffer_size,
+                    mfc->signal_value_binary[si],
+                    mfc->signal_value_binary_size[si]);
+                /* Indicate the binary object was consumed. */
                 mfc->signal_value_binary_size[si] = 0;
             }
-            dse_buffer_append(&sm[si].signal->bin, &sm[si].signal->bin_size,
-                &sm[si].signal->bin_buffer_size, mfc->signal_value_binary[si],
-                mfc->signal_value_binary_size[si]);
-            /* Indicate the binary object was consumed. */
-            mfc->signal_value_binary_size[si] = 0;
         }
     }
     return 0;
 }
 static int __marshal__model_function(void* _mf, void* _spec)
 {
-    ModelFunction* mf = _mf;
-    marshal_spec*  spec = _spec;
-    int            rc = 0;
+    ModelFunction*         mf = _mf;
+    ControllerMarshalSpec* spec = _spec;
+    int                    rc = 0;
     switch (spec->dir) {
     case MARSHAL_ADAPTER2MODEL:
+    case MARSHAL_ADAPTER2MODEL_SCALAR_ONLY:
         rc = hashmap_iterator(
             &mf->channels, __marshal__adapter2model, false, spec);
         break;
     case MARSHAL_MODEL2ADAPTER:
+    case MARSHAL_MODEL2ADAPTER_SCALAR_ONLY:
+    case MARSHAL_MODEL2ADAPTER_BINARY_ONLY:
         rc = hashmap_iterator(
             &mf->channels, __marshal__model2adapter, false, spec);
         break;
@@ -189,17 +192,20 @@ static int __marshal__model(ControllerModel* cm, void* spec)
     return rc;
 }
 
-static void marshal(SimulationSpec* sim, marshal_dir dir)
+void marshal_model(ModelInstanceSpec* mi, ControllerMarshalDir dir)
+{
+    ControllerMarshalSpec md = { dir, mi };
+    ModelInstancePrivate* mip = mi->private;
+    ControllerModel*      cm = mip->controller_model;
+    __marshal__model(cm, &md);
+}
+
+static void marshal(SimulationSpec* sim, ControllerMarshalDir dir)
 {
     assert(sim);
-    ModelInstanceSpec* _instptr = sim->instance_list;
-    while (_instptr && _instptr->name) {
-        marshal_spec          md = { dir, _instptr };
-        ModelInstancePrivate* mip = _instptr->private;
-        ControllerModel*      cm = mip->controller_model;
-        __marshal__model(cm, &md);
-        /* Next instance? */
-        _instptr++;
+    for (ModelInstanceSpec* _instptr = sim->instance_list;
+         _instptr && _instptr->name; _instptr++) {
+        marshal_model(_instptr, dir);
     }
 }
 
@@ -235,7 +241,13 @@ int controller_step(SimulationSpec* sim)
     int rc;
 
     /* Marshal data from Model Functions to Adapter Channels. */
-    marshal(sim, MARSHAL_MODEL2ADAPTER);
+    if (sim->sequential_cosim) {
+        /* The scalar final_val are already resolved in sim_step_models() so
+        only marshal out the binary signals. */
+        marshal(sim, MARSHAL_MODEL2ADAPTER_BINARY_ONLY);
+    } else {
+        marshal(sim, MARSHAL_MODEL2ADAPTER);
+    }
 
     /* ModelReady and wait on ModelStart.
 
@@ -298,7 +310,13 @@ int controller_step_phased(SimulationSpec* sim)
     if (end_time > 0 && end_time < model_time) return 1;
 
     /* Push data to SimBus. */
-    marshal(sim, MARSHAL_MODEL2ADAPTER);
+    if (sim->sequential_cosim) {
+        /* The scalar final_val are already resolved in sim_step_models() so
+        only marshal out the binary signals. */
+        marshal(sim, MARSHAL_MODEL2ADAPTER_BINARY_ONLY);
+    } else {
+        marshal(sim, MARSHAL_MODEL2ADAPTER);
+    }
     rc = adapter_model_ready(adapter, sim);
     if (rc) return rc;
 

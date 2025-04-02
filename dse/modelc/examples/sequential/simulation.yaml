@@ -1,0 +1,79 @@
+# Copyright 2025 Robert Bosch GmbH
+#
+# SPDX-License-Identifier: Apache-2.0
+
+---
+kind: Stack
+metadata:
+  name: sequential_stack
+spec:
+  connection:
+    transport:
+      redis:
+        uri: redis://localhost:6379
+        timeout: 60
+  runtime:
+    stacked: true
+    sequential: true
+  models:
+    - name: simbus
+      model:
+        name: simbus
+      channels:
+        - name: scalar_channel
+          expectedModelCount: 3
+        - name: binary_channel
+          expectedModelCount: 3
+    - name: inst1
+      uid: 1
+      model:
+        name: Sequential
+      channels:
+        - name: scalar_channel
+          alias: scalar
+        - name: binary_channel
+          alias: binary
+    - name: inst2
+      uid: 2
+      model:
+        name: Sequential
+      channels:
+        - name: scalar_channel
+          alias: scalar
+        - name: binary_channel
+          alias: binary
+    - name: inst3
+      uid: 3
+      model:
+        name: Sequential
+      channels:
+        - name: scalar_channel
+          alias: scalar
+        - name: binary_channel
+          alias: binary
+---
+kind: Model
+metadata:
+  name: simbus
+---
+kind: SignalGroup
+metadata:
+  name: scalar_channel
+  labels:
+    channel: scalar_channel
+spec:
+  signals:
+    - signal: counter
+---
+kind: SignalGroup
+metadata:
+  name: binary_channel
+  labels:
+    channel: binary_channel
+  annotations:
+    vector_type: binary
+spec:
+  signals:
+    - signal: message
+      annotations:
+        mime_type: 'application/octet-stream'

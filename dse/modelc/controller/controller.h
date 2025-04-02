@@ -78,6 +78,21 @@ typedef struct Controller {
 } Controller;
 
 
+typedef enum ControllerMarshalDir {
+    MARSHAL_ADAPTER2MODEL,
+    MARSHAL_MODEL2ADAPTER,
+    MARSHAL_ADAPTER2MODEL_SCALAR_ONLY,
+    MARSHAL_MODEL2ADAPTER_SCALAR_ONLY,
+    MARSHAL_MODEL2ADAPTER_BINARY_ONLY,
+} ControllerMarshalDir;
+
+
+typedef struct ControllerMarshalSpec {
+    ControllerMarshalDir dir;
+    ModelInstanceSpec*   mi;
+} ControllerMarshalSpec;
+
+
 /* controller.c */
 
 /* These initialise the controller and load the Model lib. */
@@ -102,6 +117,8 @@ DLL_PRIVATE void controller_stop(void);
 DLL_PRIVATE void controller_dump_debug(void);
 DLL_PRIVATE void controller_exit(SimulationSpec* sim);
 
+/* Additional marshal operations that are called in special cases. */
+DLL_PRIVATE void marshal_model(ModelInstanceSpec* mi, ControllerMarshalDir dir);
 
 /* loader.c */
 DLL_PRIVATE int controller_load_models(SimulationSpec* sim);

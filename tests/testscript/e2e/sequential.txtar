@@ -1,0 +1,83 @@
+env NAME=inst1
+env SIM=dse/modelc/build/_out/examples/sequential
+
+
+# TEST: sequential co-sim w. redis
+exec sh -e $WORK/test.sh
+
+stderr 'Using Valgrind'
+stdout 'Transport: redis'
+! stdout 'Transport: redispubsub'
+stdout 'URI: redis://localhost:6379'
+stdout 'Stacked: yes'
+stdout 'Sequential: yes'
+stdout 'Run the Simulation ...'
+stdout 'Controller exit ...'
+stdout 'Message \(message\) : inst:1 count is 1'
+stdout 'Message \(message\) : inst:2 count is 2'
+stdout 'Message \(message\) : inst:3 count is 3'
+stdout 'Message \(message\) : inst:1 count is 4'
+stdout 'Message \(message\) : inst:2 count is 5'
+stdout 'Message \(message\) : inst:3 count is 6'
+stdout 'Message \(message\) : inst:1 count is 7'
+stdout 'Message \(message\) : inst:2 count is 8'
+stdout 'Message \(message\) : inst:3 count is 9'
+
+
+# TEST: sequential co-sim w. loopback
+exec sh -e $WORK/test-loopback.sh
+
+stderr 'Using Valgrind'
+stdout 'Transport: loopback'
+stdout 'URI: loopback'
+stdout 'Stacked: yes'
+stdout 'Sequential: yes'
+stdout 'Run the Simulation ...'
+stdout 'Controller exit ...'
+stdout 'Message \(message\) : inst:1 count is 1'
+stdout 'Message \(message\) : inst:2 count is 2'
+stdout 'Message \(message\) : inst:3 count is 3'
+stdout 'Message \(message\) : inst:1 count is 4'
+stdout 'Message \(message\) : inst:2 count is 5'
+stdout 'Message \(message\) : inst:3 count is 6'
+stdout 'Message \(message\) : inst:1 count is 7'
+stdout 'Message \(message\) : inst:2 count is 8'
+stdout 'Message \(message\) : inst:3 count is 9'
+
+
+# TEST: normal co-sim w. loopback
+exec yq -i e '.spec.runtime.sequential |= false' $REPODIR/$SIM/data/simulation.yaml
+exec sh -e $WORK/test-loopback.sh
+
+stderr 'Using Valgrind'
+stdout 'Transport: loopback'
+stdout 'URI: loopback'
+stdout 'Stacked: yes'
+stdout 'Sequential: no'
+stdout 'Run the Simulation ...'
+stdout 'Controller exit ...'
+stdout 'Message \(message\) : inst:1 count is 1'
+stdout 'Message \(message\) : inst:2 count is 1'
+stdout 'Message \(message\) : inst:3 count is 1'
+stdout 'Message \(message\) : inst:1 count is 2'
+stdout 'Message \(message\) : inst:2 count is 2'
+stdout 'Message \(message\) : inst:3 count is 2'
+stdout 'Message \(message\) : inst:1 count is 3'
+stdout 'Message \(message\) : inst:2 count is 3'
+stdout 'Message \(message\) : inst:3 count is 3'
+
+
+-- test.sh --
+SIMER="${SIMER:-ghcr.io/boschglobal/dse-simer:latest}"
+docker run --name simer -i --rm -v $ENTRYHOSTDIR/$SIM:/sim \
+    $SIMER -valgrind $NAME \
+        -env SIMBUS_LOGLEVEL=3
+
+
+-- test-loopback.sh --
+SIMER="${SIMER:-ghcr.io/boschglobal/dse-simer:latest}"
+docker run --name simer -i --rm -v $ENTRYHOSTDIR/$SIM:/sim \
+    $SIMER -valgrind $NAME -simbus="" \
+        -env SIMBUS_TRANSPORT=loopback \
+        -env SIMBUS_URI=loopback \
+        -env SIMBUS_LOGLEVEL=3

@@ -1,0 +1,43 @@
+---
+kind: Stack
+metadata:
+  name: stack
+spec:
+  connection:
+    transport:
+      redispubsub:
+        uri: redis://redis:6379
+        timeout: 60
+  runtime:
+    sequential: true
+  models:
+    - name: sequential
+      uid: 42
+      model:
+        name: Sequential
+      channels:
+        - name: scalar
+          alias: scalar_vector
+---
+kind: Model
+metadata:
+  name: Sequential
+spec:
+  runtime:
+    dynlib:
+      - os: linux
+        arch: amd64
+        path: lib/model.so
+  channels:
+    - alias: scalar_vector
+      selectors:
+        channel: scalar
+---
+kind: SignalGroup
+metadata:
+  name: test_sequential
+  labels:
+    channel: scalar
+spec:
+  signals:
+    - signal: one

@@ -1,0 +1,30 @@
+# Copyright 2025 Robert Bosch GmbH
+#
+# SPDX-License-Identifier: Apache-2.0
+
+---
+kind: Model
+metadata:
+  name: Sequential
+spec:
+  runtime:
+    dynlib:
+      - os: linux
+        arch: amd64
+        path: lib/libsequential.so
+      - os: linux
+        arch: x86
+        path: lib/libsequential.so
+      - os: windows
+        arch: x64
+        path: lib/libsequential.dll
+      - os: windows
+        arch: x86
+        path: lib/libsequential.dll
+  channels:
+    - alias: scalar
+      selectors:
+        channel: scalar_channel
+    - alias: binary
+      selectors:
+        channel: binary_channel

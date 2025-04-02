@@ -112,6 +112,7 @@ typedef struct SimulationSpec {
     ModelInstanceSpec* instance_list;
     const char* sim_path;
     int mode_loopback;
+    int sequential_cosim;
     int [4] __reserved__;
 }
 ```

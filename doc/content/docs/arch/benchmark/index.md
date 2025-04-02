@@ -85,9 +85,9 @@ with optimization `-03`. Values are presented relative to realtime operation.
 
 ## Benchmark (Codespace 4 vCPU)
 
-Host system is a Codespace 4 core virtual machine. Reports CPU as Xeon Platinum 8370C 
-(Intel(R) Xeon(R) Platinum 8370C CPU, 2.80GHz, 4 Core, 16 GB Memory) with Linux. 
-All binaries are compiled for `amd64` architecture with optimization `-03`. 
+Host system is a Codespace 4 core virtual machine. Reports CPU as Xeon Platinum 8370C
+(Intel(R) Xeon(R) Platinum 8370C CPU, 2.80GHz, 4 Core, 16 GB Memory) with Linux.
+All binaries are compiled for `amd64` architecture with optimization `-03`.
 Values are presented relative to realtime operation.
 
 

@@ -70,6 +70,8 @@ typedef struct SimulationSpec {
     const char*        sim_path;
     /* Operational properties needed for loopback operation. */
     bool               mode_loopback;
+    /* Operate a stacked simulation in Sequential CoSim mode. */
+    bool               sequential_cosim;
 
     /* Reserved. */
     uint64_t __reserved__[4];
@@ -127,6 +129,7 @@ DLL_PUBLIC void modelc_set_default_args(ModelCArguments* args,
     const char* model_instance_name, double step_size, double end_time);
 DLL_PUBLIC void modelc_parse_arguments(
     ModelCArguments* args, int argc, char** argv, const char* doc_string);
+DLL_PRIVATE void* modelc_find_stack(ModelCArguments* args);
 
 
 /* signal.c - Signal Vector Interface. */

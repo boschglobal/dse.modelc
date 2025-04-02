@@ -18,12 +18,11 @@ on multiple OS/Arch combinations or running in multiple simulation environments.
 
 These topologies include:
 
-* __Model Runtime__ - Stacked model instance (single process) / Loopback SimBus
-* __Stacked w. Redis__ - Stacked model instance (single process) / Redis SimBus
-* __Distributed w. Redis__ - Distributed model instances (process per model) / Redis SimBus
-* __Gateway__ - Remote simulation systems are connected with a _gateway_ model / Redis SimBus
-* __MCL__ - Foreign models are imported via a Model Compatibility Library / Loopback SimBus
-* __Realtime__ - Distributed and Stacked model instances / Loopback & Redis SimBus
+* __Standalone__ - Stacked model instances running in a single process. Uses a Loopback SimBus.
+* __Distributed__ - Distributed model instances, multi process, multi OS, optionally stacked. Uses a Redis SimBus.
+* __Gateway__ - Remote simulation systems are connected with a _gateway_ model. Uses a Redis SimBus.
+* __MCL__ - Foreign models are imported via a Model Compatibility Library.
+* __Realtime__ - Stacked model instances which may operate either Standalone or Distributed (i.e. Loopback or Redis based SimBus).
 * __Embedded__ - External models and sensors and connected with a _POP_ model / TCP
 
 These topologies are supported by the Simer docker appliance (Linux) and
@@ -32,7 +31,7 @@ Dynamic Simulation Environment is implemented with Flatbuffers and may be
 implemented in any programming language or operating system.
 
 
-## Model Runtime
+## Standalone
 
 Several Models are stacked in a single model runtime. For example, the runtime
 may be packaged as an FMU using the FMI ModelC FMU wrapper.
@@ -55,9 +54,9 @@ Characteristics:
 <div hidden>
 
 ```text
-@startuml topology-stacked-loopback
+@startuml topology-standalone-stacked
 
-title "Stacked Models with Loopback\n"
+title "Standalone - Stacked Models with Loopback\n"
 
 box "Model Runtime" #LightSteelBlue
 
@@ -94,12 +93,12 @@ center footer Dynamic Simulation Environment - ModelC
 
 </div>
 
-![topology-stacked-loopback](topology-stacked-loopback.png)
+![topology-standalone-stacked](topology-standalone-stacked.png)
 
 
 #### Configuration
 
-##### CLI / Environemnt
+##### CLI / Environment
 
 | Variable           | CLI Option (ModelC/Simer) | Value |
 | ------------------ | ------------------------- | ------- |
@@ -120,6 +119,8 @@ spec:
     transport:
       loopback:
         uri: loopback
+  runtime:
+    stacked: true
 ```
 </details>
 
@@ -127,13 +128,11 @@ spec:
 
 ### Stacked Sequential Co-Sim
 
-> Note: This is a future/planned development.
-
 Characteristics:
 
 * Single Process - Sequential execution of models within a single process using the __ModelC__ model runtime. Performance limited by CPU clock speed.
-* Co-Simulation - Sequential-Co-Simulation resulting in _no_ phase shift _between_ the stacked models.
-* Limited deployment - Used to compose models from several "component" models where the resultant model does not exhibit phase shift between its input and output signals for any simulation step.
+* Co-Simulation - Sequential Co-Simulation resulting in _no_ phase shift of scalar signals exchanged _between_ models in the stack.
+* Limited deployment - Used to compose models from several "component" models where the resultant model does not exhibit phase shift between its input and output scalar signals for any simulation step.
 
 
 #### Sequence Diagram
@@ -141,28 +140,30 @@ Characteristics:
 <div hidden>
 
 ```text
-@startuml topology-stacked-sequential
+@startuml topology-standalone-sequential
 
-title "Stacked Sequential Co-Sim\n"
-
-
-participant SimBus as s
+title "Standalone - Stacked Sequential Co-Sim\n"
 
 box "Model Runtime" #LightSteelBlue
 
+participant Loopback as l
 control Controller as c
 participant Model as m1
 participant Model as m2
+participant Model as m3
 
 loop CoSim Step
-s -> c : step(signals)
+l -> c : step(signals)
 activate c
 c -> m1 : step(signals)
 activate m1 #gold
 m1 -> m2 : step(signals')
 deactivate
 activate m2 #gold
-m2 --> c : result(signals'')
+m2 --> m3 : result(signals'')
+deactivate
+activate m3 #gold
+m3 --> c : result(signals'')
 deactivate
 return result(signals'')
 
@@ -177,27 +178,46 @@ center footer Dynamic Simulation Environment - ModelC
 
 </div>
 
-![topology-stacked-sequential](topology-stacked-sequential.png)
+![topology-standalone-sequential](topology-standalone-sequential.png)
 
 
 #### Configuration
 
-_TBD_
+##### CLI / Environment
+
+| Variable           | CLI Option (ModelC/Simer) | Value |
+| ------------------ | ------------------------- | ------- |
+| `SIMBUS_TRANSPORT` | `--transport` | `loopback` |
+| `SIMBUS_URI`       | `--uri`       | `loopback` |
+
+
+##### Simulation Stack
+
+<details>
+<summary>simulation.yaml</summary>
+
+```yaml
+---
+kind: Stack
+spec:
+  connection:
+    transport:
+      loopback:
+        uri: loopback
+  runtime:
+    stacked: true
+    sequential: true
+```
+</details>
 
 
 
-## Stacked w. Redis
+## Distributed
 
-Several Models are stacked in a single model runtime and connect to a Redis
-based SimBus.
-
-
-## Distributed w. Redis
-
-Models are distributed in several instances of a model runtime. Model runtimes may run on several computers, use different operating systems, and execute in other Simulation Environments.
+Models are distributed in several instances of a model runtime. Model runtimes may run on several computers, use different operating systems, and execute in other Simulation Environments. Models can also be stacked, and those stacks can be configured to operate in Sequential Co-Sim mode.
 
 
-### Native w. Redis
+### Distributed w. Redis
 
 Characteristics:
 
@@ -213,15 +233,17 @@ Characteristics:
 
 ```text
 @startuml topology-distributed-redis
+!pragma teoz true
 
 title "Distributed Simulation w. Redis\n"
 
-box "Simer w. Model Runtime (Linux)" #LightSteelBlue
+box "Model Runtime (Simer/Linux)" #LightSteelBlue
 participant Model as m0
 control Controller as c0
-
+box "SimBus"
 participant SimBus as s
 participant Redis as r
+end box
 end box
 
 box "Model Runtime (Windows)" #LightSteelBlue
@@ -230,7 +252,7 @@ participant Model as m1
 participant Model as m2
 end box
 
-loop CoSim Step
+group Co-Sim Step
 
 s o-[#Blue]-> r : step(signals)
 r -[#Blue]-> c0 : step(signals)
@@ -240,14 +262,17 @@ activate c1
 
 c0 -> m0 : step(signals)
 activate m0 #gold
-c1 -> m1 : step(signals)
 
+group Sequential Co-Sim
+c1 -> m1 : step(signals)
 activate m1 #gold
 m1 -> m2 : step(signals')
 deactivate m1
 activate m2 #gold
 m2 --> c1 : result(signals'')
 deactivate m2
+end
+
 c1 -[#Blue]-> r : result(signals'')
 deactivate c1
 
@@ -304,10 +329,99 @@ spec:
 
 ## Gateway
 
-Remote systems are connected to a simulation using a Gateway model. The Gateway
-model is implemented in the remote systems operating framework and may use
-either existing integrations (i.e. the ModelC Library) or a direct implementation
-of the Flatbuffer based DSE messaging protocol.
+Remote Simulations are connected to a DSE/Simer based Simulation using a
+Gateway Model. The Gateway Model is implemented in the Remote Simulations
+framework/environment which then connects to the DSE/Simer Simulation. The
+connection may be established with either an existing integration (i.e. the
+DSE ModelC Library), or a direct implementation of the underlying
+DSE messaging protocols.
+
+
+### ModelC based Gateway
+
+#### Sequence Diagram
+
+<div hidden>
+
+```text
+@startuml topology-gateway-modelc
+!pragma teoz true
+
+title "Distributed Simulation w. Redis\n"
+
+box "Model Runtime (Simer/Linux)" #LightSteelBlue
+participant Model as m1
+participant Model as m2
+control Controller as c0
+box "SimBus"
+participant SimBus as s
+participant Redis as r
+end box
+end box
+
+box "Remote Simulation (Windows)" #LightSteelBlue
+participant Gateway as g1
+control Controller as c1
+participant Model as m3
+end box
+
+group Co-Sim Step
+
+activate c1
+s o-[#Blue]-> r : step(signals)
+r -[#Blue]-> c0 : step(signals)
+activate c0
+
+c0 -> m2 : step(signals)
+activate m2 #gold
+
+c1 -> g1 : step(signals)
+activate g1 #gold
+r -[#Green]-> g1 : step(signals)
+
+m2 --> c0 : result(signals)
+deactivate m2
+
+g1 -[#Green]-> r : result(signals)
+g1 --> c1 : result(signals)
+deactivate g1
+
+c0 -> m1 : step(signals)
+activate m1 #gold
+
+c1 -> m3 : step(signals)
+activate m3 #gold
+
+r -[#Green]->o s : result(signals)
+
+
+m1 --> c0 : result(signals)
+deactivate m1
+
+m3 --> c1 : result(signals)
+deactivate m3
+
+
+c0 -[#Blue]-> r : result(signals)
+deactivate c0
+r -[#Blue]->o s : result(signals)
+
+deactivate c1
+
+hnote over c0,g1 : Synchronization
+
+end
+
+center footer Dynamic Simulation Environment - ModelC
+
+@enduml
+
+```
+
+</div>
+
+![topology-gateway-modelc](topology-gateway-modelc.png)
+
 
 
 ## MCL

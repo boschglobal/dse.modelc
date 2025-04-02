@@ -234,13 +234,16 @@ int modelc_configure(ModelCArguments* args, SimulationSpec* sim)
     sim->step_size = args->step_size;
     sim->end_time = args->end_time;
     sim->sim_path = args->sim_path;
+    dse_yaml_get_bool(modelc_find_stack(args), "spec/runtime/sequential",
+        &sim->sequential_cosim);
 
     log_notice("Simulation Parameters:");
     log_notice("  Step Size: %f", sim->step_size);
     log_notice("  End Time: %f", sim->end_time);
     log_notice("  Model Timeout: %f", sim->timeout);
     log_notice("  Sim Path: %s", sim->sim_path);
-    log_notice("  Stacked: %s", model_count > 1 ? "yes": "no");
+    log_notice("  Stacked: %s", model_count > 1 ? "yes" : "no");
+    log_notice("  Sequential: %s", sim->sequential_cosim ? "yes" : "no");
 
     log_notice("Transport:");
     log_notice("  Transport: %s", sim->transport);

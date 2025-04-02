@@ -20,6 +20,7 @@ extern int run_signal_tests(void);
 extern int run_transform_tests(void);
 extern int run_ncodec_can_tests(void);
 extern int run_ncodec_pdu_tests(void);
+extern int run_sequential_cosim_tests(void);
 
 
 int main()
@@ -32,5 +33,6 @@ int main()
     rc |= run_transform_tests();
     rc |= run_ncodec_can_tests();
     rc |= run_ncodec_pdu_tests();
+    rc |= run_sequential_cosim_tests();
     return rc;
 }

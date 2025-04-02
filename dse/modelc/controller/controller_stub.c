@@ -32,6 +32,13 @@ void controller_bus_ready(SimulationSpec* sim)
     return;
 }
 
+void marshal_model(ModelInstanceSpec* mi, ControllerMarshalDir dir)
+{
+    UNUSED(mi);
+    UNUSED(dir);
+    return;
+}
+
 int controller_step(SimulationSpec* sim)
 {
     /* Set the model stop time in the adapter object. Simulates the reception

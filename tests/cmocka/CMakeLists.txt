@@ -25,6 +25,26 @@ list(APPEND C_CXX_WARNING_FLAGS
 add_compile_options(${C_CXX_WARNING_FLAGS})
 
 
+# External Project - msgpackc
+# ---------------------------
+set(MSGPACKC_SOURCE_DIR "$ENV{EXTERNAL_BUILD_DIR}/msgpackc")
+set(MSGPACKC_BINARY_DIR "$ENV{EXTERNAL_BUILD_DIR}/msgpackc-build")
+find_library(MSGPACKC_LIB
+    NAMES
+        libmsgpackc.a
+    PATHS
+        ${MSGPACKC_BINARY_DIR}
+    REQUIRED
+    NO_DEFAULT_PATH
+)
+add_library(msgpackc STATIC IMPORTED GLOBAL)
+set_target_properties(msgpackc
+    PROPERTIES
+        IMPORTED_LOCATION "${MSGPACKC_LIB}"
+        INTERFACE_INCLUDE_DIRECTORIES "${MSGPACKC_BINARY_DIR}"
+)
+
+
 # External Project - yaml
 # -----------------------
 set(YAML_SOURCE_DIR "$ENV{EXTERNAL_BUILD_DIR}/yaml")
@@ -122,6 +142,8 @@ set(DSE_MODELC_SOURCE_FILES
     ${DSE_MODELC_SOURCE_DIR}/controller/step.c
     ${DSE_MODELC_SOURCE_DIR}/controller/transform.c
 
+    ${DSE_MODELC_SOURCE_DIR}/adapter/index.c
+
     ${DSE_MOCKS_SOURCE_DIR}/simmock.c
 )
 set(DSE_MODELC_INCLUDE_DIR "${DSE_MODELC_SOURCE_DIR}/../..")
@@ -151,6 +173,7 @@ add_executable(test_model
     model/test_ncodec_can.c
     model/test_ncodec_pdu.c
     model/test_schema.c
+    model/test_sequential_cosim.c
     model/test_signal.c
     model/test_transform.c
     ${DSE_CLIB_SOURCE_FILES}
@@ -167,6 +190,7 @@ target_include_directories(test_model
         ${FLATCC_INCLUDE_DIR}
         ${SCHEMAS_SOURCE_DIR}
         ${YAML_SOURCE_DIR}/include
+        ${MSGPACKC_SOURCE_DIR}/include
         ./
 )
 target_compile_definitions(test_model
@@ -190,6 +214,7 @@ install(
         model/gateway.yaml
         model/internal.yaml
         model/ncodec.yaml
+        model/sequential.yaml
         model/signal.yaml
         model/transform.yaml
     DESTINATION
@@ -217,6 +242,7 @@ target_include_directories(test_model_interface
         ${FLATCC_INCLUDE_DIR}
         ${SCHEMAS_SOURCE_DIR}
         ${YAML_SOURCE_DIR}/include
+        ${MSGPACKC_SOURCE_DIR}/include
         ./
 )
 target_compile_definitions(test_model_interface
