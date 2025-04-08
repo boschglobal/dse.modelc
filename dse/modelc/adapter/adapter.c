@@ -304,6 +304,10 @@ void adapter_destroy(Adapter* adapter)
         free(adapter->vtable);
         adapter->vtable = NULL;
     }
+    if (adapter->trace) {
+        fclose(adapter->trace);
+        adapter->trace = NULL;
+    }
     free(adapter);
 }
 

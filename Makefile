@@ -22,7 +22,7 @@ DSE_CLIB_VERSION ?= 1.0.30
 export DSE_CLIB_URL ?= $(DSE_CLIB_REPO)/archive/refs/tags/v$(DSE_CLIB_VERSION).zip
 
 DSE_SCHEMA_REPO ?= https://github.com/boschglobal/dse.schemas
-DSE_SCHEMA_VERSION ?= 1.2.18
+DSE_SCHEMA_VERSION ?= 1.2.21
 export DSE_SCHEMA_URL ?= $(DSE_SCHEMA_REPO)/releases/download/v$(DSE_SCHEMA_VERSION)/dse-schemas.tar.gz
 
 DSE_NCODEC_REPO ?= https://github.com/boschglobal/dse.standards
@@ -66,6 +66,7 @@ TESTSCRIPT_E2E_FILES = \
 	$(TESTSCRIPT_E2E_DIR)/binary.txtar \
 	$(TESTSCRIPT_E2E_DIR)/ncodec.txtar \
 	$(TESTSCRIPT_E2E_DIR)/mstep.txtar \
+	$(TESTSCRIPT_E2E_DIR)/trace.txtar \
 	$(TESTSCRIPT_E2E_DIR)/transport.txtar \
 	$(TESTSCRIPT_E2E_DIR)/transport_binary.txtar \
 	$(TESTSCRIPT_E2E_DIR)/transport_block.txtar \

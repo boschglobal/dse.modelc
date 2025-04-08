@@ -8,6 +8,7 @@
 
 #include <stdint.h>
 #include <stdbool.h>
+#include <stdio.h>
 #include <time.h>
 #include <dse/clib/collections/set.h>
 #include <dse/clib/collections/hashmap.h>
@@ -136,6 +137,9 @@ typedef struct Adapter {
 
     /* Benchmarking/Profiling. */
     struct timespec bench_notifysend_ts;
+
+    /* Message trace. */
+    FILE* trace;
 } Adapter;
 
 

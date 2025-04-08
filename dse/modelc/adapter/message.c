@@ -99,6 +99,7 @@ static bool process_message_stream(Adapter* adapter, const char* channel_name,
 
     /* Messages are in a stream, each with a size prefix. */
     while (((msg_ptr - buffer) + msg_len) < (uint32_t)length) {
+        uint8_t* raw_msg_ptr = msg_ptr;
         msg_ptr = flatbuffers_read_size_prefix(msg_ptr, &msg_len);
         if (msg_len == 0) break;
         if (flatbuffers_has_identifier(msg_ptr, "SBCH")) {
@@ -111,6 +112,12 @@ static bool process_message_stream(Adapter* adapter, const char* channel_name,
             }
         } else {
             break;
+        }
+
+        /* Trace. */
+        if (adapter->trace) {
+            fwrite(raw_msg_ptr, sizeof(raw_msg_ptr[0]),
+                msg_len + sizeof(flatbuffers_uoffset_t), adapter->trace);
         }
 
         /* Next. */
@@ -195,7 +202,7 @@ int32_t send_message(Adapter* adapter, void* endpoint_channel,
     assert(adapter->vtable);
     Endpoint*         endpoint = adapter->endpoint;
     AdapterMsgVTable* v = (AdapterMsgVTable*)adapter->vtable;
-    flatcc_builder_t* builder = &(v->builder);
+    flatcc_builder_t* B = &(v->builder);
     uint8_t*          buf;
     size_t            size;
     int32_t           token = 0;
@@ -207,18 +214,24 @@ int32_t send_message(Adapter* adapter, void* endpoint_channel,
     if (ack) token = get_token();
     /* Build the Channel Message (without 'create' because it wants all
      * parameters) */
-    ns(ChannelMessage_start)(builder);
-    ns(ChannelMessage_model_uid_add)(builder, model_uid);
-    ns(ChannelMessage_message_add_value)(builder, message);
-    if (ack) ns(ChannelMessage_token_add)(builder, token);
-    ns(ChannelMessage_message_add_type)(builder, message.type);
-    channel_message = ns(ChannelMessage_end)(builder);
+    ns(ChannelMessage_start)(B);
+    ns(ChannelMessage_channel_name_create_str)(
+        B, (const char*)endpoint_channel);
+    ns(ChannelMessage_model_uid_add)(B, model_uid);
+    ns(ChannelMessage_message_add_value)(B, message);
+    if (ack) ns(ChannelMessage_token_add)(B, token);
+    ns(ChannelMessage_message_add_type)(B, message.type);
+    channel_message = ns(ChannelMessage_end)(B);
     /* Construct the buffer. */
-    flatcc_builder_create_buffer(builder, flatbuffers_channel_identifier,
-        builder->block_align, channel_message, builder->min_align,
-        builder->buffer_flags);
-    buf = flatcc_builder_finalize_buffer(
-        builder, &size); /* malloc, must call free. */
+    flatcc_builder_create_buffer(B, flatbuffers_channel_identifier,
+        B->block_align, channel_message, B->min_align, B->buffer_flags);
+    buf =
+        flatcc_builder_finalize_buffer(B, &size); /* malloc, must call free. */
+
+    /* Trace. */
+    if (adapter->trace) {
+        fwrite(buf, sizeof(buf[0]), size, adapter->trace);
+    }
 
     /* Send the Channel Message with the configured Transport. */
     rc = endpoint->send_fbs(
@@ -281,31 +294,35 @@ int32_t send_message_ack(Adapter* adapter, void* endpoint_channel,
 
     Endpoint*         endpoint = adapter->endpoint;
     AdapterMsgVTable* v = (AdapterMsgVTable*)adapter->vtable;
-    flatcc_builder_t* builder = &(v->builder);
+    flatcc_builder_t* B = &(v->builder);
     uint8_t*          buf;
     size_t            size;
     ns(ChannelMessage_ref_t) channel_message;
 
     /* Build the Channel Message (without 'create' because it wants all
      * parameters) */
-    ns(ChannelMessage_start)(builder);
-    ns(ChannelMessage_model_uid_add)(builder, model_uid);
-    ns(ChannelMessage_message_add_value)(builder, message);
-    ns(ChannelMessage_message_add_type)(builder, message.type);
-    ns(ChannelMessage_token_add)(builder, token);
-    ns(ChannelMessage_rc_add)(builder, rc);
+    ns(ChannelMessage_start)(B);
+    ns(ChannelMessage_model_uid_add)(B, model_uid);
+    ns(ChannelMessage_message_add_value)(B, message);
+    ns(ChannelMessage_message_add_type)(B, message.type);
+    ns(ChannelMessage_token_add)(B, token);
+    ns(ChannelMessage_rc_add)(B, rc);
     if (response) {
         flatbuffers_string_ref_t _response;
-        _response = flatbuffers_string_create_str(builder, response);
-        ns(ChannelMessage_response_add)(builder, _response);
+        _response = flatbuffers_string_create_str(B, response);
+        ns(ChannelMessage_response_add)(B, _response);
     }
-    channel_message = ns(ChannelMessage_end)(builder);
+    channel_message = ns(ChannelMessage_end)(B);
     /* Construct the buffer. */
-    flatcc_builder_create_buffer(builder, flatbuffers_channel_identifier,
-        builder->block_align, channel_message, builder->min_align,
-        builder->buffer_flags);
-    buf = flatcc_builder_finalize_buffer(
-        builder, &size); /* malloc, must call free. */
+    flatcc_builder_create_buffer(B, flatbuffers_channel_identifier,
+        B->block_align, channel_message, B->min_align, B->buffer_flags);
+    buf =
+        flatcc_builder_finalize_buffer(B, &size); /* malloc, must call free. */
+
+    /* Trace. */
+    if (adapter->trace) {
+        fwrite(buf, sizeof(buf[0]), size, adapter->trace);
+    }
 
     /* Send the Channel Message with the configured Transport. */
     rc = endpoint->send_fbs(
@@ -333,13 +350,17 @@ int32_t send_notify_message(
 {
     Endpoint*         endpoint = adapter->endpoint;
     AdapterMsgVTable* v = (AdapterMsgVTable*)adapter->vtable;
-    flatcc_builder_t* builder = &(v->builder);
+    flatcc_builder_t* B = &(v->builder);
 
-    flatcc_builder_create_buffer(builder, flatbuffers_notify_identifier,
-        builder->block_align, message, builder->min_align,
-        builder->buffer_flags);
+    flatcc_builder_create_buffer(B, flatbuffers_notify_identifier,
+        B->block_align, message, B->min_align, B->buffer_flags);
     size_t   size = 0;
-    uint8_t* buf = flatcc_builder_finalize_buffer(builder, &size);
+    uint8_t* buf = flatcc_builder_finalize_buffer(B, &size);
+
+    /* Trace. */
+    if (adapter->trace) {
+        fwrite(buf, sizeof(buf[0]), size, adapter->trace);
+    }
 
     /* Send the Channel Message with the configured Transport. */
     endpoint->send_fbs(endpoint, NULL, buf, (uint32_t)size, 0);

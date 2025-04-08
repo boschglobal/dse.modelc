@@ -14,6 +14,9 @@
 #include <dse/modelc/adapter/message.h>
 
 
+#define ENV_SIMBUS_TRACE_FILE "SIMBUS_TRACEFILE"
+
+
 #undef ns
 #define ns(x) FLATBUFFERS_WRAP_NAMESPACE(dse_schemas_fbs_channel, x)
 
@@ -53,6 +56,17 @@ Adapter* simbus_adapter_create(Endpoint* endpoint, double bus_step_size)
 
     /* Benchmarking/Profiling. */
     simbus_profile_init(bus_step_size);
+
+    /* Message trace. */
+    char* _trace_file = getenv(ENV_SIMBUS_TRACE_FILE);
+    if (_trace_file) {
+        log_notice("Create trace file : %s", _trace_file);
+        errno = 0;
+        adapter->trace = fopen(_trace_file, "w");
+        if (errno) {
+            log_error("Unable to open SimBus trace file (%s)", _trace_file);
+        }
+    }
 
     return adapter;
 }
