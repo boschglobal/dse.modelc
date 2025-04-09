@@ -600,7 +600,9 @@ static int notify_model(void* value, void* data)
     am->model_time = notify(NotifyMessage_model_time(message));
     am->stop_time = notify(NotifyMessage_schedule_time(message));
     if (am->stop_time <= am->model_time) {
-        log_error("WARNING:stop_time is NOT greater than model_time!");
+        // For now this is a fatal condition as it likely means the
+        // SimBus is operating with 0 stepsize (i.e. misconfiguration).
+        log_fatal("stop_time is NOT greater than model_time! Is step_size 0?");
     }
     log_simbus("    model_uid=%u", am->model_uid);
     log_simbus("    model_time=%f", am->model_time);

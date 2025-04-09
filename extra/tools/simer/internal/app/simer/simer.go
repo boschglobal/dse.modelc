@@ -38,10 +38,10 @@ func listFiles(paths []string, exts []string) []string {
 	return files
 }
 
-func scanFiles(exts []string) []string {
+func scanFiles(path string, exts []string) []string {
 	files := []string{}
 	for _, ext := range exts {
-		indexed_files, _ := index.IndexFiles(".", ext)
+		indexed_files, _ := index.IndexFiles(path, ext)
 		files = append(files, indexed_files...)
 	}
 
@@ -64,7 +64,12 @@ func loadKindDocs(files []string) ([]kind.KindDoc, error) {
 }
 
 func IndexYamlFiles(path string) map[string][]kind.KindDoc {
-	files := scanFiles([]string{".yml", ".yaml"})
+	var files []string
+	if _, err := os.Stat(path); os.IsNotExist(err) {
+		slog.Error("Index path does not exist.")
+	} else {
+		files = scanFiles(path, []string{".yml", ".yaml"})
+	}
 	kindDocs, err := loadKindDocs(files)
 	if err != nil {
 		slog.Error(err.Error())
@@ -140,7 +145,7 @@ func SimbusCommand(docMap map[string][]kind.KindDoc, simbusPath string, flags Fl
 				if flags.Uri != "" {
 					args = append(args, "--uri", flags.Uri)
 				}
-				args = append(args, "--stepsize", strconv.FormatFloat(flags.StepSize, 'f', -1, 64))
+				args = append(args, "--stepsize", calculateStepSize(flags, &stackDoc))
 				if flags.Timeout > 0.0 {
 					args = append(args, "--timeout", strconv.FormatFloat(flags.Timeout, 'f', -1, 64))
 				}
@@ -224,7 +229,7 @@ func ModelCommandList(docMap map[string][]kind.KindDoc, modelcPath string, model
 				} else if model.Runtime != nil && model.Runtime.I386 != nil && *model.Runtime.I386 {
 					progPath = modelcI386Path
 				}
-				cmd := buildModelCmd(model.Name, progPath, yamlFiles, calculateEnv(stackSpec, &model, flags), flags)
+				cmd := buildModelCmd(model.Name, progPath, yamlFiles, calculateEnv(stackSpec, &model, flags), flags, &stackDoc)
 				slog.Info(fmt.Sprintf("Model: name=%s, stack=%s", model.Name, stackDoc.Metadata.Name))
 				slog.Info(fmt.Sprintf("  Model : %s", model.Model.Name))
 				slog.Info(fmt.Sprintf("  Prog  : %s", cmd.Prog))
@@ -274,7 +279,7 @@ func stackedModelCmd(stackDoc *kind.KindDoc, modelcPath string, modelcX32Path st
 			env[k] = v
 		}
 	}
-	cmd := buildModelCmd(strings.Join(instanceName, ","), progPath, yamlFiles, env, flags)
+	cmd := buildModelCmd(strings.Join(instanceName, ","), progPath, yamlFiles, env, flags, stackDoc)
 	slog.Info(fmt.Sprintf("Model Stack: stack=%s", stackDoc.Metadata.Name))
 	slog.Info(fmt.Sprintf("  Names : %s", strings.Join(instanceName, ",")))
 	slog.Info(fmt.Sprintf("  Model : %s", strings.Join(modelName, ",")))
@@ -328,7 +333,42 @@ func processCmdModifiers(name string, path string, flags Flags) (string, []strin
 	return path, args
 }
 
-func buildModelCmd(name string, path string, yamlFiles []string, env map[string]string, flags Flags) *session.Command {
+func calculateStepSize(flags Flags, stackDoc *kind.KindDoc) string {
+	if flags.StepSize > 0.0 {
+		// User provided flag has priority.
+		return strconv.FormatFloat(flags.StepSize, 'f', -1, 64)
+	} else {
+		// Otherwise, search for stack annotations.
+		if stackDoc != nil {
+			if simAnnotations, ok := stackDoc.Metadata.Annotations["simulation"].(map[string]any); ok {
+				if stepSize, ok := simAnnotations["stepsize"].(float64); ok {
+					return strconv.FormatFloat(stepSize, 'f', -1, 64)
+				}
+			}
+		}
+	}
+	// Else, return the default value.
+	return "0.0005"
+}
+
+func calculateEndTime(flags Flags, stackDoc *kind.KindDoc) string {
+	if flags.EndTime > 0.0 {
+		// User provided flag has priority.
+		return strconv.FormatFloat(flags.EndTime, 'f', -1, 64)
+	} else {
+		// Otherwise, search for stack annotations.
+		if stackDoc != nil {
+			if simAnnotations, ok := stackDoc.Metadata.Annotations["simulation"].(map[string]any); ok {
+				if endTime, ok := simAnnotations["endtime"].(float64); ok {
+					return strconv.FormatFloat(endTime, 'f', -1, 64)
+				}
+			}
+		}
+	}
+	return "0.002"
+}
+
+func buildModelCmd(name string, path string, yamlFiles []string, env map[string]string, flags Flags, stackDoc *kind.KindDoc) *session.Command {
 
 	yamlFiles = removeDuplicate(yamlFiles)
 	path, args := processCmdModifiers(name, path, flags)
@@ -341,8 +381,8 @@ func buildModelCmd(name string, path string, yamlFiles []string, env map[string]
 	if flags.Uri != "" {
 		args = append(args, "--uri", flags.Uri)
 	}
-	args = append(args, "--stepsize", strconv.FormatFloat(flags.StepSize, 'f', -1, 64))
-	args = append(args, "--endtime", strconv.FormatFloat(flags.EndTime, 'f', -1, 64))
+	args = append(args, "--stepsize", calculateStepSize(flags, stackDoc))
+	args = append(args, "--endtime", calculateEndTime(flags, stackDoc))
 	if flags.Timeout > 0.0 {
 		args = append(args, "--timeout", strconv.FormatFloat(flags.Timeout, 'f', -1, 64))
 	}

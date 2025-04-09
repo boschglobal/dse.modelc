@@ -53,8 +53,8 @@ func parseFlags() {
 	flag.Usage = printUsage
 	flag.StringVar(&flags.Stack, "stack", "", "run the named simulation stack(s)")
 
-	flag.Float64Var(&flags.StepSize, "stepsize", 0.0005, "simulation step size")
-	flag.Float64Var(&flags.EndTime, "endtime", 0.0020, "simulation end time")
+	flag.Float64Var(&flags.StepSize, "stepsize", 0.0, "simulation step size")
+	flag.Float64Var(&flags.EndTime, "endtime", 0.0, "simulation end time")
 
 	flag.StringVar(&flags.Transport, "transport", "redispubsub", "SimBus transport")
 	flag.StringVar(&flags.Uri, "uri", "redis://localhost:6379", "SimBus connection URI")

@@ -1,0 +1,59 @@
+---
+kind: Stack
+metadata:
+  name: default
+spec:
+  connection:
+    transport:
+      redis:
+        timeout: 60
+        uri: redis://localhost:6379
+  models:
+    - channels:
+        - expectedModelCount: 2
+          name: physical
+        - expectedModelCount: 1
+          name: network
+      model:
+        name: simbus
+      name: simbus
+      uid: 0
+    - channels:
+        - alias: signal_channel
+          name: physical
+          selectors:
+            channel: signal_vector
+            model: input
+      model:
+        name: dse.modelc.csv
+      name: input
+      runtime:
+        env:
+          CSV_FILE: model/input/data/input.csv
+        paths:
+          - model/input/data
+      uid: 1
+    - channels:
+        - alias: signal_channel
+          name: physical
+          selectors:
+            channel: signal_vector
+            model: linear
+        - alias: network_channel
+          name: network
+          selectors:
+            channel: network_vector
+            model: linear
+      model:
+        name: linear
+      name: linear
+      runtime:
+        env: {}
+        paths:
+          - model/linear/data
+      uid: 2
+---
+kind: Model
+metadata:
+  name: simbus
+spec: {}
