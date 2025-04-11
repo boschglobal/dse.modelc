@@ -132,6 +132,7 @@ simer:
 		cp dse/modelc/build/_out/lib/libmodelc.so extra/tools/simer/build/stage/lib32/libmodelc.so ;\
 		cp dse/modelc/build/_out/examples/simer/lib/libcounter.so extra/tools/simer/build/stage/lib32/libcounter_i386.so ;\
 	fi
+	cp -r extra/tools/trace extra/tools/simer/build/stage
 
 .PHONY: docker
 docker:

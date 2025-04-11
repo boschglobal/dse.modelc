@@ -60,6 +60,12 @@ ADD . /src
 RUN cd /src && make build
 
 
+# Trace Builder
+# =============
+FROM golang:bullseye AS trace
+ADD build/stage/trace /src
+RUN cd /src && make build
+
 
 # Simer Container Image
 # =====================
@@ -126,6 +132,11 @@ COPY build/stage/libx32/* /usr/local/libx32/
 # Install Simer
 # =============
 COPY --from=simer /src/bin/simer /usr/local/bin/simer
+
+
+# Install Trace
+# =============
+COPY --from=trace /src/bin/trace /usr/local/bin/trace
 
 
 # Add License Information (from 3rd party repos)

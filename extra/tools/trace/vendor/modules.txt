@@ -1,0 +1,32 @@
+# github.boschdevcloud.com/fsil/fsil.go/command v1.0.4
+## explicit; go 1.23.4
+github.boschdevcloud.com/fsil/fsil.go/command
+# github.com/boschglobal/dse.schemas/code/go/dse v1.2.23
+## explicit; go 1.21.6
+github.com/boschglobal/dse.schemas/code/go/dse/schemas/fbs/channel
+github.com/boschglobal/dse.schemas/code/go/dse/schemas/fbs/notify
+# github.com/davecgh/go-spew v1.1.1
+## explicit
+github.com/davecgh/go-spew/spew
+# github.com/google/flatbuffers v25.2.10+incompatible
+## explicit
+github.com/google/flatbuffers/go
+# github.com/pmezard/go-difflib v1.0.0
+## explicit
+github.com/pmezard/go-difflib/difflib
+# github.com/stretchr/testify v1.10.0
+## explicit; go 1.17
+github.com/stretchr/testify/assert
+github.com/stretchr/testify/assert/yaml
+# github.com/vmihailenco/msgpack/v5 v5.4.1
+## explicit; go 1.19
+github.com/vmihailenco/msgpack/v5
+github.com/vmihailenco/msgpack/v5/msgpcode
+# github.com/vmihailenco/tagparser/v2 v2.0.0
+## explicit; go 1.15
+github.com/vmihailenco/tagparser/v2
+github.com/vmihailenco/tagparser/v2/internal
+github.com/vmihailenco/tagparser/v2/internal/parser
+# gopkg.in/yaml.v3 v3.0.1
+## explicit
+gopkg.in/yaml.v3
