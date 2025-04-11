@@ -102,6 +102,12 @@ static bool process_message_stream(Adapter* adapter, const char* channel_name,
         uint8_t* raw_msg_ptr = msg_ptr;
         msg_ptr = flatbuffers_read_size_prefix(msg_ptr, &msg_len);
         if (msg_len == 0) break;
+        /* Trace the incoming message, before processing. */
+        if (adapter->trace) {
+            fwrite(raw_msg_ptr, sizeof(raw_msg_ptr[0]),
+                msg_len + sizeof(flatbuffers_uoffset_t), adapter->trace);
+        }
+        /* Process the message. */
         if (flatbuffers_has_identifier(msg_ptr, "SBCH")) {
             found |= process_sbch_message(
                 adapter, msg_ptr, channel_name, message_type, token);
@@ -114,11 +120,6 @@ static bool process_message_stream(Adapter* adapter, const char* channel_name,
             break;
         }
 
-        /* Trace. */
-        if (adapter->trace) {
-            fwrite(raw_msg_ptr, sizeof(raw_msg_ptr[0]),
-                msg_len + sizeof(flatbuffers_uoffset_t), adapter->trace);
-        }
 
         /* Next. */
         msg_ptr += msg_len;
@@ -302,6 +303,8 @@ int32_t send_message_ack(Adapter* adapter, void* endpoint_channel,
     /* Build the Channel Message (without 'create' because it wants all
      * parameters) */
     ns(ChannelMessage_start)(B);
+    ns(ChannelMessage_channel_name_create_str)(
+        B, (const char*)endpoint_channel);
     ns(ChannelMessage_model_uid_add)(B, model_uid);
     ns(ChannelMessage_message_add_value)(B, message);
     ns(ChannelMessage_message_add_type)(B, message.type);
