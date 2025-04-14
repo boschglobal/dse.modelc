@@ -15,12 +15,12 @@ import (
 type Short struct {
 }
 
-func (s Short) VisitChannelMsg(cm trace.ChannelMsg) {
+func (s *Short) VisitChannelMsg(cm trace.ChannelMsg) {
 	messageName := channel.EnumNamesMessageType[cm.Msg.MessageType()]
 	fmt.Printf("%s:%d:%d:%d::%s\n", cm.Msg.ChannelName(), cm.Msg.ModelUid(), cm.Msg.Token(), cm.Msg.Rc(), messageName)
 }
 
-func (s Short) VisitNotifyMsg(nm trace.NotifyMsg) {
+func (s *Short) VisitNotifyMsg(nm trace.NotifyMsg) {
 	direction := func() string {
 		if nm.Msg.ModelUidLength() > 0 {
 			return "(S)<--(M)"
@@ -36,8 +36,4 @@ func (s Short) VisitNotifyMsg(nm trace.NotifyMsg) {
 		uids = append(uids, "0") // SimBus.
 	}
 	fmt.Printf("Notify:%f:%f:%f %s (%s)\n", nm.Msg.ModelTime(), nm.Msg.NotifyTime(), nm.Msg.ScheduleTime(), direction, strings.Join(uids, ","))
-}
-
-func (v Short) Handle(f trace.Flatbuffer) {
-	f.Accept(v)
 }

@@ -43,9 +43,9 @@ func TestShortSummary(t *testing.T) {
 	capture := StdoutCapture{}
 	capture.StartCapture()
 
-	v := Short{}
+	var v trace.Visitor = &Short{}
 	trace := trace.Stream{File: "../../../testdata/simbus.bin"}
-	err := trace.Process(v)
+	err := trace.Process(&v)
 	assert.Nil(t, err)
 
 	output, _ := capture.StopCapture()
@@ -67,9 +67,9 @@ func TestLongSummary(t *testing.T) {
 	capture := StdoutCapture{}
 	capture.StartCapture()
 
-	v := Long{SignalLookup: map[uint32]string{}}
+	var v trace.Visitor = &Long{SignalLookup: map[uint32]string{}}
 	trace := trace.Stream{File: "../../../testdata/simbus.bin"}
-	err := trace.Process(v)
+	err := trace.Process(&v)
 	assert.Nil(t, err)
 
 	output, _ := capture.StopCapture()
@@ -83,11 +83,11 @@ func TestLongSummary(t *testing.T) {
 	assert.Contains(t, outputList, "SignalValue:42:scalar_channel:counter=0.000000")
 	assert.Contains(t, outputList, "SignalRead:42:scalar_channel:0:0")
 	assert.Contains(t, outputList, "SignalRead:42:scalar_channel:counter")
-	assert.Contains(t, outputList, "Notify:0.000000:0.000000:0.000500 (S)-->(M) (0)")
-	assert.Contains(t, outputList, "Notify[8000008]:SignalVector:scalar_channel:Signal:counter=42.000000")
-	assert.Contains(t, outputList, "Notify:0.000000:0.000000:0.000000 (S)<--(M) (42)")
-	assert.Contains(t, outputList, "Notify[42]:SignalVector:scalar_channel:Signal:counter=42.000000")
-	assert.Contains(t, outputList, "Notify[8000008]:SignalVector:binary_channel:Signal:message=len(12)")
-	assert.Contains(t, outputList, "Notify[42]:SignalVector:binary_channel:Signal:message=len(12)")
+	assert.Contains(t, outputList, "[0.000000] Notify:0.000000:0.000000:0.000500 (S)-->(M) (0)")
+	assert.Contains(t, outputList, "[0.000000] Notify[8000008]:SignalVector:scalar_channel:Signal:counter=42.000000")
+	assert.Contains(t, outputList, "[0.000000] Notify:0.000000:0.000000:0.000000 (S)<--(M) (42)")
+	assert.Contains(t, outputList, "[0.000000] Notify[42]:SignalVector:scalar_channel:Signal:counter=42.000000")
+	assert.Contains(t, outputList, "[0.000500] Notify[8000008]:SignalVector:binary_channel:Signal:message=len(12)")
+	assert.Contains(t, outputList, "[0.000500] Notify[42]:SignalVector:binary_channel:Signal:message=len(12)")
 	assert.Contains(t, outputList, "ModelExit:42:scalar_channel:0:0")
 }

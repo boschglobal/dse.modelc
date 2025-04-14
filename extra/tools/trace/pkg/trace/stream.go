@@ -83,7 +83,7 @@ func (s Stream) Messages() iter.Seq[Flatbuffer] {
 	}
 }
 
-func (s Stream) Process(v Visitor) error {
+func (s Stream) Process(v *Visitor) error {
 	for m := range s.Messages() {
 		m.Accept(v)
 	}

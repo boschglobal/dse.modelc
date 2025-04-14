@@ -15,7 +15,7 @@ import (
 type SummaryCommand struct {
 	command.Command
 
-	inputFile string
+	traceFile string
 	short     bool
 	long      bool
 }
@@ -45,19 +45,27 @@ func (c *SummaryCommand) Parse(args []string) error {
 	if err != nil {
 		return err
 	}
-	if c.FlagSet().NArg() != 0 {
-		return fmt.Errorf("input file not specified")
+	if c.FlagSet().NArg() == 0 {
+		return fmt.Errorf("trace file not specified")
 	}
-	c.inputFile = c.FlagSet().Arg(0)
+	c.traceFile = c.FlagSet().Arg(0)
 	return nil
 }
 
 func (c *SummaryCommand) Run() error {
-	v := Short{}
-	trace := trace.Stream{File: ""}
-	for m := range trace.Messages() {
-		m.Accept(v)
+	var v trace.Visitor
+	trace := trace.Stream{File: c.traceFile}
+
+	// Select and configure the specified visitor.
+	if c.long {
+		v = &Long{SignalLookup: map[uint32]string{}}
+	} else if c.short {
+		v = &Short{}
+	} else {
+		return fmt.Errorf("trace visitor not specified")
 	}
 
-	return nil
+	// Process the trace.
+	err := trace.Process(&v)
+	return err
 }

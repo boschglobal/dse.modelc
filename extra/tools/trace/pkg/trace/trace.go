@@ -15,23 +15,27 @@ type Visitor interface {
 }
 
 type Flatbuffer interface {
-	Accept(Visitor)
+	Accept(*Visitor)
 }
 
 type ChannelMsg struct {
 	Msg *channel.ChannelMessage
 }
 
-func (cm ChannelMsg) Accept(v Visitor) {
-	v.VisitChannelMsg(cm)
+func (cm ChannelMsg) Accept(v *Visitor) {
+	if v != nil {
+		(*v).VisitChannelMsg(cm)
+	}
 }
 
 type NotifyMsg struct {
 	Msg *notify.NotifyMessage
 }
 
-func (nm NotifyMsg) Accept(v Visitor) {
-	v.VisitNotifyMsg(nm)
+func (nm NotifyMsg) Accept(v *Visitor) {
+	if v != nil {
+		(*v).VisitNotifyMsg(nm)
+	}
 }
 
 type Trace interface {

@@ -340,6 +340,8 @@ jobs:
           cp -r sandbox/${{ env.package_name }}-linux-amd64-sandbox/${{ env.build_dir }}/_out/licenses -t extra/tools/simer/build/stage
           ls -R extra/tools/simer/build/stage
 
+          cp -r extra/tools/trace extra/tools/simer/build/stage
+
       - name: Build and push
         uses: docker/build-push-action@v4
         with:

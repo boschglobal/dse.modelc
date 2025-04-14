@@ -75,7 +75,7 @@ func (l Long) decodeSignalData(reader *bytes.Reader) (result []string) {
 	return
 }
 
-func (l Long) VisitChannelMsg(cm trace.ChannelMsg) {
+func (l *Long) VisitChannelMsg(cm trace.ChannelMsg) {
 	messageName := channel.EnumNamesMessageType[cm.Msg.MessageType()]
 	fmt.Printf("%s:%d:%s:%d:%d\n", messageName, cm.Msg.ModelUid(), cm.Msg.ChannelName(), cm.Msg.Token(), cm.Msg.Rc())
 
@@ -127,7 +127,7 @@ func (l Long) VisitChannelMsg(cm trace.ChannelMsg) {
 	}
 }
 
-func (l Long) VisitNotifyMsg(nm trace.NotifyMsg) {
+func (l *Long) VisitNotifyMsg(nm trace.NotifyMsg) {
 	direction := func() string {
 		if nm.Msg.ModelUidLength() > 0 {
 			return "(S)<--(M)"
@@ -142,7 +142,7 @@ func (l Long) VisitNotifyMsg(nm trace.NotifyMsg) {
 	if len(uids) == 0 {
 		uids = append(uids, "0") // SimBus.
 	}
-	fmt.Printf("Notify:%f:%f:%f %s (%s)\n", nm.Msg.ModelTime(), nm.Msg.NotifyTime(), nm.Msg.ScheduleTime(), direction, strings.Join(uids, ","))
+	fmt.Printf("[%f] Notify:%f:%f:%f %s (%s)\n", nm.Msg.ModelTime(), nm.Msg.ModelTime(), nm.Msg.NotifyTime(), nm.Msg.ScheduleTime(), direction, strings.Join(uids, ","))
 
 	for i := range nm.Msg.SignalsLength() {
 		sv := new(notify.SignalVector)
@@ -150,7 +150,7 @@ func (l Long) VisitNotifyMsg(nm trace.NotifyMsg) {
 			fmt.Printf("  <unable to decode SignalVector (i=%d)>\n", i)
 			continue
 		}
-		fmt.Printf("Notify[%d]:SignalVector:%s\n", sv.ModelUid(), sv.Name())
+		fmt.Printf("[%f] Notify[%d]:SignalVector:%s\n", nm.Msg.ModelTime(), sv.ModelUid(), sv.Name())
 
 		for j := range sv.SignalLength() {
 			s := new(notify.Signal)
@@ -162,18 +162,14 @@ func (l Long) VisitNotifyMsg(nm trace.NotifyMsg) {
 			if !ok {
 				signalName = fmt.Sprintf("%d", s.Uid())
 			}
-			fmt.Printf("Notify[%d]:SignalVector:%s:Signal:%s=%f\n", sv.ModelUid(), sv.Name(), signalName, s.Value())
+			fmt.Printf("[%f] Notify[%d]:SignalVector:%s:Signal:%s=%f\n", nm.Msg.ModelTime(), sv.ModelUid(), sv.Name(), signalName, s.Value())
 		}
 
 		reader := bytes.NewReader(sv.DataBytes())
 		sd := l.decodeSignalData(reader)
 		for _, row := range sd {
-			fmt.Printf("Notify[%d]:SignalVector:%s:Signal:%s\n", sv.ModelUid(), sv.Name(), row)
+			fmt.Printf("[%f] Notify[%d]:SignalVector:%s:Signal:%s\n", nm.Msg.ModelTime(), sv.ModelUid(), sv.Name(), row)
 		}
 	}
 
-}
-
-func (v Long) Handle(f trace.Flatbuffer) {
-	f.Accept(v)
 }

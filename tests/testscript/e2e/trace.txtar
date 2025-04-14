@@ -4,7 +4,7 @@ env TRACEFILE=data/trace/simbus.bin
 
 mkdir /repo/$SIM/data/trace
 
-# TEST: redis
+# TEST: Collect a Trace
 env SIMBUS_TRANSPORT=redis
 env SIMBUS_URI=redis://localhost:6379
 
@@ -21,6 +21,16 @@ stdout 'Create trace file : data/trace/simbus.bin'
 exists /repo/$SIM/$TRACEFILE
 
 
+# TEST: Print the Trace
+exec sh -e $WORK/trace.sh
+stdout 'ModelRegister:42:binary_channel:2:0'
+stdout '\[0.000000\] Notify\[42\]:SignalVector:scalar_channel:Signal:counter=42.000000'
+stdout '\[0.000500\] Notify\[8000008\]:SignalVector:scalar_channel:Signal:counter=43.000000'
+stdout '\[0.001500\] Notify\[42\]:SignalVector:binary_channel:Signal:message=len\(12\)'
+stdout '\[0.001500\] Notify\[8000008\]:SignalVector:binary_channel:Signal:message=len\(12\)'
+stdout 'ModelExit:42:scalar_channel:0:0'
+
+
 -- test.sh --
 SIMER="${SIMER:-ghcr.io/boschglobal/dse-simer:latest}"
 docker run --name simer -i --rm -v $ENTRYHOSTDIR/$SIM:/sim \
@@ -31,3 +41,10 @@ docker run --name simer -i --rm -v $ENTRYHOSTDIR/$SIM:/sim \
         -env $NAME:SIMBUS_TRANSPORT=$SIMBUS_TRANSPORT \
         -env $NAME:SIMBUS_URI=$SIMBUS_URI \
         -env $NAME:SIMBUS_LOGLEVEL=2
+
+
+-- trace.sh --
+SIMER="${SIMER:-ghcr.io/boschglobal/dse-simer:latest}"
+docker run --name simer -i --rm -v $ENTRYHOSTDIR/$SIM:/sim \
+    --entrypoint /usr/local/bin/trace \
+    $SIMER summary -long data/trace/simbus.bin
