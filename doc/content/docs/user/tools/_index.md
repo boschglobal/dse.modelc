@@ -1,6 +1,6 @@
 ---
-title: "Tools"
-linkTitle: "Additional Tools"
+title: "Additional Tools"
+linkTitle: "Tools"
 weight: 1600
 ---
 
