@@ -43,7 +43,7 @@ static bool read_csv_line(CsvModelDesc* c)
         double ts = strtod(c->line, NULL);
         if (errno) {
             log_error("Bad line, timestamp conversion failed");
-            log_error(c->line);
+            log_error("%s", c->line);
             continue;
         }
         if (ts >= 0) c->timestamp = ts;
