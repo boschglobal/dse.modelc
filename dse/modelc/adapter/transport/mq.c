@@ -258,7 +258,7 @@ int32_t mq_start(Endpoint* endpoint)
         /* PUSH are Models, handled by hash. */
         /* PULL is SimBus.*/
         mq_ep->mq_open(&mq_ep->pull, MQ_KIND_SIMBUS, MQ_MODE_PULL);
-        log_debug("MQ opened: endpoint:%s (%d)", mq_ep->pull.endpoint);
+        log_debug("MQ opened: endpoint:%s", mq_ep->pull.endpoint);
     } else {
         /* PUSH is SimBus. */
         mq_ep->mq_open(&mq_ep->push, MQ_KIND_SIMBUS, MQ_MODE_PUSH);
