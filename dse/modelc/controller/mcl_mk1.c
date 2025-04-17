@@ -306,7 +306,7 @@ int mcl_mk1_create(ModelInstanceSpec* model_instance)
             } else {
                 if (errno == 0) errno = EINVAL;
                 log_fatal("YAML node [Model]/spec/runtime/mcl[os=%s]/path not "
-                          "found!");
+                          "found!", PLATFORM_OS);
             }
 
             assert(adapter);
