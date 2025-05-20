@@ -206,6 +206,10 @@ func ModelCommandList(docMap map[string][]kind.KindDoc, modelcPath string, model
 					continue // Next model.
 				}
 				slog.Debug(fmt.Sprintf("    %s (%s)", model.Name, model.Model.Name))
+				if model.Runtime != nil && model.Runtime.External != nil && *model.Runtime.External {
+					slog.Debug(fmt.Sprintf("External model: %s  (start externally)", model.Name))
+					continue // External model, skip (started externally).
+				}
 				// Locate the YAML files.
 				yamlFiles := []string{stackDoc.File}
 				if doc, ok := findModelDoc(docMap, model.Model.Name); ok {
@@ -255,6 +259,10 @@ func stackedModelCmd(stackDoc *kind.KindDoc, modelcPath string, modelcX32Path st
 			continue
 		}
 		slog.Debug(fmt.Sprintf("    %s (%s)", model.Name, model.Model.Name))
+		if model.Runtime != nil && model.Runtime.External != nil && *model.Runtime.External {
+			slog.Debug(fmt.Sprintf("External model: %s  (start externally)", model.Name))
+			continue // External model, skip (started externally).
+		}
 		instanceName = append(instanceName, model.Name)
 		modelName = append(modelName, model.Model.Name)
 		// Locate the YAML files.
