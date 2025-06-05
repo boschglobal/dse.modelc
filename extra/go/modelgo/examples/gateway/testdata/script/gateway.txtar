@@ -1,0 +1,26 @@
+env SIM=examples/gateway/sim
+
+
+# TEST: Gateway
+exec sh -e $WORK/test.sh
+
+stderr 'Go Gateway'
+stderr 'Redis: Connect: redis://localhost:6379'
+stderr 'Redis: PULL: dse.model.42 \(Model/Gateway\)'
+stderr 'Redis: PUSH: dse.simbus \(SimBus\)'
+stderr 'Step: Simulation time=0.005000: Signals= map\[counter:10\]'
+stderr 'Redis: Disconnect'
+
+! stdout '\[ERROR\]'
+! stdout '\[FATAL\]'
+
+
+-- test.sh --
+GATEWAY="${GATEWAY:-gateway:test}"
+echo $GATEWAY
+echo $BUILDDIR
+echo $SIM
+docker run -i --rm \
+    --name gateway \
+    -v $BUILDDIR/$SIM:/sim \
+    $GATEWAY

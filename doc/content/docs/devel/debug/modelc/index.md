@@ -250,3 +250,33 @@ set_target_properties(runtime PROPERTIES
 
 Windows will load dynamic linked libraries which have been placed in the
 folder as other libraries.
+
+
+## GLib C
+
+### Docker
+
+A common problem is that a binary build on your laptop/WSL is then installed
+inside a container where the GLib version is different (usually because a
+different OS revision/version). This can happen indirectly.
+
+```bash
+/usr/local/bin/gateway: /lib/x86_64-linux-gnu/libc.so.6: version `GLIBC_2.34' not found (required by /usr/local/bin/gateway)
+/usr/local/bin/gateway: /lib/x86_64-linux-gnu/libc.so.6: version `GLIBC_2.32' not found (required by /usr/local/bin/gateway)
+```
+
+This can be further detected/understood with this command:
+
+```bash
+objdump -T /usr/local/bin/gateway | grep GLIBC_
+```
+
+If using builder images, and mapping source trees into a container, then check
+to be sure that an executable built by the host system is not installed. The
+following example uses a clean make target to ensure a container local build.
+
+```docker
+FROM golang:bullseye AS gateway
+ADD . /src
+RUN cd /src && make clean build
+```

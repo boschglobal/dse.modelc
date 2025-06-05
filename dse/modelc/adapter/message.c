@@ -101,7 +101,11 @@ static bool process_message_stream(Adapter* adapter, const char* channel_name,
     while (((msg_ptr - buffer) + msg_len) < (uint32_t)length) {
         uint8_t* raw_msg_ptr = msg_ptr;
         msg_ptr = flatbuffers_read_size_prefix(msg_ptr, &msg_len);
-        if (msg_len == 0) break;
+        if (msg_len == 0) {
+            log_debug("process_message_stream: size_prefix is 0!?!");
+            break;
+        };
+        log_trace("process_message_stream: msg_len=%d", msg_len);
         /* Trace the incoming message, before processing. */
         if (adapter->trace) {
             fwrite(raw_msg_ptr, sizeof(raw_msg_ptr[0]),
@@ -117,6 +121,7 @@ static bool process_message_stream(Adapter* adapter, const char* channel_name,
                 found |= true;
             }
         } else {
+            log_debug("process_message_stream: identifier unknown!?!");
             break;
         }
 

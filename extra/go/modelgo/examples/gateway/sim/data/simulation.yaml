@@ -1,0 +1,36 @@
+# Copyright 2025 Robert Bosch GmbH
+#
+# SPDX-License-Identifier: Apache-2.0
+
+---
+kind: Stack
+metadata:
+  name: gateway
+spec:
+  connection:
+    transport:
+      redis:
+        uri: redis://localhost:6379
+        timeout: 60
+  models:
+    - name: simbus
+      model:
+        name: simbus
+      channels:
+        - name: physical
+          expectedModelCount: 1
+        - name: network
+          expectedModelCount: 1
+    - name: gateway
+      uid: 42
+      model:
+        name: ModelGoGateway
+      runtime:
+        external: true
+      channels:
+        - name: physical
+        - name: network
+---
+kind: Model
+metadata:
+  name: simbus

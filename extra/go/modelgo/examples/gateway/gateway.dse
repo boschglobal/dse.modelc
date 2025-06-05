@@ -1,0 +1,9 @@
+simulation
+channel physical
+channel network
+
+envar SIMER_IMAGE gateway:test
+
+model gateway external=true
+channel physical
+channel network

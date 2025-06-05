@@ -199,6 +199,7 @@ Endpoint* redis_connect(const char* path, const char* hostname, int32_t port,
         snprintf(pull_desc->endpoint, MAX_KEY_SIZE, "dse.simbus");
         hashmap_set(&redis_ep->pull_hash, "simbus", pull_desc);
         _update_pull_cmd(redis_ep);
+        memcpy(redis_ep->pull.endpoint, pull_desc->endpoint, MAX_REDIS_KEY_SIZE);
         /* Log the Endpoint information. */
         log_notice("  Endpoint: ");
         log_notice("    Model UID: %i", endpoint->uid);
@@ -331,7 +332,6 @@ static int _add_pull_key(void* _key, void* _endpoint)
 
 static void _update_pull_cmd(RedisEndpoint* redis_ep)
 {
-    redis_ep->pull.endpoint[0] = '\0';
     redis_ep->pull_argc = 0;
     free(redis_ep->pull_argv);
     free(redis_ep->pull_argvlen);
@@ -521,7 +521,6 @@ int32_t redis_recv_fbs(Endpoint* endpoint, const char** channel_name,
         /* Timed receive for 1 second (at a time). Normally no performance hit
          * in doing this loop as we expect messages on a shorter time frame.
          */
-        log_trace("Redis recv: endpoint:%s", redis_ep->pull.endpoint);
         if (redis_ep->async_ctx) {
             redisAsyncCommandArgv(redis_ep->async_ctx, _redis_async_brpop,
                 redis_ep, redis_ep->pull_argc,
@@ -565,7 +564,6 @@ int32_t redis_recv_fbs(Endpoint* endpoint, const char** channel_name,
         if (reply) freeReplyObject(reply);
         return -1; /* Caller must inspect errno to determine cause. */
     }
-
     if (redis_ep->reply_len) {
         int32_t rc = mp_decode_fbs(redis_ep->reply_str, redis_ep->reply_len,
             buffer, buffer_length, endpoint, channel_name);
