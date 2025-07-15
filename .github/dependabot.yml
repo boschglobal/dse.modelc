@@ -7,7 +7,7 @@ updates:
     schedule:
       interval: "daily"
     groups:
-      minor-and-patch:
+      gomod-automerge:
         update-types:
           - "patch"
           - "minor"
@@ -18,5 +18,11 @@ updates:
     directory: "/" # Location of package manifests
     schedule:
       interval: "daily"
+    groups:
+      actions-merge:
+        update-types:
+          - "patch"
+          - "minor"
+          - "major"
     labels:
       - "dependabot"
