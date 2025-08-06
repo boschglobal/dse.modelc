@@ -6,7 +6,7 @@ require (
 	github.com/boschglobal/dse.modelc/extra/go/ncodec v0.0.0-20250715163709-0ecd1c6646be
 	github.com/boschglobal/dse.schemas/code/go/dse v1.2.24
 	github.com/google/flatbuffers v25.2.10+incompatible
-	github.com/redis/go-redis/v9 v9.11.0
+	github.com/redis/go-redis/v9 v9.12.0
 	github.com/rogpeppe/go-internal v1.14.1
 	github.com/stretchr/testify v1.10.0
 	github.com/vmihailenco/msgpack/v5 v5.4.1
