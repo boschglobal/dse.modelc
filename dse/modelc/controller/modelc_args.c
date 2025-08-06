@@ -20,6 +20,7 @@
 #define ENV_SIMBUS_TRANSPORT "SIMBUS_TRANSPORT"
 #define ENV_SIMBUS_URI       "SIMBUS_URI"
 #define ENV_SIMBUS_LOGLEVEL  "SIMBUS_LOGLEVEL"
+#define ENV_SIMBUS_TIMEOUT   "SIMBUS_TIMEOUT"
 
 
 /* CLI related defaults. */
@@ -105,9 +106,13 @@ static void _args_extract_environment(ModelCArguments* args)
             args->uri = uri;
         }
     }
-    if (!args->log_level_set_by_cli) {
+    if (args->log_level_set_by_cli == 0) {
         char* _env = getenv(ENV_SIMBUS_LOGLEVEL);
-        if (_env) args->log_level = atol(_env);
+        args->log_level = (_env) ? atol(_env) : args->log_level;
+    }
+    if (args->timeout_set_by_cli == 0) {
+        char* _env = getenv(ENV_SIMBUS_TIMEOUT);
+        args->timeout = (_env) ? atof(_env) : args->timeout;
     }
 }
 

@@ -15,10 +15,11 @@ github_subdir: "doc"
 | Variable           | CLI Option    | Default |
 | ------------------ | ------------- | ------- |
 | `NCODEC_TRACE_{bus}_{bus_id}` | _N/A_ | _None_ |
-| `NCODEC_TRACE_PDU_{swc_id}` | _N/A_   | _None_ |
-| `SIMBUS_LOGLEVEL`  | `--logger`    | `4` (LOG_NOTICE) |
-| `SIMBUS_TRANSPORT` | `--transport` | `redispubsub` |
-| `SIMBUS_URI`       | `--uri`       | `redis://localhost:6379` |
+| `NCODEC_TRACE_PDU_{swc_id}`   | _N/A_   | _None_ |
+| `SIMBUS_LOGLEVEL`             | `--logger`    | `4` (LOG_NOTICE) |
+| `SIMBUS_TRANSPORT`            | `--transport` | `redispubsub` |
+| `SIMBUS_URI`                  | `--uri`       | `redis://localhost:6379` |
+| `SIMBUS_TIMEOUT`              | `--timeout`   | `60` (seconds) |
 
 
 ### SimBus
@@ -29,6 +30,7 @@ github_subdir: "doc"
 | `SIMBUS_TRACEFILE` | _N/A_         | _None_ (trace disabled, path to trace file) |
 | `SIMBUS_TRANSPORT` | `--transport` | `redispubsub` |
 | `SIMBUS_URI`       | `--uri`       | `redis://localhost:6379` |
+| `SIMBUS_TIMEOUT`   | `--timeout`   | `60` (seconds) |
 
 
 ### Examples
