@@ -30,7 +30,7 @@ DLL_PRIVATE Controller* controller_object_ref(SimulationSpec* sim)
 void controller_destroy(SimulationSpec* sim)
 {
     ModelInstancePrivate* mip = sim->instance_list->private;
-    Controller* controller = mip->controller;
+    Controller*           controller = mip->controller;
     if (controller == NULL) return;
 
     if (controller->adapter) adapter_destroy(controller->adapter);
@@ -47,8 +47,8 @@ int controller_init(Endpoint* endpoint, SimulationSpec* sim)
     assert(mip->controller == NULL);
 
     errno = 0;
-    mip->controller= calloc(1, sizeof(Controller));
-    if (mip->controller== NULL) {
+    mip->controller = calloc(1, sizeof(Controller));
+    if (mip->controller == NULL) {
         log_error("Controller malloc failed!");
         goto error_clean_up;
     }
@@ -336,7 +336,7 @@ void controller_run(SimulationSpec* sim)
 {
     assert(sim);
     ModelInstancePrivate* mip = sim->instance_list->private;
-    Controller* controller = mip->controller;
+    Controller*           controller = mip->controller;
     if (controller == NULL) return;
 
     /* ModelRegister (etc). */
@@ -359,7 +359,7 @@ void controller_run(SimulationSpec* sim)
 void controller_stop(SimulationSpec* sim)
 {
     ModelInstancePrivate* mip = sim->instance_list->private;
-    Controller* controller = mip->controller;
+    Controller*           controller = mip->controller;
     if (controller == NULL) return;
 
     controller->stop_request = true;
@@ -370,7 +370,7 @@ void controller_stop(SimulationSpec* sim)
 void controller_dump_debug(SimulationSpec* sim)
 {
     ModelInstancePrivate* mip = sim->instance_list->private;
-    Controller* controller = mip->controller;
+    Controller*           controller = mip->controller;
 
     if (controller && controller->adapter) {
         adapter_dump_debug(controller->adapter, controller->simulation);
@@ -381,7 +381,7 @@ void controller_dump_debug(SimulationSpec* sim)
 void controller_exit(SimulationSpec* sim)
 {
     ModelInstancePrivate* mip = sim->instance_list->private;
-    Controller* controller = mip->controller;
+    Controller*           controller = mip->controller;
     if (controller == NULL) return;
     if (sim == NULL) return;
 

@@ -86,7 +86,7 @@ void controller_dump_debug(SimulationSpec* sim)
 
 void controller_exit(SimulationSpec* sim)
 {
-    ModelInstanceSpec* _instptr = sim->instance_list;
+    ModelInstanceSpec*    _instptr = sim->instance_list;
     ModelInstancePrivate* mip = sim->instance_list->private;
     while (_instptr && _instptr->name) {
         if (_instptr->model_desc == NULL) goto exit_next;

@@ -43,7 +43,8 @@ static void redis_endpoint_destroy(Endpoint* endpoint)
         if (redis_ep->sub_event_timeout)
             event_free(redis_ep->sub_event_timeout);
         if (redis_ep->sub_event_base) event_base_free(redis_ep->sub_event_base);
-        if (redis_ep->timeout_handler_data) free(redis_ep->timeout_handler_data);
+        if (redis_ep->timeout_handler_data)
+            free(redis_ep->timeout_handler_data);
         /* Release the endpoint_channels hashmap, this is only a lookup, so
         there is no need to release the contained objects. */
         hashmap_destroy(&redis_ep->endpoint_lookup);
@@ -237,7 +238,7 @@ void* redispubsub_create_channel(Endpoint* endpoint, const char* channel_name)
 
 typedef struct {
     RedisPubSubEndpoint* redis_ep;
-    int timeout_condition;
+    int                  timeout_condition;
 } TimeoutHandlerData;
 
 static void __event_timeout_handler__(
@@ -323,8 +324,9 @@ int32_t redispubsub_start(Endpoint* endpoint)
         0);
 
     /* Wait for the PubSub to startup.*/
-    struct timeval timeout = { REDIS_SUBSCRIBE_TIMEOUT, 0 };
-    TimeoutHandlerData timeout_data = { .redis_ep = redis_ep, .timeout_condition = 0 };
+    struct timeval     timeout = { REDIS_SUBSCRIBE_TIMEOUT, 0 };
+    TimeoutHandlerData timeout_data = { .redis_ep = redis_ep,
+        .timeout_condition = 0 };
     redis_ep->sub_event_timeout = event_new(redis_ep->sub_event_base, -1, 0,
         &__event_timeout_handler__, &timeout_data);
     if (!redis_ep->sub_event_timeout) {
@@ -344,8 +346,9 @@ int32_t redispubsub_start(Endpoint* endpoint)
     event_free(redis_ep->sub_event_timeout);
 
     /* Start the timeout event. */
-    struct timeval timeout_1s = { 1, 0 };
-    TimeoutHandlerData* persistent_timeout_data = calloc(1, sizeof(TimeoutHandlerData));
+    struct timeval      timeout_1s = { 1, 0 };
+    TimeoutHandlerData* persistent_timeout_data =
+        calloc(1, sizeof(TimeoutHandlerData));
     persistent_timeout_data->redis_ep = redis_ep;
     persistent_timeout_data->timeout_condition = 0;
     redis_ep->timeout_handler_data = persistent_timeout_data;
@@ -386,7 +389,8 @@ int32_t redispubsub_send_fbs(Endpoint* endpoint, void* endpoint_channel,
             reply = redisCommand(redis_ep->ctx, "PUBLISH %s %b", ch->pub_key,
                 buffer, (size_t)buffer_length);
             if (reply == NULL) {
-                log_notice("Connection lost: redisCommand returned NULL object");
+                log_notice(
+                    "Connection lost: redisCommand returned NULL object");
             }
             log_trace("redispubsub_send_fbs: message sent");
             log_trace("redispubsub_send_fbs:     channel=%s", ch->pub_key);
@@ -438,7 +442,8 @@ int32_t redispubsub_recv_fbs(Endpoint* endpoint, const char** channel_name,
     RedisPubSubEndpoint* redis_ep = (RedisPubSubEndpoint*)endpoint->private;
     assert(redis_ep->ctx);
     assert(redis_ep->sub_ctx);
-    TimeoutHandlerData* timeout_data = (TimeoutHandlerData*)redis_ep->timeout_handler_data;
+    TimeoutHandlerData* timeout_data =
+        (TimeoutHandlerData*)redis_ep->timeout_handler_data;
 
     /* Wait for a message, but only if the queue is empty. */
     if (q_num_elements(redis_ep->recv_msg_queue) == 0) {

@@ -183,8 +183,8 @@ typedef struct RuntimeModelDesc {
 } RuntimeModelDesc;
 
 DLL_PUBLIC RuntimeModelDesc* model_runtime_create(RuntimeModelDesc* model);
-DLL_PUBLIC int model_runtime_step(
-    RuntimeModelDesc* model, double* model_time, double stop_time);
+DLL_PUBLIC int               model_runtime_step(
+                  RuntimeModelDesc* model, double* model_time, double stop_time);
 DLL_PUBLIC void model_runtime_destroy(RuntimeModelDesc* model);
 
 

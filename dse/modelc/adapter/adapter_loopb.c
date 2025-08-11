@@ -221,9 +221,9 @@ static int _resolve_bus(void* _sc, void* _)
     UNUSED(_);
     SimbusChannel* sc = _sc;
 
-        for (uint32_t i = 0; i < sc->vector.count; i++) {
-            sc->vector.length[i] = 0;
-        }
+    for (uint32_t i = 0; i < sc->vector.count; i++) {
+        sc->vector.length[i] = 0;
+    }
 
     return 0;
 }
@@ -257,8 +257,7 @@ static int ready_update_sv(void* value, void* data)
                     &sc->vector.length[sv->vector_index],
                     &sc->vector.buffer_size[sv->vector_index], sv->bin,
                     sv->bin_size);
-                log_simbus(
-                    "    SignalValue: %u = <binary> (len=%u) [name=%s]",
+                log_simbus("    SignalValue: %u = <binary> (len=%u) [name=%s]",
                     sv->uid, sv->bin_size, sv->name);
                 /* Indicate the binary object was consumed. */
                 sv->bin_size = 0;
@@ -317,12 +316,10 @@ static int notify_update_sv(void* value, void* data)
 
             if (sc->vector.binary[sv->vector_index] &&
                 sc->vector.length[sv->vector_index]) {
-                dse_buffer_append(&sv->bin, &sv->bin_size,
-                    &sv->bin_buffer_size,
+                dse_buffer_append(&sv->bin, &sv->bin_size, &sv->bin_buffer_size,
                     sc->vector.binary[sv->vector_index],
                     sc->vector.length[sv->vector_index]);
-                log_simbus(
-                    "    SignalValue: %u = <binary> (len=%u) [name=%s]",
+                log_simbus("    SignalValue: %u = <binary> (len=%u) [name=%s]",
                     sv->uid, sv->bin_size, sv->name);
             } else {
                 if (__log_level__ <= LOG_SIMBUS) {
@@ -338,7 +335,8 @@ static int notify_update_sv(void* value, void* data)
 
                 for (uint32_t i = 0; i < ch->index.count; i++) {
                     SignalValue* sv = _get_signal_value_byindex(ch, i);
-                    sv->final_val = sv->val = sc->vector.scalar[sv->vector_index];
+                    sv->final_val = sv->val =
+                        sc->vector.scalar[sv->vector_index];
                 }
             }
         }

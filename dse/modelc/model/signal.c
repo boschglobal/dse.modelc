@@ -33,7 +33,7 @@ typedef struct SignalMatchData {
 static int _signal_group_match_handler(
     ModelInstanceSpec* model_instance, SchemaObject* object)
 {
-    uint32_t index = 0;
+    uint32_t         index = 0;
     SignalMatchData* match_data = (SignalMatchData*)object->data;
 
     /* Enumerate over the signals. */
@@ -74,7 +74,8 @@ static const char* _signal_annotation(ModelInstanceSpec* mi, SignalVector* sv,
 
     /* Look for the annotation. */
     if (match_data.signal_match) {
-        YamlNode* n = dse_yaml_find_node(match_data.signal_match->data, "annotations");
+        YamlNode* n =
+            dse_yaml_find_node(match_data.signal_match->data, "annotations");
         value = dse_yaml_get_scalar(n, name);
         if (node && value) {
             *node = dse_yaml_find_node(n, name);
@@ -97,7 +98,8 @@ static int _sg_annotation_search_match_handler(
 {
     UNUSED(model_instance);
 
-    SignalGroupAnnotationData* annotation_data = (SignalGroupAnnotationData*)object->data;
+    SignalGroupAnnotationData* annotation_data =
+        (SignalGroupAnnotationData*)object->data;
     const char* name = annotation_data->annotation_name;
     YamlNode*   n = dse_yaml_find_node(object->doc, "metadata/annotations");
     const char* value = dse_yaml_get_scalar(n, name);

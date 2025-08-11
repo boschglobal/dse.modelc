@@ -61,7 +61,7 @@ __attribute__((unused)) static void __compile_time_checks(void)
     _Static_assert(sizeof(ModelGatewayDesc) == 60, "Compatibility FAIL!");
     _Static_assert(sizeof(MclDesc) == 192, "Compatibility FAIL!");
     _Static_assert(sizeof(MarshalGroup) == 84, "Compatibility FAIL!");
-    _Static_assert(sizeof(MarshalStruct) ==84, "Compatibility FAIL!");
+    _Static_assert(sizeof(MarshalStruct) == 84, "Compatibility FAIL!");
     _Static_assert(sizeof(MarshalMapSpec) == 60, "Compatibility FAIL!");
     _Static_assert(sizeof(MarshalSignalMap) == 72, "Compatibility FAIL!");
     _Static_assert(sizeof(SimulationSpec) == 80, "Compatibility FAIL!");

@@ -89,8 +89,8 @@ exit(errno)
 : Any error in loading an MCL represents a fatal configuration error and
   `exit()` is called to terminate execution.
 */
-__attribute__((deprecated))
-int mcl_mk1_loadlib(ModelInstanceSpec* model_instance)
+__attribute__((deprecated)) int mcl_mk1_loadlib(
+    ModelInstanceSpec* model_instance)
 {
     if (__mcl_dll_handle == NULL) _allocate_mcl();
     assert(__mcl_dll_handle);
@@ -181,8 +181,8 @@ exit(errno)
 : Any error in creating an MCL Model instance represents a fatal configuration
   error and `exit()` is called to terminate execution.
 */
-__attribute__((deprecated))
-int mcl_mk1_create(ModelInstanceSpec* model_instance)
+__attribute__((deprecated)) int mcl_mk1_create(
+    ModelInstanceSpec* model_instance)
 {
     assert(__mcl_strategy);
     assert(model_instance);
@@ -240,9 +240,8 @@ int mcl_mk1_create(ModelInstanceSpec* model_instance)
         /* Find the (actual) Model to be loaded into this MCL Model. */
         const char* selector[] = { "metadata/name" };
         const char* value[] = { model_name };
-        YamlNode* mcl_model_doc =
-            dse_yaml_find_doc_in_doclist(model_instance->yaml_doc_list,
-                "Model", selector, value, 1);
+        YamlNode*   mcl_model_doc = dse_yaml_find_doc_in_doclist(
+              model_instance->yaml_doc_list, "Model", selector, value, 1);
         if (mcl_model_doc == NULL) {
             if (errno == 0) errno = EINVAL;
             log_fatal(
@@ -306,7 +305,8 @@ int mcl_mk1_create(ModelInstanceSpec* model_instance)
             } else {
                 if (errno == 0) errno = EINVAL;
                 log_fatal("YAML node [Model]/spec/runtime/mcl[os=%s]/path not "
-                          "found!", PLATFORM_OS);
+                          "found!",
+                    PLATFORM_OS);
             }
 
             assert(adapter);
@@ -352,8 +352,8 @@ model_instance (ModelInstanceSpec*)
 : Model Instance object representing the Model. Contains various identifying
   and configuration elements.
 */
-__attribute__((deprecated))
-void mcl_mk1_destroy(ModelInstanceSpec* model_instance)
+__attribute__((deprecated)) void mcl_mk1_destroy(
+    ModelInstanceSpec* model_instance)
 {
     if (model_instance && model_instance->private) {
         ModelInstancePrivate* mip = model_instance->private;

@@ -92,7 +92,7 @@ int main(int argc, char** argv)
     /* Configure the Model (takes config from parsed YAML docs). */
     rc = modelc_configure(&args, &sim);
     if (rc) exit(rc);
-    
+
     /* Start and run the Controller and (dynamically linked) Model. */
     __sim = &sim;
     signal(SIGTERM, signal_handler);

@@ -199,7 +199,8 @@ Endpoint* redis_connect(const char* path, const char* hostname, int32_t port,
         snprintf(pull_desc->endpoint, MAX_KEY_SIZE, "dse.simbus");
         hashmap_set(&redis_ep->pull_hash, "simbus", pull_desc);
         _update_pull_cmd(redis_ep);
-        memcpy(redis_ep->pull.endpoint, pull_desc->endpoint, MAX_REDIS_KEY_SIZE);
+        memcpy(
+            redis_ep->pull.endpoint, pull_desc->endpoint, MAX_REDIS_KEY_SIZE);
         /* Log the Endpoint information. */
         log_notice("  Endpoint: ");
         log_notice("    Model UID: %i", endpoint->uid);
@@ -534,7 +535,8 @@ int32_t redis_recv_fbs(Endpoint* endpoint, const char** channel_name,
             if (reply && reply->type == REDIS_REPLY_ERROR) {
                 log_debug("REDIS_REPLY_ERROR : %s", reply->str);
             }
-            if (reply && reply->type == REDIS_REPLY_ARRAY && reply->elements == 2) {
+            if (reply && reply->type == REDIS_REPLY_ARRAY &&
+                reply->elements == 2) {
                 redis_ep->reply_len = reply->element[1]->len;
                 redis_ep->reply_str = reply->element[1]->str;
             } else {

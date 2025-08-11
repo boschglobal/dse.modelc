@@ -129,7 +129,7 @@ static SignalTransform* _parse_signal_transform(SchemaSignalObject* so)
 static int _signal_group_match_handler(
     ModelInstanceSpec* model_instance, SchemaObject* object)
 {
-    uint32_t index = 0;
+    uint32_t           index = 0;
     SignalHandlerData* handler_data = object->data;
 
     /* Enumerate over the signals. */
@@ -152,7 +152,8 @@ static int _signal_group_match_handler(
 
             /* Locate an associated signal transform. */
             SignalTransform* st = _parse_signal_transform(so);
-            if (st) hashmap_set_alt(&handler_data->transform_map, so->signal, st);
+            if (st)
+                hashmap_set_alt(&handler_data->transform_map, so->signal, st);
         }
         free(so);
     } while (1);
@@ -212,7 +213,7 @@ void _load_signals(ModelInstanceSpec* model_instance, ChannelSpec* channel_spec,
     __signal_list_t* signal_list, ModelChannelType* vector_type)
 {
     /* Setup handler related storage. */
-    SignalHandlerData handler_data = {0};
+    SignalHandlerData handler_data = { 0 };
     hashlist_init(&handler_data.signal_list, 512);
     hashmap_init(&handler_data.transform_map);
     handler_data.signal_vector_type = *vector_type;

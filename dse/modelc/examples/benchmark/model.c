@@ -31,7 +31,7 @@ static uint64_t _get_elapsedtime_us(struct timespec ref)
 
 
 typedef struct {
-    ModelDesc       model;
+    ModelDesc model;
 
     /* Operation Parameters */
     uint32_t model_id;
@@ -89,7 +89,7 @@ ModelDesc* model_create(ModelDesc* model)
         m->block.offset = 0;
     }
 
-     /* Document the conditions. */
+    /* Document the conditions. */
     log_notice("m->model_id %u", m->model_id);
     log_notice("m->block.offset %u", m->block.offset);
     log_notice("m->block.size %u", m->block.size);

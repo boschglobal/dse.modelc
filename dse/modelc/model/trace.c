@@ -172,8 +172,9 @@ static void _trace_pdu_log(
     switch (pdu->transport_type) {
     case NCodecPduTransportTypeCan: {
         // CAN
-        log_notice("    CAN:    frame_format=%d  frame_type=%d  interface_id=%d  "
-                   "network_id=%d",
+        log_notice(
+            "    CAN:    frame_format=%d  frame_type=%d  interface_id=%d  "
+            "network_id=%d",
             pdu->transport.can_message.frame_format,
             pdu->transport.can_message.frame_type,
             pdu->transport.can_message.interface_id,
@@ -184,8 +185,8 @@ static void _trace_pdu_log(
         log_notice("    ETH:    src_mac=%016x  dst_mac=%016x",
             pdu->transport.ip_message.eth_src_mac,
             pdu->transport.ip_message.eth_dst_mac);
-        log_notice(
-            "    ETH:    ethertype=%04x  tci_pcp=%02x  tci_dei=%02x  tci_vid=%04x",
+        log_notice("    ETH:    ethertype=%04x  tci_pcp=%02x  tci_dei=%02x  "
+                   "tci_vid=%04x",
             pdu->transport.ip_message.eth_ethertype,
             pdu->transport.ip_message.eth_tci_pcp,
             pdu->transport.ip_message.eth_tci_dei,

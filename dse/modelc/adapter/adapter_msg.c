@@ -56,7 +56,8 @@ static int notify_encode_sv(void* value, void* data)
         for (uint32_t i = 0; i < ch->index.count; i++) {
             SignalValue* sv = ch->index.map[i].signal;
             if ((sv->val != sv->final_val) && sv->uid) {
-                notify(SignalVector_signal_push_create(B, sv->uid, sv->final_val));
+                notify(
+                    SignalVector_signal_push_create(B, sv->uid, sv->final_val));
                 log_simbus("    SignalWrite: %u = %f [name=%s]", sv->uid,
                     sv->final_val, sv->name);
             }
@@ -512,7 +513,8 @@ static void process_signal_index_message(
         if (sv) {
             sv->uid = signal_uid;
             /* Add to the lookup index. */
-            hashmap_set_by_hash32(&channel->index.uid2sv_lookup, signal_uid, sv);
+            hashmap_set_by_hash32(
+                &channel->index.uid2sv_lookup, signal_uid, sv);
         }
     }
 }
@@ -634,10 +636,12 @@ static int notify_model(void* value, void* data)
         }
 
         /* Process vector encoded signal data. */
-        notify(Signal_vec_t) signal_vec = notify(SignalVector_signal(signal_vector));
+        notify(Signal_vec_t) signal_vec =
+            notify(SignalVector_signal(signal_vector));
         size_t signal_length = notify(Signal_vec_len)(signal_vec);
         for (size_t i = 0; i < signal_length; i++) {
-            notify(Signal_struct_t) signal = notify(Signal_vec_at(signal_vec, i));
+            notify(Signal_struct_t) signal =
+                notify(Signal_vec_at(signal_vec, i));
             uint32_t _uid = signal->uid;
             double   _value = signal->value;
 
