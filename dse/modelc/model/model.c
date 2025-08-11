@@ -98,9 +98,11 @@ static ModelFunctionChannel* _get_mfc(ModelInstanceSpec* model_instance,
 }
 
 
-static HashList         __handler_signal_list;
-static ModelChannelType __handler_signal_vector_type;
-static HashMap          __handler_transform_map;
+typedef struct SignalHandlerData {
+    HashList         signal_list;
+    ModelChannelType signal_vector_type;
+    HashMap          transform_map;
+} SignalHandlerData;
 
 
 static SignalTransform* _parse_signal_transform(SchemaSignalObject* so)
@@ -128,6 +130,7 @@ static int _signal_group_match_handler(
     ModelInstanceSpec* model_instance, SchemaObject* object)
 {
     uint32_t index = 0;
+    SignalHandlerData* handler_data = object->data;
 
     /* Enumerate over the signals. */
     SchemaSignalObject* so;
@@ -145,11 +148,11 @@ static int _signal_group_match_handler(
             }
 
             /* Signals are taken in parsing order. */
-            hashlist_append(&__handler_signal_list, (void*)so->signal);
+            hashlist_append(&handler_data->signal_list, (void*)so->signal);
 
             /* Locate an associated signal transform. */
             SignalTransform* st = _parse_signal_transform(so);
-            if (st) hashmap_set_alt(&__handler_transform_map, so->signal, st);
+            if (st) hashmap_set_alt(&handler_data->transform_map, so->signal, st);
         }
         free(so);
     } while (1);
@@ -159,7 +162,7 @@ static int _signal_group_match_handler(
     node = dse_yaml_find_node(object->doc, "metadata/annotations/vector_type");
     if (node && node->scalar) {
         if (strcmp(node->scalar, VECTOR_TYPE_BINARY_STR) == 0) {
-            __handler_signal_vector_type = MODEL_VECTOR_BINARY;
+            handler_data->signal_vector_type = MODEL_VECTOR_BINARY;
         }
     }
 
@@ -209,38 +212,42 @@ void _load_signals(ModelInstanceSpec* model_instance, ChannelSpec* channel_spec,
     __signal_list_t* signal_list, ModelChannelType* vector_type)
 {
     /* Setup handler related storage. */
-    hashlist_init(&__handler_signal_list, 512);
-    hashmap_init(&__handler_transform_map);
-    __handler_signal_vector_type = *vector_type;
+    SignalHandlerData handler_data = {0};
+    hashlist_init(&handler_data.signal_list, 512);
+    hashmap_init(&handler_data.transform_map);
+    handler_data.signal_vector_type = *vector_type;
+
     /* Select and handle the schema objects (default name to provided name). */
     SchemaObjectSelector* selector = schema_build_channel_selector(
         model_instance, channel_spec, "SignalGroup");
     if (selector) {
+        selector->data = &handler_data;
         schema_object_search(
             model_instance, selector, _signal_group_match_handler);
     }
+
     /* Setup the final signal list. */
-    signal_list->length = hashlist_length(&__handler_signal_list);
+    signal_list->length = hashlist_length(&handler_data.signal_list);
     if (signal_list->length) {
         signal_list->names = calloc(signal_list->length, sizeof(const char*));
         for (uint32_t i = 0; i < signal_list->length; i++) {
-            signal_list->names[i] = hashlist_at(&__handler_signal_list, i);
+            signal_list->names[i] = hashlist_at(&handler_data.signal_list, i);
             log_info("  signal[%u] : %s", i, signal_list->names[i]);
             SignalTransform* st =
-                hashmap_get(&__handler_transform_map, signal_list->names[i]);
+                hashmap_get(&handler_data.transform_map, signal_list->names[i]);
             if (st)
                 log_info("    transform[linear] : factor=%f, offset=%f",
                     st->linear.factor, st->linear.offset);
         }
     }
-    *vector_type = __handler_signal_vector_type;
+    *vector_type = handler_data.signal_vector_type;
     /* Construct the signal transform list. */
-    if (hashmap_number_keys(__handler_transform_map)) {
+    if (hashmap_number_keys(handler_data.transform_map)) {
         signal_list->transform =
             calloc(signal_list->length, sizeof(SignalTransform));
         for (size_t i = 0; i < signal_list->length; i++) {
             SignalTransform* st =
-                hashmap_get(&__handler_transform_map, signal_list->names[i]);
+                hashmap_get(&handler_data.transform_map, signal_list->names[i]);
             if (st == NULL) continue;
             /* Copy over the transform object. */
             memcpy(&signal_list->transform[i], st, sizeof(SignalTransform));
@@ -248,8 +255,8 @@ void _load_signals(ModelInstanceSpec* model_instance, ChannelSpec* channel_spec,
     }
     /* Clear handler related storage. */
     schema_release_selector(selector);
-    hashlist_destroy(&__handler_signal_list);
-    hashmap_destroy(&__handler_transform_map);
+    hashlist_destroy(&handler_data.signal_list);
+    hashmap_destroy(&handler_data.transform_map);
 }
 
 

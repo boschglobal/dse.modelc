@@ -45,6 +45,8 @@ typedef struct RedisPubSubEndpoint {
     HashMap            endpoint_lookup;
     /* Recv on_message supporting properties. */
     queue_list_t       recv_msg_queue;
+    /* Timeout handler data. */
+    void*              timeout_handler_data;
 } RedisPubSubEndpoint;
 
 

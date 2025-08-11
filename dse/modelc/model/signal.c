@@ -25,13 +25,16 @@ extern void ncodec_trace_destroy(NCodecInstance* nc);
 
 /* Signal Annotation Functions. */
 
-static SchemaSignalObject* __signal_match;
-static const char*         __signal_match_name;
+typedef struct SignalMatchData {
+    SchemaSignalObject* signal_match;
+    const char*         signal_match_name;
+} SignalMatchData;
 
 static int _signal_group_match_handler(
     ModelInstanceSpec* model_instance, SchemaObject* object)
 {
     uint32_t index = 0;
+    SignalMatchData* match_data = (SignalMatchData*)object->data;
 
     /* Enumerate over the signals. */
     SchemaSignalObject* so;
@@ -39,8 +42,8 @@ static int _signal_group_match_handler(
         so = schema_object_enumerator(model_instance, object, "spec/signals",
             &index, schema_signal_object_generator);
         if (so == NULL) break;
-        if (strcmp(so->signal, __signal_match_name) == 0) {
-            __signal_match = so; /* Caller to free. */
+        if (strcmp(so->signal, match_data->signal_match_name) == 0) {
+            match_data->signal_match = so; /* Caller to free. */
             return 0;
         }
         free(so);
@@ -55,51 +58,53 @@ static const char* _signal_annotation(ModelInstanceSpec* mi, SignalVector* sv,
     const char* value = NULL;
     if (node) *node = NULL;
 
-    /* Set the search vars. */
-    __signal_match = NULL;
-    __signal_match_name = signal;
+    /* Setup the search data. */
+    SignalMatchData match_data = { NULL, signal };
 
     /* Select and handle the schema objects. */
     ChannelSpec*          cs = model_build_channel_spec(mi, sv->name);
     SchemaObjectSelector* selector;
     selector = schema_build_channel_selector(mi, cs, "SignalGroup");
     if (selector) {
+        selector->data = &match_data;
         schema_object_search(mi, selector, _signal_group_match_handler);
     }
     schema_release_selector(selector);
     free(cs);
 
     /* Look for the annotation. */
-    if (__signal_match) {
-        YamlNode* n = dse_yaml_find_node(__signal_match->data, "annotations");
+    if (match_data.signal_match) {
+        YamlNode* n = dse_yaml_find_node(match_data.signal_match->data, "annotations");
         value = dse_yaml_get_scalar(n, name);
         if (node && value) {
             *node = dse_yaml_find_node(n, name);
         }
-        free(__signal_match);
-        __signal_match = NULL;
+        free(match_data.signal_match);
     }
 
     return value;
 }
 
 
-static const char* __signal_group_annotation_name;
-static const char* __signal_group_annotation_value;
-static YamlNode*   __signal_group_annotation_node;
+typedef struct SignalGroupAnnotationData {
+    const char* annotation_name;
+    const char* annotation_value;
+    YamlNode*   annotation_node;
+} SignalGroupAnnotationData;
 
 static int _sg_annotation_search_match_handler(
     ModelInstanceSpec* model_instance, SchemaObject* object)
 {
     UNUSED(model_instance);
 
-    const char* name = __signal_group_annotation_name;
+    SignalGroupAnnotationData* annotation_data = (SignalGroupAnnotationData*)object->data;
+    const char* name = annotation_data->annotation_name;
     YamlNode*   n = dse_yaml_find_node(object->doc, "metadata/annotations");
     const char* value = dse_yaml_get_scalar(n, name);
     if (value) {
         /* Match found, return +ve to stop search. */
-        __signal_group_annotation_value = value;
-        __signal_group_annotation_node = dse_yaml_find_node(n, name);
+        annotation_data->annotation_value = value;
+        annotation_data->annotation_node = dse_yaml_find_node(n, name);
         return 1;
     }
     return 0; /* Continue search. */
@@ -108,16 +113,15 @@ static int _sg_annotation_search_match_handler(
 static const char* _signal_group_annotation(
     ModelInstanceSpec* mi, SignalVector* sv, const char* name, void** node)
 {
-    /* Set the search vars. */
-    __signal_group_annotation_name = name;
-    __signal_group_annotation_value = NULL;
-    __signal_group_annotation_node = NULL;
+    /* Setup the search data. */
+    SignalGroupAnnotationData annotation_data = { name, NULL, NULL };
 
     /* Search over the schema objects. */
     ChannelSpec*          cs = model_build_channel_spec(mi, sv->name);
     SchemaObjectSelector* selector;
     selector = schema_build_channel_selector(mi, cs, "SignalGroup");
     if (selector) {
+        selector->data = &annotation_data;
         schema_object_search(mi, selector, _sg_annotation_search_match_handler);
     }
     schema_release_selector(selector);
@@ -125,8 +129,8 @@ static const char* _signal_group_annotation(
 
     /* If the search was successful (first match wins), the value will be set.
      */
-    if (node) *node = (void*)__signal_group_annotation_node;
-    return __signal_group_annotation_value;
+    if (node) *node = (void*)annotation_data.annotation_node;
+    return annotation_data.annotation_value;
 }
 
 

@@ -72,18 +72,22 @@ int controller_step_phased(SimulationSpec* sim)
     return 0;
 }
 
-void controller_stop(void)
+void controller_stop(SimulationSpec* sim)
 {
+    UNUSED(sim);
     return;
 }
 
-void controller_dump_debug(void)
+void controller_dump_debug(SimulationSpec* sim)
 {
+    UNUSED(sim);
+    return;
 }
 
 void controller_exit(SimulationSpec* sim)
 {
     ModelInstanceSpec* _instptr = sim->instance_list;
+    ModelInstancePrivate* mip = sim->instance_list->private;
     while (_instptr && _instptr->name) {
         if (_instptr->model_desc == NULL) goto exit_next;
         if (_instptr->model_desc->vtable.destroy == NULL) goto exit_next;
@@ -98,14 +102,16 @@ void controller_exit(SimulationSpec* sim)
         _instptr++;
     }
 
-    if (__controller) hashmap_destroy(&(__controller->adapter->models));
+    if (mip->controller) hashmap_destroy(&(mip->controller->adapter->models));
 }
 
-int controller_init(Endpoint* endpoint)
+int controller_init(Endpoint* endpoint, SimulationSpec* sim)
 {
     UNUSED(endpoint);
+    ModelInstancePrivate* mip = sim->instance_list->private;
+    mip->controller = __controller;
 
-    hashmap_init(&(__controller->adapter->models));
+    hashmap_init(&(mip->controller->adapter->models));
 
     return 0;
 }

@@ -15,6 +15,7 @@ typedef struct ModelInstancePrivate {
     ControllerModel* controller_model;
     AdapterModel*    adapter_model;
     MclInstanceDesc* mcl_instance;
+    Controller*      controller;
 } ModelInstancePrivate;
 
 

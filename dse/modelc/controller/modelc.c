@@ -519,7 +519,7 @@ int modelc_run(SimulationSpec* sim, bool run_async)
 
     /* Create Controller object. */
     log_notice("Create the Controller object ...");
-    controller_init(endpoint);
+    controller_init(endpoint, sim);
 
     /* Load all Simulation Models. */
     log_notice("Load and configure the Simulation Models ...");
@@ -561,20 +561,20 @@ int modelc_sync(SimulationSpec* sim)
 }
 
 
-void modelc_shutdown(void)
+void modelc_shutdown(SimulationSpec* sim)
 {
     /* Request and exit from the run loop.
        NOTICE: This is called from interrupt code, only set variables, then
        let controller_run() exit by itself.
     */
     __stop_request = 1;
-    controller_stop();
+    controller_stop(sim);
 }
 
 
 void modelc_exit(SimulationSpec* sim)
 {
-    controller_dump_debug();
+    controller_dump_debug(sim);
     controller_exit(sim);
     _destroy_model_instances(sim);
 }

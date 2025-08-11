@@ -20,39 +20,40 @@
 #define UNUSED(x) ((void)x)
 
 
-static Controller* __controller = NULL;
-
-
-DLL_PRIVATE Controller* controller_object_ref(void)
+DLL_PRIVATE Controller* controller_object_ref(SimulationSpec* sim)
 {
-    return __controller;
+    ModelInstancePrivate* mip = sim->instance_list->private;
+    return mip->controller;
 }
 
 
-void controller_destroy(void)
+void controller_destroy(SimulationSpec* sim)
 {
-    Controller* controller = __controller;
+    ModelInstancePrivate* mip = sim->instance_list->private;
+    Controller* controller = mip->controller;
     if (controller == NULL) return;
 
     if (controller->adapter) adapter_destroy(controller->adapter);
 
-    free(__controller);
-    __controller = NULL;
+    free(mip->controller);
+    mip->controller = NULL;
 }
 
 
-int controller_init(Endpoint* endpoint)
+int controller_init(Endpoint* endpoint, SimulationSpec* sim)
 {
-    assert(__controller == NULL);
+    ModelInstancePrivate* mip = sim->instance_list->private;
+    assert(mip);
+    assert(mip->controller == NULL);
 
     errno = 0;
-    __controller = calloc(1, sizeof(Controller));
-    if (__controller == NULL) {
+    mip->controller= calloc(1, sizeof(Controller));
+    if (mip->controller== NULL) {
         log_error("Controller malloc failed!");
         goto error_clean_up;
     }
 
-    Controller* controller = __controller;
+    Controller* controller = mip->controller;
     controller->stop_request = false;
 
     log_notice("Create the Adapter object ...");
@@ -66,7 +67,7 @@ int controller_init(Endpoint* endpoint)
     return 0;
 
 error_clean_up:
-    controller_destroy();
+    controller_destroy(sim);
     return -1;
 }
 
@@ -212,8 +213,10 @@ static void marshal(SimulationSpec* sim, ControllerMarshalDir dir)
 
 void controller_bus_ready(SimulationSpec* sim)
 {
-    assert(__controller);
-    Controller* controller = __controller;
+    assert(sim);
+    ModelInstancePrivate* mip = sim->instance_list->private;
+    assert(mip);
+    Controller* controller = mip->controller;
 
     /* Explicitly start the endpoint (creates resources etc). */
     assert(controller->adapter);
@@ -233,8 +236,10 @@ void controller_bus_ready(SimulationSpec* sim)
 
 int controller_step(SimulationSpec* sim)
 {
-    assert(__controller);
-    Controller* controller = __controller;
+    ModelInstancePrivate* mip = sim->instance_list->private;
+    assert(mip);
+    assert(mip->controller);
+    Controller* controller = mip->controller;
     assert(controller->adapter);
     Adapter* adapter = controller->adapter;
 
@@ -285,8 +290,10 @@ int controller_step(SimulationSpec* sim)
 
 int controller_step_phased(SimulationSpec* sim)
 {
-    assert(__controller);
-    Controller* controller = __controller;
+    ModelInstancePrivate* mip = sim->instance_list->private;
+    assert(mip);
+    assert(mip->controller);
+    Controller* controller = mip->controller;
     assert(controller->adapter);
     Adapter* adapter = controller->adapter;
     int      rc;
@@ -328,7 +335,8 @@ int controller_step_phased(SimulationSpec* sim)
 void controller_run(SimulationSpec* sim)
 {
     assert(sim);
-    Controller* controller = __controller;
+    ModelInstancePrivate* mip = sim->instance_list->private;
+    Controller* controller = mip->controller;
     if (controller == NULL) return;
 
     /* ModelRegister (etc). */
@@ -348,9 +356,10 @@ void controller_run(SimulationSpec* sim)
 
 
 /* Called from an interrupt. Indicate that controller_run() should exit. */
-void controller_stop(void)
+void controller_stop(SimulationSpec* sim)
 {
-    Controller* controller = __controller;
+    ModelInstancePrivate* mip = sim->instance_list->private;
+    Controller* controller = mip->controller;
     if (controller == NULL) return;
 
     controller->stop_request = true;
@@ -358,9 +367,10 @@ void controller_stop(void)
 }
 
 
-void controller_dump_debug(void)
+void controller_dump_debug(SimulationSpec* sim)
 {
-    Controller* controller = __controller;
+    ModelInstancePrivate* mip = sim->instance_list->private;
+    Controller* controller = mip->controller;
 
     if (controller && controller->adapter) {
         adapter_dump_debug(controller->adapter, controller->simulation);
@@ -370,7 +380,8 @@ void controller_dump_debug(void)
 
 void controller_exit(SimulationSpec* sim)
 {
-    Controller* controller = __controller;
+    ModelInstancePrivate* mip = sim->instance_list->private;
+    Controller* controller = mip->controller;
     if (controller == NULL) return;
     if (sim == NULL) return;
 
@@ -393,5 +404,5 @@ void controller_exit(SimulationSpec* sim)
     if (controller->adapter) adapter_exit(controller->adapter, sim);
 
     /* No retreat, no surrender. */
-    controller_destroy();
+    controller_destroy(sim);
 }

@@ -114,7 +114,7 @@ DLL_PUBLIC ModelInstanceSpec* modelc_get_model_instance(
 DLL_PUBLIC int  modelc_run(SimulationSpec* sim, bool run_async);
 DLL_PUBLIC void modelc_exit(SimulationSpec* sim);
 DLL_PUBLIC int  modelc_sync(SimulationSpec* sim);
-DLL_PUBLIC void modelc_shutdown(void);
+DLL_PUBLIC void modelc_shutdown(SimulationSpec* sim);
 DLL_PUBLIC int  modelc_model_create(
      SimulationSpec* sim, ModelInstanceSpec* mi, ModelVTable* model_vtable);
 
