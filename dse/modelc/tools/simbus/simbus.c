@@ -32,7 +32,7 @@ int main(int argc, char** argv)
 {
     setbuf(stdout, NULL);
 
-    ModelCArguments args;
+    ModelCArguments args = {0};
 
     /* Additional bookkeeping data. */
     log_notice("Version: %s", MODELC_VERSION);
