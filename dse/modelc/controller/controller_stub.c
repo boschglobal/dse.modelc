@@ -139,7 +139,7 @@ Endpoint* endpoint_create(const char* transport, const char* uri, uint32_t uid,
     return __endpoint_handle;
 }
 
-Controller* controller_object_ref(void)
+Controller* controller_object_ref(SimulationSpec* sim)
 {
     return __controller;
 }

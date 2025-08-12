@@ -393,14 +393,11 @@ Simbus Interfaces
 -----------------
 */
 
-extern Controller* controller_object_ref(void);
-
-
 SimbusVectorIndex simbus_vector_lookup(
     SimulationSpec* sim, const char* vname, const char* sname)
 {
     assert(sim);
-    Controller* controller = controller_object_ref();
+    Controller* controller = controller_object_ref(sim);
     assert(controller);
     assert(controller->adapter);
     if (controller->adapter->vtable == NULL) return (SimbusVectorIndex){};
@@ -435,7 +432,7 @@ static int _binary_reset(void* map_item, void* data)
 void simbus_vector_binary_reset(SimulationSpec* sim)
 {
     assert(sim);
-    Controller* controller = controller_object_ref();
+    Controller* controller = controller_object_ref(sim);
     assert(controller);
     assert(controller->adapter);
     if (controller->adapter->vtable == NULL) return;

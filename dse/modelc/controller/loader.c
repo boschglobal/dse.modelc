@@ -14,9 +14,6 @@
 #include <dse/modelc/model.h>
 
 
-extern Controller* controller_object_ref(void);
-
-
 extern ModelDesc* __model_gw_create__(ModelDesc* m);
 extern int        __model_gw_step__(
            ModelDesc* m, double* model_time, double stop_time);
@@ -74,7 +71,7 @@ error_dl:
 int controller_load_models(SimulationSpec* sim)
 {
     assert(sim);
-    Controller* controller = controller_object_ref();
+    Controller* controller = controller_object_ref(sim);
     int         rc = 0;
 
     controller->simulation = sim;

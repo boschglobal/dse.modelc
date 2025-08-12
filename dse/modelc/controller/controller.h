@@ -99,6 +99,7 @@ typedef struct ControllerMarshalSpec {
 DLL_PRIVATE int controller_init(Endpoint* endpoint, SimulationSpec* sim);
 DLL_PRIVATE int controller_init_channel(ModelInstanceSpec* model_instance,
     const char* channel_name, const char** signal_name, uint32_t signal_count);
+DLL_PRIVATE Controller* controller_object_ref(SimulationSpec* sim);
 
 /* These are called indirectly from the Model, via _model_function_register()
    and model_configure_channel_*(). */
