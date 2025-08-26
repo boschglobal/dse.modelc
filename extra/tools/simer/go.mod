@@ -4,7 +4,7 @@ go 1.21.6
 
 require (
 	github.com/boschglobal/dse.schemas/code/go/dse v1.2.24
-	github.com/stretchr/testify v1.10.0
+	github.com/stretchr/testify v1.11.0
 	gopkg.in/yaml.v3 v3.0.1
 )
 
