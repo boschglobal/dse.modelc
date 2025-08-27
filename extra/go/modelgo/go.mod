@@ -8,7 +8,7 @@ require (
 	github.com/google/flatbuffers v25.2.10+incompatible
 	github.com/redis/go-redis/v9 v9.12.1
 	github.com/rogpeppe/go-internal v1.14.1
-	github.com/stretchr/testify v1.11.0
+	github.com/stretchr/testify v1.11.1
 	github.com/vmihailenco/msgpack/v5 v5.4.1
 )
 
