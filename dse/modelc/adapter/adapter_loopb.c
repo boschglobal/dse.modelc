@@ -323,21 +323,14 @@ static int notify_update_sv(void* value, void* data)
                     sv->uid, sv->bin_size, sv->name);
             } else {
                 if (__log_level__ <= LOG_SIMBUS) {
-                    for (uint32_t i = 0; i < ch->index.count; i++) {
-                        SignalValue* sv = _get_signal_value_byindex(ch, i);
-                        if (sv->val != sc->vector.scalar[sv->vector_index]) {
-                            log_simbus("    SignalValue: %u = %f [name=%s]",
-                                sv->uid, sc->vector.scalar[sv->vector_index],
-                                sv->name);
-                        }
+                    if (sv->val != sc->vector.scalar[sv->vector_index]) {
+                        log_simbus("    SignalValue: %u = %f [name=%s]",
+                            sv->uid, sc->vector.scalar[sv->vector_index],
+                            sv->name);
                     }
                 }
 
-                for (uint32_t i = 0; i < ch->index.count; i++) {
-                    SignalValue* sv = _get_signal_value_byindex(ch, i);
-                    sv->final_val = sv->val =
-                        sc->vector.scalar[sv->vector_index];
-                }
+                sv->final_val = sv->val = sc->vector.scalar[sv->vector_index];
             }
         }
     }
