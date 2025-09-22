@@ -7,6 +7,8 @@
 #include <dse/testing.h>
 #include <dse/logger.h>
 #include <dse/ncodec/codec.h>
+#include <dse/ncodec/interface/frame.h>
+#include <dse/ncodec/interface/pdu.h>
 #include <dse/modelc/model.h>
 
 

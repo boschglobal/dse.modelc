@@ -10,6 +10,8 @@
 #include <dse/testing.h>
 #include <dse/clib/util/yaml.h>
 #include <dse/ncodec/codec.h>
+#include <dse/ncodec/interface/frame.h>
+#include <dse/ncodec/interface/pdu.h>
 #include <dse/mocks/simmock.h>
 
 

@@ -1,6 +1,7 @@
 #include <dse/testing.h>
 #include <dse/modelc/runtime.h>
 #include <dse/ncodec/codec.h>
+#include <dse/ncodec/interface/frame.h>
 
 typedef struct ModelCMock {
     SimulationSpec     sim;

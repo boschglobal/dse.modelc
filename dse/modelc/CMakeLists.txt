@@ -50,7 +50,7 @@ FetchContent_Declare(dse_clib
 )
 FetchContent_MakeAvailable(dse_clib)
 set(DSE_CLIB_SOURCE_DIR ${dse_clib_SOURCE_DIR}/dse)
-set(DSE_CLIB_INCLUDE_DIR "${DSE_CLIB_SOURCE_DIR}/..")
+set(DSE_CLIB_INCLUDE_DIR ${DSE_CLIB_SOURCE_DIR}/..)
 
 
 # External Project - DSE Schemas
@@ -67,15 +67,15 @@ set(DSE_SCHEMAS_SOURCE_DIR ${dse_schemas_SOURCE_DIR}/flatbuffers/c)
 
 # External Project - DSE Network Codec
 # ------------------------------------
-FetchContent_Declare(dse_network_codec
+FetchContent_Declare(dse_ncodec
     URL                 $ENV{DSE_NCODEC_URL}
     HTTP_USERNAME       $ENV{DSE_NCODEC_URL_USER}
     HTTP_PASSWORD       $ENV{DSE_NCODEC_URL_TOKEN}
+    SOURCE_SUBDIR       dse/ncodec
 )
-FetchContent_MakeAvailable(dse_network_codec)
-set(DSE_NCODEC_SOURCE_DIR ${dse_network_codec_SOURCE_DIR}/dse/ncodec)
-set(DSE_NCODEC_INCLUDE_DIR "${DSE_NCODEC_SOURCE_DIR}/../..")
-
+FetchContent_MakeAvailable(dse_ncodec)
+set(DSE_NCODEC_SOURCE_DIR ${dse_ncodec_SOURCE_DIR}/dse/ncodec)
+set(DSE_NCODEC_INCLUDE_DIR ${dse_ncodec_SOURCE_DIR})
 
 
 # External Projects (targets common to sub projects)
@@ -244,8 +244,7 @@ target_link_libraries(modelc_static_lib
         adapter
         clib_api
         controller
-        dse_ncodec
-        flatcc_runtime
+        ab-codec
         model_api
     PRIVATE
         mcheck
@@ -274,8 +273,7 @@ target_link_libraries(modelc_shared_lib
         adapter
         clib_api
         controller
-        dse_ncodec
-        flatcc_runtime
+        ab-codec
         model_api
 )
 if(NOT DEFINED modelc_link_lib)
@@ -331,6 +329,15 @@ install(
         ${DSE_NCODEC_SOURCE_DIR}/codec.h
     DESTINATION
         ${CMAKE_INSTALL_INCLUDEDIR}/dse/ncodec
+    COMPONENT
+        modelc
+)
+install(
+    FILES
+        ${DSE_NCODEC_SOURCE_DIR}/interface/frame.h
+        ${DSE_NCODEC_SOURCE_DIR}/interface/pdu.h
+    DESTINATION
+        ${CMAKE_INSTALL_INCLUDEDIR}/dse/ncodec/interface
     COMPONENT
         modelc
 )

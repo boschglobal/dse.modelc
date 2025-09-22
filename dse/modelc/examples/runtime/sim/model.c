@@ -8,6 +8,7 @@
 #include <dse/logger.h>
 #include <dse/modelc/model.h>
 #include <dse/ncodec/codec.h>
+#include <dse/ncodec/interface/frame.h>
 
 
 typedef struct {

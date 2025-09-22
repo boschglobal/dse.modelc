@@ -55,13 +55,13 @@ FetchContent_MakeAvailable(dse_schemas)
 # DSE Network Codec
 # -----------------
 include(FetchContent)
-FetchContent_Declare(dse_network_codec
+FetchContent_Declare(dse_ncodec
     URL                 $ENV{DSE_NCODEC_URL}
     HTTP_USERNAME       $ENV{DSE_NCODEC_URL_USER}
     HTTP_PASSWORD       $ENV{DSE_NCODEC_URL_TOKEN}
-    SOURCE_DIR          "$ENV{EXTERNAL_BUILD_DIR}/dse.ncodec"
+    SOURCE_DIR          "$ENV{EXTERNAL_BUILD_DIR}/dse.ncodec/dse/ncodec"
 )
-FetchContent_MakeAvailable(dse_network_codec)
+FetchContent_MakeAvailable(dse_ncodec)
 
 
 # Lib Event
@@ -175,7 +175,7 @@ add_dependencies(oss
 )
 oss_copy(${dse_clib_SOURCE_DIR}                 boschglobal/dse.clib)
 oss_copy(${dse_schemas_SOURCE_DIR}              boschglobal/dse.schemas)
-oss_copy(${dse_network_codec_SOURCE_DIR}        boschglobal/dse.ncodec)
+oss_copy(${dse_ncodec_SOURCE_DIR}               boschglobal/dse.ncodec)
 oss_copy($ENV{EXTERNAL_BUILD_DIR}/dlfcnwin32    dlfcn-win32/dlfcn-win32)
 oss_copy($ENV{EXTERNAL_BUILD_DIR}/event         libevent/libevent)
 oss_copy($ENV{EXTERNAL_BUILD_DIR}/hiredis       redis/hiredis)

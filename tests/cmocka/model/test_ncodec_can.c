@@ -9,6 +9,7 @@
 #include <dse/modelc/model.h>
 #include <dse/modelc/runtime.h>
 #include <dse/ncodec/codec.h>
+#include <dse/ncodec/interface/frame.h>
 
 
 #define UNUSED(x)         ((void)x)

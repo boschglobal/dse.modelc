@@ -87,37 +87,15 @@ set(DSE_CLIB_INCLUDE_DIR "${DSE_CLIB_SOURCE_DIR}/../..")
 
 # External Project - DSE Network Codec
 # ------------------------------------
-FetchContent_Declare(dse_network_codec
+FetchContent_Declare(dse_ncodec
     URL                 $ENV{DSE_NCODEC_URL}
     HTTP_USERNAME       $ENV{DSE_NCODEC_URL_USER}
     HTTP_PASSWORD       $ENV{DSE_NCODEC_URL_TOKEN}
+    SOURCE_SUBDIR       dse/ncodec
 )
-FetchContent_MakeAvailable(dse_network_codec)
-set(DSE_NCODEC_SOURCE_DIR ${dse_network_codec_SOURCE_DIR}/dse/ncodec)
-set(DSE_NCODEC_SOURCE_FILES
-    ${DSE_NCODEC_SOURCE_DIR}/codec.c
-    ${DSE_NCODEC_SOURCE_DIR}/libs/automotive-bus/codec.c
-    ${DSE_NCODEC_SOURCE_DIR}/libs/automotive-bus/frame_can_fbs.c
-    ${DSE_NCODEC_SOURCE_DIR}/libs/automotive-bus/pdu_fbs.c
-)
-set(DSE_NCODEC_INCLUDE_DIR "${DSE_NCODEC_SOURCE_DIR}/../..")
-
-
-# External Project - Automotive Bus Schema
-# ----------------------------------------
-FetchContent_Declare(automotive-bus-schema
-    URL https://github.com/boschglobal/automotive-bus-schema/releases/download/v1.0.5/automotive-bus-schema.tar.gz
-)
-FetchContent_MakeAvailable(automotive-bus-schema)
-set(SCHEMAS_SOURCE_DIR ${automotive-bus-schema_SOURCE_DIR}/flatbuffers/c)
-set(FLATCC_SOURCE_DIR ${SCHEMAS_SOURCE_DIR}/automotive_bus_schema/flatcc/src)
-set(FLATCC_SOURCE_FILES
-    ${FLATCC_SOURCE_DIR}/builder.c
-    ${FLATCC_SOURCE_DIR}/emitter.c
-    ${FLATCC_SOURCE_DIR}/refmap.c
-)
-set(FLATCC_INCLUDE_DIR ${SCHEMAS_SOURCE_DIR}/automotive_bus_schema/flatcc/include)
-
+FetchContent_MakeAvailable(dse_ncodec)
+set(DSE_NCODEC_SOURCE_DIR ${dse_ncodec_SOURCE_DIR}/dse/ncodec)
+set(DSE_NCODEC_INCLUDE_DIR ${dse_ncodec_SOURCE_DIR})
 
 
 # Set the project paths
@@ -178,17 +156,12 @@ add_executable(test_model
     model/test_transform.c
     ${DSE_CLIB_SOURCE_FILES}
     ${DSE_MODELC_SOURCE_FILES}
-    ${DSE_NCODEC_SOURCE_FILES}
-    ${FLATCC_SOURCE_FILES}
 )
 target_include_directories(test_model
     PRIVATE
         ${DSE_CLIB_INCLUDE_DIR}
         ${DSE_MODELC_INCLUDE_DIR}
         ${DSE_NCODEC_INCLUDE_DIR}
-        ${DSE_NCODEC_INCLUDE_DIR}/dse/ncodec/libs
-        ${FLATCC_INCLUDE_DIR}
-        ${SCHEMAS_SOURCE_DIR}
         ${YAML_SOURCE_DIR}/include
         ${MSGPACKC_SOURCE_DIR}/include
         ./
@@ -201,6 +174,8 @@ target_compile_definitions(test_model
         PLATFORM_ARCH="${CDEF_PLATFORM_ARCH}"
 )
 target_link_libraries(test_model
+    PUBLIC
+        ab-codec
     PRIVATE
         cmocka
         yaml
@@ -230,17 +205,12 @@ add_executable(test_model_interface
     model/interface/test_model_examples.c
     ${DSE_CLIB_SOURCE_FILES}
     ${DSE_MODELC_SOURCE_FILES}
-    ${DSE_NCODEC_SOURCE_FILES}
-    ${FLATCC_SOURCE_FILES}
 )
 target_include_directories(test_model_interface
     PRIVATE
         ${DSE_CLIB_INCLUDE_DIR}
         ${DSE_MODELC_INCLUDE_DIR}
-        ${DSE_NCODEC_INCLUDE_DIR}/dse/ncodec/libs
         ${DSE_NCODEC_INCLUDE_DIR}
-        ${FLATCC_INCLUDE_DIR}
-        ${SCHEMAS_SOURCE_DIR}
         ${YAML_SOURCE_DIR}/include
         ${MSGPACKC_SOURCE_DIR}/include
         ./
@@ -253,6 +223,8 @@ target_compile_definitions(test_model_interface
         PLATFORM_ARCH="${CDEF_PLATFORM_ARCH}"
 )
 target_link_libraries(test_model_interface
+    PUBLIC
+        ab-codec
     PRIVATE
         cmocka
         yaml

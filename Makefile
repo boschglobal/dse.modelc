@@ -18,15 +18,15 @@ TOOL_DIRS = simer benchmark
 ################
 ## DSE Projects.
 DSE_CLIB_REPO ?= https://github.com/boschglobal/dse.clib
-DSE_CLIB_VERSION ?= 1.0.30
+DSE_CLIB_VERSION ?= 1.0.35
 export DSE_CLIB_URL ?= $(DSE_CLIB_REPO)/archive/refs/tags/v$(DSE_CLIB_VERSION).zip
 
 DSE_SCHEMA_REPO ?= https://github.com/boschglobal/dse.schemas
 DSE_SCHEMA_VERSION ?= 1.2.21
 export DSE_SCHEMA_URL ?= $(DSE_SCHEMA_REPO)/releases/download/v$(DSE_SCHEMA_VERSION)/dse-schemas.tar.gz
 
-DSE_NCODEC_REPO ?= https://github.com/boschglobal/dse.standards
-DSE_NCODEC_VERSION ?= 1.2.0
+DSE_NCODEC_REPO ?= https://github.com/boschglobal/dse.ncodec
+DSE_NCODEC_VERSION ?= 1.1.2
 export DSE_NCODEC_URL ?= $(DSE_NCODEC_REPO)/archive/refs/tags/v$(DSE_NCODEC_VERSION).zip
 
 
@@ -95,6 +95,10 @@ ifneq ($(CI), true)
 		$(GCC_BUILDER_IMAGE)
 endif
 
+DSE_CLANG_FORMAT_CMD := docker run -it --rm \
+	--user $$(id -u):$$(id -g) \
+	--volume $$(pwd):/tmp/code \
+	${DSE_CLANG_FORMAT_IMAGE}
 
 default: build
 
@@ -179,6 +183,10 @@ clean:
 cleanall:
 	@${DOCKER_BUILDER_CMD} $(MAKE) do-cleanall
 	docker ps --filter status=dead --filter status=exited -aq | xargs -r docker rm -v
+
+.PHONY: cleandocker
+cleandocker:
+	docker ps --filter status=dead --filter status=exited -aq | xargs -r docker rm -v
 	docker images -qf dangling=true | xargs -r docker rmi
 	docker volume ls -qf dangling=true | xargs -r docker volume rm
 	docker images -q */*/$(NAMESPACE)-simer | xargs -r docker rmi
@@ -205,8 +213,8 @@ do-test_cmocka-run:
 do-test_testscript-e2e:
 # Test debug; add '-v' to Testscript command (e.g. $(TESTSCRIPT_IMAGE) -v \).
 ifeq ($(PACKAGE_ARCH), linux-amd64)
-	@-docker kill simer
-	@-docker kill gateway
+	@-docker kill simer 2>/dev/null ; true
+	@-docker kill gateway 2>/dev/null ; true
 	@set -eu; for t in $(TESTSCRIPT_E2E_FILES) ;\
 	do \
 		echo "Running E2E Test: $$t" ;\
@@ -247,15 +255,21 @@ do-oss:
 generate:
 	$(MAKE) -C doc generate
 
+.PHONY: format
+format:
+	@${DSE_CLANG_FORMAT_CMD} dse/
+	@${DSE_CLANG_FORMAT_CMD} tests/cmocka/
+
 .PHONY: super-linter
 super-linter:
 	docker run --rm --volume $$(pwd):/tmp/lint \
 		--env RUN_LOCAL=true \
 		--env DEFAULT_BRANCH=main \
 		--env IGNORE_GITIGNORED_FILES=true \
-		--env FILTER_REGEX_EXCLUDE="(dse/mocks/examples/.*|dse/modelc/examples/doc/.*|doc/content/apis/modelc/examples/.*|doc/content/docs/examples/modelc/.*|doc/content/apis.*|(^|/)vendor/)" \
+		--env FILTER_REGEX_EXCLUDE="(dse/mocks/examples/.*|dse/modelc/examples/doc/.*|doc/content/.*|(^|/)vendor/)" \
 		--env VALIDATE_CPP=true \
 		--env VALIDATE_DOCKERFILE=true \
 		--env VALIDATE_MARKDOWN=true \
 		--env VALIDATE_YAML=true \
 		ghcr.io/super-linter/super-linter:slim-v6
+		

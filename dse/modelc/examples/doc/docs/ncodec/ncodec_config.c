@@ -2,6 +2,7 @@
 #include <dse/logger.h>
 #include <dse/modelc/model.h>
 #include <dse/ncodec/codec.h>
+#include <dse/ncodec/interface/frame.h>
 
 void configure_codec(ModelDesc* m, SignalVector* sv, uint32_t idx)
 {

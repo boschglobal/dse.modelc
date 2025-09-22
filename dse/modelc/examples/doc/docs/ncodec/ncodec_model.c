@@ -1,5 +1,6 @@
 #include <dse/modelc/model.h>
 #include <dse/ncodec/codec.h>
+#include <dse/ncodec/interface/frame.h>
 
 extern int put_rx_frame_to_queue(uint32_t, uint8_t*, size_t);
 extern int get_tx_frame_from_queue(uint32_t*, uint8_t**, size_t*);

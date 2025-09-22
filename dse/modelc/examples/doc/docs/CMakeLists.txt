@@ -22,44 +22,16 @@ list(APPEND C_CXX_WARNING_FLAGS
 )
 add_compile_options(${C_CXX_WARNING_FLAGS})
 
-
-include(FetchContent)
-
-# External Project - DSE C Lib
-# ----------------------------
-FetchContent_Declare(dse_clib
-    URL                 $ENV{DSE_CLIB_URL}
-    HTTP_USERNAME       $ENV{GHE_USER}
-    HTTP_PASSWORD       $ENV{GHE_TOKEN}
-)
-FetchContent_MakeAvailable(dse_clib)
-set(DSE_CLIB_SOURCE_DIR ${dse_clib_SOURCE_DIR}/dse)
-set(DSE_CLIB_SOURCE_FILES )
-set(DSE_CLIB_INCLUDE_DIR "${DSE_CLIB_SOURCE_DIR}/..")
-
-
-# External Project - DSE Network Codec
-# ------------------------------------
-FetchContent_Declare(dse_network_codec
-    URL                 $ENV{DSE_NCODEC_URL}
-    HTTP_USERNAME       $ENV{GHE_USER}
-    HTTP_PASSWORD       $ENV{GHE_TOKEN}
-)
-FetchContent_MakeAvailable(dse_network_codec)
-set(DSE_NCODEC_SOURCE_DIR ${dse_network_codec_SOURCE_DIR}/dse/ncodec)
-set(DSE_NCODEC_INCLUDE_DIR "${DSE_NCODEC_SOURCE_DIR}/../..")
-
-
-
-# Targets
-# =======
-
 # APIs
 # ----
 add_library(docs OBJECT
     ncodec/ncodec_config.c
     ncodec/ncodec_model.c
     ncodec/ncodec_test.c
+)
+target_link_libraries(docs
+    PRIVATE
+        ab-codec
 )
 target_include_directories(docs
     PRIVATE

@@ -36,8 +36,7 @@ target_link_libraries(simbus
         adapter
         clib_api
         controller
-        dse_ncodec
-        flatcc_runtime
+        ab-codec
         model_api
 )
 install(TARGETS simbus
