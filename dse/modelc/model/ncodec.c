@@ -133,9 +133,14 @@ static int32_t stream_eof(NCODEC* nc)
 
 static int32_t stream_close(NCODEC* nc)
 {
-    UNUSED(nc);
-
-    return 0;
+    NCodecInstance* _nc = (NCodecInstance*)nc;
+    if (_nc && _nc->stream) {
+        __BinarySignalStream* _s = (__BinarySignalStream*)_nc->stream;
+        free(_nc->stream);
+        _nc->stream = NULL;
+        return 0;
+    }
+    return -ENOSTR;
 }
 
 
@@ -165,6 +170,8 @@ void* model_sv_stream_create(SignalVector* sv, uint32_t idx)
 
 void model_sv_stream_destroy(void* stream)
 {
+    /* Only called if ncodec_open() fails. Otherwise stream_close() will
+    release the stream. */
     if (stream) free(stream);
 }
 

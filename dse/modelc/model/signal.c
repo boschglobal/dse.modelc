@@ -420,7 +420,6 @@ void model_sv_destroy(SignalVector* sv)
                 NCodecInstance* nc = sv->ncodec[i];
                 if (nc) {
                     ncodec_trace_destroy(nc);
-                    model_sv_stream_destroy(nc->stream);
                     ncodec_close((NCODEC*)nc);
                     sv->ncodec[i] = NULL;
                 }

@@ -114,7 +114,6 @@ static void __free_stub_sv(SignalVector* sv)
         if (sv->binary[i]) free(sv->binary[i]);
         NCodecInstance* nc = sv->ncodec[i];
         if (nc) {
-            if (nc->stream) model_sv_stream_destroy(nc->stream);
             ncodec_close((NCODEC*)nc);
         }
     }
