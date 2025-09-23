@@ -135,7 +135,6 @@ static int32_t stream_close(NCODEC* nc)
 {
     NCodecInstance* _nc = (NCodecInstance*)nc;
     if (_nc && _nc->stream) {
-        __BinarySignalStream* _s = (__BinarySignalStream*)_nc->stream;
         free(_nc->stream);
         _nc->stream = NULL;
         return 0;
