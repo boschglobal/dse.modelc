@@ -3,7 +3,7 @@ module github.com/boschglobal/dse.modelc/extra/tools/simer
 go 1.21.6
 
 require (
-	github.com/boschglobal/dse.schemas/code/go/dse v1.2.24
+	github.com/boschglobal/dse.schemas/code/go/dse v1.2.25
 	github.com/stretchr/testify v1.11.1
 	gopkg.in/yaml.v3 v3.0.1
 )
