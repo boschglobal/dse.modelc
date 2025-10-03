@@ -86,6 +86,22 @@ static const char* _signal_annotation(ModelInstanceSpec* mi, SignalVector* sv,
     return value;
 }
 
+static const char* _signal_annotation_direct(ModelInstanceSpec* mi,
+    SignalVector* sv, uint32_t index, const char* name, void** node)
+{
+    const char* value = NULL;
+    if (node) *node = NULL;
+
+    if (sv->annotation && sv->annotation[index]) {
+        value = dse_yaml_get_scalar(sv->annotation[index], name);
+        if (node && value) {
+            *node = dse_yaml_find_node(sv->annotation[index], name);
+        }
+    }
+
+    return value;
+}
+
 
 typedef struct SignalGroupAnnotationData {
     const char* annotation_name;
@@ -215,7 +231,7 @@ static const char* __annotation_get(
     assert(sv);
     assert(sv->mi);
 
-    return _signal_annotation(sv->mi, sv, sv->signal[index], name, node);
+    return _signal_annotation_direct(sv->mi, sv, index, name, node);
 }
 
 static const char* __group_annotation_get(
@@ -263,6 +279,7 @@ static int _add_sv(void* _mfc, void* _sv_data)
     current_sv->name = mfc->channel_name;
     current_sv->count = mfc->signal_count;
     current_sv->signal = mfc->signal_names;
+    current_sv->annotation = mfc->signal_annotation;
     current_sv->function_name = data->current_modelfunction_name;
     current_sv->vtable.annotation = __annotation_get;
     current_sv->vtable.group_annotation = __group_annotation_get;

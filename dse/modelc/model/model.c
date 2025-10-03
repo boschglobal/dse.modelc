@@ -25,6 +25,7 @@ typedef struct __signal_list_t {
     const char**     names;
     uint32_t         length;
     SignalTransform* transform;
+    YamlNode**       annotation;
 } __signal_list_t;
 
 
@@ -62,6 +63,7 @@ void model_function_destroy(ModelFunction* model_function)
             }
             if (_mfc && _mfc->signal_map) free(_mfc->signal_map);
             if (_mfc && _mfc->signal_transform) free(_mfc->signal_transform);
+            if (_mfc && _mfc->signal_annotation) free(_mfc->signal_annotation);
         }
         hashmap_destroy(&model_function->channels);
         for (uint32_t _ = 0; _ < _keys_length; _++)
@@ -102,6 +104,7 @@ typedef struct SignalHandlerData {
     HashList         signal_list;
     ModelChannelType signal_vector_type;
     HashMap          transform_map;
+    HashMap          annotation_map;
 } SignalHandlerData;
 
 
@@ -154,6 +157,10 @@ static int _signal_group_match_handler(
             SignalTransform* st = _parse_signal_transform(so);
             if (st)
                 hashmap_set_alt(&handler_data->transform_map, so->signal, st);
+
+            /* Locate annotations node. */
+            YamlNode* sa = dse_yaml_find_node(so->data, "annotations");
+            if (sa) hashmap_set(&handler_data->annotation_map, so->signal, sa);
         }
         free(so);
     } while (1);
@@ -216,6 +223,7 @@ void _load_signals(ModelInstanceSpec* model_instance, ChannelSpec* channel_spec,
     SignalHandlerData handler_data = { 0 };
     hashlist_init(&handler_data.signal_list, 512);
     hashmap_init(&handler_data.transform_map);
+    hashmap_init(&handler_data.annotation_map);
     handler_data.signal_vector_type = *vector_type;
 
     /* Select and handle the schema objects (default name to provided name). */
@@ -254,10 +262,23 @@ void _load_signals(ModelInstanceSpec* model_instance, ChannelSpec* channel_spec,
             memcpy(&signal_list->transform[i], st, sizeof(SignalTransform));
         }
     }
+    /* Construct the signal annotation reference list. */
+    if (hashmap_number_keys(handler_data.annotation_map)) {
+        signal_list->annotation =
+            calloc(signal_list->length, sizeof(YamlNode*));
+        for (size_t i = 0; i < signal_list->length; i++) {
+            YamlNode* sa = hashmap_get(
+                &handler_data.annotation_map, signal_list->names[i]);
+            if (sa == NULL) continue;
+            /* Copy the annotation reference object. */
+            signal_list->annotation[i] = sa;
+        }
+    }
     /* Clear handler related storage. */
     schema_release_selector(selector);
     hashlist_destroy(&handler_data.signal_list);
     hashmap_destroy(&handler_data.transform_map);
+    hashmap_destroy(&handler_data.annotation_map);
 }
 
 
@@ -327,7 +348,7 @@ int model_configure_channel(ModelInstanceSpec* model_instance, const char* name,
     }
 
     /* Load signals via SignalGroups. */
-    __signal_list_t  signal_list = { NULL, 0 };
+    __signal_list_t  signal_list = { 0 };
     ModelChannelType vector_type = MODEL_VECTOR_DOUBLE;
     assert(model_instance->spec);
     _load_signals(model_instance, channel_spec, &signal_list, &vector_type);
@@ -364,6 +385,7 @@ int model_configure_channel(ModelInstanceSpec* model_instance, const char* name,
     mfc->signal_count = signal_list.length;
     mfc->signal_names = signal_list.names;
     mfc->signal_transform = signal_list.transform;
+    mfc->signal_annotation = signal_list.annotation;
 
     /* Brutal, eh? */
     return 0;

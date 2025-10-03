@@ -125,7 +125,7 @@ void test_model_api__model_index(void** state)
 }
 
 
-#define MINIMAL_INST_NAME      "minimal_inst"
+#define MINIMAL_INST_NAME "minimal_inst"
 
 void test_model_api__model_annotation(void** state)
 {
@@ -138,7 +138,8 @@ void test_model_api__model_annotation(void** state)
         (char*)"test_model_api",
         (char*)"--name=" MINIMAL_INST_NAME,
         (char*)"--logger=5",  // 1=debug, 5=QUIET (commit with 5!)
-        (char*)"../../../../../../tests/cmocka/build/_out/resources/model/annotations.yaml",
+        (char*)"../../../../../../tests/cmocka/build/_out/resources/model/"
+               "annotations.yaml",
     };
     SimMock* mock = *state = simmock_alloc(inst_names, ARRAY_SIZE(inst_names));
     simmock_configure(mock, argv, ARRAY_SIZE(argv), ARRAY_SIZE(inst_names));
@@ -182,7 +183,8 @@ void test_model_api__binary_stream_reset(void** state)
         (char*)"test_model_api",
         (char*)"--name=" BINARY_INST_NAME,
         (char*)"--logger=5",  // 1=debug, 5=QUIET (commit with 5!)
-        (char*)"../../../../../../tests/cmocka/build/_out/resources/model/binary_stream_reset.yaml",
+        (char*)"../../../../../../tests/cmocka/build/_out/resources/model/"
+               "binary_stream_reset.yaml",
         (char*)"data/model.yaml",
     };
     SimMock* mock = *state = simmock_alloc(inst_names, ARRAY_SIZE(inst_names));
@@ -250,7 +252,8 @@ void test_model_api__model_expand_vars(void** state)
         (char*)"test_model_api",
         (char*)"--name=" MINIMAL_INST_NAME,
         (char*)"--logger=5",  // 1=debug, 5=QUIET (commit with 5!)
-        (char*)"../../../../../../tests/cmocka/build/_out/resources/model/annotations.yaml",
+        (char*)"../../../../../../tests/cmocka/build/_out/resources/model/"
+               "annotations.yaml",
     };
     SimMock* mock = *state = simmock_alloc(inst_names, ARRAY_SIZE(inst_names));
     simmock_configure(mock, argv, ARRAY_SIZE(argv), ARRAY_SIZE(inst_names));
@@ -263,21 +266,63 @@ void test_model_api__model_expand_vars(void** state)
     setenv("LEFT", "left", true);
     setenv("MINIMAL_INST__LEFT", "right", true);  // Has priority over LEFT.
     ExpandVarsTC tc[] = {
-        { .source = "One", .expect = "One", },
-        { .source = "Before${FOO:-foo}", .expect = "Beforefoo", },
-        { .source = "${FOO:-foo}After", .expect = "fooAfter", },
-        { .source = "Before${FOO:-foo}After", .expect = "BeforefooAfter", },
-        { .source = "${FOO:-foo}${BAR:-bar}", .expect = "foobar", },
-        { .source = "A${FOO}B${BAR}C", .expect = "AFOOBBARC", },
-        { .source = "A${FOO:-}B${BAR:-}C", .expect = "ABC", },
-        { .source = "${FOO:-}${BAR:-}", .expect = "", },
-        { .source = "${FOO}${BAR}", .expect = "FOOBAR", },
-        { .source = "${FUBAR}", .expect = "FuBaR", },
-        { .source = "${fubar}", .expect = "FuBaR", },
-        { .source = "${fUbAr}", .expect = "FuBaR", },
+        {
+            .source = "One",
+            .expect = "One",
+        },
+        {
+            .source = "Before${FOO:-foo}",
+            .expect = "Beforefoo",
+        },
+        {
+            .source = "${FOO:-foo}After",
+            .expect = "fooAfter",
+        },
+        {
+            .source = "Before${FOO:-foo}After",
+            .expect = "BeforefooAfter",
+        },
+        {
+            .source = "${FOO:-foo}${BAR:-bar}",
+            .expect = "foobar",
+        },
+        {
+            .source = "A${FOO}B${BAR}C",
+            .expect = "AFOOBBARC",
+        },
+        {
+            .source = "A${FOO:-}B${BAR:-}C",
+            .expect = "ABC",
+        },
+        {
+            .source = "${FOO:-}${BAR:-}",
+            .expect = "",
+        },
+        {
+            .source = "${FOO}${BAR}",
+            .expect = "FOOBAR",
+        },
+        {
+            .source = "${FUBAR}",
+            .expect = "FuBaR",
+        },
+        {
+            .source = "${fubar}",
+            .expect = "FuBaR",
+        },
+        {
+            .source = "${fUbAr}",
+            .expect = "FuBaR",
+        },
         // Model instance prefix has priority.
-        { .source = "${LEFT}", .expect = "right", },
-        { .source = "${left}", .expect = "right", },
+        {
+            .source = "${LEFT}",
+            .expect = "right",
+        },
+        {
+            .source = "${left}",
+            .expect = "right",
+        },
     };
     for (size_t i = 0; i < ARRAY_SIZE(tc); i++) {
         char* result = model_expand_vars(model->mi->model_desc, tc[i].source);
@@ -297,8 +342,10 @@ int run_model_api_tests(void)
     const struct CMUnitTest tests[] = {
         cmocka_unit_test_setup_teardown(test_model_api__model_index, s, t),
         cmocka_unit_test_setup_teardown(test_model_api__model_annotation, s, t),
-        cmocka_unit_test_setup_teardown(test_model_api__binary_stream_reset, s, t),
-        cmocka_unit_test_setup_teardown(test_model_api__model_expand_vars, s, t),
+        cmocka_unit_test_setup_teardown(
+            test_model_api__binary_stream_reset, s, t),
+        cmocka_unit_test_setup_teardown(
+            test_model_api__model_expand_vars, s, t),
     };
 
     return cmocka_run_group_tests_name("MODEL / API", tests, NULL, NULL);

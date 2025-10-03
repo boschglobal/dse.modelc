@@ -15,7 +15,7 @@
 #define UNUSED(x) ((void)x)
 
 
-void test_schema__(void **state)
+void test_schema__(void** state)
 {
     UNUSED(state);
 

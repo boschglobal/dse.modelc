@@ -57,8 +57,8 @@ int main(int argc, char** argv)
 {
     int             rc;
     char            general_buffer[GENERAL_BUFFER_LEN];
-    ModelCArguments args = {0};
-    SimulationSpec  sim  = {0};
+    ModelCArguments args = { 0 };
+    SimulationSpec  sim = { 0 };
 
     /* Additional bookkeeping data. */
     log_notice("Version: %s", MODELC_VERSION);

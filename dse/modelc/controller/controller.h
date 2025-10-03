@@ -43,6 +43,9 @@ typedef struct ModelFunctionChannel {
 
     /* Signal Transform; only allocated if transforms are present. */
     SignalTransform* signal_transform;
+
+    /* Signal Annotation reference (to YAML nodes). */
+    void** signal_annotation;
 } ModelFunctionChannel;
 
 

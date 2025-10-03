@@ -245,8 +245,11 @@ typedef struct SignalVector {
     /* Helper functions. */
     SignalVectorVTable vtable;
 
+    /* Annotation direct lookup. */
+    void** annotation;
+
     /* Reserved. */
-    uint64_t __reserved__[8];
+    uint64_t __reserved__[7];
 } SignalVector;
 
 

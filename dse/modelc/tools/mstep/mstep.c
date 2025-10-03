@@ -95,8 +95,8 @@ static int   setup_enumerator(ModelInstanceSpec* mi, SchemaObject* object);
 int main(int argc, char** argv)
 {
     int                rc;
-    ModelCArguments    args = {0};
-    SimulationSpec     sim  = {0};
+    ModelCArguments    args = { 0 };
+    SimulationSpec     sim = { 0 };
     ModelInstanceSpec* mi;
 
     modelc_set_default_args(&args, NULL, STEP_SIZE, END_TIME);
