@@ -52,8 +52,9 @@ static int _signal_group_match_handler(
     return 0;
 }
 
-static const char* _signal_annotation(ModelInstanceSpec* mi, SignalVector* sv,
-    const char* signal, const char* name, void** node)
+__attribute__((used)) static const char* _signal_annotation(
+    ModelInstanceSpec* mi, SignalVector* sv, const char* signal,
+    const char* name, void** node)
 {
     const char* value = NULL;
     if (node) *node = NULL;
@@ -86,7 +87,7 @@ static const char* _signal_annotation(ModelInstanceSpec* mi, SignalVector* sv,
     return value;
 }
 
-static const char* _signal_annotation_direct(ModelInstanceSpec* mi,
+static const char* _signal_annotation_direct(
     SignalVector* sv, uint32_t index, const char* name, void** node)
 {
     const char* value = NULL;
@@ -231,7 +232,7 @@ static const char* __annotation_get(
     assert(sv);
     assert(sv->mi);
 
-    return _signal_annotation_direct(sv->mi, sv, index, name, node);
+    return _signal_annotation_direct(sv, index, name, node);
 }
 
 static const char* __group_annotation_get(

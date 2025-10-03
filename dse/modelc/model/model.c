@@ -385,7 +385,7 @@ int model_configure_channel(ModelInstanceSpec* model_instance, const char* name,
     mfc->signal_count = signal_list.length;
     mfc->signal_names = signal_list.names;
     mfc->signal_transform = signal_list.transform;
-    mfc->signal_annotation = signal_list.annotation;
+    mfc->signal_annotation = (void**)signal_list.annotation;
 
     /* Brutal, eh? */
     return 0;

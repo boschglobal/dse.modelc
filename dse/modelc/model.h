@@ -249,7 +249,17 @@ typedef struct SignalVector {
     void** annotation;
 
     /* Reserved. */
+#if defined(__x86_64__)
+#if __SIZEOF_POINTER__ == 8
     uint64_t __reserved__[7];
+#else
+    uint32_t __reserved_4__;
+    uint64_t __reserved__[7];
+#endif
+#elif defined(__i386__)
+    uint32_t __reserved_4__;
+    uint64_t __reserved__[7];
+#endif
 } SignalVector;
 
 
