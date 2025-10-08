@@ -343,6 +343,14 @@ install(
 )
 install(
     FILES
+        ${DSE_NCODEC_SOURCE_DIR}/stream/stream.h
+    DESTINATION
+        ${CMAKE_INSTALL_INCLUDEDIR}/dse/ncodec/stream
+    COMPONENT
+        modelc
+)
+install(
+    FILES
         ${DSE_MODELC_PUBLIC_HEADERS}
     DESTINATION
         ${CMAKE_INSTALL_INCLUDEDIR}/dse/modelc
