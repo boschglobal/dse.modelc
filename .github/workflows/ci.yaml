@@ -142,12 +142,30 @@ jobs:
           export HOST_DOCKER_WORKSPACE=${{ env.HOST_DOCKER_WORKSPACE }}
           make test_e2e
 
+  release:
+    if: startsWith(github.ref, 'refs/tags/')
+    runs-on: [ubuntu-latest]
+    needs: [build, test_e2e]
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Create Release from Tag
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          tag: ${{ github.ref_name }}
+        run: |
+          gh release create "$tag" \
+            --notes-from-tag
+            
   publish:
     if: startsWith(github.ref, 'refs/tags/')
     permissions:
       contents: write
     runs-on: [ubuntu-latest]
-    needs: [build, test_e2e]
+    needs: [release]
     strategy:
       matrix:
         package_arch:
@@ -180,12 +198,13 @@ jobs:
         with:
           name: ${{ env.package_name }}-${{ matrix.package_arch }}-package
           path: ${{ env.build_dir }}/_dist
-
-      - name: Publish
-        uses: softprops/action-gh-release@v2
-        if: startsWith(github.ref, 'refs/tags/')
-        with:
-          files: |
+      
+      - name: Upload Release Asset
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          tag: ${{ github.ref_name }}
+        run: |
+          gh release upload "$tag" \
             ${{ env.build_dir }}/_dist/${{ env.package_name }}-${{ env.PACKAGE_VERSION }}-${{ matrix.package_arch }}.zip
 
   docker_push:
