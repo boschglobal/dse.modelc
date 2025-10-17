@@ -18,7 +18,7 @@
 
 # Go Builder
 # ==========
-FROM golang:bullseye as go
+FROM golang:bookworm as go
 RUN GOBIN=/usr/local/bin go install github.com/rogpeppe/go-internal/cmd/testscript@latest
 RUN GOBIN=/usr/local/bin go install github.com/go-task/task/v3/cmd/task@latest
 
@@ -26,7 +26,7 @@ RUN GOBIN=/usr/local/bin go install github.com/go-task/task/v3/cmd/task@latest
 
 # Testscript Container Image
 # ==========================
-FROM debian:bullseye-slim
+FROM debian:bookworm-slim
 LABEL maintainer="timothy.rule@de.bosch.com"
 
 RUN apt-get -y update; \

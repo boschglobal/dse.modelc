@@ -13,7 +13,7 @@ ARG SIMER_IMAGE=ghcr.io/boschglobal/dse-simer
 
 # Gateway Builder
 # ===============
-FROM golang:bullseye AS gateway
+FROM golang:bookworm AS gateway
 ARG HTTPS_PROXY
 ADD . /src
 RUN cd /src/modelgo && make clean build

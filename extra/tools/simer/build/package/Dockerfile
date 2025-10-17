@@ -13,7 +13,7 @@
 
 # Redis Builder
 # =============
-FROM debian:bullseye-slim AS redis
+FROM debian:bookworm-slim AS redis
 
 ENV REDIS_VERSION=6.0.20
 ENV REDIS_DOWNLOAD_URL=http://download.redis.io/releases/redis-6.0.20.tar.gz
@@ -55,21 +55,21 @@ RUN set -eux; \
 
 # Simer Builder
 # =============
-FROM golang:bullseye AS simer
+FROM golang:bookworm AS simer
 ADD . /src
 RUN cd /src && make build
 
 
 # Trace Builder
 # =============
-FROM golang:bullseye AS trace
+FROM golang:bookworm AS trace
 ADD build/stage/trace /src
 RUN cd /src && make build
 
 
 # Simer Container Image
 # =====================
-FROM debian:bullseye-slim
+FROM debian:bookworm-slim
 LABEL maintainer="timothy.rule@de.bosch.com"
 
 ENV DEBIAN_FRONTEND=noninteractive
