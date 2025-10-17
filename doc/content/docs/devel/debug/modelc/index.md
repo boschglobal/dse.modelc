@@ -276,7 +276,7 @@ to be sure that an executable built by the host system is not installed. The
 following example uses a clean make target to ensure a container local build.
 
 ```docker
-FROM golang:bullseye AS gateway
+FROM golang:bookworm AS gateway
 ADD . /src
 RUN cd /src && make clean build
 ```
