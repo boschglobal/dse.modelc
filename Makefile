@@ -64,18 +64,16 @@ TESTSCRIPT_E2E_FILES = \
 	$(TESTSCRIPT_E2E_DIR)/csv.txtar \
 	$(TESTSCRIPT_E2E_DIR)/transform.txtar \
 	$(TESTSCRIPT_E2E_DIR)/binary.txtar \
-	$(TESTSCRIPT_E2E_DIR)/ncodec.txtar
-
-# 	$(TESTSCRIPT_E2E_DIR)/ncodec.txtar \
-# 	$(TESTSCRIPT_E2E_DIR)/mstep.txtar \
-# 	$(TESTSCRIPT_E2E_DIR)/trace.txtar \
-# 	$(TESTSCRIPT_E2E_DIR)/transport.txtar \
-# 	$(TESTSCRIPT_E2E_DIR)/transport_binary.txtar \
-# 	$(TESTSCRIPT_E2E_DIR)/transport_block.txtar \
-# 	$(TESTSCRIPT_E2E_DIR)/stack.txtar \
-# 	$(TESTSCRIPT_E2E_DIR)/runtime.txtar \
-# 	$(TESTSCRIPT_E2E_DIR)/sequential.txtar \
-# 	$(TESTSCRIPT_E2E_DIR)/benchmark.txtar
+	$(TESTSCRIPT_E2E_DIR)/ncodec.txtar \
+	$(TESTSCRIPT_E2E_DIR)/mstep.txtar \
+	$(TESTSCRIPT_E2E_DIR)/trace.txtar \
+	$(TESTSCRIPT_E2E_DIR)/transport.txtar \
+	$(TESTSCRIPT_E2E_DIR)/transport_binary.txtar \
+	$(TESTSCRIPT_E2E_DIR)/transport_block.txtar \
+	$(TESTSCRIPT_E2E_DIR)/stack.txtar \
+	$(TESTSCRIPT_E2E_DIR)/runtime.txtar \
+	$(TESTSCRIPT_E2E_DIR)/sequential.txtar \
+	$(TESTSCRIPT_E2E_DIR)/benchmark.txtar
 
 ifneq ($(CI), true)
 	TESTSCRIPT_E2E_FILES += $(TESTSCRIPT_E2E_DIR)/gateway.txtar
