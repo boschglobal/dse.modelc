@@ -215,7 +215,6 @@ jobs:
       matrix:
         container:
           - simer
-          - testscript
     steps:
       - name: Log in to the Container registry
         uses: docker/login-action@v3
