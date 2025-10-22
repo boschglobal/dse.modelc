@@ -11,22 +11,22 @@ SIMER_IMAGE ?= ghcr.io/boschglobal/dse-simer:latest
 
 ###############
 ## Docker Containers.
-DOCKER_DIRS = simbus-sa modelc modelc-x86 testscript
+DOCKER_DIRS = simbus-sa modelc modelc-x86
 TOOL_DIRS = simer benchmark
 
 
 ################
 ## DSE Projects.
 DSE_CLIB_REPO ?= https://github.com/boschglobal/dse.clib
-DSE_CLIB_VERSION ?= 1.0.36
+DSE_CLIB_VERSION ?= 1.0.38
 export DSE_CLIB_URL ?= $(DSE_CLIB_REPO)/archive/refs/tags/v$(DSE_CLIB_VERSION).zip
 
 DSE_SCHEMA_REPO ?= https://github.com/boschglobal/dse.schemas
-DSE_SCHEMA_VERSION ?= 1.2.21
+DSE_SCHEMA_VERSION ?= 1.2.29
 export DSE_SCHEMA_URL ?= $(DSE_SCHEMA_REPO)/releases/download/v$(DSE_SCHEMA_VERSION)/dse-schemas.tar.gz
 
 DSE_NCODEC_REPO ?= https://github.com/boschglobal/dse.ncodec
-DSE_NCODEC_VERSION ?= 1.1.8
+DSE_NCODEC_VERSION ?= 1.2.0
 export DSE_NCODEC_URL ?= $(DSE_NCODEC_REPO)/archive/refs/tags/v$(DSE_NCODEC_VERSION).zip
 
 
@@ -271,5 +271,5 @@ super-linter:
 		--env VALIDATE_DOCKERFILE=true \
 		--env VALIDATE_MARKDOWN=true \
 		--env VALIDATE_YAML=true \
-		ghcr.io/super-linter/super-linter:slim-v6
+		ghcr.io/super-linter/super-linter:slim-v8
 

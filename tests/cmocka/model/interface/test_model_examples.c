@@ -3,6 +3,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 #include <unistd.h>
+#include <stdio.h>
 #include <stdbool.h>
 #include <dse/testing.h>
 #include <dse/logger.h>

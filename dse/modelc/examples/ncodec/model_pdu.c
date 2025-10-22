@@ -3,6 +3,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 #include <string.h>
+#include <stdio.h>
 #include <dse/logger.h>
 #include <dse/modelc/model.h>
 #include <dse/ncodec/codec.h>

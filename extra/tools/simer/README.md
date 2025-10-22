@@ -59,6 +59,7 @@ $ make run_noredis
 ### Container Testing
 
 ```bash
+export DSE_SIMER_IMAGE=simer:test
 $ simer() { ( cd "$1" && shift && docker run -it --rm -v $(pwd):/sim simer:test "$@"; ) }
 $ simer dse/modelc/build/_out/examples/simer -endtime 0.04
 ```

@@ -3,6 +3,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 #include <stdbool.h>
+#include <stdio.h>
 #include <stddef.h>
 #include <string.h>
 #include <dse/modelc/model.h>

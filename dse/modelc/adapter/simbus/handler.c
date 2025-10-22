@@ -86,6 +86,8 @@ static void process_signal_read_message(Adapter* adapter, Channel* channel,
 {
     AdapterMsgVTable* v = (AdapterMsgVTable*)adapter->vtable;
     flatcc_builder_t* B = &(v->builder);
+    msgpack_sbuffer   sbuf = { 0 };
+    msgpack_packer    pk = { 0 };
 
     flatcc_builder_reset(B);
     uint32_t read_signal_count = 0;  // Incase of unpack error, return NOP.
@@ -168,8 +170,7 @@ static void process_signal_read_message(Adapter* adapter, Channel* channel,
     /* Encode SignalValue MsgPack payload: data:[ubyte] = [[UID],[Value]] */
     log_simbus("SignalValue --> [%s]", channel->name);
     log_simbus("    model_uid=%d", model_uid);
-    msgpack_sbuffer sbuf;
-    msgpack_packer  pk;
+
     msgpack_sbuffer_init(&sbuf);
     msgpack_packer_init(&pk, &sbuf, msgpack_sbuffer_write);
     /* First(root) Object, array, 2 elements. */
@@ -489,8 +490,8 @@ static void resolve_and_notify(
         /* Encode binary data (if present). */
         flatbuffers_uint8_vec_ref_t sv_msgpack_data = 0;
         if (binary_signal_count) {
-            msgpack_sbuffer sbuf;
-            msgpack_packer  pk;
+            msgpack_sbuffer sbuf = { 0 };
+            msgpack_packer  pk = { 0 };
             msgpack_sbuffer_init(&sbuf);
             msgpack_packer_init(&pk, &sbuf, msgpack_sbuffer_write);
             sv_delta_to_msgpack_binonly(ch, &pk, "SignalValue");
@@ -527,8 +528,8 @@ static void resolve_channel_and_model_start(
     log_simbus("SignalValue+", channel->name);
 
     /* Encode SignalWrite MsgPack payload: data:[ubyte] = [[UID],[Value]] */
-    msgpack_sbuffer sbuf;
-    msgpack_packer  pk;
+    msgpack_sbuffer sbuf = { 0 };
+    msgpack_packer  pk = { 0 };
     msgpack_sbuffer_init(&sbuf);
     msgpack_packer_init(&pk, &sbuf, msgpack_sbuffer_write);
     /* First(root) Object, array, 2 elements. */

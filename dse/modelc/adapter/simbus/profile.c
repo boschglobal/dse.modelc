@@ -3,6 +3,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 #include <stdint.h>
+#include <stdio.h>
 #include <dse/logger.h>
 #include <dse/clib/collections/hashmap.h>
 #include <dse/modelc/adapter/timer.h>

@@ -156,7 +156,8 @@ typedef struct SignalVector {
         void** ncodec;
         _Bool* reset_called;
     } vtable;
-    uint64_t [8] __reserved__;
+    void** annotation;
+    uint64_t [7] __reserved__;
 }
 ```
 

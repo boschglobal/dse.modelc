@@ -3,6 +3,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
 cmake_minimum_required(VERSION 3.21)
+cmake_policy(SET CMP0135 NEW)
 
 # set(CMAKE_VERBOSE_MAKEFILE ON)
 set(VERSION "$ENV{PACKAGE_VERSION}")
