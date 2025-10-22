@@ -16,6 +16,7 @@
 
 
 #define UNUSED(x)      ((void)x)
+#define ARRAY_SIZE(x)  (sizeof(x) / sizeof(x[0]))
 
 #define NCT_BUFFER_LEN 2000
 #define NCT_ENVVAR_LEN 100
@@ -118,6 +119,148 @@ static void _trace_can_write(NCODEC* nc, NCodecMessage* m)
 
 /* PDU Trace
    --------- */
+static const char* _lpdu_status_str(NCodecPduFlexrayLpduStatus v)
+{
+    const char* _t[] = {
+        [NCodecPduFlexrayLpduStatusNone] = "None",
+        [NCodecPduFlexrayLpduStatusTransmitted] = "Transmitted",
+        [NCodecPduFlexrayLpduStatusNotTransmitted] = "NotTransmitted",
+        [NCodecPduFlexrayLpduStatusReceived] = "Received",
+        [NCodecPduFlexrayLpduStatusNotReceived] = "NotReceived",
+    };
+    if (v > ARRAY_SIZE(_t)) {
+        return NULL;
+    } else {
+        return _t[v];
+    }
+}
+static const char* _channel_tcvr_state_str(NCodecPduFlexrayTransceiverState v)
+{
+    const char* _t[] = {
+        [NCodecPduFlexrayTransceiverStateNone] = "None",
+        [NCodecPduFlexrayTransceiverStateNoPower] = "NoPower",
+        [NCodecPduFlexrayTransceiverStateNoConnection] = "NoConnection",
+        [NCodecPduFlexrayTransceiverStateNoSignal] = "NoSignal",
+        [NCodecPduFlexrayTransceiverStateCAS] = "CAS",
+        [NCodecPduFlexrayTransceiverStateWUP] = "WUP",
+        [NCodecPduFlexrayTransceiverStateFrameSync] = "FrameSync",
+        [NCodecPduFlexrayTransceiverStateFrameError] = "FrameError",
+    };
+    if (v > ARRAY_SIZE(_t)) {
+        return NULL;
+    } else {
+        return _t[v];
+    }
+}
+static const char* _channel_poc_state_str(NCodecPduFlexrayPocState v)
+{
+    const char* _t[] = {
+        [NCodecPduFlexrayPocStateDefaultConfig] = "DefaultConfig",
+        [NCodecPduFlexrayPocStateConfig] = "Config",
+        [NCodecPduFlexrayPocStateReady] = "Ready",
+        [NCodecPduFlexrayPocStateWakeup] = "Wakeup",
+        [NCodecPduFlexrayPocStateStartup] = "Startup",
+        [NCodecPduFlexrayPocStateNormalActive] = "NormalActive",
+        [NCodecPduFlexrayPocStateNormalPassive] = "NormalPassive",
+        [NCodecPduFlexrayPocStateHalt] = "Halt",
+        [NCodecPduFlexrayPocStateFreeze] = "Freeze",
+        [NCodecPduFlexrayPocStateUndefined] = "Undefined",
+    };
+    if (v > ARRAY_SIZE(_t)) {
+        return NULL;
+    } else {
+        return _t[v];
+    }
+}
+static const char* _channel_poc_command_str(NCodecPduFlexrayPocCommand v)
+{
+    const char* _t[] = {
+        [NCodecPduFlexrayCommandNone] = "None",
+        [NCodecPduFlexrayCommandConfig] = "Config",
+        [NCodecPduFlexrayCommandReady] = "Ready",
+        [NCodecPduFlexrayCommandWakeup] = "Wakeup",
+        [NCodecPduFlexrayCommandRun] = "Run",
+        [NCodecPduFlexrayCommandAllSlots] = "AllSlots",
+        [NCodecPduFlexrayCommandHalt] = "Halt",
+        [NCodecPduFlexrayCommandFreeze] = "Freeze",
+        [NCodecPduFlexrayCommandAllowColdstart] = "AllowColdstart",
+        [NCodecPduFlexrayCommandNop] = "Nop",
+    };
+    if (v > ARRAY_SIZE(_t)) {
+        return NULL;
+    } else {
+        return _t[v];
+    }
+}
+static const char* _config_op_str(NCodecPduFlexrayConfigOp v)
+{
+    const char* _t[] = {
+        [NCodecPduFlexrayLpduConfigSet] = "Set",
+        [NCodecPduFlexrayLpduConfigFrameTableSet] = "Frame Table Set",
+        [NCodecPduFlexrayLpduConfigFrameTableMerge] = "Frame Table Merge",
+        [NCodecPduFlexrayLpduConfigFrameTableDelete] = "Frame Table Delete",
+    };
+    if (v > ARRAY_SIZE(_t)) {
+        return NULL;
+    } else {
+        return _t[v];
+    }
+}
+static const char* _config_bit_rate_str(NCodecPduFlexrayBitrate v)
+{
+    const char* _t[] = {
+        [NCodecPduFlexrayBitrateNone] = "None",
+        [NCodecPduFlexrayBitrate10] = "10",
+        [NCodecPduFlexrayBitrate5] = "5",
+        [NCodecPduFlexrayBitrate2_5] = "2.5",
+    };
+    if (v > ARRAY_SIZE(_t)) {
+        return NULL;
+    } else {
+        return _t[v];
+    }
+}
+static const char* _config_channel_str(NCodecPduFlexrayChannel v)
+{
+    const char* _t[] = {
+        [NCodecPduFlexrayChannelNone] = "None",
+        [NCodecPduFlexrayChannelA] = "A",
+        [NCodecPduFlexrayChannelB] = "B",
+        [NCodecPduFlexrayChannelAB] = "AB",
+    };
+    if (v > ARRAY_SIZE(_t)) {
+        return NULL;
+    } else {
+        return _t[v];
+    }
+}
+static const char* _config_lpdu_dir_str(NCodecPduFlexrayDirection v)
+{
+    const char* _t[] = {
+        [NCodecPduFlexrayDirectionNone] = "None",
+        [NCodecPduFlexrayDirectionRx] = "Rx",
+        [NCodecPduFlexrayDirectionTx] = "Tx",
+    };
+    if (v > ARRAY_SIZE(_t)) {
+        return NULL;
+    } else {
+        return _t[v];
+    }
+}
+static const char* _config_lpdu_txmode_str(NCodecPduFlexrayTransmitMode v)
+{
+    const char* _t[] = {
+        [NCodecPduFlexrayTransmitModeNone] = "None",
+        [NCodecPduFlexrayTransmitModeContinuous] = "Continuous",
+        [NCodecPduFlexrayTransmitModeSingleShot] = "SingleShot",
+    };
+    if (v > ARRAY_SIZE(_t)) {
+        return NULL;
+    } else {
+        return _t[v];
+    }
+}
+
 static void _trace_pdu_log(
     NCodecInstance* nc, NCodecMessage* m, const char* direction)
 {
@@ -252,6 +395,64 @@ static void _trace_pdu_log(
                 pdu->transport.ip_message.so_ad.some_ip.message_type,
                 pdu->transport.ip_message.so_ad.some_ip.message_id,
                 pdu->transport.ip_message.so_ad.some_ip.length);
+        } break;
+        default:
+            break;
+        }
+    } break;
+    case NCodecPduTransportTypeFlexray: {
+        NCodecPduFlexrayNodeIdentifier ni = pdu->transport.flexray.node_ident;
+
+        switch (pdu->transport.flexray.metadata_type) {
+        case NCodecPduFlexrayMetadataTypeConfig: {
+            NCodecPduFlexrayConfig c = pdu->transport.flexray.metadata.config;
+            log_notice("    FlexRay: (%u:%u:%u) Config vcn=%u", ni.node.ecu_id,
+                ni.node.cc_id, ni.node.swc_id, c.vcn_count);
+            log_notice("    FlexRay: (%u:%u:%u) Config");
+            log_notice("        operation=%s", _config_op_str(c.operation));
+            log_notice("        macrotick_per_cycle=%u", c.macrotick_per_cycle);
+            log_notice("        microtick_per_cycle=%u", c.microtick_per_cycle);
+            log_notice("        network_idle_start=%u", c.network_idle_start);
+            log_notice("        static_slot_length=%u", c.static_slot_length);
+            log_notice("        static_slot_count=%u", c.static_slot_count);
+            log_notice("        static_slot_payload_length=%u",
+                c.static_slot_payload_length);
+            log_notice("        minislot_length=%u", c.minislot_length);
+            log_notice("        minislot_count=%u", c.minislot_count);
+            log_notice("        bit_rate=%s", _config_bit_rate_str(c.bit_rate));
+            log_notice("        channel_enable=%s",
+                _config_channel_str(c.channel_enable));
+            log_notice("        coldstart_node=%s",
+                c.coldstart_node ? "true" : "false");
+            log_notice("        sync_node=%s", c.sync_node ? "true" : "false");
+            log_notice("        Frame Table:");
+            for (size_t i = 0; i < c.frame_config.count; i++) {
+                NCodecPduFlexrayLpduConfig lc = c.frame_config.table[i];
+                log_notice("            [%u] LPDU %04x base=%u rep=%u dir=%s "
+                           "ch=%s tx_mode=%s inhibit_null=%s",
+                    i, lc.slot_id, lc.base_cycle, lc.cycle_repetition,
+                    _config_lpdu_dir_str(lc.direction),
+                    _config_channel_str(lc.channel),
+                    _config_lpdu_txmode_str(lc.transmit_mode),
+                    lc.inhibit_null ? "true" : "false");
+            }
+        } break;
+        case NCodecPduFlexrayMetadataTypeStatus: {
+            NCodecPduFlexrayStatus s = pdu->transport.flexray.metadata.status;
+            log_notice("    FlexRay: (%u:%u:%u) Status cycle=%u ma=%u; CH0 "
+                       "tcvr=%s poc_state=%s poc_cmd=%s",
+                ni.node.ecu_id, ni.node.cc_id, ni.node.swc_id, s.cycle,
+                s.macrotick, _channel_tcvr_state_str(s.channel[0].tcvr_state),
+                _channel_poc_state_str(s.channel[0].poc_state),
+                _channel_poc_command_str(s.channel[0].poc_command));
+        } break;
+        case NCodecPduFlexrayMetadataTypeLpdu: {
+            NCodecPduFlexrayLpdu l = pdu->transport.flexray.metadata.lpdu;
+            log_notice(
+                "    FlexRay: (%u:%u:%u) LPDU %04x index=%u, len=%u, status=%s",
+                ni.node.ecu_id, ni.node.cc_id, ni.node.swc_id, pdu->id,
+                l.frame_config_index, pdu->payload_len,
+                _lpdu_status_str(l.status));
         } break;
         default:
             break;
