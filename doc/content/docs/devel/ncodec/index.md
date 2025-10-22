@@ -52,6 +52,11 @@ Configuration items can also be set at runtime with the `ncodec_config()` API as
 {{< readfile file="../../examples/modelc/ncodec/ncodec_config.c" code="true" lang="c" >}}
 
 
+### NCodec Logging
+
+NCodec logging is enabled by setting the environment variable `NCODEC_TRACE_LOG` (to any value).
+
+
 ### Tracing NCodec Frames
 
 The ModelC runtime can enable tracing for selected (or all) frames being sent or received by a Model Instance. This tracing is enabled via environment variables.

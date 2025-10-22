@@ -3,6 +3,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 #include <stdlib.h>
+#include <stdio.h>
 #include <stdint.h>
 #include <ctype.h>
 #include <dse/testing.h>
@@ -13,6 +14,8 @@
 #include <dse/modelc/runtime.h>
 #include <dse/modelc/controller/model_private.h>
 
+
+#define UNUSED(x)      ((void)x)
 
 #define NCT_BUFFER_LEN 2000
 #define NCT_ENVVAR_LEN 100
@@ -269,6 +272,12 @@ static void _trace_pdu_write(NCODEC* nc, NCodecMessage* m)
     _trace_pdu_log((NCodecInstance*)nc, m, "TX");
 }
 
+static void _trace_log(NCODEC* nc, NCodecTraceLogLevel level, const char* msg)
+{
+    UNUSED(nc);
+    if (level >= __log_level__) __log2console(level, NULL, 0, "%s", msg);
+}
+
 
 /* Trace Configuration
    ------------------- */
@@ -281,6 +290,11 @@ DLL_PRIVATE void ncodec_trace_configure(
     if (codec_type == NULL) return;
     if (strcmp(codec_type, "frame") == 0) type_can = true;
     if (strcmp(codec_type, "pdu") == 0) type_pdu = true;
+
+    /* Install the log function. */
+    if (getenv("NCODEC_TRACE_LOG") != NULL) {
+        nc->trace.log = _trace_log;
+    }
 
     /* Query the environment variable. */
     char env_name[NCT_ENVVAR_LEN];

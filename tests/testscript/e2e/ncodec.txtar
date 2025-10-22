@@ -71,7 +71,8 @@ SIMER="${SIMER:-ghcr.io/boschglobal/dse-simer:latest}"
 docker run --name simer -i --rm -v $ENTRYHOSTDIR/$SIM:/sim \
     $SIMER -valgrind $NAME_CAN \
         -env $NAME_CAN:SIMBUS_LOGLEVEL=2 \
-        -env $NAME_PDU:SIMBUS_LOGLEVEL=2
+        -env $NAME_PDU:SIMBUS_LOGLEVEL=2 \
+        -env NCODEC_TRACE_LOG=1
 
 -- test_trace_wildcard.sh --
 SIMER="${SIMER:-ghcr.io/boschglobal/dse-simer:latest}"
