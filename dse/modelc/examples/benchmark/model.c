@@ -112,6 +112,7 @@ ModelDesc* model_create(ModelDesc* model)
     if (m->startup_anno) {
         for (size_t i = 0; i < m->model.sv->count; i++) {
             const char* anno = signal_annotation(m->model.sv, i, "name", NULL);
+            assert(anno);
             assert(strcmp(anno, m->model.sv->signal[i]) == 0);
         }
     }

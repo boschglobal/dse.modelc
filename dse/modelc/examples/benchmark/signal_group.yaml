@@ -7,7 +7,17 @@ metadata:
 spec:
   signals:
     - signal: counter-1
+      annotations:
+        name: counter-1
     - signal: counter-2
+      annotations:
+        name: counter-2
     - signal: counter-3
+      annotations:
+        name: counter-3
     - signal: counter-4
+      annotations:
+        name: counter-4
     - signal: counter-5
+      annotations:
+        name: counter-5
