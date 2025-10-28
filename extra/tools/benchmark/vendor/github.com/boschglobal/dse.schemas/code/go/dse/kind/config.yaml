@@ -1,7 +1,0 @@
-package: kind
-generate:
-  models: true
-import-mapping:
-  channel.yaml: delete_this_line
-  metadata.yaml: delete_this_line
-  transform.yaml: delete_this_line

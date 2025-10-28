@@ -3,7 +3,7 @@ module github.com/boschglobal/dse.modelc/extra/tools/benchmark
 go 1.24.1
 
 require (
-	github.boschdevcloud.com/fsil/fsil.go/command v0.0.0-20250129110146-53b3531b3f3d
+	github.com/boschglobal/dse.clib/extra/go/command v1.0.35
 	github.com/boschglobal/dse.schemas/code/go/dse v1.2.17
 	github.com/elliotchance/orderedmap/v3 v3.1.0
 	github.com/go-echarts/go-echarts/v2 v2.5.2

@@ -17,11 +17,3 @@ set(CMAKE_FIND_ROOT_PATH_MODE_LIBRARY BOTH)
 set(CMAKE_FIND_ROOT_PATH_MODE_INCLUDE ONLY)
 
 add_compile_definitions(SIGPIPE=13)
-
-# Enable CCache if available.
-# Trigger secondary storage by setting environment variables:
-#   CCACHE_SECONDARY_STORAGE=redis://YOUR_SERVER
-find_program(CCACHE_PROGRAM ccache)
-if(CCACHE_PROGRAM)
-    set(CMAKE_C_COMPILER_LAUNCHER "${CCACHE_PROGRAM}")
-endif()

@@ -15,13 +15,15 @@ This model is used for benchmark testing.
 $ git clone https://github.com/boschglobal/dse.modelc.git
 $ cd dse.modelc
 $ make
-$ make simer tools
+$ export SIMER_IMAGE=simer:test
+$ make build simer tools
 
 # Stop any local Redis servers.
 $ sudo /etc/init.d/redis-server stop
 
 # Run the benchmark script.
-$ sh dse/modelc/examples/benchmark/scripts/benchmark.sh 5 2000 1
+$ sh dse/modelc/examples/benchmark/scripts/benchmark.sh 5 2000 40
+$ sh dse/modelc/examples/benchmark/scripts/benchmark.sh 5 2000 40 1 1
 ...
 Benchmark
 =========

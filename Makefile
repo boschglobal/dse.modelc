@@ -81,7 +81,10 @@ endif
 
 
 ifneq ($(CI), true)
-	DOCKER_BUILDER_CMD := docker run -it --rm \
+DOCKER_BUILDER_CMD := \
+	mkdir -p $(EXTERNAL_BUILD_DIR); \
+	docker run -it --rm \
+		--user $$(id -u):$$(id -g) \
 		--env CMAKE_TOOLCHAIN_FILE=/tmp/repo/extra/cmake/$(PACKAGE_ARCH).cmake \
 		--env EXTERNAL_BUILD_DIR=$(EXTERNAL_BUILD_DIR) \
 		--env GDB_CMD="$(GDB_CMD)" \
@@ -99,6 +102,7 @@ DSE_CLANG_FORMAT_CMD := docker run -it --rm \
 	--user $$(id -u):$$(id -g) \
 	--volume $$(pwd):/tmp/code \
 	${DSE_CLANG_FORMAT_IMAGE}
+
 
 default: build
 

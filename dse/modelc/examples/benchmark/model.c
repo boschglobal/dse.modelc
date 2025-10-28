@@ -2,6 +2,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
+#include <assert.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stddef.h>
@@ -36,6 +37,8 @@ typedef struct {
 
     /* Operation Parameters */
     uint32_t model_id;
+    uint32_t startup_idx;
+    uint32_t startup_anno;
 
     /* Block Parameters (calculated). */
     struct {
@@ -83,6 +86,8 @@ ModelDesc* model_create(ModelDesc* model)
 
     /* Setup the parameters. */
     m->model_id = _get_envar((ModelDesc*)m, "MODEL_ID", 1);
+    m->startup_idx = _get_envar((ModelDesc*)m, "STARTUP_IDX", 1);
+    m->startup_anno = _get_envar((ModelDesc*)m, "STARTUP_ANNO", 1);
     m->block.size = _get_envar((ModelDesc*)m, "SIGNAL_CHANGE", 5);
     m->block.sv = m->model.sv;
     m->block.offset = m->block.size * (m->model_id - 1);
@@ -95,6 +100,21 @@ ModelDesc* model_create(ModelDesc* model)
     log_notice("m->block.offset %u", m->block.offset);
     log_notice("m->block.size %u", m->block.size);
     log_notice("m->block.sv->count %u", m->block.sv->count);
+
+    /* Generate minimal expected startup load. */
+    if (m->startup_idx) {
+        for (size_t i = 0; i < m->model.sv->count; i++) {
+            ModelSignalIndex idx =
+                signal_index(model, m->model.sv->alias, m->model.sv->signal[i]);
+            assert(idx.signal == i);
+        }
+    }
+    if (m->startup_anno) {
+        for (size_t i = 0; i < m->model.sv->count; i++) {
+            const char* anno = signal_annotation(m->model.sv, i, "name", NULL);
+            assert(strcmp(anno, m->model.sv->signal[i]) == 0);
+        }
+    }
 
     /* Return the extended object. */
     return (ModelDesc*)m;
@@ -125,6 +145,11 @@ void model_destroy(ModelDesc* model)
 
     const char* tag = "";
     if (getenv("TAG")) tag = getenv("TAG");
+    log_notice(LOG_COLOUR_LBLUE ":::benchmark_key:"
+                                "<tag>::<tspt>:<uri>:"
+                                "<step>:<end>:<model_id>:"
+                                "<sig_cnt>:<block_cnt>:<steps>:<setup>:<run>"
+                                ":::" LOG_COLOUR_NONE);
     log_notice(LOG_COLOUR_LBLUE
         ":::benchmark:%s::%s;%s;%.6f;%.6f;%u;%u;%u;%lu;%."
         "3f;%.3f:::" LOG_COLOUR_NONE,

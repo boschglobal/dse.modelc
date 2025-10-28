@@ -1,9 +1,9 @@
-github.boschdevcloud.com/fsil/fsil.go/command v0.0.0-20250129110146-53b3531b3f3d h1:pyeTZrnYdbY4CzQHuMYJcW3rsmXNKa2ZpzR+Nis4uT8=
-github.boschdevcloud.com/fsil/fsil.go/command v0.0.0-20250129110146-53b3531b3f3d/go.mod h1:aMO+nGAfavJ8bXcEfl361MxmhxOd6+Ex+WXVo6yFaYA=
 github.com/RaveNoX/go-jsoncommentstrip v1.0.0/go.mod h1:78ihd09MekBnJnxpICcwzCMzGrKSKYe4AqU6PDYYpjk=
 github.com/apapsch/go-jsonmerge/v2 v2.0.0 h1:axGnT1gRIfimI7gJifB699GoE/oq+F2MU7Dml6nw9rQ=
 github.com/apapsch/go-jsonmerge/v2 v2.0.0/go.mod h1:lvDnEdqiQrp0O42VQGgmlKpxL1AP2+08jFMw88y4klk=
 github.com/bmatcuk/doublestar v1.1.1/go.mod h1:UD6OnuiIn0yFxxA2le/rnRU1G4RaI4UvFv1sNto9p6w=
+github.com/boschglobal/dse.clib/extra/go/command v1.0.35 h1:2dhcqazDNOADOADfJbV3LW3vSUj2C9nKb2Mh1RIdXQE=
+github.com/boschglobal/dse.clib/extra/go/command v1.0.35/go.mod h1:whUGAF0Y0n6r21jM2to/YHwZd9XRB6G5g2EvI9BJNQE=
 github.com/boschglobal/dse.schemas/code/go/dse v1.2.17 h1:3u0oFH3T5oolGLu2BEenbpWCshYg4Ay+80GZnKquavc=
 github.com/boschglobal/dse.schemas/code/go/dse v1.2.17/go.mod h1:1pxTw2DGf81svt1NZrzbn7kE7l1fsOjEmDpqKdEHl2Q=
 github.com/chromedp/cdproto v0.0.0-20231011050154-1d073bb38998 h1:2zipcnjfFdqAjOQa8otCCh0Lk1M7RBzciy3s80YAKHk=

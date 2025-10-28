@@ -12,7 +12,7 @@ $ make
 $ make build simer tools
 
 # (optional) Also use local artifacts (i.e. simer container).
-$ export export SIMER_IMAGE=simer:test
+$ export SIMER_IMAGE=simer:test
 
 # Stop any local Redis.
 $ sudo /etc/init.d/redis-server stop
@@ -21,6 +21,7 @@ $ sudo /etc/init.d/redis-server stop
 $ sh dse/modelc/examples/benchmark/charts/model_fanout.sh
 $ sh dse/modelc/examples/benchmark/charts/signal_count.sh
 $ sh dse/modelc/examples/benchmark/charts/signal_throughput.sh
+$ sh dse/modelc/examples/benchmark/charts/startup_signal.sh
 ```
 
 

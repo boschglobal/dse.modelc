@@ -8,8 +8,8 @@ import (
 	"flag"
 	"fmt"
 
-	"github.boschdevcloud.com/fsil/fsil.go/command"
-	"github.boschdevcloud.com/fsil/fsil.go/command/util"
+	"github.com/boschglobal/dse.clib/extra/go/command"
+	"github.com/boschglobal/dse.clib/extra/go/command/util"
 	"github.com/boschglobal/dse.schemas/code/go/dse/kind"
 )
 

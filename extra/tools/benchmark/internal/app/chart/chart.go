@@ -14,7 +14,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.boschdevcloud.com/fsil/fsil.go/command"
+	"github.com/boschglobal/dse.clib/extra/go/command"
 
 	"github.com/elliotchance/orderedmap/v3"
 
@@ -26,12 +26,13 @@ import (
 type ChartCommand struct {
 	command.Command
 
-	title      string
-	conditions string
-	axisIndex  uint
-	axisLabel  string
-	inputFile  string
-	outputFile string
+	title       string
+	conditions  string
+	axisIndex   uint
+	axisLabel   string
+	inputFile   string
+	outputFile  string
+	sampleIndex uint
 }
 
 func NewChartCommand(name string) *ChartCommand {
@@ -47,6 +48,7 @@ func NewChartCommand(name string) *ChartCommand {
 	c.FlagSet().StringVar(&c.axisLabel, "axis_label", "", "axis label")
 	c.FlagSet().StringVar(&c.inputFile, "input", "", "path to captured console output of benchmark simulation")
 	c.FlagSet().StringVar(&c.outputFile, "output", "", "path to write generated chart ()")
+	c.FlagSet().UintVar(&c.sampleIndex, "sample_index", 9, "index of sample value to chart")
 	return c
 }
 
@@ -106,7 +108,7 @@ func (c *ChartCommand) getSeries() (*chartSeries, error) {
 				raw_sample.Set(key, []float64{})
 			}
 			s, _ := raw_sample.Get(key)
-			v, _ := strconv.ParseFloat(samples[len(samples)-1], 64)
+			v, _ := strconv.ParseFloat(samples[c.sampleIndex], 64)
 			raw_sample.Set(key, append(s, v))
 		}
 

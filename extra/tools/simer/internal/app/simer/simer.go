@@ -14,9 +14,9 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/boschglobal/dse.modelc/extra/tools/simer/internal/pkg/file/handler"
-	"github.com/boschglobal/dse.modelc/extra/tools/simer/internal/pkg/file/handler/kind"
-	"github.com/boschglobal/dse.modelc/extra/tools/simer/internal/pkg/index"
+	"github.com/boschglobal/dse.clib/extra/go/file/handler/kind"
+	"github.com/boschglobal/dse.clib/extra/go/file/index"
+
 	"github.com/boschglobal/dse.modelc/extra/tools/simer/internal/pkg/session"
 
 	schema_kind "github.com/boschglobal/dse.schemas/code/go/dse/kind"
@@ -38,58 +38,6 @@ func listFiles(paths []string, exts []string) []string {
 	return files
 }
 
-func scanFiles(path string, exts []string) []string {
-	files := []string{}
-	for _, ext := range exts {
-		indexed_files, _ := index.IndexFiles(path, ext)
-		files = append(files, indexed_files...)
-	}
-
-	return files
-}
-
-func loadKindDocs(files []string) ([]kind.KindDoc, error) {
-	var docList []kind.KindDoc
-	for _, f := range files {
-		//println(f)
-		_, docs, err := handler.ParseFile(f)
-		if err != nil {
-			slog.Debug(fmt.Sprintf("Parse failed (%s) on file: %s", err.Error(), f))
-			continue
-		}
-		dl := docs.([]kind.KindDoc)
-		docList = append(docList, dl...)
-	}
-	return docList, nil
-}
-
-func IndexYamlFiles(path string) map[string][]kind.KindDoc {
-	var files []string
-	if _, err := os.Stat(path); os.IsNotExist(err) {
-		slog.Error("Index path does not exist.")
-	} else {
-		files = scanFiles(path, []string{".yml", ".yaml"})
-	}
-	kindDocs, err := loadKindDocs(files)
-	if err != nil {
-		slog.Error(err.Error())
-	}
-	if len(kindDocs) == 0 {
-		slog.Error("No Kind Docs found, check simulation path volume mapping(?).")
-	}
-
-	index := map[string][]kind.KindDoc{}
-
-	slog.Info("Kind Docs (YAML):")
-	for _, doc := range kindDocs {
-		slog.Info(fmt.Sprintf("kind: %s; name=%s (%s)", doc.Kind, doc.Metadata.Name, doc.File))
-
-		index[doc.Kind] = append(index[doc.Kind], doc)
-	}
-
-	return index
-}
-
 func RedisCommand(redisPath string, quiet bool) *session.Command {
 	if redisPath == "" {
 		slog.Info("No Redis path specified, remote operation(?).")
@@ -105,13 +53,13 @@ func RedisCommand(redisPath string, quiet bool) *session.Command {
 	}
 }
 
-func SimbusCommand(docMap map[string][]kind.KindDoc, simbusPath string, flags Flags) *session.Command {
+func SimbusCommand(index *index.YamlFileIndex, simbusPath string, flags Flags) *session.Command {
 	if simbusPath == "" {
 		slog.Info("No SimBus path specified; loopback or remote SimBus connection.")
 		return nil
 	}
 	slog.Debug("Build SimBus command...")
-	if stackDocs, ok := docMap["Stack"]; ok {
+	if stackDocs, ok := index.DocMap["Stack"]; ok {
 		for _, stackDoc := range stackDocs {
 			slog.Debug(stackDoc.File)
 			slog.Debug(fmt.Sprintf("  %s", stackDoc.Metadata.Name))
@@ -167,8 +115,8 @@ func SimbusCommand(docMap map[string][]kind.KindDoc, simbusPath string, flags Fl
 	return nil
 }
 
-func findModelDoc(docMap map[string][]kind.KindDoc, modelName string) (*kind.KindDoc, bool) {
-	if modelDocs, ok := docMap["Model"]; ok {
+func findModelDoc(index *index.YamlFileIndex, modelName string) (*kind.KindDoc, bool) {
+	if modelDocs, ok := index.DocMap["Model"]; ok {
 		for _, modelDoc := range modelDocs {
 			if modelDoc.Metadata.Name == modelName {
 				return &modelDoc, true
@@ -178,11 +126,11 @@ func findModelDoc(docMap map[string][]kind.KindDoc, modelName string) (*kind.Kin
 	return nil, false
 }
 
-func ModelCommandList(docMap map[string][]kind.KindDoc, modelcPath string, modelcX32Path string, modelcI386Path string, flags Flags) []*session.Command {
+func ModelCommandList(index *index.YamlFileIndex, modelcPath string, modelcX32Path string, modelcI386Path string, flags Flags) []*session.Command {
 	cmds := []*session.Command{}
 
 	slog.Debug("Build Model commands...")
-	if stackDocs, ok := docMap["Stack"]; ok {
+	if stackDocs, ok := index.DocMap["Stack"]; ok {
 		for _, stackDoc := range stackDocs {
 			slog.Debug(stackDoc.File)
 			slog.Debug(fmt.Sprintf("  %s", stackDoc.Metadata.Name))
@@ -196,7 +144,7 @@ func ModelCommandList(docMap map[string][]kind.KindDoc, modelcPath string, model
 			// Stacked is a special case, emit/return the single command.
 			if stackSpec.Runtime != nil && stackSpec.Runtime.Stacked != nil && *stackSpec.Runtime.Stacked {
 				slog.Debug(("Build stacked command"))
-				cmd := stackedModelCmd(&stackDoc, modelcPath, modelcX32Path, modelcI386Path, flags, docMap)
+				cmd := stackedModelCmd(&stackDoc, modelcPath, modelcX32Path, modelcI386Path, flags, index)
 				cmds = append(cmds, cmd)
 				continue // Next stack.
 			}
@@ -212,7 +160,7 @@ func ModelCommandList(docMap map[string][]kind.KindDoc, modelcPath string, model
 				}
 				// Locate the YAML files.
 				yamlFiles := []string{stackDoc.File}
-				if doc, ok := findModelDoc(docMap, model.Model.Name); ok {
+				if doc, ok := findModelDoc(index, model.Model.Name); ok {
 					modelSpec := doc.Spec.(*schema_kind.ModelSpec)
 					if modelSpec.Runtime.Gateway != nil {
 						slog.Debug(fmt.Sprintf("Gateway model: %s  (start externally)", model.Name))
@@ -246,7 +194,7 @@ func ModelCommandList(docMap map[string][]kind.KindDoc, modelcPath string, model
 	return cmds
 }
 
-func stackedModelCmd(stackDoc *kind.KindDoc, modelcPath string, modelcX32Path string, modelcI386Path string, flags Flags, docMap map[string][]kind.KindDoc) *session.Command {
+func stackedModelCmd(stackDoc *kind.KindDoc, modelcPath string, modelcX32Path string, modelcI386Path string, flags Flags, index *index.YamlFileIndex) *session.Command {
 	stackSpec := stackDoc.Spec.(*schema_kind.StackSpec)
 	instanceName := []string{}
 	modelName := []string{}
@@ -266,7 +214,7 @@ func stackedModelCmd(stackDoc *kind.KindDoc, modelcPath string, modelcX32Path st
 		instanceName = append(instanceName, model.Name)
 		modelName = append(modelName, model.Model.Name)
 		// Locate the YAML files.
-		if doc, ok := findModelDoc(docMap, model.Model.Name); ok {
+		if doc, ok := findModelDoc(index, model.Model.Name); ok {
 			yamlFiles = append(yamlFiles, doc.File)
 		}
 		if model.Runtime != nil && model.Runtime.Files != nil {

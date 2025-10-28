@@ -9,6 +9,7 @@ import (
 	"log/slog"
 	"os"
 
+	"github.com/boschglobal/dse.clib/extra/go/file/index"
 	"github.com/boschglobal/dse.modelc/extra/tools/simer/internal/app/simer"
 	"github.com/boschglobal/dse.modelc/extra/tools/simer/internal/pkg/session"
 )
@@ -31,8 +32,13 @@ func main() {
 	printFlags()
 
 	cmds := []*session.Command{}
-	index := simer.IndexYamlFiles(".")
-	if len(index) == 0 {
+	var index = index.NewYamlFileIndex()
+	index.Scan(".")
+	if len(index.FileMap) == 0 {
+		slog.Error("No files indexed!", "pwd", func() string {
+			dir, _ := os.Getwd()
+			return dir
+		}())
 		os.Exit(1)
 	}
 

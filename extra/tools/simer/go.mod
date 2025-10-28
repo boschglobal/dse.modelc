@@ -1,11 +1,11 @@
 module github.com/boschglobal/dse.modelc/extra/tools/simer
 
-go 1.21.6
+go 1.23.5
 
 require (
+	github.com/boschglobal/dse.clib/extra/go/file v1.0.36
 	github.com/boschglobal/dse.schemas/code/go/dse v1.2.25
 	github.com/stretchr/testify v1.11.1
-	gopkg.in/yaml.v3 v3.0.1
 )
 
 require (
@@ -14,4 +14,5 @@ require (
 	github.com/google/uuid v1.5.0 // indirect
 	github.com/oapi-codegen/runtime v1.1.1 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
+	gopkg.in/yaml.v3 v3.0.1 // indirect
 )

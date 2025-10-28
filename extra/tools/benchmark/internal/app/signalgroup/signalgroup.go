@@ -8,8 +8,8 @@ import (
 	"flag"
 	"fmt"
 
-	"github.boschdevcloud.com/fsil/fsil.go/command"
-	"github.boschdevcloud.com/fsil/fsil.go/command/util"
+	"github.com/boschglobal/dse.clib/extra/go/command"
+	"github.com/boschglobal/dse.clib/extra/go/command/util"
 	"github.com/boschglobal/dse.schemas/code/go/dse/kind"
 )
 
@@ -48,8 +48,12 @@ func (c *SignalGroupCommand) Run() error {
 
 	scalarSignals := []kind.Signal{}
 	for i := 1; i <= c.signalCount; i++ {
+		name := fmt.Sprintf("counter-%d", i)
 		signal := kind.Signal{
-			Signal: fmt.Sprintf("counter-%d", i),
+			Signal: name,
+			Annotations: &kind.Annotations{
+				"name": name,
+			},
 		}
 		scalarSignals = append(scalarSignals, signal)
 	}

@@ -7,7 +7,8 @@ package simer
 import (
 	"testing"
 
-	"github.com/boschglobal/dse.modelc/extra/tools/simer/internal/pkg/file/handler/kind"
+	"github.com/boschglobal/dse.clib/extra/go/file/handler/kind"
+	"github.com/boschglobal/dse.clib/extra/go/file/index"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -65,9 +66,10 @@ func TestStackAnnotatedFlags(t *testing.T) {
 			t.Parallel()
 			var stackDoc *kind.KindDoc
 			if len(tc.yamlPath) > 0 {
-				index := IndexYamlFiles(tc.yamlPath)
+				var index = index.NewYamlFileIndex()
+				index.Scan(tc.yamlPath)
 				t.Log(index)
-				stacks, ok := index["Stack"]
+				stacks, ok := index.DocMap["Stack"]
 				assert.True(t, ok)
 				assert.Len(t, stacks, 1)
 				stackDoc = &stacks[0]

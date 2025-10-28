@@ -5,7 +5,6 @@
 export EXTERNAL_BUILD_DIR ?= /dev/null
 export MAKE_NPROC ?= $(shell nproc)
 
-
 default: build
 
 setup:
