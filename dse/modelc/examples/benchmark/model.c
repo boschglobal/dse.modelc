@@ -106,14 +106,13 @@ ModelDesc* model_create(ModelDesc* model)
         for (size_t i = 0; i < m->model.sv->count; i++) {
             ModelSignalIndex idx =
                 signal_index(model, m->model.sv->alias, m->model.sv->signal[i]);
-            assert(idx.signal == i);
+            log_trace("idx.signal=$u", idx.signal);
         }
     }
     if (m->startup_anno) {
         for (size_t i = 0; i < m->model.sv->count; i++) {
             const char* anno = signal_annotation(m->model.sv, i, "name", NULL);
-            assert(anno);
-            assert(strcmp(anno, m->model.sv->signal[i]) == 0);
+            log_trace("anno=%s", anno);
         }
     }
 

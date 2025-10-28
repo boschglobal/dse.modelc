@@ -151,7 +151,7 @@ Endpoint* redis_connect(const char* path, const char* hostname, int32_t port,
     if (async) {
         redis_ep->async_ctx =
             redisAsyncConnect(redis_ep->hostname, redis_ep->port);
-        if (redis_ep->async_ctx->err) log_fatal("XXXX 1");
+        if (redis_ep->async_ctx->err) log_fatal("redisAsyncConnect");
         redis_ep->actx_connecting = 1;
         redis_ep->async_ctx->data = redis_ep;
         redis_ep->base = event_base_new();

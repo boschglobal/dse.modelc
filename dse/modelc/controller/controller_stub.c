@@ -141,6 +141,7 @@ Endpoint* endpoint_create(const char* transport, const char* uri, uint32_t uid,
 
 Controller* controller_object_ref(SimulationSpec* sim)
 {
+    UNUSED(sim);
     return __controller;
 }
 

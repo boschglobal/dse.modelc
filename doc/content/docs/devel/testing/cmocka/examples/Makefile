@@ -6,7 +6,7 @@ export EXTERNAL_BUILD_DIR ?= /tmp/$(NAMESPACE).$(MODULE)
 export PACKAGE_ARCH ?= linux-amd64
 export CMAKE_TOOLCHAIN_FILE ?= $(shell pwd -P)/extra/cmake/$(PACKAGE_ARCH).cmake
 export PACKAGE_VERSION ?= 0.0.2
-export GCC_BUILDER_IMAGE ?= $(DOCKER_REPO)/dse-gcc-builder:main
+export GCC_BUILDER_IMAGE ?= $(DOCKER_REPO)/dse-gcc-builder:latest
 
 ifneq ($(CI), true)
 	DOCKER_BUILDER_CMD := docker run -it --rm \

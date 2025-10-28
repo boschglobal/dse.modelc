@@ -46,7 +46,7 @@ The Docker images can also be build locally with the `make docker` target.
 # Start a container.
 $ docker run --rm -it --name gateway --net dse \
         --volume $(pwd)/dse/modelc/build/_out/examples/gateway:/tmp \
-        ghcr.io/boschglobal/dse-gcc-builder:main
+        ghcr.io/boschglobal/dse-gcc-builder:latest
 
 # Run the Gateway
 $ cd /tmp/bin

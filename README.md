@@ -59,8 +59,7 @@ $ git clone https://github.com/boschglobal/dse.modelc.git
 $ cd dse.modelc
 
 # Optionally set builder images.
-$ export GCC_BUILDER_IMAGE=ghcr.io/boschglobal/dse-gcc-builder:main
-$ export GCC_TESTER_IMAGE=ghcr.io/boschglobal/dse-python-builder:main
+$ export GCC_BUILDER_IMAGE=ghcr.io/boschglobal/dse-gcc-builder:latest
 
 # Build.
 $ make
@@ -94,8 +93,7 @@ Alternatively, the latest Docker Images are available on ghcr.io and can be
 used as follows:
 
 ```bash
-$ export GCC_BUILDER_IMAGE=ghcr.io/boschglobal/dse-gcc-builder:main
-$ export GCC_TESTER_IMAGE=ghcr.io/boschglobal/dse-python-builder:main
+$ export GCC_BUILDER_IMAGE=ghcr.io/boschglobal/dse-gcc-builder:latest
 ```
 
 

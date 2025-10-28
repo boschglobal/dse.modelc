@@ -4,11 +4,11 @@ name: CI
 on:  # yamllint disable-line rule:truthy
   workflow_dispatch:
   push:
-    branches: [main, devel]
+    branches: [main]
     tags:
       - 'v*.*.*'
   pull_request:
-    branches: [main, devel]
+    branches: [main]
 
 permissions:
   contents: read
@@ -35,7 +35,7 @@ jobs:
           - windows-x64
           - windows-x86
     container:
-      image: ghcr.io/boschglobal/dse-gcc-builder:main
+      image: ghcr.io/boschglobal/dse-gcc-builder:latest
     steps:
       - name: Checkout
         uses: actions/checkout@v5

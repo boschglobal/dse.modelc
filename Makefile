@@ -4,7 +4,7 @@
 
 ###############
 ## Docker Images.
-GCC_BUILDER_IMAGE ?= ghcr.io/boschglobal/dse-gcc-builder:main
+GCC_BUILDER_IMAGE ?= ghcr.io/boschglobal/dse-gcc-builder:latest
 TESTSCRIPT_IMAGE ?= ghcr.io/boschglobal/dse-testscript:latest
 SIMER_IMAGE ?= ghcr.io/boschglobal/dse-simer:latest
 
