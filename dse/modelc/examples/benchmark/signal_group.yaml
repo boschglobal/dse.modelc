@@ -9,15 +9,20 @@ spec:
     - signal: counter-1
       annotations:
         name: counter-1
+        direction: output
     - signal: counter-2
       annotations:
         name: counter-2
+        direction: output
     - signal: counter-3
       annotations:
         name: counter-3
+        direction: output
     - signal: counter-4
       annotations:
         name: counter-4
+        direction: output
     - signal: counter-5
       annotations:
         name: counter-5
+        direction: output

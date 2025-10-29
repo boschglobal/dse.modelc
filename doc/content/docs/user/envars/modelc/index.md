@@ -40,6 +40,10 @@ github_subdir: "doc"
 
 | Variable           | CLI Option    | Default |
 | ------------------ | ------------- | ------- |
+| `MODEL_ID`         | _N/A_         | `1`     |
+| `SIGNAL_CHANGE`    | _N/A_         | `5`     |
+| `STARTUP_ANNO`     | _N/A_         | `1`     |
+| `STARTUP_IDX`      | _N/A_         | `1`     |
 | `TAG`              | _N/A_         | _None_ (a log prefix, configure as a string) |
 
 

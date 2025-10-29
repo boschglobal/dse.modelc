@@ -408,7 +408,6 @@ static void _trace_pdu_log(
             NCodecPduFlexrayConfig c = pdu->transport.flexray.metadata.config;
             log_notice("    FlexRay: (%u:%u:%u) Config vcn=%u", ni.node.ecu_id,
                 ni.node.cc_id, ni.node.swc_id, c.vcn_count);
-            log_notice("    FlexRay: (%u:%u:%u) Config");
             log_notice("        operation=%s", _config_op_str(c.operation));
             log_notice("        macrotick_per_cycle=%u", c.macrotick_per_cycle);
             log_notice("        microtick_per_cycle=%u", c.microtick_per_cycle);

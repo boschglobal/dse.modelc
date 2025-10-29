@@ -24,6 +24,8 @@ $ sudo /etc/init.d/redis-server stop
 # Run the benchmark script.
 $ sh dse/modelc/examples/benchmark/scripts/benchmark.sh 5 2000 40
 $ sh dse/modelc/examples/benchmark/scripts/benchmark.sh 5 2000 40 1 1
+$ sh dse/modelc/examples/benchmark/scripts/benchmark.sh 5 2000 40 1 1 1 1 simer
+$ sh dse/modelc/examples/benchmark/scripts/benchmark.sh 5 2000 40 1 1 1 1 fmi
 ...
 Benchmark
 =========

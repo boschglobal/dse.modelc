@@ -52,7 +52,8 @@ func (c *SignalGroupCommand) Run() error {
 		signal := kind.Signal{
 			Signal: name,
 			Annotations: &kind.Annotations{
-				"name": name,
+				"name":      name,
+				"direction": "output",
 			},
 		}
 		scalarSignals = append(scalarSignals, signal)

@@ -8,11 +8,13 @@ SPDX-License-Identifier: Apache-2.0
 
 ```bash
 # Build local artifacts.
-$ make
 $ make build simer tools
+# Associated FMI repo.
+$ make build fmi tools
 
 # (optional) Also use local artifacts (i.e. simer container).
 $ export SIMER_IMAGE=simer:test
+$ export FMI_IMAGE=fmi:test
 
 # Stop any local Redis.
 $ sudo /etc/init.d/redis-server stop
@@ -22,6 +24,7 @@ $ sh dse/modelc/examples/benchmark/charts/model_fanout.sh
 $ sh dse/modelc/examples/benchmark/charts/signal_count.sh
 $ sh dse/modelc/examples/benchmark/charts/signal_throughput.sh
 $ sh dse/modelc/examples/benchmark/charts/startup_signal.sh
+$ sh dse/modelc/examples/benchmark/charts/modelcfmu_signal_count.sh
 ```
 
 
