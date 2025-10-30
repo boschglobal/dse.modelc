@@ -78,7 +78,7 @@ static int test_teardown(void** state)
 }
 
 
-void test_sequential__parse(void** state)
+void test_stack__sequential_cosim(void** state)
 {
     ModelCMock* mock = *state;
 
@@ -86,12 +86,23 @@ void test_sequential__parse(void** state)
 }
 
 
-int run_sequential_cosim_tests(void)
+void test_stack__sim_spec(void** state)
 {
+    ModelCMock* mock = *state;
+
+    assert_non_null(mock->sim.spec);
+}
+
+
+int run_stack_tests(void)
+{
+    void* s = test_setup;
+    void* t = test_teardown;
+
     const struct CMUnitTest tests[] = {
-        cmocka_unit_test_setup_teardown(
-            test_sequential__parse, test_setup, test_teardown),
+        cmocka_unit_test_setup_teardown(test_stack__sequential_cosim, s, t),
+        cmocka_unit_test_setup_teardown(test_stack__sim_spec, s, t),
     };
 
-    return cmocka_run_group_tests_name("SEQUENTIAL_COSIM", tests, NULL, NULL);
+    return cmocka_run_group_tests_name("STACK", tests, NULL, NULL);
 }

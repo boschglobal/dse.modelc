@@ -72,9 +72,21 @@ typedef struct SimulationSpec {
     bool               mode_loopback;
     /* Operate a stacked simulation in Sequential CoSim mode. */
     bool               sequential_cosim;
+    /* Reference to parsed YAML (stack:spec). */
+    void*              spec;
 
     /* Reserved. */
-    uint64_t __reserved__[4];
+#if defined(__x86_64__)
+#if __SIZEOF_POINTER__ == 8
+    uint64_t __reserved__[3];
+#else
+    uint32_t __reserved_4__;
+    uint64_t __reserved__[3];
+#endif
+#elif defined(__i386__)
+    uint32_t __reserved_4__;
+    uint64_t __reserved__[3];
+#endif
 } SimulationSpec;
 
 

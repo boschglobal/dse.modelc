@@ -152,7 +152,7 @@ add_executable(test_model
     model/test_ncodec_can.c
     model/test_ncodec_pdu.c
     model/test_schema.c
-    model/test_sequential_cosim.c
+    model/test_stack.c
     model/test_signal.c
     model/test_transform.c
     ${DSE_CLIB_SOURCE_FILES}
