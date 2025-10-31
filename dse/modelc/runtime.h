@@ -162,9 +162,21 @@ DLL_PRIVATE int model_configure_channel(ModelInstanceSpec* model_instance,
 
 
 /* model_runtime.c - Runtime Interface (for operation in foreign systems). */
+typedef struct RuntimeModelDesc RuntimeModelDesc;
+
 #define MODEL_RUNTIME_CREATE_FUNC_NAME  "model_runtime_create"
 #define MODEL_RUNTIME_STEP_FUNC_NAME    "model_runtime_step"
 #define MODEL_RUNTIME_DESTROY_FUNC_NAME "model_runtime_destroy"
+
+typedef void (*RuntimeModelSetEnv)(RuntimeModelDesc* m);
+
+typedef struct RuntimeModelVTable {
+    RuntimeModelSetEnv set_env;
+
+    /* Reserved (space for 2 function pointers). */
+    void* __reserved__[2];
+} RuntimeModelVTable;
+
 
 typedef struct RuntimeModelDesc {
     ModelDesc model;
@@ -188,11 +200,26 @@ typedef struct RuntimeModelDesc {
         double  end_time;
         double  step_time_correction;
         bool    binary_signals_reset;
+
+        /* Runtime Function Table - Importer provided functions. */
+        RuntimeModelVTable vtable;
     } runtime;
 
+
     /* Reserved. */
-    uint64_t __reserved__[8];
+#if defined(__x86_64__)
+#if __SIZEOF_POINTER__ == 8
+    uint64_t __reserved__[5];
+#else
+    uint32_t __reserved_4__[3];
+    uint64_t __reserved__[5];
+#endif
+#elif defined(__i386__)
+    uint32_t __reserved_4__[3];
+    uint64_t __reserved__[5];
+#endif
 } RuntimeModelDesc;
+
 
 DLL_PUBLIC RuntimeModelDesc* model_runtime_create(RuntimeModelDesc* model);
 DLL_PUBLIC int               model_runtime_step(

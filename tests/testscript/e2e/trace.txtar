@@ -30,10 +30,12 @@ stdout '\[0.001500\] Notify\[42\]:SignalVector:binary_channel:Signal:message=len
 stdout '\[0.001500\] Notify\[8000008\]:SignalVector:binary_channel:Signal:message=len\(12\)'
 stdout 'ModelExit:42:scalar_channel:0:0'
 
+exec rm /repo/$SIM/$TRACEFILE
 
 -- test.sh --
 SIMER="${SIMER:-ghcr.io/boschglobal/dse-simer:latest}"
-docker run --name simer -i --rm -v $ENTRYHOSTDIR/$SIM:/sim \
+docker run --name simer -i --rm \
+    -v $ENTRYHOSTDIR/$SIM:/sim \
     $SIMER -valgrind $NAME \
         -env simbus:SIMBUS_TRANSPORT=$SIMBUS_TRANSPORT \
         -env simbus:SIMBUS_URI=$SIMBUS_URI \
@@ -45,6 +47,7 @@ docker run --name simer -i --rm -v $ENTRYHOSTDIR/$SIM:/sim \
 
 -- trace.sh --
 SIMER="${SIMER:-ghcr.io/boschglobal/dse-simer:latest}"
-docker run --name simer -i --rm -v $ENTRYHOSTDIR/$SIM:/sim \
+docker run --name simer -i --rm \
+    -v $ENTRYHOSTDIR/$SIM:/sim \
     --entrypoint /usr/local/bin/trace \
     $SIMER summary -long data/trace/simbus.bin

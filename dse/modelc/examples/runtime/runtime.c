@@ -7,6 +7,9 @@
 #include <dse/modelc/runtime.h>
 
 
+#define UNUSED(x) ((void)x)
+
+
 /**
 Runtime for Importer Interface
 ==============================
@@ -17,11 +20,20 @@ and then runs the simulation via calls to the Model Runtime API.
 [importer] -> [importer interface] -> [model_runtime] -> [model]
 */
 
+static void runtime_set_env(RuntimeModelDesc* m)
+{
+    UNUSED(m);
+#if defined(__linux__)
+    setenv("MSG", "Hello from importer runtime!", true);
+#endif
+}
+
 ModelDesc* model_create(ModelDesc* model)
 {
     RuntimeModelDesc* m = (RuntimeModelDesc*)model;
 
     m->model.sim = calloc(1, sizeof(SimulationSpec));
+    m->runtime.vtable.set_env = runtime_set_env;
     m = model_runtime_create(m);
     return (ModelDesc*)m;
 }

@@ -62,6 +62,9 @@ ModelDesc* model_create(ModelDesc* model)
     }
     if (m->node_id == NULL) log_fatal("NCodec node_id not configured!");
 
+    /* Enquire about envars. */
+    log_notice("ENVAR:MSG=%s", getenv("MSG"));
+
     /* Return the extended object. */
     return (ModelDesc*)m;
 }

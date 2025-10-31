@@ -135,6 +135,8 @@ RuntimeModelDesc* model_runtime_create(RuntimeModelDesc* rm)
     rm->model.sim->uri = strdup(TRANSPORT_LOOPBACK);
     rm->model.sim->mode_loopback = true;
 
+    /* Runtime callbacks - set model environment variables. */
+    if (rm->runtime.vtable.set_env) rm->runtime.vtable.set_env(rm);
 
     __log("Create the Simulation Models ...");
     rc = modelc_run(rm->model.sim, true);
