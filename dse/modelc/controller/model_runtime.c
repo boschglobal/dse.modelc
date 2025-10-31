@@ -136,6 +136,7 @@ RuntimeModelDesc* model_runtime_create(RuntimeModelDesc* rm)
     rm->model.sim->mode_loopback = true;
 
     /* Runtime callbacks - set model environment variables. */
+    __log("Call runtime callbacks ...");
     if (rm->runtime.vtable.set_env) rm->runtime.vtable.set_env(rm);
 
     __log("Create the Simulation Models ...");

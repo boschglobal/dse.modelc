@@ -4,6 +4,7 @@
 
 #include <stddef.h>
 #include <stdlib.h>
+#include <stdio.h>
 #include <dse/modelc/runtime.h>
 
 
@@ -24,7 +25,10 @@ static void runtime_set_env(RuntimeModelDesc* m)
 {
     UNUSED(m);
 #if defined(__linux__)
-    setenv("MSG", "Hello from importer runtime!", true);
+#define MSG "Hello from importer runtime!"
+    printf("Importer: Runtime: set_env(MSG=%s)\n", MSG);
+    fflush(stdout);
+    setenv("MSG", MSG, true);
 #endif
 }
 
