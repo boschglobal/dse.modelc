@@ -122,8 +122,36 @@ set(DSE_MODELC_SOURCE_FILES
     ${DSE_MODELC_SOURCE_DIR}/controller/transform.c
 
     ${DSE_MODELC_SOURCE_DIR}/adapter/index.c
-
     ${DSE_MOCKS_SOURCE_DIR}/simmock.c
+)
+
+
+
+set(DSE_MODELC_SIMBUS_LOOPBACK_SOURCE_FILES
+    ${DSE_MODELC_SOURCE_DIR}/model/gateway.c
+    ${DSE_MODELC_SOURCE_DIR}/model/model.c
+    ${DSE_MODELC_SOURCE_DIR}/model/ncodec.c
+    ${DSE_MODELC_SOURCE_DIR}/model/schema.c
+    ${DSE_MODELC_SOURCE_DIR}/model/signal.c
+    ${DSE_MODELC_SOURCE_DIR}/model/trace.c
+
+    ${DSE_MODELC_SOURCE_DIR}/controller/controller.c
+    ${DSE_MODELC_SOURCE_DIR}/controller/loader.c
+    ${DSE_MODELC_SOURCE_DIR}/controller/log.c
+    ${DSE_MODELC_SOURCE_DIR}/controller/model_function.c
+    ${DSE_MODELC_SOURCE_DIR}/controller/modelc.c
+    ${DSE_MODELC_SOURCE_DIR}/controller/modelc_debug.c
+    ${DSE_MODELC_SOURCE_DIR}/controller/modelc_args.c
+    ${DSE_MODELC_SOURCE_DIR}/controller/step.c
+    ${DSE_MODELC_SOURCE_DIR}/controller/transform.c
+
+    ${DSE_MODELC_SOURCE_DIR}/adapter/adapter.c
+    ${DSE_MODELC_SOURCE_DIR}/adapter/adapter_loopb.c
+    ${DSE_MODELC_SOURCE_DIR}/adapter/create.c
+    ${DSE_MODELC_SOURCE_DIR}/adapter/index.c
+    ${DSE_MODELC_SOURCE_DIR}/adapter/msgpack.c
+
+    ${DSE_MOCKS_SOURCE_DIR}/adaptermock.c
 )
 set(DSE_MODELC_INCLUDE_DIR "${DSE_MODELC_SOURCE_DIR}/../..")
 
@@ -240,4 +268,50 @@ install(
         model/interface/binary_stream_reset.yaml
     DESTINATION
         resources/model
+)
+
+
+# Target - SimBus
+# ---------------
+add_executable(test_simbus_loopback
+    simbus/__test__.c
+    simbus/mock.c
+    simbus/test_direct_index.c
+    simbus/test_map_index.c
+    ${DSE_CLIB_SOURCE_FILES}
+    ${DSE_MODELC_SIMBUS_LOOPBACK_SOURCE_FILES}
+)
+target_include_directories(test_simbus_loopback
+    PRIVATE
+        ${DSE_CLIB_INCLUDE_DIR}
+        ${DSE_MODELC_INCLUDE_DIR}
+        ${DSE_NCODEC_INCLUDE_DIR}
+        ${YAML_SOURCE_DIR}/include
+        ${MSGPACKC_SOURCE_DIR}/include
+        ./simbus
+)
+target_compile_definitions(test_simbus_loopback
+    PUBLIC
+        CMOCKA_TESTING
+    PRIVATE
+        PLATFORM_OS="${CDEF_PLATFORM_OS}"
+        PLATFORM_ARCH="${CDEF_PLATFORM_ARCH}"
+)
+target_link_libraries(test_simbus_loopback
+    PUBLIC
+        ab-codec
+    PRIVATE
+        cmocka
+        yaml
+        dl
+        m
+        # -Wl,--wrap=strdup # Wrapping strdup does not work with libyaml.
+)
+install(TARGETS test_simbus_loopback)
+install(
+    FILES
+        simbus/direct_index.yaml
+        simbus/map_index.yaml
+    DESTINATION
+        resources/simbus
 )

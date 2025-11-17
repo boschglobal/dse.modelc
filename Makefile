@@ -5,6 +5,7 @@
 ###############
 ## Docker Images.
 GCC_BUILDER_IMAGE ?= ghcr.io/boschglobal/dse-gcc-builder:latest
+DSE_CLANG_FORMAT_IMAGE ?= ghcr.io/boschglobal/dse-clang-format:latest
 TESTSCRIPT_IMAGE ?= ghcr.io/boschglobal/dse-testscript:latest
 SIMER_IMAGE ?= ghcr.io/boschglobal/dse-simer:latest
 
@@ -18,7 +19,7 @@ TOOL_DIRS = simer benchmark
 ################
 ## DSE Projects.
 DSE_CLIB_REPO ?= https://github.com/boschglobal/dse.clib
-DSE_CLIB_VERSION ?= 1.0.41
+DSE_CLIB_VERSION ?= 1.0.43
 export DSE_CLIB_URL ?= $(DSE_CLIB_REPO)/archive/refs/tags/v$(DSE_CLIB_VERSION).zip
 
 DSE_SCHEMA_REPO ?= https://github.com/boschglobal/dse.schemas
@@ -26,7 +27,7 @@ DSE_SCHEMA_VERSION ?= 1.2.29
 export DSE_SCHEMA_URL ?= $(DSE_SCHEMA_REPO)/releases/download/v$(DSE_SCHEMA_VERSION)/dse-schemas.tar.gz
 
 DSE_NCODEC_REPO ?= https://github.com/boschglobal/dse.ncodec
-DSE_NCODEC_VERSION ?= 1.2.0
+DSE_NCODEC_VERSION ?= 1.2.1
 export DSE_NCODEC_URL ?= $(DSE_NCODEC_REPO)/archive/refs/tags/v$(DSE_NCODEC_VERSION).zip
 
 
@@ -254,6 +255,14 @@ do-cleanall: do-clean
 .PHONY: do-oss
 do-oss:
 	$(MAKE) -C extra/external oss
+
+.PHONY: arch
+arch:
+	PACKAGE_ARCH=linux-x86 $(MAKE) cleanall build
+	PACKAGE_ARCH=linux-i386 $(MAKE) cleanall build
+	PACKAGE_ARCH=windows-x64 $(MAKE) cleanall build
+	PACKAGE_ARCH=windows-x86 $(MAKE) cleanall build
+	$(MAKE) cleanall build
 
 .PHONY: generate
 generate:

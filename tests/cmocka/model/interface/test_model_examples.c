@@ -24,7 +24,7 @@ static int test_teardown(void** state)
 {
     SimMock* mock = *state;
 
-    simmock_exit(mock, false);
+    simmock_exit(mock, true);
     simmock_free(mock);
 
     chdir(__entry_path__);
@@ -302,7 +302,7 @@ void test_model__ncodec_pdu(void** state)
     simmock_configure(mock, argv, ARRAY_SIZE(argv), ARRAY_SIZE(inst_names));
     ModelMock* model = simmock_find_model(mock, NCODEC_PDU_INST_NAME);
     simmock_load(mock);
-    simmock_load_model_check(model, true, true, false);
+    simmock_load_model_check(model, true, true, true);
     simmock_setup(mock, NULL, "binary_channel");
 
     /* Initial value. */

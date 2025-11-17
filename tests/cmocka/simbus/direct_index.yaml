@@ -1,0 +1,120 @@
+---
+kind: Stack
+metadata:
+  name: direct_index
+spec:
+  connection:
+    transport:
+      loopback:
+        uri: loopback
+        timeout: 60
+  models:
+    - name: direct_index
+      uid: 42
+      model:
+        name: Direct
+      channels:
+        - name: one
+          alias: one_vector
+        - name: two
+          alias: two_vector
+        - name: three
+          alias: three_vector
+---
+kind: Model
+metadata:
+  name: Direct
+spec:
+  runtime:
+    dynlib:
+      - os: linux
+        arch: amd64
+        path: lib/model.so
+  channels:
+    - alias: one_vector
+      selectors:
+        channel: one
+    - alias: two_vector
+      selectors:
+        channel: two
+    - alias: three_vector
+      selectors:
+        channel: three
+---
+kind: SignalGroup
+metadata:
+  name: one
+  labels:
+    channel: one
+spec:
+  signals:
+    - signal: a
+    - signal: b
+    - signal: c
+---
+kind: SignalGroup
+metadata:
+  name: two
+  labels:
+    channel: two
+spec:
+  signals:
+    - signal: f
+    - signal: e
+    - signal: d
+---
+kind: SignalGroup
+metadata:
+  name: three
+  labels:
+    channel: three
+spec:
+  signals:
+    - signal: h
+    - signal: g
+    - signal: i
+---
+kind: SignalGroup
+metadata:
+  name: one
+  labels:
+    index: direct
+  annotations:
+    direct_index:
+      offset: 0
+      length: 3
+spec:
+  signals:
+    - signal: a
+    - signal: b
+    - signal: c
+---
+kind: SignalGroup
+metadata:
+  name: two
+  labels:
+    index: direct
+  annotations:
+    direct_index:
+      offset: 3
+      length: 3
+spec:
+  signals:
+    - signal: d
+    - signal: e
+    - signal: f
+---
+kind: SignalGroup
+metadata:
+  name: three
+  labels:
+    index: direct
+  annotations:
+    direct_index:
+      offset: 6
+      length: 3
+spec:
+  signals:
+    - signal: g
+    - signal: h
+    - signal: i

@@ -1,0 +1,75 @@
+---
+kind: Stack
+metadata:
+  name: map_index
+spec:
+  connection:
+    transport:
+      loopback:
+        uri: loopback
+        timeout: 60
+  models:
+    - name: map_index
+      uid: 42
+      model:
+        name: Map
+      channels:
+        - name: one
+          alias: one_vector
+        - name: two
+          alias: two_vector
+        - name: three
+          alias: three_vector
+---
+kind: Model
+metadata:
+  name: Map
+spec:
+  runtime:
+    dynlib:
+      - os: linux
+        arch: amd64
+        path: lib/model.so
+  channels:
+    - alias: one_vector
+      selectors:
+        channel: one
+    - alias: two_vector
+      selectors:
+        channel: two
+    - alias: three_vector
+      selectors:
+        channel: three
+---
+kind: SignalGroup
+metadata:
+  name: one
+  labels:
+    channel: one
+spec:
+  signals:
+    - signal: a
+    - signal: b
+    - signal: c
+---
+kind: SignalGroup
+metadata:
+  name: two
+  labels:
+    channel: two
+spec:
+  signals:
+    - signal: f
+    - signal: e
+    - signal: d
+---
+kind: SignalGroup
+metadata:
+  name: three
+  labels:
+    channel: three
+spec:
+  signals:
+    - signal: h
+    - signal: g
+    - signal: i

@@ -9,8 +9,9 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include <dse/platform.h>
-#include <dse/clib/collections/set.h>
 #include <dse/clib/collections/hashmap.h>
+#include <dse/clib/collections/set.h>
+#include <dse/clib/collections/vector.h>
 #include <dse/modelc/adapter/adapter.h>
 #include <dse/modelc/runtime.h>
 
@@ -31,12 +32,23 @@ typedef struct SimbusChannel {
     const char*  name;
     SimpleSet    signals;
     SimbusVector vector;
+
+    /* Direct Index: supporting data, parsed from SignalGroups with the
+    following indicator: 'metadata:labels:index: direct'. */
+    Vector   signal_list;
+    uint32_t offset; /* metadata/annotations/direct_index/length */
+    uint32_t length; /* metadata/annotations/direct_index/offset */
 } SimbusChannel;
 
 
 typedef struct SimbusVectorIndex {
     SimbusVector* sbv;
     uint32_t      vi;
+    struct {
+        void*  map;
+        size_t offset; /* Offset of _this_ vector in the map. */
+        size_t size;   /* Upper bound of map. */
+    } direct_index;
 } SimbusVectorIndex;
 
 

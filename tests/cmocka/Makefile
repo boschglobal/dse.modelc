@@ -5,9 +5,13 @@
 export MAKE_NPROC ?= $(shell nproc)
 export LD_LIBRARY_PATH=$(shell pwd)/build/_out/lib
 
-GDB_CMD ?= valgrind -q --leak-check=yes
-# GDB_CMD ?= LD_DEBUG=libs
-# GDB_CMD ?= gdb -q -ex='set confirm on' -ex=run -ex=quit
+# 41 = ASCII 'A'/65
+# 42 = ASCII 'B'/66
+ifeq ($(GDB_CMD),)
+GDB_CMD = valgrind -q --leak-check=yes --free-fill=42 --malloc-fill=41
+endif
+# GDB_CMD = LD_DEBUG=libs
+# GDB_CMD = gdb -q -ex='set confirm on' -ex=run -ex=quit
 
 default: build
 
@@ -27,8 +31,13 @@ build:
 	@find build/_out/ -type f -name '*' -exec ls -sh --color=auto {} \;
 
 run:
-	cd build/_out; $(GDB_CMD) bin/test_model
-	cd build/_out; $(GDB_CMD) bin/test_model_interface
+	@echo "[ GDB_CMD  ] $(GDB_CMD)"
+	@echo "[----------]"
+	@cd build/_out; $(GDB_CMD) bin/test_model
+	@cd build/_out; $(GDB_CMD) bin/test_model_interface
+	@cd build/_out; $(GDB_CMD) bin/test_simbus_loopback
+	@echo "[----------]"
+	@echo "[ GDB_CMD  ] $(GDB_CMD)"
 
 clean:
 	rm -rf build

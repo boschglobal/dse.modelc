@@ -11,13 +11,13 @@
 
 
 typedef struct {
-    ModelDesc   model;
+    ModelDesc model;
     /* Network Codec reference. */
-    NCODEC*     nc;
+    NCODEC*   nc;
     /* Model Instance values. */
-    const char* swc_id;
-    const char* ecu_id;
-    uint8_t     counter;
+    char*     swc_id;
+    char*     ecu_id;
+    uint8_t   counter;
 } ExtendedModelDesc;
 
 
@@ -46,15 +46,15 @@ ModelDesc* model_create(ModelDesc* model)
     for (int i = 0; i >= 0; i++) {
         NCodecConfigItem nci = ncodec_stat(m->nc, &i);
         if (strcmp(nci.name, "swc_id") == 0) {
-            m->swc_id = nci.value;
+            m->swc_id = strdup(nci.value);
             break;
         } else if (strcmp(nci.name, "ecu_id") == 0) {
-            m->ecu_id = nci.value;
+            m->ecu_id = strdup(nci.value);
             break;
         }
     }
     if (m->swc_id == NULL) {
-        m->swc_id = model_instance_annotation((ModelDesc*)m, "swc_id");
+        m->swc_id = strdup(model_instance_annotation((ModelDesc*)m, "swc_id"));
         if (m->swc_id == NULL) log_fatal("No swc_id configuration found!");
         ncodec_config(m->nc, (struct NCodecConfigItem){
                                  .name = "swc_id",
@@ -62,7 +62,7 @@ ModelDesc* model_create(ModelDesc* model)
                              });
     }
     if (m->ecu_id == NULL) {
-        m->ecu_id = model_instance_annotation((ModelDesc*)m, "ecu_id");
+        m->ecu_id = strdup(model_instance_annotation((ModelDesc*)m, "ecu_id"));
         if (m->ecu_id == NULL) log_fatal("No ecu_id configuration found!");
         ncodec_config(m->nc, (struct NCodecConfigItem){
                                  .name = "ecu_id",
@@ -128,4 +128,12 @@ int model_step(ModelDesc* model, double* model_time, double stop_time)
 
     *model_time = stop_time;
     return 0;
+}
+
+
+void model_destroy(ModelDesc* model)
+{
+    ExtendedModelDesc* m = (ExtendedModelDesc*)model;
+    free(m->swc_id);
+    free(m->ecu_id);
 }
