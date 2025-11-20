@@ -27,14 +27,33 @@
 #   $ make build simer tools
 #   $ sudo /etc/init.d/redis-server start
 #
-# Run
-# ---
+# Run w. GPerf
+# ------------
+# Comment out all PROFILE_CMD below (and directly run gprof).
+#
 #   $ sh dse/modelc/examples/benchmark/scripts/profile.sh
 #   $ gprof -p dse/modelc/build/_out/bin/simbus  dse/modelc/build/_out/examples/benchmark/simbus/gmon.out
 #   $ gprof -p dse/modelc/build/_out/bin/modelc  dse/modelc/build/_out/examples/benchmark/gmon.out
 #
+# Run w. Cachegrind
+# -----------------
+# Uncomment the desired PROFILE_CMD command below (example continues with cachegrind).
+#
+#   $ sh dse/modelc/examples/benchmark/scripts/profile.sh
+#   ...
+#   $ ls dse/modelc/build/_out/examples/benchmark/
+#   cachegrind.out.141602 ....
 #   cg_annotate --threshold=1 dse/modelc/build/_out/examples/benchmark/cachegrind.out.141602
-#   callgrind_annotate  --threshold=1 dse/modelc/build/_out/examples/benchmark/cachegrind.out.141602
+#
+# Run w. Callgrind
+# ----------------
+# Uncomment the desired PROFILE_CMD command below (example continues with callgrind).
+#
+#   $ sh dse/modelc/examples/benchmark/scripts/profile.sh
+#   ...
+#   $ ls dse/modelc/build/_out/examples/benchmark/
+#   callgrind.out.141602 ....
+#   callgrind_annotate  --threshold=1 dse/modelc/build/_out/examples/benchmark/callgrind.out.141602
 
 
 # Parameters
@@ -51,10 +70,10 @@
 : "${SIMBUS_LOGGER:=4}"
 : "${MODELC_LOGGER:=4}"
 
-: "${SIMBUS_TRANSPORT=redis}"
-: "${SIMBUS_URI=redis://localhost}"
+: "${SIMBUS_TRANSPORT=loopback}"
+: "${SIMBUS_URI=loopback://localhost}"
 
-#: "${PROFILE_CMD=valgrind --tool=cachegrind }"
+: "${PROFILE_CMD=valgrind --tool=cachegrind }"
 #: "${PROFILE_CMD=valgrind --tool=callgrind }"
 #: "${PROFILE_CMD=gdb -q -ex='set confirm on' -ex=run -ex=quit -args }"
 
