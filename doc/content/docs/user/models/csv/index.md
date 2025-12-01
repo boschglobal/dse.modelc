@@ -45,7 +45,9 @@ Timestamp;A;B;C
 
 ### Simulation / DSE Script
 
-{{ readFile "script.md" chomp }}
+{{readFile "script.md" chomp }}
+xxx
+{{< readfile file="script.md" code="true" lang="hs" >}}
 
 ### Simulation / Stack
 
