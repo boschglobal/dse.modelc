@@ -1,3 +1,4 @@
+```hs
 simulation
 channel physical
 
@@ -8,3 +9,4 @@ model input dse.modelc.csv
 channel physical signal_channel
 envar CSV_FILE model/input/data/valueset.csv
 file valueset.csv input.csv
+```

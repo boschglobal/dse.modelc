@@ -45,9 +45,7 @@ Timestamp;A;B;C
 
 ### Simulation / DSE Script
 
-```hs
 {{ readFile "script.md" chomp }}
-```
 
 ### Simulation / Stack
 
