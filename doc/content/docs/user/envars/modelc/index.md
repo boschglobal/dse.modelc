@@ -60,3 +60,4 @@ github_subdir: "doc"
 | Variable           | CLI Option    | Default |
 | ------------------ | ------------- | ------- |
 | `CSV_FILE`         | _N/A_         | _None_ (path to CSV file) |
+| `CSV_LINE_MAXLEN`  | _N/A_         | `1ß24` |

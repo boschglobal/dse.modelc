@@ -94,8 +94,18 @@ typedef struct RuntimeModelDesc {
         double end_time;
         double step_time_correction;
         int binary_signals_reset;
+        RuntimeModelVTable vtable;
     } runtime;
-    int [8] __reserved__;
+    int [5] __reserved__;
+}
+```
+
+### RuntimeModelVTable
+
+```c
+typedef struct RuntimeModelVTable {
+    RuntimeModelSetEnv set_env;
+    void *[2] __reserved__;
 }
 ```
 
@@ -113,7 +123,8 @@ typedef struct SimulationSpec {
     const char* sim_path;
     int mode_loopback;
     int sequential_cosim;
-    int [4] __reserved__;
+    void* spec;
+    int [3] __reserved__;
 }
 ```
 

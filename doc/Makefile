@@ -119,5 +119,9 @@ generate_images: $(MD_DOCS)
 		$(DSE_PLANTUML_IMAGE) \
 			-tpng  $^
 
+.PHONY: model
+model:
+	cd ..;cp dse/modelc/examples/csv/simulation.yaml doc/content/docs/user/models/csv/stack.md;
+	cd ..;sed -i '/^#/d' doc/content/docs/user/models/csv/stack.md
 .PHONY: generate
-generate: index examples $(DOC_C_MODULES) generate_images
+generate: index examples $(DOC_C_MODULES) generate_images model

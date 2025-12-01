@@ -1,4 +1,4 @@
-env NAME=csv_inst
+env NAME=input
 env SIM=dse/modelc/build/_out/examples/csv
 
 
