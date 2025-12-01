@@ -45,12 +45,8 @@ Timestamp;A;B;C
 
 ### Simulation / DSE Script
 
-{{readFile "script.md" chomp }}
-xxx
 {{< readfile file="script.md" code="true" lang="hs" >}}
 
 ### Simulation / Stack
 
-```yaml
-{{ readFile "stack.md" chomp }}
-```
+{{< readfile file="stack.md" code="true" lang="yaml" >}}
