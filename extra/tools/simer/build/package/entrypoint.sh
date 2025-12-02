@@ -4,7 +4,9 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
+set -euo pipefail
 
+: "${SIM_PATH:=}"
 : "${SIMER_EXE:=/usr/local/bin/simer}"
 
 # Remove the IP6 localhost entry from /etc/hosts.

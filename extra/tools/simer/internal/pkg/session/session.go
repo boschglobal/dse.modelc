@@ -126,7 +126,7 @@ func (c *Command) Wait() error {
 	c.wg.Wait()
 	if err := c.cmd.Wait(); err != nil {
 		slog.Error(err.Error())
+		return err
 	}
-
 	return nil
 }

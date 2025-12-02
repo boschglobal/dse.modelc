@@ -12,10 +12,10 @@
 #include <dse/modelc/model.h>
 
 
-#define CSV_LINE_MAXLEN 1024
-#define CSV_DELIMITER   ",;\n"
-#define CSV_FILE_ENVAR  "CSV_FILE"
-#define CSV_LINE_MAXLEN_ENVAR  "CSV_LINE_MAXLEN"
+#define CSV_LINE_MAXLEN       1024
+#define CSV_DELIMITER         ",;\n"
+#define CSV_FILE_ENVAR        "CSV_FILE"
+#define CSV_LINE_MAXLEN_ENVAR "CSV_LINE_MAXLEN"
 
 
 typedef struct {
@@ -28,7 +28,7 @@ typedef struct {
     size_t        line_maxlen;
     double        timestamp;
     SignalVector* sv;
-        Vector      index; /* vector_at[idx] -> *double */
+    Vector        index; /* vector_at[idx] -> *double */
 } CsvModelDesc;
 
 
@@ -125,8 +125,7 @@ int model_step(ModelDesc* model, double* model_time, double stop_time)
                 vector_at(&c->index, idx, &signal);
                 if (signal) *signal = v;
             } else {
-                log_error("Error decoding sample [%f][%u]",
-                    c->timestamp, idx);
+                log_error("Error decoding sample [%f][%u]", c->timestamp, idx);
             }
             /* Check limit. */
             if (++idx >= vector_len(&c->index)) break;

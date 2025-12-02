@@ -81,8 +81,10 @@ static int _destroy_vector(void* _sc, void* _v)
     }
     free(sc->vector.signal);
     free(sc->vector.uid);
-    if (v && v->direct_index.active == false) {
+
+    if (v && v->direct_index.active == true) {
         /* Direct Index memory is allocated elsewhere. */
+    } else {
         free(sc->vector.scalar);
         free(sc->vector.binary);
         free(sc->vector.length);

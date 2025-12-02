@@ -67,6 +67,9 @@ func main() {
 	for _, c := range cmds {
 		s.Attach(c)
 	}
-	s.Wait()
+	if err := s.Wait(); err != nil {
+		slog.Error("One or more commands failed!")
+		os.Exit(1)
+	}
 	os.Exit(0)
 }

@@ -61,13 +61,16 @@ func (s *ConsoleSession) Attach(c *Command) error {
 }
 
 func (s *ConsoleSession) Wait() error {
+	var result error
 	for _, c := range s.commands {
 		if c.KillNoWait == true {
 			continue
 		}
-		c.Wait()
+		if err := c.Wait(); err != nil {
+			result = err
+		}
 	}
-	return nil
+	return result
 }
 
 type PassThroughWriter struct {
