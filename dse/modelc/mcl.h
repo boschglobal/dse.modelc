@@ -83,6 +83,7 @@ typedef struct MclDesc MclDesc;
 
 
 typedef MclDesc* (*MclCreate)(ModelDesc* m);
+typedef void (*MclDestroy)(MclDesc* m);
 
 typedef int32_t (*MclLoad)(MclDesc* m);
 typedef int32_t (*MclInit)(MclDesc* m);

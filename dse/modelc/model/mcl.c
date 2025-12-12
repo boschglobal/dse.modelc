@@ -2,11 +2,14 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
+#include <assert.h>
 #include <errno.h>
 #include <stdlib.h>
 #include <dse/logger.h>
 #include <dse/clib/collections/hashlist.h>
 #include <dse/clib/data/marshal.h>
+#include <dse/modelc/controller/model_private.h>
+#include <dse/modelc/runtime.h>
 #include <dse/modelc/mcl.h>
 
 
@@ -399,4 +402,74 @@ int32_t mcl_unload(MclDesc* model)
     } else {
         return -EINVAL;
     }
+}
+
+
+DLL_PRIVATE ModelDesc* mcl_builtin_model_create(ModelDesc* model)
+{
+    int32_t rc;
+    assert(model);
+    assert(model->mi);
+    assert(model->mi->private);
+    ModelInstancePrivate* mip = model->mi->private;
+
+    assert(mip->mcl_create_func);
+    MclDesc* m = mip->mcl_create_func((void*)model);
+
+    rc = mcl_load(m);
+    if (rc != 0) log_fatal("Could not load MCL (%d)", rc);
+
+    rc = mcl_init(m);
+    if (rc != 0) log_fatal("Could not initiate MCL (%d)", rc);
+
+    /* Marshal FMU values after initialization from the simbus so that
+       that they are available (to the simulation) in the first step. */
+    rc = mcl_marshal_in(m);
+
+    if (rc != 0) {
+        log_error("Could not marshal initial fmu values (%d)", rc);
+    }
+
+    /* Return the extended object (FmuModel). */
+    return (ModelDesc*)m;
+}
+
+DLL_PRIVATE int mcl_builtin_model_step(
+    ModelDesc* model, double* model_time, double stop_time)
+{
+    int32_t  rc;
+    MclDesc* m = (MclDesc*)model;
+
+
+    /* Step the FMU. */
+    rc = mcl_marshal_out(m);
+    if (rc != 0) return rc;
+
+    rc = mcl_step(m, stop_time);
+    if (rc != 0) return rc;
+
+    rc = mcl_marshal_in(m);
+    if (rc != 0) return rc;
+
+    /* Advance the model time. */
+    *model_time = stop_time;
+
+    return 0;
+}
+
+DLL_PRIVATE void mcl_builtin_model_destroy(ModelDesc* model)
+{
+    int32_t rc;
+    assert(model);
+    assert(model->mi);
+    MclDesc* m = (MclDesc*)model;
+
+    /* Unload the MCL. */
+    rc = mcl_unload((void*)m);
+    if (rc != 0) log_fatal("Could not unload MCL (%d)", rc);
+
+    assert(model->mi->private);
+    ModelInstancePrivate* mip = model->mi->private;
+    assert(mip->mcl_destroy_func);
+    mip->mcl_destroy_func((void*)m);
 }

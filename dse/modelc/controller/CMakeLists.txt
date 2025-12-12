@@ -17,7 +17,6 @@ add_library(controller OBJECT
     controller.c
     loader.c
     log.c
-    mcl_mk1.c
     model_function.c
     model_runtime.c
     modelc.c
@@ -36,6 +35,7 @@ target_include_directories(controller
     PRIVATE
         ${DSE_CLIB_INCLUDE_DIR}
         ${DSE_NCODEC_INCLUDE_DIR}
+        ${LUA_SOURCE_DIR}
         ${YAML_SOURCE_DIR}/include
         ../../..
         $<$<BOOL:${WIN32}>:${DLFCNWIN32_SOURCE_DIR}>

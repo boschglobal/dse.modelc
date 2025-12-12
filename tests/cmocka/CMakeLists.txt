@@ -4,6 +4,8 @@ cmake_policy(SET CMP0135 NEW)
 #set(CMAKE_VERBOSE_MAKEFILE ON)
 
 project(test_modelc)
+set(VERSION "$ENV{PACKAGE_VERSION}")
+set(PROJECT_VERSION ${VERSION})
 
 include(FetchContent)
 include(GNUInstallDirs)
@@ -66,6 +68,28 @@ set_target_properties(yaml
 )
 
 
+# External Project - lua
+# ----------------------
+if(UNIX)
+set(LUA_SOURCE_DIR "$ENV{EXTERNAL_BUILD_DIR}/lua")
+set(LUA_BINARY_DIR "$ENV{EXTERNAL_BUILD_DIR}/lua")
+find_library(LUA_LIB
+    NAMES
+        liblua.a
+    PATHS
+        ${LUA_BINARY_DIR}
+    REQUIRED
+    NO_DEFAULT_PATH
+)
+add_library(lua STATIC IMPORTED GLOBAL)
+set_target_properties(lua
+    PROPERTIES
+        IMPORTED_LOCATION "${LUA_LIB}"
+        INTERFACE_INCLUDE_DIRECTORIES "${LUA_BINARY_DIR}"
+)
+endif()
+
+
 # External Project - DSE C Lib
 # ----------------------------
 FetchContent_Declare(dse_clib
@@ -80,6 +104,7 @@ set(DSE_CLIB_SOURCE_FILES
     ${DSE_CLIB_SOURCE_DIR}/util/yaml.c
     ${DSE_CLIB_SOURCE_DIR}/util/strings.c
     ${DSE_CLIB_SOURCE_DIR}/util/binary.c  # FIXME still use this API?
+    ${DSE_CLIB_SOURCE_DIR}/data/marshal.c
     ${DSE_CLIB_SOURCE_DIR}/collections/hashmap.c
     ${DSE_CLIB_SOURCE_DIR}/collections/set.c
 )
@@ -105,6 +130,9 @@ set(DSE_MODELC_SOURCE_DIR ../../dse/modelc)
 set(DSE_MOCKS_SOURCE_DIR ../../dse/mocks)
 set(DSE_MODELC_SOURCE_FILES
     ${DSE_MODELC_SOURCE_DIR}/model/gateway.c
+    ${DSE_MODELC_SOURCE_DIR}/model/lua.c
+    ${DSE_MODELC_SOURCE_DIR}/model/luamodel.c
+    ${DSE_MODELC_SOURCE_DIR}/model/mcl.c
     ${DSE_MODELC_SOURCE_DIR}/model/model.c
     ${DSE_MODELC_SOURCE_DIR}/model/ncodec.c
     ${DSE_MODELC_SOURCE_DIR}/model/schema.c
@@ -129,6 +157,9 @@ set(DSE_MODELC_SOURCE_FILES
 
 set(DSE_MODELC_SIMBUS_LOOPBACK_SOURCE_FILES
     ${DSE_MODELC_SOURCE_DIR}/model/gateway.c
+    ${DSE_MODELC_SOURCE_DIR}/model/lua.c
+    ${DSE_MODELC_SOURCE_DIR}/model/luamodel.c
+    ${DSE_MODELC_SOURCE_DIR}/model/mcl.c
     ${DSE_MODELC_SOURCE_DIR}/model/model.c
     ${DSE_MODELC_SOURCE_DIR}/model/ncodec.c
     ${DSE_MODELC_SOURCE_DIR}/model/schema.c
@@ -201,12 +232,14 @@ target_compile_definitions(test_model
     PRIVATE
         PLATFORM_OS="${CDEF_PLATFORM_OS}"
         PLATFORM_ARCH="${CDEF_PLATFORM_ARCH}"
+        MODELC_VERSION="${VERSION}"
 )
 target_link_libraries(test_model
     PUBLIC
         ab-codec
     PRIVATE
         cmocka
+        lua
         yaml
         dl
         m
@@ -250,12 +283,14 @@ target_compile_definitions(test_model_interface
     PRIVATE
         PLATFORM_OS="${CDEF_PLATFORM_OS}"
         PLATFORM_ARCH="${CDEF_PLATFORM_ARCH}"
+        MODELC_VERSION="${VERSION}"
 )
 target_link_libraries(test_model_interface
     PUBLIC
         ab-codec
     PRIVATE
         cmocka
+        lua
         yaml
         dl
         m
@@ -296,12 +331,14 @@ target_compile_definitions(test_simbus_loopback
     PRIVATE
         PLATFORM_OS="${CDEF_PLATFORM_OS}"
         PLATFORM_ARCH="${CDEF_PLATFORM_ARCH}"
+        MODELC_VERSION="${VERSION}"
 )
 target_link_libraries(test_simbus_loopback
     PUBLIC
         ab-codec
     PRIVATE
         cmocka
+        lua
         yaml
         dl
         m

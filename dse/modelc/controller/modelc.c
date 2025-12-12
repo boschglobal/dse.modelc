@@ -19,6 +19,9 @@
 #include <dse/modelc/adapter/transport/endpoint.h>
 #include <dse/modelc/controller/controller.h>
 #include <dse/modelc/controller/model_private.h>
+#ifdef __linux__
+#include <dse/modelc/model/lua.h>
+#endif
 #include <dse/modelc/model.h>
 
 
@@ -101,6 +104,31 @@ static char* _dse_path_cat(const char* a, const char* b)
     return path;
 }
 
+static int _configure_mcl(ModelInstanceSpec* mi)
+{
+    ModelInstancePrivate* mip = mi->private;
+
+    mip->mcl_name = dse_yaml_get_scalar(mi->spec, MI_RUNTIME_MCL_PATH);
+    assert(mip->mcl_name);
+    log_notice("Model Instance:");
+    log_notice("  Name: %s", mi->name);
+    log_notice("  UID: %u", mi->uid);
+    log_notice("  MCL Name: %s", mip->mcl_name);
+
+    if (strcmp(mip->mcl_name, MI_RUNTIME_LUA_MCL_NAME) == 0) {
+#ifdef __linux__
+        mip->mcl_create_func = lua_mcl_create;
+        mip->mcl_destroy_func = lua_mcl_destroy;
+#else
+        log_error("Lua MCL runtime not supported!");
+#endif
+        return 0;
+    } else {
+        log_error("MCL runtime not available!");
+        return EINVAL;
+    }
+}
+
 int modelc_configure_model(
     ModelCArguments* args, ModelInstanceSpec* model_instance)
 {
@@ -112,6 +140,9 @@ int modelc_configure_model(
     YamlNode*   md_doc;
     YamlNode*   node;
     const char* model_name = NULL;
+
+    /* Set a reference ot the parsed YAML Doc List.  */
+    model_instance->yaml_doc_list = args->yaml_doc_list;
 
     /* Model Instance: locate in stack. */
     mi_node = dse_yaml_find_node_in_seq_in_doclist(args->yaml_doc_list, "Stack",
@@ -128,6 +159,12 @@ int modelc_configure_model(
         node = dse_yaml_find_node(mi_node, "uid");
         if (node) model_instance->uid = strtoul(node->scalar, NULL, 10);
     }
+
+    /* Check if this Model Instance uses a built-in MCL. */
+    if (dse_yaml_find_node(mi_node, MI_RUNTIME_MCL_PATH) != NULL) {
+        return _configure_mcl(model_instance);
+    }
+
     /* Name. */
     node = dse_yaml_find_node(mi_node, "model/name");
     if (node && node->scalar) {
@@ -184,8 +221,6 @@ int modelc_configure_model(
                 model_instance->model_definition.file);
     }
 
-    /* Set a reference ot the parsed YAML Doc List.  */
-    model_instance->yaml_doc_list = args->yaml_doc_list;
 
     log_notice("Model Instance:");
     log_notice("  Name: %s", model_instance->name);
@@ -362,6 +397,8 @@ error_clean_up:
 int modelc_model_create(
     SimulationSpec* sim, ModelInstanceSpec* mi, ModelVTable* model_vtable)
 {
+    ModelInstancePrivate* mip = mi->private;
+
     /* Create the Model Function (to represent model_step). */
     if (model_vtable->step == NULL) {
         errno = EINVAL;
@@ -380,7 +417,11 @@ int modelc_model_create(
     if (dse_yaml_find_node(mi->model_definition.doc, "spec/runtime/gateway")) {
         log_debug("Select channels based on Model Instance (Gateway)");
         c_node = dse_yaml_find_node(mi->spec, "channels");
+    } else if (mip && mip->mcl_create_func) {
+        log_debug("Select channels based on Model Instance (MCL)");
+        c_node = dse_yaml_find_node(mi->spec, "channels");
     } else {
+        log_debug("Select channels based on Model Definition");
         c_node = dse_yaml_find_node(mi->model_definition.doc, "spec/channels");
     }
     if (c_node) {

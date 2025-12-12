@@ -19,11 +19,11 @@ TOOL_DIRS = simer benchmark
 ################
 ## DSE Projects.
 DSE_CLIB_REPO ?= https://github.com/boschglobal/dse.clib
-DSE_CLIB_VERSION ?= 1.0.44
+DSE_CLIB_VERSION ?= 1.0.46
 export DSE_CLIB_URL ?= $(DSE_CLIB_REPO)/archive/refs/tags/v$(DSE_CLIB_VERSION).zip
 
 DSE_SCHEMA_REPO ?= https://github.com/boschglobal/dse.schemas
-DSE_SCHEMA_VERSION ?= 1.2.29
+DSE_SCHEMA_VERSION ?= 1.2.32
 export DSE_SCHEMA_URL ?= $(DSE_SCHEMA_REPO)/releases/download/v$(DSE_SCHEMA_VERSION)/dse-schemas.tar.gz
 
 DSE_NCODEC_REPO ?= https://github.com/boschglobal/dse.ncodec
@@ -74,6 +74,7 @@ TESTSCRIPT_E2E_FILES = \
 	$(TESTSCRIPT_E2E_DIR)/stack.txtar \
 	$(TESTSCRIPT_E2E_DIR)/runtime.txtar \
 	$(TESTSCRIPT_E2E_DIR)/sequential.txtar \
+	$(TESTSCRIPT_E2E_DIR)/lua.txtar \
 	$(TESTSCRIPT_E2E_DIR)/benchmark.txtar
 
 ifneq ($(CI), true)
@@ -124,20 +125,17 @@ simer:
 	@if [ ${PACKAGE_ARCH} = "linux-amd64" ]; then \
 		cp dse/modelc/build/_out/bin/simbus extra/tools/simer/build/stage/bin/simbus ;\
 		cp dse/modelc/build/_out/bin/modelc extra/tools/simer/build/stage/bin/modelc ;\
-		cp dse/modelc/build/_out/lib/mcl_model.so extra/tools/simer/build/stage/lib/mcl_model.so ;\
 		cp dse/modelc/build/_out/lib/libmodelc.so extra/tools/simer/build/stage/lib/libmodelc.so ;\
 		cp -r licenses -t extra/tools/simer/build/stage ;\
 	fi
 	@if [ ${PACKAGE_ARCH} = "linux-x86" ]; then \
 		cp dse/modelc/build/_out/bin/modelc extra/tools/simer/build/stage/bin/modelc32 ;\
 		cp dse/modelc/build/_out/bin/modelc extra/tools/simer/build/stage/bin/modelc32_x86 ;\
-		cp dse/modelc/build/_out/lib/mcl_model.so extra/tools/simer/build/stage/libx32/mcl_model.so ;\
 		cp dse/modelc/build/_out/lib/libmodelc.so extra/tools/simer/build/stage/libx32/libmodelc.so ;\
 		cp dse/modelc/build/_out/examples/simer/lib/libcounter.so extra/tools/simer/build/stage/lib32/libcounter_x86.so ;\
 	fi
 	@if [ ${PACKAGE_ARCH} = "linux-i386" ]; then \
 		cp dse/modelc/build/_out/bin/modelc extra/tools/simer/build/stage/bin/modelc32_i386 ;\
-		cp dse/modelc/build/_out/lib/mcl_model.so extra/tools/simer/build/stage/lib32/mcl_model_i386.so ;\
 		cp dse/modelc/build/_out/lib/libmodelc.so extra/tools/simer/build/stage/lib32/libmodelc.so ;\
 		cp dse/modelc/build/_out/examples/simer/lib/libcounter.so extra/tools/simer/build/stage/lib32/libcounter_i386.so ;\
 	fi

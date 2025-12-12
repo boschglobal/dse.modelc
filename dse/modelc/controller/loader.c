@@ -10,6 +10,7 @@
 #include <dse/testing.h>
 #include <dse/logger.h>
 #include <dse/clib/util/strings.h>
+#include <dse/clib/util/yaml.h>
 #include <dse/modelc/controller/controller.h>
 #include <dse/modelc/controller/model_private.h>
 #include <dse/modelc/model.h>
@@ -50,14 +51,18 @@ static int controller_load_model(ModelInstanceSpec* mi, SimulationSpec* sim)
         cm->vtable.destroy = dlsym(cm->handle, MODEL_DESTROY_FUNC_NAME);
         log_notice("Loading symbol: %s ... %s", MODEL_DESTROY_FUNC_NAME,
             cm->vtable.destroy ? "ok" : "not found");
-    } else {
-        if (dse_yaml_find_node(
-                mi->model_definition.doc, "spec/runtime/gateway")) {
-            log_notice("Using gateway symbols: ...");
-            cm->vtable.create = __model_gw_create__;
-            cm->vtable.step = __model_gw_step__;
-            cm->vtable.destroy = __model_gw_destroy__;
-        }
+    } else if (dse_yaml_find_node(
+                   mi->model_definition.doc, "spec/runtime/gateway")) {
+        log_notice("Using gateway symbols: ...");
+        cm->vtable.create = __model_gw_create__;
+        cm->vtable.step = __model_gw_step__;
+        cm->vtable.destroy = __model_gw_destroy__;
+
+    } else if (mip->mcl_create_func != NULL) {
+        log_notice("Using MCL Runtime: %s ...", mip->mcl_name);
+        cm->vtable.create = mcl_builtin_model_create;
+        cm->vtable.step = mcl_builtin_model_step;
+        cm->vtable.destroy = mcl_builtin_model_destroy;
     }
 
     return 0;

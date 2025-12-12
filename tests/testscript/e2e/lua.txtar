@@ -1,0 +1,39 @@
+env NAME=lua_inst
+env SIM=dse/modelc/build/_out/examples/lua/modellib_api
+
+
+# TEST: lua modellib api
+exec sh -e $WORK/test.sh
+
+
+stdout '\[INFO\]   Allocate signal vector type 0 for 1 signals.'
+stdout 'Lua MCL: loading model: data/model.lua'
+stdout 'model_create\(\)'
+stdout '\[ERROR\]  error msg'
+stdout 'notice msg'
+stdout '\[INFO\]   info msg'
+stdout '\[DEBUG\]  debug msg'
+stdout 'model:version\(\) = \d+\.\d+\.\d+'
+stdout 'model:step_size\(\) = 0.0005'
+stdout 'model:model_time\(\) = 0.0'
+stdout 'model.sv\[\]:find\(\) = 1'
+stdout 'model.sv\[\]:annotation\(\) = 23'
+stdout 'model.sv\[\]:group_annotation\(\) = signal'
+stdout 'len\(model.sv\) = 1'
+stdout 'len\(model.sv\[\].signal\) = 1'
+stdout 'len\(model.sv\[\].scalar\) = 1'
+stdout 'model.sv\[\].signal\[\] = counter'
+stdout 'model.sv\[\].signal\[\] = 0.0'
+stdout 'model_step\(\) @ 0.000000'
+stdout 'model.sv\[\].signal\[\] = 24.0'
+stdout 'model_step\(\) @ 0.000500'
+stdout 'model.sv\[\].signal\[\] = 25.0'
+stdout 'model_step\(\) @ 0.002000'
+stdout 'model.sv\[\].signal\[\] = 28.0'
+stdout 'model_destroy\(\)'
+
+
+-- test.sh --
+SIMER="${SIMER:-ghcr.io/boschglobal/dse-simer:latest}"
+docker run --name simer -i --rm -v $ENTRYHOSTDIR/$SIM:/sim \
+    $SIMER -valgrind $NAME -env $NAME:SIMBUS_LOGLEVEL=1 -logger 2
