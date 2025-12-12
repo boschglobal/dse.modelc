@@ -38,6 +38,8 @@ target_link_libraries(simbus
         controller
         ab-codec
         model_api
+        $<$<BOOL:${UNIX}>:lua>
+        m
 )
 install(TARGETS simbus
     COMPONENT

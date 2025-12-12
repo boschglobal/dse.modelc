@@ -49,6 +49,7 @@ target_include_directories(adapter
         ${HIREDIS_INCLUDE_DIR}
         ${MSGPACKC_SOURCE_DIR}/include
         ${EVENT_SOURCE_DIR}/include
+        ${LUA_SOURCE_DIR}
         ${DSE_CLIB_INCLUDE_DIR}
         ${DSE_SCHEMAS_SOURCE_DIR}
         ${DSE_SCHEMAS_SOURCE_DIR}/dse_schemas/flatcc/include

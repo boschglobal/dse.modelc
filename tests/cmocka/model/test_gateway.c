@@ -6,6 +6,7 @@
 #include <stddef.h>
 #include <stdlib.h>
 #include <stdint.h>
+#include <string.h>
 #include <float.h>
 #include <setjmp.h>
 #include <cmocka.h>

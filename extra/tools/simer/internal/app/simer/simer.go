@@ -169,7 +169,7 @@ func ModelCommandList(index *index.YamlFileIndex, modelcPath string, modelcX32Pa
 					yamlFiles = append(yamlFiles, doc.File)
 				}
 				if model.Runtime != nil && model.Runtime.Files != nil {
-					yamlFiles = append(yamlFiles, *model.Runtime.Files...)
+					yamlFiles = append(yamlFiles, listFiles(*model.Runtime.Files, []string{".yaml", ".yml"})...)
 				}
 				if model.Runtime != nil && model.Runtime.Paths != nil {
 					yamlFiles = append(yamlFiles, listFiles(*model.Runtime.Paths, []string{".yaml", ".yml"})...)

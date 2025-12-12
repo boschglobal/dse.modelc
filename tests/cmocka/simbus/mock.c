@@ -4,6 +4,7 @@
 
 #include <dse/logger.h>
 #include <dse/testing.h>
+#include <dse/clib/util/yaml.h>
 #include <dse/modelc/controller/model_private.h>
 #include <dse/modelc/controller/controller.h>
 #include <dse/modelc/adapter/simbus/simbus.h>

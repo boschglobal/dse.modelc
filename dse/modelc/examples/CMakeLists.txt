@@ -17,6 +17,7 @@ add_subdirectory(sequential)
 add_subdirectory(simer)
 add_subdirectory(transform)
 if(UNIX)
+add_subdirectory(lua)
 add_subdirectory(benchmark)
 endif()
 

@@ -22,6 +22,17 @@ metadata:
         - windows-x86
       channels:
         - alias: signal_channel
+    dse.modelc.lua:
+      name: lua
+      displayName: dse.modelc.lua
+      mcl: true  # built-in, no path.
+      workflows: []
+      platforms:
+        - linux-amd64
+        - linux-x86
+        - linux-i386
+        - windows-x64
+        - windows-x86
 
 vars:
   # When running from E2E tests (i.e. Docker in Docker), the ENTRYDIR (for

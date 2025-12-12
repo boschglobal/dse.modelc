@@ -10,6 +10,7 @@
 #include <linux/limits.h>
 #include <dse/testing.h>
 #include <dse/clib/util/yaml.h>
+#include <dse/modelc/controller/model_private.h>
 #include <dse/ncodec/codec.h>
 #include <dse/ncodec/interface/frame.h>
 #include <dse/ncodec/interface/pdu.h>
@@ -240,6 +241,15 @@ void simmock_load(SimMock* mock)
         getcwd(_cwd, PATH_MAX);
         log_debug("cwd = %s", _cwd);
         log_debug("fullpath = %s", model->mi->model_definition.full_path);
+
+        ModelInstancePrivate* mip = model->mi->private;
+        if (mip->mcl_create_func != NULL) {
+            log_debug("mcl = %s", mip->mcl_name);
+            model->vtable.create = mcl_builtin_model_create;
+            model->vtable.step = mcl_builtin_model_step;
+            model->vtable.destroy = mcl_builtin_model_destroy;
+            continue;
+        }
 
         void* handle = dlopen(
             model->mi->model_definition.full_path, RTLD_NOW | RTLD_LOCAL);

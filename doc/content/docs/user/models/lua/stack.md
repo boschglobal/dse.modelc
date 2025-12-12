@@ -1,8 +1,7 @@
-
 ---
 kind: Stack
 metadata:
-  name: csv_stack
+  name: lua_model
 spec:
   connection:
     transport:
@@ -16,28 +15,27 @@ spec:
       channels:
         - name: physical
           expectedModelCount: 1
-    - name: input
+    - name: lua_inst
       uid: 42
-      model:
-        name: dse.modelc.csv
       runtime:
-        env:
-          CSV_FILE: data/valueset.csv
+        mcl: lua
+        files:
+          - data/model.lua
       channels:
         - name: physical
-          alias: signal_channel
----
-kind: Model
-metadata:
-  name: simbus
+          alias: signal
+          selectors:
+            signal: signal
 ---
 kind: SignalGroup
 metadata:
-  name: signal_vector
+  name: signal
   labels:
-    channel: signal_vector
+    signal: signal
+  annotations:
+    vector_name: signal
 spec:
   signals:
-    - signal: A
-    - signal: B
-    - signal: C
+    - signal: counter
+      annotations:
+        initial_value: 23

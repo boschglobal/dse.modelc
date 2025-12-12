@@ -1,0 +1,37 @@
+# Copyright 2025 Robert Bosch GmbH
+#
+# SPDX-License-Identifier: Apache-2.0
+
+---
+kind: Stack
+metadata:
+  name: lua_model
+spec:
+  connection:
+    transport:
+      redispubsub:
+        uri: redis://localhost:6379
+        timeout: 60
+  models:
+    - name: simbus
+      model:
+        name: simbus
+      channels:
+        - name: signal
+          expectedModelCount: 1
+    - name: lua_inst
+      uid: 42
+      runtime:
+        mcl: lua
+        files:
+          - data/signalgroup.yaml
+          - data/model.lua
+      channels:
+        - name: signal
+          alias: signal
+          selectors:
+            signal: signal
+---
+kind: Model
+metadata:
+  name: simbus

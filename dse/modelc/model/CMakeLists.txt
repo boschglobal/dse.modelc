@@ -11,6 +11,8 @@ project(ModelC_Model_API)
 add_library(model_api OBJECT
     $<$<BOOL:${UNIX}>:checks.c>
     gateway.c
+    $<$<BOOL:${UNIX}>:lua.c>
+    $<$<BOOL:${UNIX}>:luamodel.c>
     mcl.c
     model.c
     ncodec.c
@@ -22,14 +24,22 @@ target_include_directories(model_api
     PRIVATE
         ${DSE_CLIB_INCLUDE_DIR}
         ${DSE_NCODEC_INCLUDE_DIR}
+        ${LUA_SOURCE_DIR}
         ${YAML_SOURCE_DIR}/include
         ../../..
+)
+target_compile_definitions(model_api
+    PRIVATE
+        PLATFORM_OS="${CDEF_PLATFORM_OS}"
+        PLATFORM_ARCH="${CDEF_PLATFORM_ARCH}"
+        MODELC_VERSION="${VERSION}"
 )
 target_link_libraries(model_api
     PUBLIC
         ab-codec
     PRIVATE
         yaml
+        $<$<BOOL:${UNIX}>:lua>
         m
         $<$<BOOL:${WIN32}>:ws2_32>
         $<$<BOOL:${WIN32}>:iphlpapi>

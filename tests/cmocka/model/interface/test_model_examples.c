@@ -328,6 +328,50 @@ void test_model__ncodec_pdu(void** state)
 }
 
 
+#define LUA_INST_NAME      "lua_inst"
+#define LUA_SIGNAL_GROUP   "signal"
+#define LUA_SIGNAL_COUNTER 0
+
+void test_model__lua(void** state)
+{
+    chdir("../../../../dse/modelc/build/_out/examples/lua/model");
+
+    const char* inst_names[] = {
+        LUA_INST_NAME,
+    };
+    char* argv[] = {
+        (char*)"test_model_interface",
+        (char*)"--name=" LUA_INST_NAME,
+        (char*)"--logger=5",  // 1=debug, 5=QUIET (commit with 5!)
+        (char*)"data/simulation.yaml",
+        (char*)"data/signalgroup.yaml",
+    };
+    SimMock* mock = *state = simmock_alloc(inst_names, ARRAY_SIZE(inst_names));
+    simmock_configure(mock, argv, ARRAY_SIZE(argv), ARRAY_SIZE(inst_names));
+    ModelMock* model = simmock_find_model(mock, LUA_INST_NAME);
+    simmock_load(mock);
+    simmock_load_model_check(model, true, true, true);
+    simmock_setup(mock, LUA_SIGNAL_GROUP, NULL);
+
+    /* Initial value. */
+    double counter = 23.0;
+    simmock_print_scalar_signals(mock, LOG_DEBUG);
+    /* T0 ... Tn */
+    for (uint32_t i = 0; i < 5; i++) {
+        /* Do the check. */
+        SignalCheck checks[] = {
+            { .index = LUA_SIGNAL_COUNTER, .value = counter },
+        };
+        simmock_signal_check(
+            mock, LUA_INST_NAME, checks, ARRAY_SIZE(checks), NULL);
+        /* Step the model. */
+        assert_int_equal(simmock_step(mock, true), 0);
+        simmock_print_scalar_signals(mock, LOG_DEBUG);
+        counter += 1.0;
+    }
+}
+
+
 int run_model_examples_tests(void)
 {
     void* s = test_setup;
@@ -341,6 +385,7 @@ int run_model_examples_tests(void)
         cmocka_unit_test_setup_teardown(test_model__binary, s, t),
         cmocka_unit_test_setup_teardown(test_model__ncodec_can, s, t),
         cmocka_unit_test_setup_teardown(test_model__ncodec_pdu, s, t),
+        cmocka_unit_test_setup_teardown(test_model__lua, s, t),
 #ifndef _WIN32
         cmocka_unit_test_setup_teardown(test_model__benchmark, s, t),
 #endif
