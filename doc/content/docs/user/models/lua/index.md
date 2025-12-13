@@ -35,10 +35,11 @@ end
 ### Structure
 
 ```text
-examples/csv
+examples/lua/model
     └── sim
         ├── data
         │    └── simulation.yml
+        │    └── signalgroup.yml        <-- Simulation signals.
         └── model
             └── lua
                 └── data
@@ -238,10 +239,10 @@ Produces a _Error Log_ via the ModelC Runtime logging subsystem.
 
 {{< readfile file="example.md" code="true" lang="lua" >}}
 
-### Simulation / DSE Script
+### DSE Script
 
 {{< readfile file="script.md" code="true" lang="hs" >}}
 
-### Simulation / Stack
+### Simulation Stack
 
 {{< readfile file="stack.md" code="true" lang="yaml" >}}
