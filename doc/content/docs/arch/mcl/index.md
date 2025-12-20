@@ -30,4 +30,4 @@ signal/variable exchange with the model being interfaced.
 
 * [MCL API]({{< relref "apis/modelc/mcl" >}})
 * [Marshal API]({{< relref "apis/clib/marshal" >}})
-* [FMI MCL]({{< relref "docs/user/models/fmi/fmimcl" >}}) - An MCL implementation for the Modelica FMI Standard.
+* FMI MCL - An MCL implementation for the Modelica FMI Standard.
