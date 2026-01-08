@@ -4,8 +4,8 @@
 
 ###############
 ## Docker Images.
-DSE_CDOCGEN_IMAGE ?= dse-cdocgen:latest
-DSE_PLANTUML_IMAGE ?= dse-plantuml:latest
+DSE_CDOCGEN_IMAGE ?= ghcr.io/boschglobal/dse-cdocgen:latest
+DSE_PLANTUML_IMAGE ?= ghcr.io/boschglobal/dse-plantuml:latest
 
 
 ###############

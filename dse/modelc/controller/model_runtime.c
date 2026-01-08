@@ -64,7 +64,7 @@ static int __build_args(const char* sim_yaml, int* argc, char*** argv)
     /* Extract parameters from the simulation YAML file. */
     YamlDocList* doc_list = dse_yaml_load_file(sim_yaml, NULL);
     YamlNode*    a_node = dse_yaml_find_node_in_doclist(
-           doc_list, "Stack", "metadata/annotations");
+        doc_list, "Stack", "metadata/annotations");
     size_t       yaml_len = 0;
     const char** yaml_files =
         dse_yaml_get_array(a_node, "model_runtime__yaml_files", &yaml_len);

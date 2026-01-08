@@ -187,7 +187,7 @@ ChannelSpec* model_build_channel_spec(
     const char* selectors[] = { "name" };
     const char* values[] = { channel_name };
     YamlNode*   c_node = dse_yaml_find_node_in_seq(
-          model_instance->spec, "channels", selectors, values, 1);
+        model_instance->spec, "channels", selectors, values, 1);
     if (c_node) {
         log_debug(" channel found by name");
     } else {

@@ -124,7 +124,7 @@ static void _merge_scalar_signals_backward(
     from all Model Instances to the target, ordered from left to right, so that
     the last updated value is the final value. */
     for (ModelInstanceSpec* _instptr = sim->instance_list;
-         _instptr && _instptr->name; _instptr++) {
+        _instptr && _instptr->name; _instptr++) {
         if (_instptr != target) {
             ModelInstancePrivate* mip = target->private;
             ControllerModel*      cm = mip->controller_model;
@@ -176,7 +176,7 @@ static void _merge_scalar_signals_forward(
     from all previous Model Instances since a linear propagation (m1->m2->m3)
     would miss channels that were in m1 & m3 but not in m2. */
     for (ModelInstanceSpec* _instptr = sim->instance_list;
-         _instptr && _instptr != target; _instptr++) {
+        _instptr && _instptr != target; _instptr++) {
         ModelInstancePrivate* mip = target->private;
         ControllerModel*      cm = mip->controller_model;
         merge_spec            spec = { _instptr, target };
@@ -192,7 +192,7 @@ DLL_PRIVATE int sim_step_models(SimulationSpec* sim, double* model_time)
     errno = 0;
 
     for (ModelInstanceSpec* _instptr = sim->instance_list;
-         _instptr && _instptr->name; _instptr++) {
+        _instptr && _instptr->name; _instptr++) {
         if (sim->sequential_cosim) {
             /* Merge SignalValue->final_val values forward. */
             _merge_scalar_signals_forward(sim, _instptr);
@@ -222,7 +222,7 @@ DLL_PRIVATE int sim_step_models(SimulationSpec* sim, double* model_time)
         the resolution by the SimBus is non-determistic and the last value
         may not become the SimBus value). */
         for (ModelInstanceSpec* _instptr = sim->instance_list;
-             _instptr && _instptr->name; _instptr++) {
+            _instptr && _instptr->name; _instptr++) {
             _merge_scalar_signals_backward(sim, _instptr);
         }
     }

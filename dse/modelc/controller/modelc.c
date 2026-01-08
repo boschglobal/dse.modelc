@@ -541,7 +541,7 @@ int modelc_run(SimulationSpec* sim, bool run_async)
     /* Setup Sim UID. */
     if (sim->uid == 0) sim->uid = endpoint->uid;
     for (ModelInstanceSpec* _instptr = sim->instance_list;
-         _instptr && _instptr->name; _instptr++) {
+        _instptr && _instptr->name; _instptr++) {
         if (_instptr->uid) {
             /* Set Sim UID to that of the first specified Model. */
             sim->uid = _instptr->uid;
@@ -552,7 +552,7 @@ int modelc_run(SimulationSpec* sim, bool run_async)
     /* Setup Model UIDs. */
     int inst_counter = 0;
     for (ModelInstanceSpec* _instptr = sim->instance_list;
-         _instptr && _instptr->name; _instptr++) {
+        _instptr && _instptr->name; _instptr++) {
         /* Generate a UID for this Model. */
         uint32_t _uid = (inst_counter * 10000) + sim->uid;
         if (_instptr->uid == 0) _instptr->uid = _uid;

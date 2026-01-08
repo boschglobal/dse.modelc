@@ -205,7 +205,7 @@ static void marshal(SimulationSpec* sim, ControllerMarshalDir dir)
 {
     assert(sim);
     for (ModelInstanceSpec* _instptr = sim->instance_list;
-         _instptr && _instptr->name; _instptr++) {
+        _instptr && _instptr->name; _instptr++) {
         marshal_model(_instptr, dir);
     }
 }

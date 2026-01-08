@@ -118,7 +118,7 @@ static int adapter_msg_connect(
     ns(MessageType_union_ref_t) message;
 
     for (uint32_t channel_index = 0; channel_index < am->channels_length;
-         channel_index++) {
+        channel_index++) {
         Channel* ch = _get_channel_byindex(am, channel_index);
 
         int rc = 0;
@@ -156,7 +156,7 @@ static int adapter_msg_register(AdapterModel* am)
 
     /* SignalIndex on all channels. */
     for (uint32_t channel_index = 0; channel_index < am->channels_length;
-         channel_index++) {
+        channel_index++) {
         Channel* ch = _get_channel_byindex(am, channel_index);
         ns(MessageType_union_ref_t) message;
 
@@ -324,7 +324,7 @@ static int adapter_msg_exit(AdapterModel* am)
     ns(MessageType_union_ref_t) message;
 
     for (uint32_t channel_index = 0; channel_index < am->channels_length;
-         channel_index++) {
+        channel_index++) {
         Channel* ch = _get_channel_byindex(am, channel_index);
         log_simbus("ModelExit --> [%s]", ch->name);
         /* ModelExit */

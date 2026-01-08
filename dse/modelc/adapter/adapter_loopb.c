@@ -401,6 +401,10 @@ static int adapter_loopb_register(AdapterModel* am)
         SimbusChannel* sc = _get_simbus_channel(v, ch->name);
         assert(sc);
         log_simbus("SignalIndex <-- [%s]", ch->name);
+        if (sc->vector.index.hash_function == NULL) {
+            log_fatal("SimBus Channel not initialised, index missing, mismatch "
+                      "with Channel");
+        }
 
         _refresh_index(ch);
         for (uint32_t i = 0; i < ch->index.count; i++) {

@@ -325,7 +325,7 @@ void adapter_model_dump_debug(AdapterModel* am, const char* name)
     log_simbus("Channel Objects:");
     log_simbus("----------------");
     for (uint32_t channel_index = 0; channel_index < am->channels_length;
-         channel_index++) {
+        channel_index++) {
         Channel* ch = _get_channel_byindex(am, channel_index);
         _refresh_index(ch);
         log_simbus("----------------------------------------");
