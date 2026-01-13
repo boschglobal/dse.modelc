@@ -10,7 +10,6 @@
 #include <dse/modelc/adapter/transport/endpoint.h>
 #include <dse/modelc/adapter/transport/redis.h>
 #include <dse/modelc/adapter/transport/redispubsub.h>
-#include <dse/modelc/adapter/transport/mq.h>
 
 
 #define REDIS_PORT            6379
@@ -112,9 +111,6 @@ Endpoint* endpoint_create(const char* transport, const char* uri, uint32_t uid,
             log_error("ERROR: Incorrect Redis URI (%s)", uri);
             return NULL;
         }
-    } else if (strcmp(transport, TRANSPORT_MQ) == 0) {
-        /* Message Queue. */
-        endpoint = mq_connect(uri, uid, bus_mode, timeout);
     } else if (strcmp(transport, TRANSPORT_LOOPBACK) == 0) {
         /* Loopback - may also be created outside of this function. */
         endpoint = calloc(1, sizeof(Endpoint));

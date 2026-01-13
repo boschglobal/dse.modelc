@@ -38,9 +38,6 @@ add_library(adapter OBJECT
     simbus/profile.c
     simbus/states.c
     transport/endpoint.c
-    transport/mq.c
-    transport/msgpack.c
-    $<$<BOOL:${UNIX}>:transport/mq_posix.c>
     transport/redis.c
     transport/redispubsub.c
 )

@@ -74,7 +74,7 @@ static void print_usage(const char* doc_string)
  *  _args_extract_environment
  *
  *  Extract arguments from environment variables.
- *      SIMBUS_TRANSPORT = "redispubsub" | "mq"  (see endpoint.h)
+ *      SIMBUS_TRANSPORT = "redispubsub" | "loopback"  (see endpoint.h)
  *      SIMBUS_URI = "redis://localhost:6379"
  *      SIMBUS_LOGLEVEL = 0 .. 6
  *

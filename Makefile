@@ -113,11 +113,11 @@ build:
 	@${DOCKER_BUILDER_CMD} $(MAKE) do-build
 
 .PHONY: package
-package:
+package: build
 	@${DOCKER_BUILDER_CMD} $(MAKE) do-package
 
 .PHONY: simer
-simer:
+simer: build package
 	mkdir -p extra/tools/simer/build/stage/bin
 	mkdir -p extra/tools/simer/build/stage/lib
 	mkdir -p extra/tools/simer/build/stage/lib32
@@ -150,7 +150,7 @@ docker:
 	done;
 
 .PHONY: tools
-tools:
+tools: simer
 	for d in $(TOOL_DIRS) ;\
 	do \
 		if [ -f extra/tools/$$d/build/package/Dockerfile ]; then \

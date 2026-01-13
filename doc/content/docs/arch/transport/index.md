@@ -27,7 +27,6 @@ a transport will be determined by the planned operational deployment of a simula
 | RESP         | Fast    | Under consideration, for cloud connectivity (tunnelling).  |
 | gPPC         | Fast    | Under consideration, for cloud connectivity (HTTP). |
 | Redis Async  | Slower  | Available, experimental. |
-| MsgQueue     | Slowest | Discontinued, poor performance at scale. |
 
 
 ### Usage

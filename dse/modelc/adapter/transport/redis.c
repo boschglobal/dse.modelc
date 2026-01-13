@@ -7,7 +7,6 @@
 #include <string.h>
 #include <errno.h>
 #include <assert.h>
-#include <msgpack.h>
 #include <hiredis/adapters/libevent.h>
 #include <dse/logger.h>
 #include <dse/clib/collections/hashmap.h>
@@ -387,6 +386,181 @@ static void _update_pull_key(Endpoint* endpoint, uint32_t model_uid)
     log_notice("    Pull Endpoint: %s", pull_desc->endpoint);
 }
 
+static uint8_t* _write_str_header(uint8_t* p, uint32_t len)
+{
+    if (len <= 31) {
+        *p++ = (uint8_t)(0xA0 | (uint8_t)len);
+    } else if (len <= 0xFF) {
+        *p++ = 0xD9;
+        *p++ = (uint8_t)len;
+    } else if (len <= 0xFFFF) {
+        *p++ = 0xDA;
+        *p++ = (uint8_t)((len >> 8) & 0xFF);
+        *p++ = (uint8_t)(len & 0xFF);
+    } else {
+        *p++ = 0xDB;
+        *p++ = (uint8_t)((len >> 24) & 0xFF);
+        *p++ = (uint8_t)((len >> 16) & 0xFF);
+        *p++ = (uint8_t)((len >> 8) & 0xFF);
+        *p++ = (uint8_t)(len & 0xFF);
+    }
+    return p;
+}
+
+static inline uint8_t* _write_bin_header(uint8_t* p, uint32_t len)
+{
+    if (len <= 0xFF) {
+        *p++ = 0xC4;
+        *p++ = (uint8_t)len;
+    } else if (len <= 0xFFFF) {
+        *p++ = 0xC5;
+        *p++ = (uint8_t)((len >> 8) & 0xFF);
+        *p++ = (uint8_t)(len & 0xFF);
+    } else {
+        *p++ = 0xC6;
+        *p++ = (uint8_t)((len >> 24) & 0xFF);
+        *p++ = (uint8_t)((len >> 16) & 0xFF);
+        *p++ = (uint8_t)((len >> 8) & 0xFF);
+        *p++ = (uint8_t)(len & 0xFF);
+    }
+    return p;
+}
+
+static uint8_t* _encode_fbs(const void* buffer, uint32_t buffer_length,
+    const char* channel_name, uint32_t* length)
+{
+    /**
+     * Encode as a MsgPack datagram:
+     *      [0]: "SBCH" or "SBNO" (str)
+     *      [1]: channel name (str, "")
+     *      [2]: payload buffer (bin)
+     */
+    uint32_t ch_name_len = channel_name ? strlen(channel_name) : 0;
+    uint32_t payload_length = (3 * 5) + 4 + ch_name_len + buffer_length;
+    assert(payload_length > buffer_length);
+    uint8_t* payload = calloc(payload_length, sizeof(uint8_t));
+    assert(payload);
+
+    uint8_t* p = payload;
+    // [0] Message indicator.
+    p = _write_str_header(p, 4);
+    memcpy(p, channel_name ? "SBCH" : "SBNO", 4);
+    p += 4;
+    // [1] Channel name.
+    p = _write_str_header(p, ch_name_len);
+    if (ch_name_len) memcpy(p, channel_name, ch_name_len);
+    p += ch_name_len;
+    // [2] Buffer data.
+    p = _write_bin_header(p, buffer_length);
+    if (buffer && buffer_length > 0) memcpy(p, buffer, buffer_length);
+
+    if (length) *length = payload_length;
+    return payload; /* Caller to free. */
+}
+
+static const uint8_t* _read_str_header(const uint8_t* p, uint32_t* len)
+{
+    uint8_t  tag = *p++;
+    uint32_t length = 0;
+
+    if ((tag & 0xE0) == 0xA0) {
+        length = (uint32_t)(tag & 0x1F);
+    } else if (tag == 0xD9) {
+        length = (uint32_t)p[0];
+        p += 1;
+    } else if (tag == 0xDA) {
+        length = ((uint32_t)p[0] << 8) | (uint32_t)p[1];
+        p += 2;
+    } else if (tag == 0xDB) {
+        length = ((uint32_t)p[0] << 24) | ((uint32_t)p[1] << 16) |
+                 ((uint32_t)p[2] << 8) | (uint32_t)p[3];
+        p += 4;
+    } else {
+        assert(0);
+    }
+
+    if (len) *len = length;
+    return p;
+}
+
+static const uint8_t* _read_bin_header(const uint8_t* p, uint32_t* len)
+{
+    uint8_t  tag = *p++;
+    uint32_t length = 0;
+
+    if (tag == 0xC4) {
+        length = (uint32_t)p[0];
+        p += 1;
+    } else if (tag == 0xC5) {
+        length = ((uint32_t)p[0] << 8) | (uint32_t)p[1];
+        p += 2;
+    } else if (tag == 0xC6) {
+        length = ((uint32_t)p[0] << 24) | ((uint32_t)p[1] << 16) |
+                 ((uint32_t)p[2] << 8) | (uint32_t)p[3];
+        p += 4;
+    } else {
+        assert(0);
+    }
+
+    if (len) *len = length;
+    return p;
+}
+
+int32_t _decode_fbs(char* msg, int msg_len, uint8_t** buffer,
+    uint32_t* buffer_length, Endpoint* endpoint, const char** channel_name)
+{
+    /**
+     * Decode as a MsgPack datagram:
+     *      Object[0]: message indicator (SBNO or SBCH) (string)
+     *      Object[1]: channel name (string)
+     *      Object[2]: buffer (FBS) (bin)
+     */
+
+    char           msg_ind[5] = { 0 };
+    const uint8_t* p = (uint8_t*)msg;
+    const uint8_t* end = (uint8_t*)msg + msg_len;
+    uint32_t       len = 0;
+    // [0] Message indicator.
+    p = _read_str_header(p, &len);
+    assert(p);
+    assert(len == 4);
+    assert(p + len <= end);
+    memcpy(msg_ind, p, len);
+    p += len;
+    // [1] Channel name.
+    p = _read_str_header(p, &len);
+    assert(p);
+    assert(p + len <= end);
+    if (strcmp(msg_ind, "SBCH") == 0) {
+        static char ch_name[100];
+        assert(len < 100);
+        strncpy(ch_name, (char*)p, len);
+        ch_name[len] = '\0';
+        const char* _ = hashmap_get(&endpoint->endpoint_channels, ch_name);
+        assert(_);         /* Channel name should be known. */
+        *channel_name = _; /* Return the const char* version of ch_name. */
+    } else {
+        /* Potential Notify message. */
+    }
+    p += len;
+    // [2] Buffer data.
+    p = _read_bin_header(p, &len);
+    assert(p);
+    assert(p + len <= end);
+    /* Marshal data to caller. */
+    if (len > *buffer_length) {
+        /* Prepare the buffer, resize if necessary. */
+        *buffer = realloc(*buffer, len);
+        assert(*buffer);
+        *buffer_length = (size_t)len;
+    }
+    memset(*buffer, 0, *buffer_length);
+    memcpy(*buffer, p, len);
+
+    /* Return the buffer length (+ve) as indicator of success. */
+    return len;
+}
+
 
 int32_t redis_send_fbs(Endpoint* endpoint, void* endpoint_channel, void* buffer,
     uint32_t buffer_length, uint32_t model_uid)
@@ -399,16 +573,17 @@ int32_t redis_send_fbs(Endpoint* endpoint, void* endpoint_channel, void* buffer,
     _update_pull_key(endpoint, model_uid);
 
     /* Construct the message payload. */
-    const char*     channel_name = endpoint_channel;
-    msgpack_sbuffer sbuf = mp_encode_fbs(buffer, buffer_length, channel_name);
+    const char* channel_name = endpoint_channel;
+    uint32_t    buf_len = 0;
+    uint8_t* buf = _encode_fbs(buffer, buffer_length, channel_name, &buf_len);
 
     /* Send the message/datagram. */
     if (endpoint_channel) {
         RedisKeyDesc* push_desc = _get_push_key(endpoint, model_uid);
         log_trace("Redis send: endpoint:%s, length: %d", push_desc->endpoint,
-            sbuf.size);
+            buf_len);
         redisReply* _ = redisCommand(redis_ep->ctx, "LPUSH %s %b",
-            push_desc->endpoint, (void*)sbuf.data, (size_t)sbuf.size);
+            push_desc->endpoint, (void*)buf, (size_t)buf_len);
         _check_free_reply(_);
     } else {
         if (endpoint->bus_mode) {
@@ -425,15 +600,14 @@ int32_t redis_send_fbs(Endpoint* endpoint, void* endpoint_channel, void* buffer,
             for (uint32_t i = 0; i < count; i++) {
                 RedisKeyDesc* push_desc = hashmap_get(push_hash, keys[i]);
                 log_trace("Redis send: endpoint:%s, length: %d",
-                    push_desc->endpoint, sbuf.size);
+                    push_desc->endpoint, buf_len);
                 if (redis_ep->async_ctx) {
                     redisAsyncCommand(redis_ep->async_ctx, NULL, NULL,
-                        "LPUSH %s %b", push_desc->endpoint, (void*)sbuf.data,
-                        (size_t)sbuf.size);
+                        "LPUSH %s %b", push_desc->endpoint, (void*)buf,
+                        (size_t)buf_len);
                 } else {
                     redisReply* _ = redisCommand(redis_ep->ctx, "LPUSH %s %b",
-                        push_desc->endpoint, (void*)sbuf.data,
-                        (size_t)sbuf.size);
+                        push_desc->endpoint, (void*)buf, (size_t)buf_len);
                     _check_free_reply(_);
                 }
             }
@@ -444,21 +618,21 @@ int32_t redis_send_fbs(Endpoint* endpoint, void* endpoint_channel, void* buffer,
         } else {
             RedisKeyDesc* push_desc = _get_push_key(endpoint, model_uid);
             log_trace("Redis send: endpoint:%s, length: %d",
-                push_desc->endpoint, sbuf.size);
+                push_desc->endpoint, buf_len);
             if (redis_ep->async_ctx) {
                 redisAsyncCommand(redis_ep->async_ctx, NULL, NULL,
-                    "LPUSH %s %b", push_desc->endpoint, (void*)sbuf.data,
-                    (size_t)sbuf.size);
+                    "LPUSH %s %b", push_desc->endpoint, (void*)buf,
+                    (size_t)buf_len);
             } else {
                 redisReply* _ = redisCommand(redis_ep->ctx, "LPUSH %s %b",
-                    push_desc->endpoint, (void*)sbuf.data, (size_t)sbuf.size);
+                    push_desc->endpoint, (void*)buf, (size_t)buf_len);
                 _check_free_reply(_);
             }
         }
     }
 
     /* Release the encoded datagram. */
-    msgpack_sbuffer_destroy(&sbuf);
+    if (buf) free(buf);
 
     return rc;
 }
@@ -568,7 +742,7 @@ int32_t redis_recv_fbs(Endpoint* endpoint, const char** channel_name,
         return -1; /* Caller must inspect errno to determine cause. */
     }
     if (redis_ep->reply_len) {
-        int32_t rc = mp_decode_fbs(redis_ep->reply_str, redis_ep->reply_len,
+        int32_t rc = _decode_fbs(redis_ep->reply_str, redis_ep->reply_len,
             buffer, buffer_length, endpoint, channel_name);
         redis_ep->reply_len = 0;
         if (reply) freeReplyObject(reply);
