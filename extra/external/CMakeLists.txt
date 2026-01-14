@@ -98,23 +98,6 @@ ExternalProject_Add(yaml
     INSTALL_COMMAND     ""
 )
 
-# MsgpackC
-# --------
-ExternalProject_Add(msgpackc
-    URL                 ${ExternalProject__MSGPACK__URL}
-    HTTP_USERNAME       ${ExternalProject__MSGPACK__USERNAME}
-    HTTP_PASSWORD       ${ExternalProject__MSGPACK__PASSWORD}
-    SOURCE_DIR          "$ENV{EXTERNAL_BUILD_DIR}/msgpackc"
-    BINARY_DIR          "$ENV{EXTERNAL_BUILD_DIR}/msgpackc-build"
-    CMAKE_ARGS
-        -DCMAKE_C_FLAGS=${CMAKE_C_FLAGS}
-        -DBUILD_SHARED_LIBS=OFF
-        -DMSGPACK_BUILD_EXAMPLES=OFF
-        -DMSGPACK_BUILD_TESTS=OFF
-        -DMSGPACK_GEN_COVERAGE=OFF
-    INSTALL_COMMAND     ""
-)
-
 # HiRedis
 # -------
 # HiRedis depends on LibEvent and needs its include path set correctly to
@@ -188,7 +171,6 @@ add_dependencies(oss
     dlfcnwin32-download
     event-download
     hiredis-download
-    msgpackc-download
     yaml-download
 )
 oss_copy(${dse_clib_SOURCE_DIR}                 boschglobal/dse.clib)
@@ -197,5 +179,4 @@ oss_copy(${dse_ncodec_SOURCE_DIR}               boschglobal/dse.ncodec)
 oss_copy($ENV{EXTERNAL_BUILD_DIR}/dlfcnwin32    dlfcn-win32/dlfcn-win32)
 oss_copy($ENV{EXTERNAL_BUILD_DIR}/event         libevent/libevent)
 oss_copy($ENV{EXTERNAL_BUILD_DIR}/hiredis       redis/hiredis)
-oss_copy($ENV{EXTERNAL_BUILD_DIR}/msgpackc      msgpack/msgpackc)
 oss_copy($ENV{EXTERNAL_BUILD_DIR}/yaml          yaml/libyaml)

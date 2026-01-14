@@ -28,26 +28,6 @@ list(APPEND C_CXX_WARNING_FLAGS
 add_compile_options(${C_CXX_WARNING_FLAGS})
 
 
-# External Project - msgpackc
-# ---------------------------
-set(MSGPACKC_SOURCE_DIR "$ENV{EXTERNAL_BUILD_DIR}/msgpackc")
-set(MSGPACKC_BINARY_DIR "$ENV{EXTERNAL_BUILD_DIR}/msgpackc-build")
-find_library(MSGPACKC_LIB
-    NAMES
-        libmsgpackc.a
-    PATHS
-        ${MSGPACKC_BINARY_DIR}
-    REQUIRED
-    NO_DEFAULT_PATH
-)
-add_library(msgpackc STATIC IMPORTED GLOBAL)
-set_target_properties(msgpackc
-    PROPERTIES
-        IMPORTED_LOCATION "${MSGPACKC_LIB}"
-        INTERFACE_INCLUDE_DIRECTORIES "${MSGPACKC_BINARY_DIR}"
-)
-
-
 # External Project - yaml
 # -----------------------
 set(YAML_SOURCE_DIR "$ENV{EXTERNAL_BUILD_DIR}/yaml")
@@ -180,7 +160,6 @@ set(DSE_MODELC_SIMBUS_LOOPBACK_SOURCE_FILES
     ${DSE_MODELC_SOURCE_DIR}/adapter/adapter_loopb.c
     ${DSE_MODELC_SOURCE_DIR}/adapter/create.c
     ${DSE_MODELC_SOURCE_DIR}/adapter/index.c
-    ${DSE_MODELC_SOURCE_DIR}/adapter/msgpack.c
 
     ${DSE_MOCKS_SOURCE_DIR}/adaptermock.c
 )
@@ -223,7 +202,6 @@ target_include_directories(test_model
         ${DSE_MODELC_INCLUDE_DIR}
         ${DSE_NCODEC_INCLUDE_DIR}
         ${YAML_SOURCE_DIR}/include
-        ${MSGPACKC_SOURCE_DIR}/include
         ./
 )
 target_compile_definitions(test_model
@@ -274,7 +252,6 @@ target_include_directories(test_model_interface
         ${DSE_MODELC_INCLUDE_DIR}
         ${DSE_NCODEC_INCLUDE_DIR}
         ${YAML_SOURCE_DIR}/include
-        ${MSGPACKC_SOURCE_DIR}/include
         ./
 )
 target_compile_definitions(test_model_interface
@@ -322,7 +299,6 @@ target_include_directories(test_simbus_loopback
         ${DSE_MODELC_INCLUDE_DIR}
         ${DSE_NCODEC_INCLUDE_DIR}
         ${YAML_SOURCE_DIR}/include
-        ${MSGPACKC_SOURCE_DIR}/include
         ./simbus
 )
 target_compile_definitions(test_simbus_loopback

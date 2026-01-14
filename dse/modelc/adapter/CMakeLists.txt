@@ -32,7 +32,6 @@ add_library(adapter OBJECT
     create.c
     index.c
     message.c
-    msgpack.c
     simbus/adapter.c
     simbus/handler.c
     simbus/profile.c
@@ -44,7 +43,6 @@ add_library(adapter OBJECT
 target_include_directories(adapter
     PRIVATE
         ${HIREDIS_INCLUDE_DIR}
-        ${MSGPACKC_SOURCE_DIR}/include
         ${EVENT_SOURCE_DIR}/include
         ${LUA_SOURCE_DIR}
         ${DSE_CLIB_INCLUDE_DIR}
@@ -55,7 +53,6 @@ target_include_directories(adapter
 )
 target_link_libraries(adapter
     PRIVATE
-        msgpackc
         hiredis
         event
         dl

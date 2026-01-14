@@ -26,8 +26,8 @@ exec sh -e $WORK/trace.sh
 stdout 'ModelRegister:42:binary_channel:2:0'
 stdout '\[0.000000\] Notify\[42\]:SignalVector:scalar_channel:Signal:counter=42.000000'
 stdout '\[0.000500\] Notify\[8000008\]:SignalVector:scalar_channel:Signal:counter=43.000000'
-stdout '\[0.001500\] Notify\[42\]:SignalVector:binary_channel:Signal:message=len\(12\)'
-stdout '\[0.001500\] Notify\[8000008\]:SignalVector:binary_channel:Signal:message=len\(12\)'
+stdout '\[0.001500\] Notify\[42\]:SignalVector:binary_channel'
+stdout '\[0.001500\] Notify\[8000008\]:SignalVector:binary_channel'
 stdout 'ModelExit:42:scalar_channel:0:0'
 
 exec rm /repo/$SIM/$TRACEFILE

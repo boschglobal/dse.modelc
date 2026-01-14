@@ -2,7 +2,6 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-#include <msgpack.h>
 #include <dse/logger.h>
 #include <dse/clib/util/strings.h>
 #include <dse/modelc/adapter/simbus/simbus_private.h>
@@ -81,323 +80,6 @@ static void process_signal_index_message(Adapter* adapter, Channel* channel,
     free(resp__signal_lookup_list);
 }
 
-static void process_signal_read_message(Adapter* adapter, Channel* channel,
-    uint32_t model_uid, ns(SignalRead_table_t) signal_read_table)
-{
-    AdapterMsgVTable* v = (AdapterMsgVTable*)adapter->vtable;
-    flatcc_builder_t* B = &(v->builder);
-    msgpack_sbuffer   sbuf = { 0 };
-    msgpack_packer    pk = { 0 };
-
-    flatcc_builder_reset(B);
-    uint32_t read_signal_count = 0;  // Incase of unpack error, return NOP.
-
-    /* Extract the vector parameter. */
-    if (!ns(SignalRead_data_is_present(signal_read_table))) {
-        log_simbus("WARNING: no data in SignalRead message!");
-    }
-
-    /* Decode the MsgPack payload: data:[ubyte] = [[UID:0..N]] */
-    flatbuffers_uint8_vec_t data_vector =
-        ns(SignalRead_data(signal_read_table));
-    size_t data_length = flatbuffers_uint8_vec_len(data_vector);
-    if (data_vector == NULL) {
-        log_simbus(
-            "WARNING: data vector could not be obtained SignalRead message!");
-        data_length = 0;
-    }
-    log_simbus("    data payload: %lu bytes", data_length);
-    /* Unpack. */
-    bool             result;
-    msgpack_unpacker unpacker;
-    //  +4 is COUNTER_SIZE.
-    result = msgpack_unpacker_init(&unpacker, data_length + 4);
-    if (!result) {
-        log_error("MsgPack unpacker init failed!");
-        goto error_clean_up;
-    }
-    if (msgpack_unpacker_buffer_capacity(&unpacker) < data_length) {
-        log_error("MsgPack unpacker buffer size too small!");
-        goto error_clean_up;
-    }
-    memcpy(msgpack_unpacker_buffer(&unpacker), (const char*)data_vector,
-        data_length);
-    msgpack_unpacker_buffer_consumed(&unpacker, data_length);
-    /* Unpack: Process Objects. */
-    msgpack_unpacked      unpacked;
-    msgpack_unpack_return ret;
-    msgpack_unpacked_init(&unpacked);
-    ret = msgpack_unpacker_next(&unpacker, &unpacked);
-    if (ret != MSGPACK_UNPACK_SUCCESS) {
-        log_simbus("WARNING: data vector unpacked with unexpected return code! "
-                   "(ret=%d)",
-            ret);
-        log_error("MsgPack msgpack_unpacker_next failed!");
-        goto error_clean_up;
-    }
-    /* Root object is array with 1 (but 2 would also be possible). */
-    msgpack_object obj = unpacked.data;
-    // debug_msgpack_print(obj);
-    if (obj.type != MSGPACK_OBJECT_ARRAY) {
-        log_simbus(
-            "WARNING: data vector with unexpected object type! (%d)", obj.type);
-    }
-    if (obj.via.array.size != 1) {
-        log_simbus(
-            "WARNING: data vector with wrong size! (%d)", obj.via.array.size);
-        if (obj.via.array.size == 0) goto error_clean_up;
-    }
-    /* Extract the embedded UID array. */
-    msgpack_object uid_obj = obj.via.array.ptr[0];
-    if (uid_obj.type == MSGPACK_OBJECT_ARRAY) {
-        read_signal_count = uid_obj.via.array.size;
-        log_simbus("    read_signal_count %u", read_signal_count);
-        for (uint32_t i = 0; i < read_signal_count; i++) {
-            uint32_t     _uid = uid_obj.via.array.ptr[i].via.u64;
-            SignalValue* sv = _find_signal_by_uid(channel, _uid);
-            if (sv == NULL) {
-                log_simbus("WARNING: signal with uid (%u) not found!", _uid);
-            } else {
-                log_simbus("    SignalRead: %s [UID=%u]", sv->name, _uid);
-            }
-        }
-    } else {
-        log_simbus(
-            "WARNING: signal_uid array with unexpected object type! (%d)",
-            obj.type);
-    }
-
-    /* Encode SignalValue MsgPack payload: data:[ubyte] = [[UID],[Value]] */
-    log_simbus("SignalValue --> [%s]", channel->name);
-    log_simbus("    model_uid=%d", model_uid);
-
-    msgpack_sbuffer_init(&sbuf);
-    msgpack_packer_init(&pk, &sbuf, msgpack_sbuffer_write);
-    /* First(root) Object, array, 2 elements. */
-    msgpack_pack_array(&pk, 2);
-    /* 1st Object in root Array, list of UID's. */
-    msgpack_pack_array(&pk, read_signal_count);
-    for (uint32_t i = 0; i < read_signal_count; i++) {
-        uint32_t _uid = uid_obj.via.array.ptr[i].via.u64;
-        if (_uid) {
-            msgpack_pack_uint32(&pk, _uid);
-        }
-    }
-    /* 2st Object in root Array, list of Values. */
-    msgpack_pack_array(&pk, read_signal_count);
-    for (uint32_t i = 0; i < read_signal_count; i++) {
-        uint32_t _uid = uid_obj.via.array.ptr[i].via.u64;
-        if (_uid) {
-            SignalValue* sv = _find_signal_by_uid(channel, _uid);
-            if (sv == NULL) {
-                log_simbus("WARNING: signal with uid (%u) not found!", _uid);
-                msgpack_pack_double(&pk, 0.0);
-                continue;
-            }
-            if (sv->bin) {
-                /* The Signal Read case will return return an empty binary
-                 * blob because the binary data will only be sent as
-                 * SignalValue message embedded in ModelStart message. That
-                 * ensures that the binary stream is only sent when it is
-                 * fully constructed from all previous ModelReady messages
-                 * from all connected models (via embedded SignalWrite message).
-                 */
-                msgpack_pack_bin_with_body(&pk, sv->bin, 0);
-                log_simbus("    SignalWrite: %u = <binary> (len=%u) [name=%s]",
-                    sv->uid, 0, sv->name);
-            } else {
-                msgpack_pack_double(&pk, sv->val);
-                log_simbus("    uid=%u, val=%f", _uid, sv->val);
-            }
-        }
-    }
-
-    /* Construct the SignalValue message. */
-    log_simbus("    data payload: %lu bytes", sbuf.size);
-    ns(MessageType_union_ref_t) resp__message;
-    flatbuffers_uint8_vec_ref_t resp__data_vector;
-    resp__data_vector =
-        flatbuffers_uint8_vec_create(B, (uint8_t*)sbuf.data, sbuf.size);
-    resp__message = ns(MessageType_as_SignalValue(
-        ns(SignalValue_create(B, resp__data_vector))));
-    send_message(
-        adapter, channel->endpoint_channel, model_uid, resp__message, false);
-
-error_clean_up:
-    /* Unpack: Cleanup. */
-    msgpack_unpacked_destroy(&unpacked);
-    msgpack_unpacker_destroy(&unpacker);
-    msgpack_sbuffer_destroy(&sbuf);
-}
-
-
-static void process_signalvector(
-    Channel* channel, flatbuffers_uint8_vec_t data_vector)
-{
-    /* Decode the MsgPack payload: data:[ubyte] = [[UID:0..N],[Value:0..N]] */
-    if (data_vector == NULL) {
-        log_simbus(
-            "WARNING: data vector could not be obtained SignalWrite message!");
-        return;
-    }
-    size_t           length = flatbuffers_uint8_vec_len(data_vector);
-    /* Unpack. */
-    bool             result;
-    msgpack_unpacker unpacker;
-    // 4 is COUNTER_SIZE.
-    result = msgpack_unpacker_init(&unpacker, length + 4);
-    if (!result) {
-        log_error("MsgPack unpacker init failed!");
-        goto error_clean_up;
-    }
-    if (msgpack_unpacker_buffer_capacity(&unpacker) < length) {
-        log_error("MsgPack unpacker buffer size too small!");
-        goto error_clean_up;
-    }
-    memcpy(
-        msgpack_unpacker_buffer(&unpacker), (const char*)data_vector, length);
-    msgpack_unpacker_buffer_consumed(&unpacker, length);
-    /* Unpack: Process Objects. */
-    msgpack_unpacked      unpacked;
-    msgpack_unpack_return ret;
-    msgpack_unpacked_init(&unpacked);
-    ret = msgpack_unpacker_next(&unpacker, &unpacked);
-    if (ret != MSGPACK_UNPACK_SUCCESS) {
-        log_simbus("WARNING: data vector unpacked with unexpected return code! "
-                   "(ret=%d)",
-            ret);
-        log_error("MsgPack msgpack_unpacker_next failed!");
-        goto error_clean_up;
-    }
-    /* Root object is array with 2 elements. */
-    msgpack_object obj = unpacked.data;
-    // debug_msgpack_print(obj);
-    if (obj.type != MSGPACK_OBJECT_ARRAY) {
-        log_simbus(
-            "WARNING: data vector with unexpected object type! (%d)", obj.type);
-        goto error_clean_up;
-    }
-    if (obj.via.array.size != 2) {
-        log_simbus(
-            "WARNING: data vector with wrong size! (%d)", obj.via.array.size);
-        goto error_clean_up;
-    }
-    /* Extract the embedded UID and Value arrays. */
-    msgpack_object uid_obj = obj.via.array.ptr[0];
-    msgpack_object val_obj = obj.via.array.ptr[1];
-    if (uid_obj.type != MSGPACK_OBJECT_ARRAY) {
-        log_simbus(
-            "WARNING: signal_uid array with unexpected object type! (%d)",
-            uid_obj.type);
-        goto error_clean_up;
-    }
-    if (val_obj.type != MSGPACK_OBJECT_ARRAY) {
-        log_simbus("WARNING: signal value array unexpected object type! (%d)",
-            val_obj.type);
-        goto error_clean_up;
-    }
-    if (uid_obj.via.array.size != val_obj.via.array.size) {
-        log_simbus(
-            "WARNING: signal uid and value arrays are different length!");
-        goto error_clean_up;
-    }
-
-    /* Update the SignalValue for each included Signal UID:Value pair. */
-    uint32_t write_signal_count = uid_obj.via.array.size;
-    for (uint32_t i = 0; i < write_signal_count; i++) {
-        uint32_t    _uid = uid_obj.via.array.ptr[i].via.u64;
-        double      _value = 0;
-        const void* _bin_ptr = NULL;
-        uint32_t    _bin_size = 0;
-        switch (val_obj.via.array.ptr[i].type) {
-        case MSGPACK_OBJECT_POSITIVE_INTEGER:
-            _value = val_obj.via.array.ptr[i].via.u64;
-            break;
-        case MSGPACK_OBJECT_NEGATIVE_INTEGER:
-            _value = val_obj.via.array.ptr[i].via.i64;
-            break;
-        case MSGPACK_OBJECT_FLOAT32:
-            _value = (float)val_obj.via.array.ptr[i].via.f64;
-            break;
-        case MSGPACK_OBJECT_FLOAT64:
-            _value = val_obj.via.array.ptr[i].via.f64;
-            break;
-        case MSGPACK_OBJECT_BIN:
-            _bin_ptr = val_obj.via.array.ptr[i].via.bin.ptr;
-            _bin_size = val_obj.via.array.ptr[i].via.bin.size;
-            break;
-        default:
-            log_simbus("WARNING: signal value unexpected type! (%d)",
-                val_obj.via.array.ptr[i].type);
-        }
-        SignalValue* sv = _find_signal_by_uid(channel, _uid);
-        if ((sv == NULL) && _uid) {
-            log_simbus("WARNING: signal with uid (%u) not found!", _uid);
-            continue;
-        }
-        if (_bin_size) {
-            /* Binary. */
-            dse_buffer_append(&sv->bin, &sv->bin_size, &sv->bin_buffer_size,
-                _bin_ptr, _bin_size);
-            log_simbus("    SignalValue: %u = <binary> (len=%u) [name=%s]",
-                _uid, sv->bin_size, sv->name);
-        } else {
-            /* Double. */
-            sv->final_val =
-                _value; /* Reset final_val (changes will trigger SignalWrite) */
-            log_simbus("    SignalWrite: %u = %f [name=%s, prev=%f]", _uid,
-                sv->final_val, sv->name, sv->val);
-        }
-    }
-
-error_clean_up:
-    /* Unpack: Cleanup. */
-    msgpack_unpacked_destroy(&unpacked);
-    msgpack_unpacker_destroy(&unpacker);
-}
-
-
-static void process_signal_write_message(Adapter* adapter, Channel* channel,
-    uint32_t model_uid, ns(SignalWrite_table_t) signal_write_table)
-{
-    UNUSED(adapter);
-    UNUSED(model_uid);
-
-    if (!ns(SignalWrite_data_is_present(signal_write_table))) {
-        log_simbus("WARNING: no data in SignalWrite message!");
-        return;
-    }
-
-    /* Decode the MsgPack payload: data:[ubyte] = [[UID:0..N],[Value:0..N]] */
-    flatbuffers_uint8_vec_t data_vector =
-        ns(SignalWrite_data(signal_write_table));
-    if (data_vector == NULL) {
-        log_simbus(
-            "WARNING: data vector could not be obtained SignalWrite message!");
-        return;
-    }
-    process_signalvector(channel, data_vector);
-}
-
-
-static void process_model_ready_message(Adapter* adapter, Channel* channel,
-    uint32_t model_uid, ns(ModelReady_table_t) model_ready_table)
-{
-    if (ns(ModelReady_model_time_is_present(model_ready_table))) {
-        double model_time = ns(ModelReady_model_time(model_ready_table));
-        log_simbus("    model_time=%f", model_time);
-        /** Currently model_time is ignored. The Bus is progressing time
-        according to its own step_size for _all_ models.
-        */
-    }
-
-    /* Handle embedded SignalWite message. */
-    if (ns(ModelReady_signal_write_is_present(model_ready_table))) {
-        process_signal_write_message(adapter, channel, model_uid,
-            ns(ModelReady_signal_write(model_ready_table)));
-    }
-}
-
 
 static void process_notify_signalvector(Adapter* adapter, Channel* channel,
     uint32_t model_uid, notify(SignalVector_table_t) signal_vector)
@@ -405,11 +87,30 @@ static void process_notify_signalvector(Adapter* adapter, Channel* channel,
     UNUSED(adapter);
     UNUSED(model_uid);
 
-    /* Process MsgPack encoded signal data. */
-    flatbuffers_uint8_vec_t data_vector =
-        notify(SignalVector_data(signal_vector));
-    if (data_vector != NULL) {
-        process_signalvector(channel, data_vector);
+    /* Process vector encoded binary signal data. */
+    notify(BinarySignal_vec_t) binary_signal_vec =
+        notify(SignalVector_binary_signal(signal_vector));
+    size_t binary_signal_vec_len =
+        notify(BinarySignal_vec_len)(binary_signal_vec);
+    for (size_t i = 0; i < binary_signal_vec_len; i++) {
+        notify(BinarySignal_table_t) binary_signal =
+            notify(BinarySignal_vec_at(binary_signal_vec, i));
+        uint32_t                _uid = notify(BinarySignal_uid(binary_signal));
+        flatbuffers_uint8_vec_t data_vec =
+            notify(BinarySignal_data(binary_signal));
+        size_t data_vec_len = flatbuffers_uint8_vec_len(data_vec);
+
+        SignalValue* sv = _find_signal_by_uid(channel, _uid);
+        if ((sv == NULL) && _uid) {
+            log_simbus("WARNING: signal with uid (%u) not found!", _uid);
+            continue;
+        }
+        if (data_vec != NULL && data_vec_len) {
+            dse_buffer_append(&sv->bin, &sv->bin_size, &sv->bin_buffer_size,
+                data_vec, data_vec_len);
+            log_simbus("    SignalValue: %u = <binary> (len=%u) [name=%s]",
+                _uid, sv->bin_size, sv->name);
+        }
     }
 
     /* Process vector encoded signal data. */
@@ -464,12 +165,13 @@ static void resolve_and_notify(
         _refresh_index(ch);
         log_simbus("SignalVector --> [%s]", ch->name);
 
+        /* SignalVector table. */
         notify(SignalVector_start(B));
         notify(SignalVector_name_add(
             B, flatbuffers_string_create_str(B, ch->name)));
         notify(SignalVector_model_uid_add(B, am->model_uid));
 
-        /* Signal Vector. */
+        /* Signal vector. */
         size_t binary_signal_count = 0;
         notify(SignalVector_signal_start(B));
         for (uint32_t i = 0; i < ch->index.count; i++) {
@@ -487,21 +189,25 @@ static void resolve_and_notify(
         }
         notify(SignalVector_signal_add(B, notify(SignalVector_signal_end(B))));
 
-        /* Encode binary data (if present). */
-        flatbuffers_uint8_vec_ref_t sv_msgpack_data = 0;
+        /* Binary Vector. */
         if (binary_signal_count) {
-            msgpack_sbuffer sbuf = { 0 };
-            msgpack_packer  pk = { 0 };
-            msgpack_sbuffer_init(&sbuf);
-            msgpack_packer_init(&pk, &sbuf, msgpack_sbuffer_write);
-            sv_delta_to_msgpack_binonly(ch, &pk, "SignalValue");
-            sv_msgpack_data =
-                flatbuffers_uint8_vec_create(B, (uint8_t*)sbuf.data, sbuf.size);
-            notify(SignalVector_data_add(B, sv_msgpack_data));
-            log_simbus("    data payload: %lu bytes", sbuf.size);
-            msgpack_sbuffer_destroy(&sbuf);
+            notify(SignalVector_binary_signal_start(B));
+            for (uint32_t i = 0; i < ch->index.count; i++) {
+                SignalValue* sv = ch->index.map[i].signal;
+                if (sv->bin && sv->bin_size && sv->uid) {
+                    flatbuffers_uint8_vec_ref_t data =
+                        flatbuffers_uint8_vec_create(
+                            B, (uint8_t*)sv->bin, sv->bin_size);
+                    notify(SignalVector_binary_signal_push_create(
+                        B, sv->uid, data));
+                    log_simbus(
+                        "    SignalValue: %u = <binary> (len=%u) [name=%s]",
+                        sv->uid, sv->bin_size, sv->name);
+                }
+            }
+            notify(SignalVector_binary_signal_add(
+                B, notify(SignalVector_binary_signal_end(B))));
         }
-
         notify(SignalVector_vec_push(B, notify(SignalVector_end(B))));
 
         /* Resolve the channel. */
@@ -516,94 +222,6 @@ static void resolve_and_notify(
     notify(NotifyMessage_schedule_time_add(B, schedule_time));
     notify(NotifyMessage_ref_t) message = notify(NotifyMessage_end(B));
     send_notify_message(adapter, message);
-}
-
-
-static void resolve_channel_and_model_start(
-    Adapter* adapter, Channel* channel, double model_time, double stop_time)
-{
-    AdapterMsgVTable* v = (AdapterMsgVTable*)adapter->vtable;
-    flatcc_builder_t* B = &(v->builder);
-
-    log_simbus("SignalValue+", channel->name);
-
-    /* Encode SignalWrite MsgPack payload: data:[ubyte] = [[UID],[Value]] */
-    msgpack_sbuffer sbuf = { 0 };
-    msgpack_packer  pk = { 0 };
-    msgpack_sbuffer_init(&sbuf);
-    msgpack_packer_init(&pk, &sbuf, msgpack_sbuffer_write);
-    /* First(root) Object, array, 2 elements. */
-    msgpack_pack_array(&pk, 2);
-    uint32_t changed_signal_count = 0;
-    for (uint32_t i = 0; i < channel->index.count; i++) {
-        SignalValue* sv = channel->index.map[i].signal;
-        if (sv->uid == 0) continue;
-        if ((sv->val != sv->final_val) || (sv->bin && sv->bin_size)) {
-            changed_signal_count++;
-        }
-    }
-    /* 1st Object in root Array, list of UID's. */
-    msgpack_pack_array(&pk, changed_signal_count);
-    for (uint32_t i = 0; i < channel->index.count; i++) {
-        SignalValue* sv = channel->index.map[i].signal;
-        if (sv->uid == 0) continue;
-        if ((sv->val != sv->final_val) || (sv->bin && sv->bin_size)) {
-            msgpack_pack_uint32(&pk, sv->uid);
-        }
-    }
-    /* 2st Object in root Array, list of Values. */
-    msgpack_pack_array(&pk, changed_signal_count);
-    for (uint32_t i = 0; i < channel->index.count; i++) {
-        SignalValue* sv = channel->index.map[i].signal;
-        if (sv->uid == 0) continue;
-        if (sv->bin && sv->bin_size) {
-            msgpack_pack_bin_with_body(&pk, sv->bin, sv->bin_size);
-            log_simbus("    SignalValue: %u = <binary> (len=%u) [name=%s]",
-                sv->uid, sv->bin_size, sv->name);
-        } else if (sv->val != sv->final_val) {
-            msgpack_pack_double(&pk, sv->final_val);
-            log_simbus("    SignalValue: %u = %f [name=%s]", sv->uid,
-                sv->final_val, sv->name);
-        }
-    }
-    log_simbus("    data payload: %lu bytes", sbuf.size);
-
-    /* Resolve the Bus. */
-    for (uint32_t i = 0; i < channel->index.count; i++) {
-        SignalValue* sv = channel->index.map[i].signal;
-        sv->val = sv->final_val;
-        sv->bin_size = 0;
-    }
-
-    /* Send ModelStart with SignalValue. */
-    for (uint32_t i = 0; i < channel->model_ready_set->number_nodes; i++) {
-        if (channel->model_ready_set->nodes[i] == NULL) continue;
-        uint32_t model_uid = (uint32_t)strtol(
-            channel->model_ready_set->nodes[i]->_key, NULL, 10);
-        flatcc_builder_reset(B);
-        /* SignalValue */
-        ns(SignalWrite_ref_t) resp__signal_value_message;
-        flatbuffers_uint8_vec_ref_t resp__data_vector;
-        resp__data_vector =
-            flatbuffers_uint8_vec_create(B, (uint8_t*)sbuf.data, sbuf.size);
-        resp__signal_value_message =
-            ns(SignalValue_create(B, resp__data_vector));
-        /* ModelStart */
-        log_simbus("ModelStart --> [%s]", channel->name);
-        log_simbus("    model_uid=%d", model_uid);
-        log_simbus("    model_time=%f", model_time);
-        log_simbus("    stop_time=%f", stop_time);
-        ns(MessageType_union_ref_t) resp__model_start_message;
-        resp__model_start_message =
-            ns(MessageType_as_ModelStart(ns(ModelStart_create(B,
-                model_time,                 // model_time
-                stop_time,                  // stop_time
-                resp__signal_value_message  // signal_write
-                ))));
-        send_message(adapter, channel->endpoint_channel, model_uid,
-            resp__model_start_message, false);
-    }
-    msgpack_sbuffer_destroy(&sbuf);
 }
 
 
@@ -770,58 +388,6 @@ void simbus_handle_message(Adapter* adapter, const char* channel_name,
         log_simbus("    model_uid=%d", model_uid);
         process_signal_index_message(adapter, channel, model_uid,
             ns(ChannelMessage_message(channel_message)));
-    }
-    /* SignalRead */
-    else if (msg_type == ns(MessageType_SignalRead)) {
-        log_simbus("SignalRead <-- [%s]", channel->name);
-        log_simbus("    model_uid=%d", model_uid);
-        process_signal_read_message(adapter, channel, model_uid,
-            ns(ChannelMessage_message(channel_message)));
-    }
-    /* SignalWrite */
-    else if (msg_type == ns(MessageType_SignalWrite)) {
-        log_simbus("SignalWrite <-- [%s]", channel->name);
-        log_simbus("    model_uid=%d", model_uid);
-        process_signal_write_message(adapter, channel, model_uid,
-            ns(ChannelMessage_message(channel_message)));
-    }
-    /* ModelReady */
-    else if (msg_type == ns(MessageType_ModelReady)) {
-        log_simbus("ModelReady <-- [%s]", channel->name);
-        log_simbus("    model_uid=%d", model_uid);
-        /* Handle ModelReady and embedded SignalWrite message. */
-        process_model_ready_message(adapter, channel, model_uid,
-            ns(ChannelMessage_message(channel_message)));
-        simbus_model_at_ready(am, channel, model_uid);
-        /* Resolve the Bus. */
-        if (simbus_network_ready(am) && simbus_models_ready(am)) {
-            /**
-            This condition will exist when the last model on the last channel
-            sends its ModelReady message. When that happens, resolve the bus.
-
-            Time on the Bus is progressed according to Bus Cycle Time.
-
-            Increment the bus time via Kahan summation.
-            */
-            double y = adapter->bus_step_size - adapter->bus_time_correction;
-            double t = adapter->bus_time + y;
-            adapter->bus_time_correction = (t - adapter->bus_time) - y;
-            adapter->bus_time = t;
-
-            double model_time = adapter->bus_time;
-            double stop_time = model_time + adapter->bus_step_size;
-            if (0) {
-                for (uint32_t i = 0; i < am->channels_length; i++) {
-                    Channel* ch = _get_channel_byindex(am, i);
-                    _refresh_index(ch);
-                    resolve_channel_and_model_start(
-                        adapter, ch, model_time, stop_time);
-                }
-            }
-
-            resolve_and_notify(adapter, model_time, stop_time);
-            simbus_models_to_start(am);
-        }
     }
     /* ModelExit */
     else if (msg_type == ns(MessageType_ModelExit)) {

@@ -7,7 +7,6 @@
 #include <stdio.h>
 #include <stdbool.h>
 #include <stdint.h>
-#include <msgpack.h>
 #include <dse/logger.h>
 #include <dse/clib/util/strings.h>
 #include <dse/modelc/adapter/adapter.h>
@@ -69,19 +68,24 @@ static int notify_encode_sv(void* value, void* data)
         }
         notify(SignalVector_signal_add(B, notify(SignalVector_signal_end(B))));
 
-        /* Encode binary data (if present). */
-        flatbuffers_uint8_vec_ref_t sv_msgpack_data = 0;
+        /* Binary Vector. */
         if (binary_signal_count) {
-            msgpack_sbuffer sbuf;
-            msgpack_packer  pk;
-            msgpack_sbuffer_init(&sbuf);
-            msgpack_packer_init(&pk, &sbuf, msgpack_sbuffer_write);
-            sv_delta_to_msgpack_binonly(ch, &pk, "SignalWrite");
-            sv_msgpack_data =
-                flatbuffers_uint8_vec_create(B, (uint8_t*)sbuf.data, sbuf.size);
-            notify(SignalVector_data_add(B, sv_msgpack_data));
-            log_simbus("    data payload: %lu bytes", sbuf.size);
-            msgpack_sbuffer_destroy(&sbuf);
+            notify(SignalVector_binary_signal_start(B));
+            for (uint32_t i = 0; i < ch->index.count; i++) {
+                SignalValue* sv = ch->index.map[i].signal;
+                if (sv->bin && sv->bin_size && sv->uid) {
+                    flatbuffers_uint8_vec_ref_t data =
+                        flatbuffers_uint8_vec_create(
+                            B, (uint8_t*)sv->bin, sv->bin_size);
+                    notify(SignalVector_binary_signal_push_create(
+                        B, sv->uid, data));
+                    log_simbus(
+                        "    SignalWrite: %u = <binary> (len=%u) [name=%s]",
+                        sv->uid, sv->bin_size, sv->name);
+                }
+            }
+            notify(SignalVector_binary_signal_add(
+                B, notify(SignalVector_binary_signal_end(B))));
         }
 
         notify(SignalVector_vec_push(B, notify(SignalVector_end(B))));
@@ -195,7 +199,7 @@ static int adapter_msg_register(AdapterModel* am)
             adapter, ch->endpoint_channel, am->model_uid, message, false);
         free(signal_lookup_list);
 
-        /* Wait on SignalIndex (and handle SignalValue) */
+        /* Wait on SignalIndex. */
         log_debug("adapter_register: wait on SignalIndex ...");
         {
             const char* msg_channel_name = NULL;
@@ -207,51 +211,6 @@ static int adapter_msg_register(AdapterModel* am)
             }
             assert(msg_channel_name);
         }
-
-        /* SignalRead */
-        log_simbus("SignalRead --> [%s]", ch->name);
-        flatcc_builder_reset(B);
-
-        /* Encode the MsgPack payload: data:[ubyte] = [[SignalUID]] */
-        msgpack_sbuffer sbuf;
-        msgpack_packer  pk;
-        msgpack_sbuffer_init(&sbuf);
-        msgpack_packer_init(&pk, &sbuf, msgpack_sbuffer_write);
-        msgpack_pack_array(&pk, 1);
-        msgpack_pack_array(&pk, signal_list_length);
-        _refresh_index(ch);
-        for (unsigned int i = 0; i < signal_list_length; i++) {
-            SignalValue* sv = _get_signal_value_byindex(ch, i);
-            if (sv->uid) {
-                msgpack_pack_uint32(&pk, sv->uid);
-                log_simbus("    SignalRead: %u [name=%s]", sv->uid, sv->name);
-            }
-        }
-        log_simbus("    data payload: %lu bytes", sbuf.size);
-
-        /* Construct the final message */
-        flatbuffers_uint8_vec_ref_t data_vector;
-        data_vector =
-            flatbuffers_uint8_vec_create(B, (uint8_t*)sbuf.data, sbuf.size);
-        message = ns(
-            MessageType_as_SignalRead(ns(SignalRead_create(B, data_vector))));
-        send_message(
-            adapter, ch->endpoint_channel, am->model_uid, message, false);
-
-        /* Wait on SignalIndex (and handle SignalValue) after SignalRead */
-        log_debug("adapter_register: wait on SignalValue after SignalRead ...");
-        {
-            const char* msg_channel_name = NULL;
-            bool        found = false;
-            wait_message(adapter, &msg_channel_name,
-                ns(MessageType_SignalValue), 0, &found);
-            if (!found) {
-                log_fatal("No SignalValue received from SimBus!!!");
-            }
-            assert(msg_channel_name);
-        }
-
-        msgpack_sbuffer_destroy(&sbuf);
     }
 
     return 0;
@@ -343,148 +302,33 @@ Adapter Message Handling/Processing
 -----------------------------------
 */
 
-static void process_signal_value_data(
-    Channel* channel, flatbuffers_uint8_vec_t data_vector, size_t length)
+static void process_signal_value_message(
+    Channel* channel, ns(SignalValue_table_t) signal_value_table)
 {
-    _refresh_index(channel);
-
-    /* Unpack. */
-    bool             result;
-    msgpack_unpacker unpacker;
-    // +4 is COUNTER_SIZE.
-    result = msgpack_unpacker_init(&unpacker, length + 4);
-    if (!result) {
-        log_error("MsgPack unpacker init failed!");
-        goto error_clean_up;
-    }
-    if (msgpack_unpacker_buffer_capacity(&unpacker) < length) {
-        log_error("MsgPack unpacker buffer size too small!");
-        goto error_clean_up;
-    }
-    memcpy(
-        msgpack_unpacker_buffer(&unpacker), (const char*)data_vector, length);
-    msgpack_unpacker_buffer_consumed(&unpacker, length);
-
-    /* Unpack: Process Objects. */
-    msgpack_unpacked      unpacked;
-    msgpack_unpack_return ret;
-    msgpack_unpacked_init(&unpacked);
-    ret = msgpack_unpacker_next(&unpacker, &unpacked);
-    if (ret != MSGPACK_UNPACK_SUCCESS) {
-        log_simbus("WARNING: data vector unpacked with unexpected return code! "
-                   "(ret=%d)",
-            ret);
-        log_error("MsgPack msgpack_unpacker_next failed!");
-        goto error_clean_up;
+    if (!ns(SignalValue_signal_is_present(signal_value_table))) {
+        log_simbus("WARNING: no signals in SignalValue message!");
+        return;
     }
 
-    /* Root object is array with 2 elements. */
-    msgpack_object obj = unpacked.data;
-    // debug_msgpack_print(obj);
-    if (obj.type != MSGPACK_OBJECT_ARRAY) {
-        log_simbus(
-            "WARNING: data vector with unexpected object type! (%d)", obj.type);
-        goto error_clean_up;
-    }
-    if (obj.via.array.size != 2) {
-        log_simbus(
-            "WARNING: data vector with wrong size! (%d)", obj.via.array.size);
-        goto error_clean_up;
-    }
-    /* Extract the embedded UID and Value arrays. */
-    msgpack_object uid_obj = obj.via.array.ptr[0];
-    msgpack_object val_obj = obj.via.array.ptr[1];
-    if (uid_obj.type != MSGPACK_OBJECT_ARRAY) {
-        log_simbus(
-            "WARNING: signal_uid array with unexpected object type! (%d)",
-            uid_obj.type);
-        goto error_clean_up;
-    }
-    if (val_obj.type != MSGPACK_OBJECT_ARRAY) {
-        log_simbus("WARNING: signal value array unexpected object type! (%d)",
-            val_obj.type);
-        goto error_clean_up;
-    }
-    if (uid_obj.via.array.size != val_obj.via.array.size) {
-        log_simbus(
-            "WARNING: signal uid and value arrays are different length!");
-        goto error_clean_up;
-    }
+    /* Decode the Signal vector. */
+    ns(Signal_vec_t) signal_vec = ns(SignalValue_signal(signal_value_table));
+    size_t signal_length = ns(Signal_vec_len(signal_vec));
+    for (size_t i = 0; i < signal_length; i++) {
+        ns(Signal_struct_t) signal = ns(Signal_vec_at(signal_vec, i));
+        uint32_t _uid = signal->uid;
+        double   _value = signal->value;
 
-    /* Update the SignalValue for each included Signal UID:Value pair. */
-    for (uint32_t i = 0; i < uid_obj.via.array.size; i++) {
-        uint32_t    _uid = uid_obj.via.array.ptr[i].via.u64;
-        double      _value = 0;
-        const void* _bin_ptr = NULL;
-        uint32_t    _bin_size = 0;
-        switch (val_obj.via.array.ptr[i].type) {
-        case MSGPACK_OBJECT_POSITIVE_INTEGER:
-            _value = val_obj.via.array.ptr[i].via.u64;
-            break;
-        case MSGPACK_OBJECT_NEGATIVE_INTEGER:
-            _value = val_obj.via.array.ptr[i].via.i64;
-            break;
-        case MSGPACK_OBJECT_FLOAT32:
-            _value = (float)val_obj.via.array.ptr[i].via.f64;
-            break;
-        case MSGPACK_OBJECT_FLOAT64:
-            _value = val_obj.via.array.ptr[i].via.f64;
-            break;
-        case MSGPACK_OBJECT_BIN:
-            _bin_ptr = val_obj.via.array.ptr[i].via.bin.ptr;
-            _bin_size = val_obj.via.array.ptr[i].via.bin.size;
-            break;
-        default:
-            log_simbus("WARNING: signal value unexpected type! (%d)",
-                val_obj.via.array.ptr[i].type);
-        }
         SignalValue* sv = _find_signal_by_uid(channel, _uid);
         if ((sv == NULL) && _uid) {
             log_simbus("WARNING: signal with uid (%u) not found!", _uid);
             continue;
         }
-        if (_bin_size) {
-            /* Binary. */
-            dse_buffer_append(&sv->bin, &sv->bin_size, &sv->bin_buffer_size,
-                _bin_ptr, _bin_size);
-            log_simbus("    SignalValue: %u = <binary> (len=%u) [name=%s]",
-                _uid, sv->bin_size, sv->name);
-        } else {
-            /* Double. */
-            sv->val = _value;
-            log_simbus(
-                "    SignalValue: %u = %f [name=%s]", _uid, sv->val, sv->name);
-            /* Reset final_val (changes will trigger SignalWrite) */
-            sv->final_val = _value;
-        }
-    }
-
-error_clean_up:
-    /* Unpack: Cleanup. */
-    msgpack_unpacked_destroy(&unpacked);
-    msgpack_unpacker_destroy(&unpacker);
-}
-
-static void process_signal_value_message(
-    Channel* channel, ns(SignalValue_table_t) signal_value_table)
-{
-    if (!ns(SignalValue_data_is_present(signal_value_table))) {
-        log_simbus("WARNING: no data in SignalValue message!");
-        return;
-    }
-
-    /* Decode the MsgPack payload: data:[ubyte] = [[UID:0..N],[Value:0..N]] */
-    flatbuffers_uint8_vec_t data_vector =
-        ns(SignalValue_data(signal_value_table));
-    size_t length = flatbuffers_uint8_vec_len(data_vector);
-    if (data_vector == NULL) {
+        sv->val = _value;
+        /* Reset final_val (changes will trigger SignalWrite) */
+        sv->final_val = _value;
         log_simbus(
-            "WARNING: data vector could not be obtained SignalValue message!");
-        return;
+            "    SignalValue: %u = %f [name=%s]", _uid, sv->val, sv->name);
     }
-    log_simbus("    data payload: %lu bytes", length);
-
-    process_signal_value_data(channel, data_vector, length);
 }
 
 static void process_signal_index_message(
@@ -517,24 +361,6 @@ static void process_signal_index_message(
             hashmap_set_by_hash32(
                 &channel->index.uid2sv_lookup, signal_uid, sv);
         }
-    }
-}
-
-static void process_model_start_message(AdapterModel* am, Channel* channel,
-    ns(ModelStart_table_t) model_start_table)
-{
-    am->model_time = ns(ModelStart_model_time(model_start_table));
-    am->stop_time = ns(ModelStart_stop_time(model_start_table));
-    if (am->stop_time <= am->model_time) {
-        log_error("WARNING:stop_time is NOT greater than model_time!");
-    }
-    log_simbus("    model_time=%f", am->model_time);
-    log_simbus("    stop_time=%f", am->stop_time);
-
-    /* Handle embedded SignalValue message. */
-    if (ns(ModelStart_signal_value_is_present(model_start_table))) {
-        process_signal_value_message(
-            channel, ns(ModelStart_signal_value(model_start_table)));
     }
 }
 
@@ -574,12 +400,6 @@ static void handle_channel_message(Adapter* adapter, const char* channel_name,
         log_simbus("SignalValue <-- [%s]", channel->name);
         process_signal_value_message(
             channel, ns(ChannelMessage_message(channel_message)));
-    }
-    /* ModelStart */
-    else if (msg_type == ns(MessageType_ModelStart)) {
-        log_simbus("ModelStart <-- [%s]", channel->name);
-        process_model_start_message(
-            am, channel, ns(ChannelMessage_message(channel_message)));
     }
     /* ModelExit */
     else if (msg_type == ns(MessageType_ModelExit)) {
@@ -627,13 +447,30 @@ static int notify_model(void* value, void* data)
         if (channel == NULL) continue;
         log_simbus("SignalVector <-- [%s]", channel->name);
 
-        /* Process MsgPack encoded signal data. */
-        flatbuffers_uint8_vec_t data_vector =
-            notify(SignalVector_data(signal_vector));
-        size_t data_length = flatbuffers_uint8_vec_len(data_vector);
-        if (data_vector != NULL) {
-            process_signal_value_data(channel, data_vector, data_length);
-            log_simbus("    data payload: %lu bytes", data_length);
+        /* Process vector encoded binary signal data. */
+        notify(BinarySignal_vec_t) binary_signal_vec =
+            notify(SignalVector_binary_signal(signal_vector));
+        size_t binary_signal_vec_len =
+            notify(BinarySignal_vec_len)(binary_signal_vec);
+        for (size_t i = 0; i < binary_signal_vec_len; i++) {
+            notify(BinarySignal_table_t) binary_signal =
+                notify(BinarySignal_vec_at(binary_signal_vec, i));
+            uint32_t _uid = notify(BinarySignal_uid(binary_signal));
+            flatbuffers_uint8_vec_t data_vec =
+                notify(BinarySignal_data(binary_signal));
+            size_t data_vec_len = flatbuffers_uint8_vec_len(data_vec);
+
+            SignalValue* sv = _find_signal_by_uid(channel, _uid);
+            if ((sv == NULL) && _uid) {
+                log_simbus("WARNING: signal with uid (%u) not found!", _uid);
+                continue;
+            }
+            if (data_vec != NULL && data_vec_len) {
+                dse_buffer_append(&sv->bin, &sv->bin_size, &sv->bin_buffer_size,
+                    data_vec, data_vec_len);
+                log_simbus("    SignalValue: %u = <binary> (len=%u) [name=%s]",
+                    _uid, sv->bin_size, sv->name);
+            }
         }
 
         /* Process vector encoded signal data. */

@@ -102,26 +102,6 @@ set_target_properties(event
 )
 
 
-# External Project - msgpackc
-# ---------------------------
-set(MSGPACKC_SOURCE_DIR "$ENV{EXTERNAL_BUILD_DIR}/msgpackc")
-set(MSGPACKC_BINARY_DIR "$ENV{EXTERNAL_BUILD_DIR}/msgpackc-build")
-find_library(MSGPACKC_LIB
-    NAMES
-        libmsgpackc.a
-    PATHS
-        ${MSGPACKC_BINARY_DIR}
-    REQUIRED
-    NO_DEFAULT_PATH
-)
-add_library(msgpackc STATIC IMPORTED GLOBAL)
-set_target_properties(msgpackc
-    PROPERTIES
-        IMPORTED_LOCATION "${MSGPACKC_LIB}"
-        INTERFACE_INCLUDE_DIRECTORIES "${MSGPACKC_BINARY_DIR}"
-)
-
-
 # External Project - hiredis
 # --------------------------
 set(HIREDIS_INCLUDE_DIR "$ENV{EXTERNAL_BUILD_DIR}")

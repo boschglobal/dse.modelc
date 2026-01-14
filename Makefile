@@ -23,7 +23,7 @@ DSE_CLIB_VERSION ?= 1.0.47
 export DSE_CLIB_URL ?= $(DSE_CLIB_REPO)/archive/refs/tags/v$(DSE_CLIB_VERSION).zip
 
 DSE_SCHEMA_REPO ?= https://github.com/boschglobal/dse.schemas
-DSE_SCHEMA_VERSION ?= 1.2.32
+DSE_SCHEMA_VERSION ?= 1.2.35
 export DSE_SCHEMA_URL ?= $(DSE_SCHEMA_REPO)/releases/download/v$(DSE_SCHEMA_VERSION)/dse-schemas.tar.gz
 
 DSE_NCODEC_REPO ?= https://github.com/boschglobal/dse.ncodec

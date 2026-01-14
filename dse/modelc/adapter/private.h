@@ -7,7 +7,6 @@
 
 
 #include <stdint.h>
-#include <msgpack.h>
 #include <dse/modelc/adapter/adapter.h>
 #include <dse/platform.h>
 
@@ -28,12 +27,6 @@ DLL_PRIVATE SignalValue* _get_signal_value_byindex(
     Channel* channel, uint32_t index);
 DLL_PRIVATE SignalMap* _get_signal_value_map(
     Channel* channel, const char** signal_name, uint32_t signal_count);
-
-/* msgpack.c*/
-DLL_PRIVATE void sv_delta_to_msgpack(
-    Channel* channel, msgpack_packer* pk, const char* log_prefix);
-DLL_PRIVATE void sv_delta_to_msgpack_binonly(
-    Channel* channel, msgpack_packer* pk, const char* log_prefix);
 
 
 #endif  // DSE_MODELC_ADAPTER_PRIVATE_H_
