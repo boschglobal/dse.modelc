@@ -1,7 +1,6 @@
 ---
 title: "Model - Lua Model/MCL"
 linkTitle: "Lua"
-weight: 100
 tags:
 - Model
 - Lua

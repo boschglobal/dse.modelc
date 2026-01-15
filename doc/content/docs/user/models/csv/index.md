@@ -1,7 +1,6 @@
 ---
 title: "Model - CSV"
 linkTitle: "CSV"
-weight: 100
 tags:
 - Model
 - CSV
