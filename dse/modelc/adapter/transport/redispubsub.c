@@ -414,19 +414,38 @@ int32_t redispubsub_send_fbs(Endpoint* endpoint, void* endpoint_channel,
         }
     } else {
         /* Sending a Notify Message. */
-        redisReply* reply;
-        reply = redisCommand(redis_ep->ctx, "PUBLISH %s %b",
-            endpoint->bus_mode ? NOTIFY_MODEL_KEY : NOTIFY_SIMBUS_KEY, buffer,
-            (size_t)buffer_length);
-        if (reply == NULL) {
-            log_notice("Connection lost: redisCommand returned NULL object");
+
+        /** Models first connecting to a SimBus may send messages before the
+         *  SimBus has started. As a result, messages are lost. This is a
+         *  condition we only expect at startup of Models - in that case a
+         *  retry is attempted (according to the general receive timeout).
+         */
+        int retry_count = endpoint->bus_mode ? 1 : (int)redis_ep->recv_timeout;
+        while (retry_count--) {
+            redisReply* reply;
+            reply = redisCommand(redis_ep->ctx, "PUBLISH %s %b",
+                endpoint->bus_mode ? NOTIFY_MODEL_KEY : NOTIFY_SIMBUS_KEY,
+                buffer, (size_t)buffer_length);
+            if (reply == NULL) {
+                log_notice(
+                    "Connection lost: redisCommand returned NULL object");
+            }
+            log_trace("redispubsub_send_fbs: message sent");
+            log_trace("redispubsub_send_fbs:     clients=%lld", reply->integer);
+            if (reply && reply->integer == 0) {
+                log_notice(
+                    "redispubsub_send_fbs: no clients received message!");
+                freeReplyObject(reply);
+                if (endpoint->stop_request) {
+                    errno = ECANCELED;
+                    return -1;
+                }
+                sleep(1);
+            } else {
+                freeReplyObject(reply);
+                break;
+            }
         }
-        log_trace("redispubsub_send_fbs: message sent");
-        log_trace("redispubsub_send_fbs:     clients=%lld", reply->integer);
-        if (reply && reply->integer == 0) {
-            log_notice("redispubsub_send_fbs: no clients received message!");
-        }
-        freeReplyObject(reply);
     }
 
     return 0;

@@ -5,27 +5,15 @@
 package trace
 
 import (
-	"github.com/boschglobal/dse.schemas/code/go/dse/schemas/fbs/channel"
 	"github.com/boschglobal/dse.schemas/code/go/dse/schemas/fbs/notify"
 )
 
 type Visitor interface {
-	VisitChannelMsg(ChannelMsg)
 	VisitNotifyMsg(NotifyMsg)
 }
 
 type Flatbuffer interface {
 	Accept(*Visitor)
-}
-
-type ChannelMsg struct {
-	Msg *channel.ChannelMessage
-}
-
-func (cm ChannelMsg) Accept(v *Visitor) {
-	if v != nil {
-		(*v).VisitChannelMsg(cm)
-	}
 }
 
 type NotifyMsg struct {

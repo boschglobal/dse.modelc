@@ -12,19 +12,13 @@
 
 
 #undef flatbuffers_identifier
-#define flatbuffers_channel_identifier "SBCH"
-#define flatbuffers_notify_identifier  "SBNO"
-#undef ns
-#define ns(x) FLATBUFFERS_WRAP_NAMESPACE(dse_schemas_fbs_channel, x)
+#define flatbuffers_notify_identifier "SBNO"
 #undef notify
 #define notify(x) FLATBUFFERS_WRAP_NAMESPACE(dse_schemas_fbs_notify, x)
 
 
 /* Adapter Message Interface. */
 
-typedef void (*HandleChannelMessageFunc)(Adapter* adapter,
-    const char* channel_name, ns(ChannelMessage_table_t) channel_message,
-    int32_t     token);
 typedef void (*HandleNotifyMessageFunc)(
     Adapter* adapter, notify(NotifyMessage_table_t) notify_message);
 
@@ -32,8 +26,7 @@ typedef struct AdapterMsgVTable {
     AdapterVTable vtable;
 
     /* Message handling. */
-    HandleChannelMessageFunc handle_message;
-    HandleNotifyMessageFunc  handle_notify_message;
+    HandleNotifyMessageFunc handle_notify_message;
 
     /* Supporting data objects. */
     flatcc_builder_t builder;
@@ -44,14 +37,11 @@ typedef struct AdapterMsgVTable {
 
 /* message.c */
 DLL_PRIVATE int32_t send_notify_message(
-    Adapter* adapter, notify(NotifyMessage_ref_t) message);
-DLL_PRIVATE int32_t send_message(Adapter* adapter, void* endpoint_channel,
-    uint32_t model_uid, ns(MessageType_union_ref_t) message, bool ack);
-DLL_PRIVATE int32_t send_message_ack(Adapter* adapter, void* endpoint_channel,
-    uint32_t model_uid, ns(MessageType_union_ref_t) message, int32_t token,
-    int32_t rc, char* response);
-DLL_PRIVATE int32_t wait_message(Adapter* adapter, const char** channel_name,
-    ns(MessageType_union_type_t) message_type, int32_t token, bool* found);
+    Adapter* adapter, uint32_t model_uid, notify(NotifyMessage_ref_t) message);
+DLL_PRIVATE int32_t send_notify_message_wait_ack(Adapter* adapter,
+    uint32_t model_uid, notify(NotifyMessage_ref_t) message, int32_t token);
+DLL_PRIVATE int32_t wait_message(
+    Adapter* adapter, const char** channel_name, int32_t token, bool* found);
 
 
 #endif  // DSE_MODELC_ADAPTER_MESSAGE_H_

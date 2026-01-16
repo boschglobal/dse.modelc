@@ -16,10 +16,7 @@
 
 
 #undef flatbuffers_identifier
-#define flatbuffers_channel_identifier "SBCH"
-#define flatbuffers_notify_identifier  "SBNO"
-#undef ns
-#define ns(x) FLATBUFFERS_WRAP_NAMESPACE(dse_schemas_fbs_channel, x)
+#define flatbuffers_notify_identifier "SBNO"
 #undef notify
 #define notify(x) FLATBUFFERS_WRAP_NAMESPACE(dse_schemas_fbs_notify, x)
 
@@ -29,9 +26,6 @@ DLL_PRIVATE uint32_t simbus_generate_uid_hash(const char* key);
 
 
 /* handler.c */
-DLL_PRIVATE void simbus_handle_message(Adapter* adapter,
-    const char* channel_name, ns(ChannelMessage_table_t) channel_message,
-    int32_t     token);
 DLL_PRIVATE void simbus_handle_notify_message(
     Adapter* adapter, notify(NotifyMessage_table_t) notify_message);
 

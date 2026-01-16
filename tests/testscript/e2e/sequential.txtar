@@ -3,6 +3,7 @@ env SIM=dse/modelc/build/_out/examples/sequential
 
 
 # TEST: sequential co-sim w. redis
+exec yq -i e '.spec.runtime.sequential |= true' $REPODIR/$SIM/data/simulation.yaml
 exec sh -e $WORK/test.sh
 
 stderr 'Using Valgrind'
@@ -25,6 +26,7 @@ stdout 'Message \(message\) : inst:3 count is 9'
 
 
 # TEST: sequential co-sim w. loopback
+exec yq -i e '.spec.runtime.sequential |= true' $REPODIR/$SIM/data/simulation.yaml
 exec sh -e $WORK/test-loopback.sh
 
 stderr 'Using Valgrind'

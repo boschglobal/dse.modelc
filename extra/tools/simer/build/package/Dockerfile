@@ -64,7 +64,7 @@ RUN cd /src && make build
 # =============
 FROM golang:bookworm AS trace
 ADD build/stage/trace /src
-RUN cd /src && make build
+RUN cd /src && make clean && make build
 
 
 # Simer Container Image

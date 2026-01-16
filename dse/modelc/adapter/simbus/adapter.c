@@ -18,10 +18,6 @@
 #define ENV_SIMBUS_TRACE_FILE "SIMBUS_TRACEFILE"
 
 
-#undef ns
-#define ns(x) FLATBUFFERS_WRAP_NAMESPACE(dse_schemas_fbs_channel, x)
-
-
 DLL_PRIVATE bool __simbus_exit_run_loop__;
 
 
@@ -42,7 +38,6 @@ Adapter* simbus_adapter_create(Endpoint* endpoint, double bus_step_size)
     adapter->bus_time =
         0.0 - bus_step_size;  // Will be set to 0.0 on first Sync.
     adapter->bus_step_size = bus_step_size;
-    v->handle_message = simbus_handle_message;
     v->handle_notify_message = simbus_handle_notify_message;
 
     /* Create the Adapter Model object. */
@@ -129,8 +124,7 @@ void simbus_adapter_run(Adapter* adapter)
     while (true) {
         const char* _msg_channel_name = NULL;
         bool        found = false; /* Found result is ignored. */
-        wait_message(
-            adapter, &_msg_channel_name, ns(MessageType_NONE), 0, &found);
+        wait_message(adapter, &_msg_channel_name, 0, &found);
 
         if (__simbus_exit_run_loop__) break;
     }

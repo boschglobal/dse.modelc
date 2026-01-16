@@ -4,10 +4,9 @@ go 1.24.2
 
 require (
 	github.com/boschglobal/dse.clib/extra/go/command v1.0.36
-	github.com/boschglobal/dse.schemas/code/go/dse v1.2.23
-	github.com/google/flatbuffers v25.2.10+incompatible
+	github.com/boschglobal/dse.schemas/code/go/dse v1.2.37
+	github.com/google/flatbuffers v25.12.19+incompatible
 	github.com/stretchr/testify v1.11.1
-	github.com/vmihailenco/msgpack/v5 v5.4.1
 )
 
 require (

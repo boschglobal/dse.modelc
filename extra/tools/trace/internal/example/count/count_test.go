@@ -17,6 +17,6 @@ func TestShortSummary(t *testing.T) {
 	trace := trace.Stream{File: "../../../testdata/simbus.bin"}
 	err := trace.Process(&v)
 	assert.Nil(t, err)
-	assert.Equal(t, 24, int(v.(*CountVisitor).msgCount))
-	assert.Equal(t, 10, int(v.(*CountVisitor).notifyCount))
+	assert.Equal(t, 20, int(v.(*CountVisitor).msgCount))
+	assert.Equal(t, 20, int(v.(*CountVisitor).notifyCount))
 }

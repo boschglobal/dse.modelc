@@ -12,7 +12,6 @@ import (
 
 	flatbuffers "github.com/google/flatbuffers/go"
 
-	"github.com/boschglobal/dse.schemas/code/go/dse/schemas/fbs/channel"
 	"github.com/boschglobal/dse.schemas/code/go/dse/schemas/fbs/notify"
 )
 
@@ -43,7 +42,7 @@ func (s Stream) Messages() iter.Seq[Flatbuffer] {
 		f, err := os.Open(s.File)
 		check(err)
 		defer f.Close()
-		for true {
+		for {
 			// Get the size of the next flatbuffer.
 			b := make([]byte, flatbuffers.SizeUint32)
 			readLen, err := f.Read(b)
@@ -64,12 +63,6 @@ func (s Stream) Messages() iter.Seq[Flatbuffer] {
 
 			// Create and yield the message.
 			switch id := flatbuffers.GetBufferIdentifier(flatbuffer); id {
-			case "SBCH":
-				m := ChannelMsg{}
-				m.Msg = channel.GetRootAsChannelMessage(flatbuffer, 0)
-				if !yield(m) {
-					return
-				}
 			case "SBNO":
 				m := NotifyMsg{}
 				m.Msg = notify.GetRootAsNotifyMessage(flatbuffer, 0)

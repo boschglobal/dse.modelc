@@ -27,60 +27,6 @@ static uint32_t _process_signal_lookup(Channel* ch, const char* signal_name)
 }
 
 
-static void process_signal_index_message(Adapter* adapter, Channel* channel,
-    uint32_t model_uid, ns(SignalIndex_table_t) signal_index_table)
-{
-    AdapterMsgVTable* v = (AdapterMsgVTable*)adapter->vtable;
-    flatcc_builder_t* B = &(v->builder);
-
-    flatcc_builder_reset(B);
-
-    /* Extract the vector parameters and create response object. */
-    if (!ns(SignalIndex_indexes_is_present(signal_index_table))) {
-        log_simbus("WARNING: no indexes in SignalIndex message!");
-    }
-    ns(SignalLookup_vec_t) vector = ns(SignalIndex_indexes(signal_index_table));
-    size_t vector_len = ns(SignalLookup_vec_len(vector));
-    ns(SignalLookup_ref_t)* resp__signal_lookup_list =
-        calloc(vector_len, sizeof(ns(SignalLookup_ref_t)));
-
-    /* Do the lookup and build the response vector. */
-    for (uint32_t _vi = 0; _vi < vector_len; _vi++) {
-        /* Check the Lookup data is complete. */
-        ns(SignalLookup_table_t) signal_lookup =
-            ns(SignalLookup_vec_at(vector, _vi));
-        if (!ns(SignalLookup_name_is_present(signal_lookup))) continue;
-        const char* signal_name = ns(SignalLookup_name(signal_lookup));
-        uint32_t    signal_uid = ns(SignalLookup_signal_uid(signal_lookup));
-        /* Lookup/Resolve the signal (the provided UID is discarded). */
-        signal_uid = _process_signal_lookup(channel, signal_name);
-        /* Create the response Lookup table/object. */
-        flatbuffers_string_ref_t resp__signal_name;
-        resp__signal_name = flatbuffers_string_create_str(B, signal_name);
-        ns(SignalLookup_start(B));
-        ns(SignalLookup_name_add(B, resp__signal_name));
-        ns(SignalLookup_signal_uid_add(B, signal_uid));
-        resp__signal_lookup_list[_vi] = ns(SignalLookup_end(B));
-    }
-    _generate_index(channel);
-
-    /* Create the response Lookup vecotr. */
-    log_simbus("SignalIndex --> [%s]", channel->name);
-    ns(SignalLookup_vec_ref_t) resp__signal_lookup_vector;
-    ns(SignalLookup_vec_start(B));
-    for (uint32_t i = 0; i < vector_len; i++)
-        ns(SignalLookup_vec_push(B, resp__signal_lookup_list[i]));
-    resp__signal_lookup_vector = ns(SignalLookup_vec_end(B));
-    /* Construct the response SignalIndex message. */
-    ns(MessageType_union_ref_t) resp__message;
-    resp__message = ns(MessageType_as_SignalIndex(
-        ns(SignalIndex_create(B, resp__signal_lookup_vector))));
-    send_message(
-        adapter, channel->endpoint_channel, model_uid, resp__message, false);
-    free(resp__signal_lookup_list);
-}
-
-
 static void process_notify_signalvector(Adapter* adapter, Channel* channel,
     uint32_t model_uid, notify(SignalVector_table_t) signal_vector)
 {
@@ -163,7 +109,7 @@ static void resolve_and_notify(
     for (uint32_t i = 0; i < am->channels_length; i++) {
         Channel* ch = _get_channel_byindex(am, i);
         _refresh_index(ch);
-        log_simbus("SignalVector --> [%s]", ch->name);
+        log_simbus("  SignalVector --> [%s]", ch->name);
 
         /* SignalVector table. */
         notify(SignalVector_start(B));
@@ -221,19 +167,16 @@ static void resolve_and_notify(
     notify(NotifyMessage_model_time_add(B, model_time));
     notify(NotifyMessage_schedule_time_add(B, schedule_time));
     notify(NotifyMessage_ref_t) message = notify(NotifyMessage_end(B));
-    send_notify_message(adapter, message);
+    send_notify_message(adapter, 0, message);
 }
 
 
 void simbus_handle_notify_message(
     Adapter* adapter, notify(NotifyMessage_table_t) notify_message)
 {
-    AdapterModel* am = adapter->bus_adapter_model;
-
-    /* Notify meta information. */
-    double model_time = notify(NotifyMessage_model_time(notify_message));
-    log_simbus("Notify/ModelReady <--");
-    log_simbus("    model_time=%f", model_time);
+    AdapterModel*     am = adapter->bus_adapter_model;
+    AdapterMsgVTable* v = (AdapterMsgVTable*)adapter->vtable;
+    flatcc_builder_t* B = &(v->builder);
 
     /* Benchmarking/Profiling. */
     if (adapter->bus_time > 0.0) {
@@ -254,6 +197,199 @@ void simbus_handle_notify_message(
                 model_proc_time, network_time_ns, ref_ts);
         }
     }
+
+    /* Handle embedded ModelRegister message/table. */
+    if (notify(NotifyMessage_model_register_is_present(notify_message))) {
+        /* NotifyMessage container message.*/
+        if (!notify(NotifyMessage_channel_name_is_present(notify_message)))
+            assert(0);
+        const char* ch_name =
+            notify(NotifyMessage_channel_name(notify_message));
+        Channel* channel = hashmap_get(&am->channels, ch_name);
+        assert(channel);
+        flatbuffers_uint32_vec_t vector =
+            notify(NotifyMessage_model_uid(notify_message));
+        size_t vector_len = flatbuffers_uint32_vec_len(vector);
+        assert(vector_len == 1);
+        uint32_t model_uid = flatbuffers_uint32_vec_at(vector, 0);
+        uint32_t token = notify(NotifyMessage_token(notify_message));
+
+        /* ModelRegister table. */
+        notify(ModelRegister_table_t) t =
+            notify(NotifyMessage_model_register(notify_message));
+        double step_size = notify(ModelRegister_step_size(t));
+        model_uid = notify(ModelRegister_model_uid(t));
+        uint32_t notify_uid = notify(ModelRegister_notify_uid(t));
+
+        log_simbus("ModelRegister <-- [%s]", channel->name);
+        log_simbus("    step_size=%f", step_size);
+        log_simbus("    model_uid=%d", model_uid);
+        log_simbus("    notify_uid=%d", notify_uid);
+        log_simbus("    token=%d", token);
+
+        Endpoint* endpoint = adapter->endpoint;
+        if (endpoint && endpoint->register_notify_uid) {
+            if (notify_uid) {
+                endpoint->register_notify_uid(endpoint, notify_uid);
+            }
+        }
+
+        /* Count the number of ModelRegisters. Keep in mind that this message
+        will be sent from a model on all channels, therefore the number of
+        ModelRegister messages may exceed the number of models.
+         */
+        simbus_model_at_register(am, channel, model_uid);
+        if (simbus_network_ready(am)) {
+            log_simbus("Bus Network is complete, all Models connected.");
+        }
+
+        /* Send response if necessary. */
+        if (token) {
+            log_simbus("ModelRegister ACK --> [%s]", channel->name);
+            log_simbus("    model_uid=%d", model_uid);
+            log_simbus("    token=%d", token);
+
+            flatcc_builder_reset(B);
+
+            /* ModelRegister message. */
+            notify(ModelRegister_start(B));
+            notify(ModelRegister_step_size_add)(B, step_size);
+            notify(ModelRegister_model_uid_add)(B, model_uid);
+            notify(ModelRegister_notify_uid_add)(B, notify_uid);
+            notify(ModelRegister_ref_t) model_register =
+                notify(ModelRegister_end(B));
+
+            /* UID vector. */
+            flatbuffers_uint32_vec_start(B);
+            flatbuffers_uint32_vec_push(B, &am->model_uid);
+            flatbuffers_uint32_vec_ref_t model_uids =
+                flatbuffers_uint32_vec_end(B);
+
+            notify(NotifyMessage_start(B));
+            notify(NotifyMessage_token_add(B, token));
+            notify(NotifyMessage_model_uid_add(B, model_uids));
+            notify(NotifyMessage_channel_name_add(
+                B, flatbuffers_string_create_str(B, channel->name)));
+            notify(NotifyMessage_model_register_add(B, model_register));
+            notify(NotifyMessage_ref_t) message = notify(NotifyMessage_end(B));
+
+            send_notify_message(adapter, 0, message);
+        }
+
+        return; /* No additional processing. */
+    }
+
+    /* Handle embedded SignalIndex message/table. */
+    if (notify(NotifyMessage_signal_index_is_present(notify_message))) {
+        /* NotifyMessage container message.*/
+        if (!notify(NotifyMessage_channel_name_is_present(notify_message)))
+            assert(0);
+        const char* ch_name =
+            notify(NotifyMessage_channel_name(notify_message));
+        Channel* channel = hashmap_get(&am->channels, ch_name);
+        assert(channel);
+        flatbuffers_uint32_vec_t vector =
+            notify(NotifyMessage_model_uid(notify_message));
+        size_t vector_len = flatbuffers_uint32_vec_len(vector);
+        assert(vector_len == 1);
+        uint32_t model_uid = flatbuffers_uint32_vec_at(vector, 0);
+        uint32_t token = notify(NotifyMessage_token(notify_message));
+
+        log_simbus("SignalIndex <--> [%s]", channel->name);
+        log_simbus("    model_uid=%d", model_uid);
+
+        flatcc_builder_reset(B);
+
+        /* SignalIndex table - extract and create response object. */
+        notify(SignalIndex_table_t) t =
+            notify(NotifyMessage_signal_index(notify_message));
+        if (!notify(SignalIndex_indexes_is_present(t))) {
+            log_simbus("WARNING: no indexes in SignalIndex message!");
+        }
+        notify(SignalLookup_vec_t) v = notify(SignalIndex_indexes(t));
+        size_t v_len = notify(SignalLookup_vec_len(v));
+        notify(SignalLookup_ref_t)* resp__signal_lookup_list =
+            calloc(v_len, sizeof(notify(SignalLookup_ref_t)));
+
+        /* Do the lookup and build the response vector. */
+        for (uint32_t _vi = 0; _vi < v_len; _vi++) {
+            /* Check the Lookup data is complete. */
+            notify(SignalLookup_table_t) signal_lookup =
+                notify(SignalLookup_vec_at(v, _vi));
+            if (!notify(SignalLookup_name_is_present(signal_lookup))) continue;
+            const char* signal_name = notify(SignalLookup_name(signal_lookup));
+            uint32_t    signal_uid =
+                notify(SignalLookup_signal_uid(signal_lookup));
+            /* Lookup/Resolve the signal (the provided UID is discarded). */
+            signal_uid = _process_signal_lookup(channel, signal_name);
+            /* Create the response Lookup table/object. */
+            flatbuffers_string_ref_t resp__signal_name;
+            resp__signal_name = flatbuffers_string_create_str(B, signal_name);
+            notify(SignalLookup_start(B));
+            notify(SignalLookup_name_add(B, resp__signal_name));
+            notify(SignalLookup_signal_uid_add(B, signal_uid));
+            resp__signal_lookup_list[_vi] = notify(SignalLookup_end(B));
+        }
+        notify(SignalLookup_vec_ref_t) resp__signal_lookup_vector;
+        notify(SignalLookup_vec_start(B));
+        for (uint32_t i = 0; i < v_len; i++) {
+            notify(SignalLookup_vec_push(B, resp__signal_lookup_list[i]));
+        }
+        resp__signal_lookup_vector = notify(SignalLookup_vec_end(B));
+
+        _generate_index(channel);
+
+        /* SignalIndex message - response. */
+        notify(SignalIndex_start(B));
+        notify(SignalIndex_indexes_add(B, resp__signal_lookup_vector));
+        notify(SignalIndex_ref_t) signal_index = notify(SignalIndex_end(B));
+
+        /* UID vector. */
+        flatbuffers_uint32_vec_start(B);
+        flatbuffers_uint32_vec_push(B, &model_uid);
+        flatbuffers_uint32_vec_ref_t model_uids = flatbuffers_uint32_vec_end(B);
+
+        /* NotifyMessage container message. */
+        notify(NotifyMessage_start(B));
+        notify(NotifyMessage_token_add(B, token));
+        notify(NotifyMessage_model_uid_add(B, model_uids));
+        notify(NotifyMessage_channel_name_add(
+            B, flatbuffers_string_create_str(B, channel->name)));
+        notify(NotifyMessage_signal_index_add(B, signal_index));
+        notify(NotifyMessage_ref_t) message = notify(NotifyMessage_end(B));
+
+        send_notify_message(adapter, 0, message);
+        free(resp__signal_lookup_list);
+
+        return; /* No additional processing. */
+    }
+
+    /* Handle embedded ModelExit message/table. */
+    if (notify(NotifyMessage_model_exit_is_present(notify_message))) {
+        if (!notify(NotifyMessage_channel_name_is_present(notify_message)))
+            assert(0);
+        const char* ch_name =
+            notify(NotifyMessage_channel_name(notify_message));
+        Channel* channel = hashmap_get(&am->channels, ch_name);
+        assert(channel);
+
+        flatbuffers_uint32_vec_t vector =
+            notify(NotifyMessage_model_uid(notify_message));
+        size_t vector_len = flatbuffers_uint32_vec_len(vector);
+        assert(vector_len == 1);
+        uint32_t model_uid = flatbuffers_uint32_vec_at(vector, 0);
+
+        log_simbus("ModelExit <-- [%s]", channel->name);
+        log_simbus("    model_uid=%d", model_uid);
+        simbus_model_at_exit(am, channel, model_uid);
+
+        return; /* No additional processing. */
+    }
+
+    /* Handle NotifyMessage ... Notify meta information. */
+    double model_time = notify(NotifyMessage_model_time(notify_message));
+    log_simbus("Notify/ModelReady <--");
+    log_simbus("    model_time=%f", model_time);
 
     /* Handle embedded SignalVector tables. */
     notify(SignalVector_vec_t) vector =
@@ -311,96 +447,5 @@ void simbus_handle_notify_message(
         /* Notify/ModelStart. */
         resolve_and_notify(adapter, model_time, stop_time);
         simbus_models_to_start(am);
-    }
-}
-
-
-void simbus_handle_message(Adapter* adapter, const char* channel_name,
-    ns(ChannelMessage_table_t) channel_message, int32_t  token)
-{
-    assert(adapter);
-    assert(channel_name);
-
-    AdapterModel* am = adapter->bus_adapter_model;
-    assert(am);
-    Channel* channel = hashmap_get(&am->channels, channel_name);
-    assert(channel);
-
-    AdapterMsgVTable* v = (AdapterMsgVTable*)adapter->vtable;
-    flatcc_builder_t* B = &(v->builder);
-    int32_t           rc = 0;
-    char*             response = NULL;
-
-    /* limitations:
-     * All signal changes sent to all models. No filtering based on SignalRead.
-     * Signal aliases are not supported.
-     * Many other limitations.
-     */
-
-    ns(MessageType_union_type_t) msg_type =
-        ns(ChannelMessage_message_type(channel_message));
-    uint32_t model_uid = ns(ChannelMessage_model_uid(channel_message));
-
-    /* ModelRegister */
-    if (msg_type == ns(MessageType_ModelRegister)) {
-        ns(ModelRegister_table_t) t =
-            ns(ChannelMessage_message(channel_message));
-        log_simbus("ModelRegister <-- [%s]", channel->name);
-        log_simbus("    step_size=%f", ns(ModelRegister_step_size(t)));
-        log_simbus("    model_uid=%d", model_uid);
-        log_simbus("    notify_uid=%d", ns(ModelRegister_notify_uid(t)));
-        log_simbus("    token=%d", token);
-
-        Endpoint* endpoint = adapter->endpoint;
-        if (endpoint && endpoint->register_notify_uid) {
-            uint32_t notify_uid = ns(ModelRegister_notify_uid(t));
-            if (notify_uid) {
-                endpoint->register_notify_uid(endpoint, notify_uid);
-            }
-        }
-
-        /* Count the number of ModelRegisters. Keep in mind that this message
-        will be sent from a model on all channels, therefore the number of
-        ModelRegister messages may exceed the number of models.
-         */
-        simbus_model_at_register(am, channel, model_uid);
-        if (simbus_network_ready(am)) {
-            log_simbus("Bus Network is complete, all Models connected.");
-        }
-        /* Send response if necessary. */
-        if (token || rc) {
-            log_simbus("ModelRegister ACK --> [%s]", channel->name);
-            log_simbus("    model_uid=%d", model_uid);
-            log_simbus("    token=%d", token);
-            log_simbus("    rc=%d", rc);
-            ns(MessageType_union_ref_t) ack_message;
-            flatcc_builder_reset(B);
-            ns(ModelRegister_start)(B);
-            ack_message =
-                ns(MessageType_as_ModelRegister(ns(ModelRegister_end)(B)));
-            send_message_ack(adapter, channel->endpoint_channel, model_uid,
-                ack_message, token, rc, response);
-        }
-    }
-    /* SignalIndex */
-    else if (msg_type == ns(MessageType_SignalIndex)) {
-        log_simbus("SignalIndex <-- [%s]", channel->name);
-        log_simbus("    model_uid=%d", model_uid);
-        process_signal_index_message(adapter, channel, model_uid,
-            ns(ChannelMessage_message(channel_message)));
-    }
-    /* ModelExit */
-    else if (msg_type == ns(MessageType_ModelExit)) {
-        log_simbus("ModelExit <-- [%s]", channel->name);
-        log_simbus("    model_uid=%d", model_uid);
-
-        simbus_model_at_exit(am, channel, model_uid);
-    }
-    /* Unexpected message? */
-    else {
-        log_simbus("UNEXPECTED <-- [%s]", channel->name);
-        log_simbus("    model_uid=%d", model_uid);
-        log_simbus("    message_type (%d)", msg_type);
-        return;
     }
 }

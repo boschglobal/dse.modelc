@@ -453,7 +453,7 @@ static int ready_update_sv(void* value, void* data)
         Channel*       ch = _get_channel_byindex(am, ch_idx);
         SimbusChannel* sc = _get_simbus_channel(v, ch->name);
         assert(sc);
-        log_simbus("SignalVector --> [%s]", ch->name);
+        log_simbus("  SignalVector --> [%s]", ch->name);
 
         _refresh_index(ch);
         for (uint32_t i = 0; i < ch->index.count; i++) {

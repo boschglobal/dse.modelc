@@ -2,10 +2,14 @@ github.com/boschglobal/dse.clib/extra/go/command v1.0.36 h1:4XbJLorCUk0BEB22KTE+
 github.com/boschglobal/dse.clib/extra/go/command v1.0.36/go.mod h1:g11DkMVJRVo+FP+vLJcTkJpLHpm27Xfizk8WzWDs17c=
 github.com/boschglobal/dse.schemas/code/go/dse v1.2.23 h1:IkviFh6zdgA34o504gcJ4V/06giyi76iNf4I7UAzjug=
 github.com/boschglobal/dse.schemas/code/go/dse v1.2.23/go.mod h1:1pxTw2DGf81svt1NZrzbn7kE7l1fsOjEmDpqKdEHl2Q=
+github.com/boschglobal/dse.schemas/code/go/dse v1.2.37 h1:MCbE7ree3p9Ktg51Qq+MFN/jm/EIo6VO8gs07CUb0Uo=
+github.com/boschglobal/dse.schemas/code/go/dse v1.2.37/go.mod h1:1pxTw2DGf81svt1NZrzbn7kE7l1fsOjEmDpqKdEHl2Q=
 github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c=
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/google/flatbuffers v25.2.10+incompatible h1:F3vclr7C3HpB1k9mxCGRMXq6FdUalZ6H/pNX4FP1v0Q=
 github.com/google/flatbuffers v25.2.10+incompatible/go.mod h1:1AeVuKshWv4vARoZatz6mlQ0JxURH0Kv5+zNeJKJCa8=
+github.com/google/flatbuffers v25.12.19+incompatible h1:haMV2JRRJCe1998HeW/p0X9UaMTK6SDo0ffLn2+DbLs=
+github.com/google/flatbuffers v25.12.19+incompatible/go.mod h1:1AeVuKshWv4vARoZatz6mlQ0JxURH0Kv5+zNeJKJCa8=
 github.com/pmezard/go-difflib v1.0.0 h1:4DBwDE0NGyQoBHbLQYPwSUPoCMWR5BEzIk/f1lZbAQM=
 github.com/pmezard/go-difflib v1.0.0/go.mod h1:iKH77koFhYxTK1pcRnkKkqfTogsbg7gZNVY4sRDYZ/4=
 github.com/stretchr/testify v1.11.1 h1:7s2iGBzp5EwR7/aIZr8ao5+dra3wiQyKjjFuvgVKu7U=

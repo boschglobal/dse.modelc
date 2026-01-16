@@ -11,10 +11,6 @@ type CountVisitor struct {
 	notifyCount uint32
 }
 
-func (c *CountVisitor) VisitChannelMsg(cm trace.ChannelMsg) {
-	c.msgCount += 1
-}
-
 func (c *CountVisitor) VisitNotifyMsg(nm trace.NotifyMsg) {
 	c.msgCount += 1
 	c.notifyCount += 1

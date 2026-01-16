@@ -9,15 +9,9 @@ import (
 	"strings"
 
 	"github.com/boschglobal/dse.modelc/extra/tools/trace/pkg/trace"
-	"github.com/boschglobal/dse.schemas/code/go/dse/schemas/fbs/channel"
 )
 
 type Short struct {
-}
-
-func (s *Short) VisitChannelMsg(cm trace.ChannelMsg) {
-	messageName := channel.EnumNamesMessageType[cm.Msg.MessageType()]
-	fmt.Printf("%s:%d:%d:%d::%s\n", cm.Msg.ChannelName(), cm.Msg.ModelUid(), cm.Msg.Token(), cm.Msg.Rc(), messageName)
 }
 
 func (s *Short) VisitNotifyMsg(nm trace.NotifyMsg) {
@@ -35,5 +29,28 @@ func (s *Short) VisitNotifyMsg(nm trace.NotifyMsg) {
 	if len(uids) == 0 {
 		uids = append(uids, "0") // SimBus.
 	}
+
+	// Embedded ModelRegister message.
+	mReg := nm.Msg.ModelRegister(nil)
+	if mReg != nil {
+		fmt.Printf("%s:%s:%d:%d::ModelRegister\n", nm.Msg.ChannelName(), uids[0], nm.Msg.Token(), nm.Msg.Rc())
+		return
+	}
+
+	// Embedded SignalIndex message.
+	siMsg := nm.Msg.SignalIndex(nil)
+	if siMsg != nil {
+		fmt.Printf("%s:%s:%d:%d::SignalIndex\n", nm.Msg.ChannelName(), uids[0], nm.Msg.Token(), nm.Msg.Rc())
+		return
+	}
+
+	// Embedded ModelExit message.
+	mExit := nm.Msg.ModelExit(nil)
+	if mExit != nil {
+		fmt.Printf("%s:%s:%d:%d::ModelExit\n", nm.Msg.ChannelName(), uids[0], nm.Msg.Token(), nm.Msg.Rc())
+		return
+	}
+
+	// Notify message.
 	fmt.Printf("Notify:%f:%f:%f %s (%s)\n", nm.Msg.ModelTime(), nm.Msg.NotifyTime(), nm.Msg.ScheduleTime(), direction, strings.Join(uids, ","))
 }
