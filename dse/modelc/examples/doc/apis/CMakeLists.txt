@@ -50,6 +50,7 @@ add_library(apis OBJECT
     model_interface.c
     signalvector_annotation.c
     signalvector_interface.c
+    schema_load_object.c
     schema_object_search.c
     simmock_configure.c
     simmock_frame_check.c

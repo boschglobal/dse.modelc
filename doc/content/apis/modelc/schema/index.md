@@ -12,6 +12,26 @@ documents which represent (some of) the Schemas of the Model C Library.
 
 ## Typedefs
 
+### SchemaFieldMapSpec
+
+```c
+typedef struct SchemaFieldMapSpec {
+    const char* key;
+    uint8_t val;
+}
+```
+
+### SchemaFieldSpec
+
+```c
+typedef struct SchemaFieldSpec {
+    SchemaFieldType type;
+    const char* path;
+    int offset;
+    const SchemaFieldMapSpec* map;
+}
+```
+
 ### SchemaLabel
 
 ```c
@@ -88,6 +108,36 @@ NULL
   an error condition. The caller will determine if this condition represents
   and error (typically a configuration error).
  
+
+
+### schema_load_object
+
+Load the specified fields from the YAML node and marshal them into the
+provided object. The field spec (`SchemaFieldSpec`) lists the type, path and
+offset for the fields to be loaded. Additionally a field map spec
+(`SchemaFieldMapSpec`) supports mapping/enumerations values.
+
+> Hint: The field map spec is a NTL (Null-Terminated-List).
+
+#### Example
+
+
+{{< readfile file="../examples/schema_load_object.c" code="true" lang="c" >}}
+
+#### Parameters
+
+node (void*)
+: The YAML node to load fields from.
+
+node (void*)
+: The object where fields should be loaded to.
+
+spec (SchemaFieldSpec)
+: Specification of fields to load from the `node`.
+
+count (size_t)
+: Number of items in the `spec`.
+
 
 
 ### schema_object_enumerator

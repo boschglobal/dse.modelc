@@ -359,3 +359,110 @@ void* schema_signal_object_generator(
     }
     return NULL;
 }
+
+
+/**
+schema_load_object
+==================
+
+Load the specified fields from the YAML node and marshal them into the
+provided object. The field spec (`SchemaFieldSpec`) lists the type, path and
+offset for the fields to be loaded. Additionally a field map spec
+(`SchemaFieldMapSpec`) supports mapping/enumerations values.
+
+> Hint: The field map spec is a NTL (Null-Terminated-List).
+
+Example
+-------
+
+{{< readfile file="../examples/schema_load_object.c" code="true" lang="c" >}}
+
+Parameters
+----------
+node (void*)
+: The YAML node to load fields from.
+
+node (void*)
+: The object where fields should be loaded to.
+
+spec (SchemaFieldSpec)
+: Specification of fields to load from the `node`.
+
+count (size_t)
+: Number of items in the `spec`.
+*/
+void schema_load_object(
+    void* node, void* object, const SchemaFieldSpec* spec, size_t count)
+{
+    YamlNode* n = (YamlNode*)node;
+    uint8_t*  o = (uint8_t*)object;
+    int       _;
+
+    log_debug("Schema load object:");
+
+    for (size_t i = 0; i < count; i++) {
+        const SchemaFieldSpec* s = &spec[i];
+        switch (s->type) {
+        case SchemaFieldTypeU8: {
+            if (s->map) {
+                const char* v = NULL;
+                dse_yaml_get_string(n, s->path, &v);
+                if (v == NULL) continue;
+                for (const SchemaFieldMapSpec* m = s->map; m && m->key; m++) {
+                    if (strcmp(v, m->key) == 0) {
+                        *(uint8_t*)(o + s->offset) = (uint8_t)m->val;
+                        log_debug("  load field: %s=%u (%s)", s->path,
+                            (uint8_t)m->val, m->key);
+                        break;
+                    }
+                }
+                continue;
+            } else {
+                unsigned int _uint = 0;
+                _ = dse_yaml_get_uint(n, s->path, &_uint);
+                *(uint8_t*)(o + s->offset) = (uint8_t)_uint;
+                if (!_)
+                    log_debug("  load field: %s=%u", s->path, (uint8_t)_uint);
+            }
+            break;
+        }
+        case SchemaFieldTypeU16: {
+            unsigned int _uint = 0;
+            _ = dse_yaml_get_uint(n, s->path, &_uint);
+            *(uint16_t*)(o + s->offset) = (uint16_t)_uint;
+            if (!_) log_debug("  load field: %s=%u", s->path, (uint8_t)_uint);
+            break;
+        }
+        case SchemaFieldTypeU32: {
+            unsigned int _uint = 0;
+            _ = dse_yaml_get_uint(n, s->path, &_uint);
+            *(uint32_t*)(o + s->offset) = (uint32_t)_uint;
+            if (!_) log_debug("  load field: %s=%u", s->path, (uint32_t)_uint);
+            break;
+        }
+        case SchemaFieldTypeD: {
+            _ = dse_yaml_get_double(n, s->path, (double*)(o + s->offset));
+            if (!_)
+                log_debug(
+                    "  load field: %s=%f", s->path, *(double*)(o + s->offset));
+            break;
+        }
+        case SchemaFieldTypeB: {
+            _ = dse_yaml_get_bool(n, s->path, (bool*)(o + s->offset));
+            if (!_)
+                log_debug(
+                    "  load field: %s=%u", s->path, *(bool*)(o + s->offset));
+            break;
+        }
+        case SchemaFieldTypeS: {
+            _ = dse_yaml_get_string(n, s->path, (const char**)(o + s->offset));
+            if (!_)
+                log_debug("  load field: %s=%s", s->path,
+                    *(const char**)(o + s->offset));
+            break;
+        }
+        default:
+            log_debug("  Warning, unsupported field type (type=%u)", s->type);
+        }
+    }
+}

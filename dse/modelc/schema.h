@@ -74,9 +74,34 @@ typedef struct SchemaSignalObject {
     void*       data;
 } SchemaSignalObject;
 
-
 DLL_PUBLIC void* schema_signal_object_generator(
     ModelInstanceSpec* model_instance, void* data);
 
+
+/* schema.c - Schema Object Generators. */
+typedef enum SchemaFieldType {
+    SchemaFieldTypeNONE = 0,
+    SchemaFieldTypeU8,
+    SchemaFieldTypeU16,
+    SchemaFieldTypeU32,
+    SchemaFieldTypeD, /* double */
+    SchemaFieldTypeB, /* bool */
+    SchemaFieldTypeS  /* string */
+} SchemaFieldType;
+
+typedef struct SchemaFieldMapSpec {
+    const char* key;
+    uint8_t     val;
+} SchemaFieldMapSpec;
+
+typedef struct SchemaFieldSpec {
+    SchemaFieldType           type;
+    const char*               path;
+    size_t                    offset;
+    const SchemaFieldMapSpec* map;
+} SchemaFieldSpec;
+
+DLL_PUBLIC void schema_load_object(
+    void* node, void* object, const SchemaFieldSpec* spec, size_t count);
 
 #endif  // DSE_MODELC_SCHEMA_H_
