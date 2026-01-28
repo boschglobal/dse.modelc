@@ -418,7 +418,7 @@ void schema_load_object(
                 }
                 continue;
             } else {
-                unsigned int _uint = 0;
+                unsigned int _uint = *(uint8_t*)(o + s->offset);
                 _ = dse_yaml_get_uint(n, s->path, &_uint);
                 *(uint8_t*)(o + s->offset) = (uint8_t)_uint;
                 if (!_)
@@ -427,14 +427,14 @@ void schema_load_object(
             break;
         }
         case SchemaFieldTypeU16: {
-            unsigned int _uint = 0;
+            unsigned int _uint = *(uint16_t*)(o + s->offset);
             _ = dse_yaml_get_uint(n, s->path, &_uint);
             *(uint16_t*)(o + s->offset) = (uint16_t)_uint;
             if (!_) log_debug("  load field: %s=%u", s->path, (uint8_t)_uint);
             break;
         }
         case SchemaFieldTypeU32: {
-            unsigned int _uint = 0;
+            unsigned int _uint = *(uint32_t*)(o + s->offset);
             _ = dse_yaml_get_uint(n, s->path, &_uint);
             *(uint32_t*)(o + s->offset) = (uint32_t)_uint;
             if (!_) log_debug("  load field: %s=%u", s->path, (uint32_t)_uint);
