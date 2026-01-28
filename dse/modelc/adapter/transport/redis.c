@@ -32,7 +32,6 @@ static void redis_endpoint_destroy(Endpoint* endpoint)
         if (redis_ep->async_ctx) {
             // Hold the redis collection open for a second, so that async
             // messaging can complete (i.e. ModelExit to SimBus).
-            redisReply* reply = NULL;
             if (redis_ep->reply_str == NULL && redis_ep->async_ctx) {
                 redis_ep->reply_alloc_size = 1000;
                 redis_ep->reply_str = malloc(redis_ep->reply_alloc_size);

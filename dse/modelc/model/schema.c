@@ -70,6 +70,7 @@ int schema_object_search(ModelInstanceSpec* model_instance,
     if (handler == NULL) return 0;
     if (doc_list == NULL) return 0;
 
+    size_t match_counter = 0;
     for (uint32_t i = 0; i < hashlist_length(doc_list); i++) {
         log_debug("  searching document ...");
         doc = hashlist_at(doc_list, i);
@@ -119,10 +120,16 @@ int schema_object_search(ModelInstanceSpec* model_instance,
         object.doc = (void*)doc;
         object.data = (void*)selector->data;
         int rc = handler(model_instance, &object);
-        if (rc != 0) return 1;
+        if (rc < 0) return 1; /* Stop searching, error. */
+        match_counter++;
+        if (rc > 0) return 0; /* Stop searching, success. */
     }
 
-    return 0;
+    if (match_counter) {
+        return 0;
+    } else {
+        return -ENODATA;
+    }
 }
 
 

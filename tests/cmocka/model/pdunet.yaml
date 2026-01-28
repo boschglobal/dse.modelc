@@ -1,0 +1,289 @@
+---
+kind: Stack
+metadata:
+  name: stack
+spec:
+  connection:
+    transport:
+      redispubsub:
+        uri: redis://redis:6379
+        timeout: 60
+  models:
+    - name: flexray
+      model:
+        name: Stub
+      uid: 42
+      channels:
+        - name: network
+          alias: network_vector
+---
+kind: Model
+metadata:
+  name: Stub
+spec:
+  runtime:
+    dynlib:
+      - os: linux
+        arch: amd64
+        path: lib/model.so
+  channels:
+    - alias: network_vector
+      selectors:
+        channel: network
+---
+kind: SignalGroup
+metadata:
+  name: test_binary_signals
+  labels:
+    name: flexray
+    channel: network_vector
+  annotations:
+    vector_type: binary
+spec:
+  signals:
+    - signal: FlexRay
+      annotations:
+        mime_type: application/x-automotive-bus; interface=stream; type=pdu; model=flexray; schema=fbs; swc_id=4; ecu_id=5
+---
+kind: Network
+metadata:
+  name: FR
+  labels:
+    name: FlexRay
+    model: flexray
+spec:
+  schedule:
+    epoch_offset: 10.000
+  # FlexRay cluster configuration (NetworkMetadata → FlexrayConfig)
+  metadata:
+    flexray:
+      inhibit_null_frames: true
+      macrotick_per_cycle: 8000
+      microtick_per_cycle: 80
+      network_idle_start: 10
+      static_slot_length: 64
+      static_slot_count: 48
+      minislot_length: 10
+      minislot_count: 300
+      static_slot_payload_length: 32
+      bit_rate: BR10Mbps
+      channel_enable: AB
+      wakeup_channel_select: A
+      single_slot_enabled: true
+  pdus:
+    - pdu: ONE
+      id: 101
+      length: 64
+      dir: Tx
+      schedule:
+        phase: -0.001
+        interval: 0.005
+      metadata:
+        flexray:
+          slot_id: 11
+          payload_length: 64
+          cycle_repetition: 8
+          base_cycle: 4
+          direction: Tx
+          channel: A
+          transmit_mode: Continuous
+          inhibit_null: true
+      functions:
+        encode:
+          - lua: |
+              function FR__ONE-encode(ctx) return ctx end
+        decode:
+          - lua: |
+              function FR__ONE-decode(ctx) return ctx end
+      signals:
+        - signal: SIG_A
+          encoding:
+            start: 4
+            length: 12
+            factor: 0.1
+            offset: -40
+            min: -30
+            max: 215
+          functions:
+            encode:
+              - lua: |
+                  function FR__ONE__SIG_A-encode(ctx) return ctx end
+            decode:
+              - lua: |
+                  function FR__ONE__SIG_A-decode(ctx) return ctx end
+        - signal: SIG_B
+          encoding:
+            start: 13
+            length: 20
+            factor: 1.0
+            offset: -50
+            min: -50
+            max: 50
+          functions:
+            encode:
+              - lua: |
+                  function FR__ONE__SIG_B-encode(ctx) return ctx end
+            decode:
+              - lua: |
+                  function FR__ONE__SIG_B-decode(ctx) return ctx end
+    - pdu: TWO
+      id: 202
+      length: 64
+      dir: Rx
+      metadata:
+        flexray:
+          slot_id: 22
+          payload_length: 64
+          cycle_repetition: 4
+          base_cycle: 2
+          direction: Rx
+          channel: A
+          transmit_mode: Continuous
+          inhibit_null: true
+      functions:
+        encode:
+          - lua: |
+              function FR__TWO-encode(ctx) return ctx end
+        decode:
+          - lua: |
+              function FR__TWO-decode(ctx) return ctx end
+      signals:
+        - signal: SIG_C
+          encoding:
+            start: 2
+            length: 4
+            factor: 1.0
+            offset: 0
+          functions:
+            encode:
+              - lua: |
+                  function FR__TWO__SIG_C-encode(ctx) return ctx end
+            decode:
+              - lua: |
+                  function FR__TWO__SIG_C-decode(ctx) return ctx end
+        - signal: SIG_D
+          encoding:
+            start: 10
+            length: 8
+            factor: 1.0
+            offset: -50
+            min: 0
+            max: 200
+          functions:
+            encode:
+              - lua: |
+                  function FR__TWO__SIG_D-encode(ctx) return ctx end
+            decode:
+              - lua: |
+                  function FR__TWO__SIG_D-decode(ctx) return ctx end
+    - pdu: THREE
+      id: 303
+      length: 64
+      dir: Tx
+      schedule:
+        phase: -0.001
+        interval: 0.010
+      metadata:
+        flexray:
+          slot_id: 33
+          payload_length: 64
+          cycle_repetition: 4
+          base_cycle: 2
+          direction: Tx
+          channel: A
+          transmit_mode: Continuous
+          inhibit_null: true
+      functions:
+        encode:
+          - lua: |
+              function FR__THREE-encode(ctx) return ctx end
+        decode:
+          - lua: |
+              function FR__THREE-decode(ctx) return ctx end
+      signals:
+        - signal: SIG_E
+          encoding:
+            start: 2
+            length: 4
+            factor: 1.0
+            offset: 0
+          functions:
+            encode:
+              - lua: |
+                  function FR__THREE__SIG_E-encode(ctx) return ctx end
+            decode:
+              - lua: |
+                  function FR__THREE__SIG_E-decode(ctx) return ctx end
+        - signal: SIG_F
+          encoding:
+            start: 10
+            length: 8
+            factor: 1.0
+            offset: -50
+            min: 0
+            max: 200
+          functions:
+            encode:
+              - lua: |
+                  function FR__THREE__SIG_F-encode(ctx) return ctx end
+            decode:
+              - lua: |
+                  function FR__THREE__SIG_F-decode(ctx) return ctx end
+    - pdu: FOUR
+      id: 404
+      length: 64
+      dir: Rx
+      metadata:
+        flexray:
+          slot_id: 44
+          payload_length: 64
+          cycle_repetition: 4
+          base_cycle: 2
+          direction: Rx
+          channel: A
+          transmit_mode: Continuous
+          inhibit_null: true
+      functions:
+        encode:
+          - lua: |
+              function FR__FOUR-encode(ctx) return ctx end
+        decode:
+          - lua: |
+              function FR__FOUR-decode(ctx) return ctx end
+      signals:
+        - signal: SIG_G  # Test default values.
+          encoding:
+            start: 0
+            length: 4
+        - signal: SIG_H
+          encoding:
+            start: 8
+            length: 8
+            factor: 2.0
+            offset: -100
+            min: -80
+            max: 300
+          functions:
+            encode:
+              - lua: |
+                  function FR__FOUR__SIG_H-encode(ctx) return ctx end
+            decode:
+              - lua: |
+                  function FR__FOUR__SIG_H-decode(ctx) return ctx end
+        - signal: SIG_I  # Discarded, no encoding.start or encoding.length.
+        - signal: SIG_J  # Discarded, factor is 0.0.
+          encoding:
+            start: 16
+            length: 32
+            factor: 0.0
+            offset: 250
+            min: -250
+            max: 250
+        - signal: SIG_K  # Discarded, beyond payload boundary.
+          encoding:
+            start: 1
+            length: 512  # 64 * 8
+        - signal: SIG_L  # Discarded, beyond payload boundary.
+          encoding:
+            start: 512
+            length: 1

@@ -106,6 +106,7 @@ set(DSE_NCODEC_INCLUDE_DIR ${dse_ncodec_SOURCE_DIR})
 # =====================
 set(DSE_MODELC_SOURCE_DIR ../../dse/modelc)
 set(DSE_MOCKS_SOURCE_DIR ../../dse/mocks)
+file(GLOB PDUNET_SOURCES CONFIGURE_DEPENDS "${DSE_MODELC_SOURCE_DIR}/model/pdunet/*.c")
 set(DSE_MODELC_SOURCE_FILES
     ${DSE_MODELC_SOURCE_DIR}/model/gateway.c
     ${DSE_MODELC_SOURCE_DIR}/model/lua.c
@@ -113,6 +114,8 @@ set(DSE_MODELC_SOURCE_FILES
     ${DSE_MODELC_SOURCE_DIR}/model/mcl.c
     ${DSE_MODELC_SOURCE_DIR}/model/model.c
     ${DSE_MODELC_SOURCE_DIR}/model/ncodec.c
+    ${DSE_MODELC_SOURCE_DIR}/model/pdunet.c
+    ${PDUNET_SOURCES}
     ${DSE_MODELC_SOURCE_DIR}/model/schema.c
     ${DSE_MODELC_SOURCE_DIR}/model/signal.c
     ${DSE_MODELC_SOURCE_DIR}/model/trace.c
@@ -140,6 +143,8 @@ set(DSE_MODELC_SIMBUS_LOOPBACK_SOURCE_FILES
     ${DSE_MODELC_SOURCE_DIR}/model/mcl.c
     ${DSE_MODELC_SOURCE_DIR}/model/model.c
     ${DSE_MODELC_SOURCE_DIR}/model/ncodec.c
+    ${DSE_MODELC_SOURCE_DIR}/model/pdunet.c
+    ${PDUNET_SOURCES}
     ${DSE_MODELC_SOURCE_DIR}/model/schema.c
     ${DSE_MODELC_SOURCE_DIR}/model/signal.c
     ${DSE_MODELC_SOURCE_DIR}/model/trace.c
@@ -187,6 +192,7 @@ add_executable(test_model
     model/test_gateway.c
     model/test_ncodec_can.c
     model/test_ncodec_pdu.c
+    model/test_pdunet.c
     model/test_schema.c
     model/test_stack.c
     model/test_signal.c
@@ -227,12 +233,15 @@ install(
         model/gateway.yaml
         model/internal.yaml
         model/ncodec.yaml
+        model/pdunet.yaml
+        model/pdunet_lua.yaml
         model/sequential.yaml
         model/signal.yaml
         model/transform.yaml
     DESTINATION
         resources/model
 )
+set(FLATCC_INCLUDE_DIR ${DSE_NCODEC_SOURCE_DIR}/schema/abs/flatcc/include)
 
 
 # Target - Model Interface
@@ -241,6 +250,7 @@ add_executable(test_model_interface
     model/interface/__test__.c
     model/interface/test_model_api.c
     model/interface/test_model_examples.c
+    model/interface/test_pdunet_ncodec.c
     ${DSE_CLIB_SOURCE_FILES}
     ${DSE_MODELC_SOURCE_FILES}
 )
@@ -250,6 +260,7 @@ target_include_directories(test_model_interface
         ${DSE_MODELC_INCLUDE_DIR}
         ${DSE_NCODEC_INCLUDE_DIR}
         ${YAML_SOURCE_DIR}/include
+        ${FLATCC_INCLUDE_DIR}
         ./
 )
 target_compile_definitions(test_model_interface

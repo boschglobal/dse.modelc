@@ -372,6 +372,154 @@ void test_model__lua(void** state)
 }
 
 
+#define PDUNET_FRNET_INST_NAME       "pdunet_inst"
+#define PDUNET_FRNET_SIGNAL_ALIVE    0
+#define PDUNET_FRNET_SIGNAL_ALIVE_RX 1
+#define PDUNET_FRNET_SIGNAL_FOO      2
+#define PDUNET_FRNET_SIGNAL_BAR      3
+
+extern void ncodec_trace_configure(void* nc, ModelInstanceSpec* mi, bool force);
+extern void ncodec_trace_destroy(void* nc);
+
+void test_model__pdunet_frnet(void** state)
+{
+    chdir("../../../../dse/modelc/build/_out/examples/pdunet/frnet");
+
+    const char* inst_names[] = {
+        PDUNET_FRNET_INST_NAME,
+    };
+    char* argv[] = {
+        (char*)"test_model_interface",
+        (char*)"--name=" PDUNET_FRNET_INST_NAME,
+        (char*)"--logger=5",  // 1=debug, 5=QUIET (commit with 5!)
+        (char*)"data/simulation.yaml",
+        (char*)"data/network.yaml",
+        (char*)"data/model.yaml",
+    };
+    SimMock* mock = *state = simmock_alloc(inst_names, ARRAY_SIZE(inst_names));
+    simmock_configure(mock, argv, ARRAY_SIZE(argv), ARRAY_SIZE(inst_names));
+    ModelMock* model = simmock_find_model(mock, PDUNET_FRNET_INST_NAME);
+    simmock_load(mock);
+    simmock_load_model_check(model, true, true, false);
+    simmock_setup(mock, "scalar", "network");
+    assert_non_null(model->sv_network);
+    assert_non_null(model->sv_signal);
+
+    /* Install the trace. */
+    ncodec_trace_destroy(model->sv_network->ncodec[0]);
+    ncodec_trace_configure(model->sv_network->ncodec[0], model->mi, true);
+
+    /* Initial value. */
+    double alive = 0;
+    double alive_rx = 0;
+    double foo = 0;
+    double bar = 0;
+    simmock_print_scalar_signals(mock, LOG_DEBUG);
+    simmock_print_binary_signals(mock, LOG_TRACE);
+    /* T0 */
+    for (uint32_t i = 0; i < 1; i++) {
+        /* Do the check. */
+        SignalCheck checks[] = {
+            { .index = PDUNET_FRNET_SIGNAL_ALIVE, .value = alive },
+            { .index = PDUNET_FRNET_SIGNAL_ALIVE_RX, .value = alive_rx },
+            { .index = PDUNET_FRNET_SIGNAL_FOO, .value = foo },
+            { .index = PDUNET_FRNET_SIGNAL_BAR, .value = bar },
+        };
+        simmock_signal_check(
+            mock, PDUNET_FRNET_INST_NAME, checks, ARRAY_SIZE(checks), NULL);
+        /* Step the model. */
+        assert_int_equal(simmock_step(mock, true), 0);
+        simmock_print_scalar_signals(mock, LOG_DEBUG);
+        simmock_print_binary_signals(mock, LOG_TRACE);
+        /* Set check conditions (for next step). */
+    }
+    alive = 0;
+    alive_rx = 0;
+    foo = 42;
+    bar = 0;
+    /* T0 ... 4.0 */
+    for (uint32_t i = 0; i < 8; i++) {
+        /* Do the check. */
+        SignalCheck checks[] = {
+            { .index = PDUNET_FRNET_SIGNAL_ALIVE, .value = alive },
+            { .index = PDUNET_FRNET_SIGNAL_ALIVE_RX, .value = alive_rx },
+            { .index = PDUNET_FRNET_SIGNAL_FOO, .value = foo },
+            { .index = PDUNET_FRNET_SIGNAL_BAR, .value = bar },
+        };
+        simmock_signal_check(
+            mock, PDUNET_FRNET_INST_NAME, checks, ARRAY_SIZE(checks), NULL);
+        /* Step the model. */
+        assert_int_equal(simmock_step(mock, true), 0);
+        simmock_print_scalar_signals(mock, LOG_DEBUG);
+        simmock_print_binary_signals(mock, LOG_TRACE);
+        /* Set check conditions (for next step). */
+    }
+    alive = 1;
+    alive_rx = 0;
+    foo = 42;
+    bar = 0;
+    /* T4.5 ... 5.5 */
+    for (uint32_t i = 0; i < 4; i++) {
+        /* Do the check. */
+        SignalCheck checks[] = {
+            { .index = PDUNET_FRNET_SIGNAL_ALIVE, .value = alive },
+            { .index = PDUNET_FRNET_SIGNAL_ALIVE_RX, .value = alive_rx },
+            { .index = PDUNET_FRNET_SIGNAL_FOO, .value = foo },
+            { .index = PDUNET_FRNET_SIGNAL_BAR, .value = bar },
+        };
+        simmock_signal_check(
+            mock, PDUNET_FRNET_INST_NAME, checks, ARRAY_SIZE(checks), NULL);
+        /* Step the model. */
+        assert_int_equal(simmock_step(mock, true), 0);
+        simmock_print_scalar_signals(mock, LOG_DEBUG);
+        simmock_print_binary_signals(mock, LOG_TRACE);
+        /* Set check conditions (for next step). */
+    }
+    alive = 1;
+    alive_rx = 1;
+    foo = 24;
+    bar = 42;
+    /* T6.0 .. 9.0 */
+    for (uint32_t i = 0; i < 5; i++) {
+        /* Do the check. */
+        SignalCheck checks[] = {
+            { .index = PDUNET_FRNET_SIGNAL_ALIVE, .value = alive },
+            { .index = PDUNET_FRNET_SIGNAL_ALIVE_RX, .value = alive_rx },
+            { .index = PDUNET_FRNET_SIGNAL_FOO, .value = foo },
+            { .index = PDUNET_FRNET_SIGNAL_BAR, .value = bar },
+        };
+        simmock_signal_check(
+            mock, PDUNET_FRNET_INST_NAME, checks, ARRAY_SIZE(checks), NULL);
+        /* Step the model. */
+        assert_int_equal(simmock_step(mock, true), 0);
+        simmock_print_scalar_signals(mock, LOG_DEBUG);
+        simmock_print_binary_signals(mock, LOG_TRACE);
+        /* Set check conditions (for next step). */
+    }
+    alive = 2;
+    alive_rx = 1;
+    foo = 24;
+    bar = 42;
+    /* T9.5 ... */
+    for (uint32_t i = 0; i < 4; i++) {
+        /* Do the check. */
+        SignalCheck checks[] = {
+            { .index = PDUNET_FRNET_SIGNAL_ALIVE, .value = alive },
+            { .index = PDUNET_FRNET_SIGNAL_ALIVE_RX, .value = alive_rx },
+            { .index = PDUNET_FRNET_SIGNAL_FOO, .value = foo },
+            { .index = PDUNET_FRNET_SIGNAL_BAR, .value = bar },
+        };
+        simmock_signal_check(
+            mock, PDUNET_FRNET_INST_NAME, checks, ARRAY_SIZE(checks), NULL);
+        /* Step the model. */
+        assert_int_equal(simmock_step(mock, true), 0);
+        simmock_print_scalar_signals(mock, LOG_DEBUG);
+        simmock_print_binary_signals(mock, LOG_TRACE);
+        /* Set check conditions (for next step). */
+    }
+}
+
+
 int run_model_examples_tests(void)
 {
     void* s = test_setup;
@@ -386,6 +534,7 @@ int run_model_examples_tests(void)
         cmocka_unit_test_setup_teardown(test_model__ncodec_can, s, t),
         cmocka_unit_test_setup_teardown(test_model__ncodec_pdu, s, t),
         cmocka_unit_test_setup_teardown(test_model__lua, s, t),
+        cmocka_unit_test_setup_teardown(test_model__pdunet_frnet, s, t),
 #ifndef _WIN32
         cmocka_unit_test_setup_teardown(test_model__benchmark, s, t),
 #endif

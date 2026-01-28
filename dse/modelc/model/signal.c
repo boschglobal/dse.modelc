@@ -19,7 +19,8 @@
 #define DEFAULT_BINARY_MIME_TYPE "application/octet-stream"
 
 
-extern void ncodec_trace_configure(NCODEC* nc, ModelInstanceSpec* mi);
+extern void ncodec_trace_configure(
+    NCODEC* nc, ModelInstanceSpec* mi, bool force);
 extern void ncodec_trace_destroy(NCodecInstance* nc);
 
 
@@ -310,7 +311,7 @@ static int _add_sv(void* _mfc, void* _sv_data)
             void*   stream = model_sv_stream_create(current_sv, i);
             NCODEC* nc = ncodec_open(current_sv->mime_type[i], stream);
             if (nc) {
-                ncodec_trace_configure(nc, data->mi);
+                ncodec_trace_configure(nc, data->mi, false);
                 current_sv->ncodec[i] = nc;
             } else {
                 model_sv_stream_destroy(stream);
@@ -394,8 +395,7 @@ SignalVector* model_sv_create(ModelInstanceSpec* mi)
     }
 
     /* Lookup channel aliases on the Model Instance. */
-    SignalVector* sv_p = sv;
-    while (sv_p && sv_p->name) {
+    for (SignalVector* sv_p = sv; sv_p->name; sv_p++) {
         const char* selector[] = { "name" };
         const char* value[] = { sv_p->name };
         YamlNode*   ch_node =
@@ -403,8 +403,6 @@ SignalVector* model_sv_create(ModelInstanceSpec* mi)
         if (ch_node) {
             sv_p->alias = dse_yaml_get_scalar(ch_node, "alias");
         }
-        /* Next signal vector. */
-        sv_p++;
     }
 
     /* Return the signal vector list (NULL terminated). */
@@ -436,11 +434,12 @@ void model_sv_destroy(SignalVector* sv)
             /* NCodec. */
             for (uint32_t i = 0; i < sv->count; i++) {
                 NCodecInstance* nc = sv->ncodec[i];
-                if (nc) {
-                    ncodec_trace_destroy(nc);
-                    ncodec_close((NCODEC*)nc);
-                    sv->ncodec[i] = NULL;
-                }
+                if (nc == NULL) continue;
+
+                /* Destroy the NCodec objects. */
+                ncodec_trace_destroy(nc);
+                ncodec_close((NCODEC*)nc);
+                sv->ncodec[i] = NULL;
             }
             free(sv->ncodec);
         }

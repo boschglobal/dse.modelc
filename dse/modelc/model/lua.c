@@ -39,8 +39,9 @@ lua_State* lua_model_create(ModelDesc* m)
     lua_State* L;
     L = luaL_newstate();
     luaL_openlibs(L);
-    lua_modellib_open(L, m);
-
+    if (m != NULL) {
+        lua_modellib_open(L, m);
+    }
     return L;
 }
 

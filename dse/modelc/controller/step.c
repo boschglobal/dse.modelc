@@ -12,6 +12,7 @@
 #include <dse/modelc/controller/controller.h>
 #include <dse/modelc/controller/model_private.h>
 #include <dse/ncodec/codec.h>
+#include <dse/modelc/pdunet.h>
 
 
 #define UNUSED(x) ((void)x)
@@ -54,12 +55,30 @@ int step_model(ModelInstanceSpec* mi, double* model_time)
     ControllerModel*      cm = mip->controller_model;
     AdapterModel*         am = mip->adapter_model;
 
+    /* PDU Net - receive from network. */
+    for (size_t i = 0; i < vector_len(&mip->pdunet); i++) {
+        PduNetworkDesc* net = NULL;
+        vector_at(&mip->pdunet, i, &net);
+        if (net) {
+            pdunet_rx(net, NULL, NULL, NULL);
+        }
+    }
+
     /* Step the Model (i.e. call registered Model Functions). */
     mf_step_data    step_data = { mi, am->model_time, am->stop_time };
     HashMap*        mf_map = &cm->model_functions;
     struct timespec stepcall_ts = get_timespec_now();
     int rc = hashmap_iterator(mf_map, _do_step_func, false, &step_data);
     am->bench_steptime_ns = get_elapsedtime_ns(stepcall_ts);
+
+    /* PDU Net - send to network. */
+    for (size_t i = 0; i < vector_len(&mip->pdunet); i++) {
+        PduNetworkDesc* net = NULL;
+        vector_at(&mip->pdunet, i, &net);
+        if (net) {
+            pdunet_tx(net, NULL, pdunet_visit_needs_tx, NULL, am->model_time);
+        }
+    }
 
     /* Update the Model times. */
     am->model_time = am->stop_time;
