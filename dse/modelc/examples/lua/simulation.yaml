@@ -24,8 +24,8 @@ spec:
       runtime:
         mcl: lua
         files:
-          - data/signalgroup.yaml
-          - data/model.lua
+          - model/lua_inst/data/signalgroup.yaml
+          - model/lua_inst/model.lua
       channels:
         - name: signal
           alias: signal
