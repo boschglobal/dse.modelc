@@ -27,6 +27,9 @@ func listFiles(paths []string, exts []string) []string {
 	for _, path := range paths {
 		fileSystem := os.DirFS(".")
 		fs.WalkDir(fileSystem, path, func(s string, d fs.DirEntry, e error) error {
+			if e != nil {
+				return nil
+			}
 			slog.Debug(fmt.Sprintf("ListFiles: %s (%t, %s)", s, d.IsDir(), filepath.Ext(s)))
 			if !d.IsDir() && slices.Contains(exts, filepath.Ext(s)) {
 				files = append(files, s)
