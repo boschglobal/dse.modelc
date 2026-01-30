@@ -344,7 +344,7 @@ void test_model__lua(void** state)
         (char*)"--name=" LUA_INST_NAME,
         (char*)"--logger=5",  // 1=debug, 5=QUIET (commit with 5!)
         (char*)"data/simulation.yaml",
-        (char*)"data/signalgroup.yaml",
+        (char*)"model/"LUA_INST_NAME"/data/signalgroup.yaml",
     };
     SimMock* mock = *state = simmock_alloc(inst_names, ARRAY_SIZE(inst_names));
     simmock_configure(mock, argv, ARRAY_SIZE(argv), ARRAY_SIZE(inst_names));
