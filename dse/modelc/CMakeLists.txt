@@ -167,7 +167,6 @@ endif()
 
 # External Project - lua
 # ----------------------
-if(UNIX)
 set(LUA_SOURCE_DIR "$ENV{EXTERNAL_BUILD_DIR}/lua")
 set(LUA_BINARY_DIR "$ENV{EXTERNAL_BUILD_DIR}/lua")
 find_library(LUA_LIB
@@ -184,7 +183,6 @@ set_target_properties(lua
         IMPORTED_LOCATION "${LUA_LIB}"
         INTERFACE_INCLUDE_DIRECTORIES "${LUA_BINARY_DIR}"
 )
-endif()
 
 
 # Targets

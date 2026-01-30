@@ -10,9 +10,7 @@
 #include <dse/modelc/controller/controller.h>
 #include <dse/modelc/runtime.h>
 #include <dse/modelc/mcl.h>
-#ifdef __linux__
 #include <lua.h>
-#endif
 
 #define MI_RUNTIME_MCL_PATH     "runtime/mcl"
 #define MI_RUNTIME_LUA_MCL_NAME "lua"
@@ -22,9 +20,7 @@ typedef struct ModelInstancePrivate {
     ControllerModel* controller_model;
     AdapterModel*    adapter_model;
     Controller*      controller;
-#ifdef __linux__
-    lua_State* lua_state;
-#endif
+    lua_State*       lua_state;
 
     /* Runtime MCL Properties (built-in MCL's). */
     const char* mcl_name;

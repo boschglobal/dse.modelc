@@ -19,9 +19,7 @@
 #include <dse/modelc/adapter/transport/endpoint.h>
 #include <dse/modelc/controller/controller.h>
 #include <dse/modelc/controller/model_private.h>
-#ifdef __linux__
 #include <dse/modelc/model/lua.h>
-#endif
 #include <dse/modelc/model.h>
 
 
@@ -116,12 +114,8 @@ static int _configure_mcl(ModelInstanceSpec* mi)
     log_notice("  MCL Name: %s", mip->mcl_name);
 
     if (strcmp(mip->mcl_name, MI_RUNTIME_LUA_MCL_NAME) == 0) {
-#ifdef __linux__
         mip->mcl_create_func = lua_mcl_create;
         mip->mcl_destroy_func = lua_mcl_destroy;
-#else
-        log_error("Lua MCL runtime not supported!");
-#endif
         return 0;
     } else {
         log_error("MCL runtime not available!");

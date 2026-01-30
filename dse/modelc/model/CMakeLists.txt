@@ -11,8 +11,8 @@ project(ModelC_Model_API)
 add_library(model_api OBJECT
     $<$<BOOL:${UNIX}>:checks.c>
     gateway.c
-    $<$<BOOL:${UNIX}>:lua.c>
-    $<$<BOOL:${UNIX}>:luamodel.c>
+    lua.c
+    luamodel.c
     mcl.c
     model.c
     ncodec.c
@@ -39,7 +39,7 @@ target_link_libraries(model_api
         ab-codec
     PRIVATE
         yaml
-        $<$<BOOL:${UNIX}>:lua>
+        lua
         m
         $<$<BOOL:${WIN32}>:ws2_32>
         $<$<BOOL:${WIN32}>:iphlpapi>

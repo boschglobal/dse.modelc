@@ -4,9 +4,9 @@
 #include <dse/modelc/schema.h>
 
 #define ARRAY_SIZE(a) (sizeof(a) / sizeof((a)[0]))
-#define S SchemaFieldTypeS
-#define U8 SchemaFieldTypeU8
-#define U32 SchemaFieldTypeU32
+#define S             SchemaFieldTypeS
+#define U8            SchemaFieldTypeU8
+#define U32           SchemaFieldTypeU32
 
 typedef enum {
     DirectionNone = 0,
