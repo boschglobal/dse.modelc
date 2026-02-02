@@ -7,7 +7,7 @@ exec sh -e $WORK/test.sh
 
 
 stdout '\[INFO\]   Allocate signal vector type 0 for 1 signals.'
-stdout 'Lua MCL: loading model: data/model.lua'
+stdout 'Lua MCL: loading model: model/lua_inst/model.lua'
 stdout 'model_create\(\)'
 stdout '\[ERROR\]  error msg'
 stdout 'notice msg'
