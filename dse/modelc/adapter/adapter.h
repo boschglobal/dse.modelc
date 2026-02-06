@@ -77,6 +77,7 @@ typedef struct SignalMap {
 typedef struct Channel {
     const char* name;
     void*       endpoint_channel;  // Reference to an Endpoint object.
+    void*       mfc;               // Reference to ModelFunctionChannel object.
 
     /* Signal properties. */
     HashMap signal_values;  // map{name:SignalValue}
@@ -146,7 +147,8 @@ typedef struct Adapter {
 /* adapter.c */
 DLL_PRIVATE Adapter* adapter_create(Endpoint* endpoint);
 DLL_PRIVATE Channel* adapter_init_channel(AdapterModel* am,
-    const char* channel_name, const char** signal_name, uint32_t count);
+    const char* channel_name, const char** signal_name, uint32_t count,
+    void* mfc);
 DLL_PRIVATE void     adapter_connect(
         Adapter* adapter, SimulationSpec* sim, int retry_count);
 DLL_PRIVATE void     adapter_register(Adapter* adapter, SimulationSpec* sim);

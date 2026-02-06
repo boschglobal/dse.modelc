@@ -91,7 +91,7 @@ int main(int argc, char** argv)
             log_notice("  Channel: %s (expected models=%u)", n_node->scalar,
                 _model_count);
             adapter_init_channel(
-                adapter->bus_adapter_model, n_node->scalar, NULL, 0);
+                adapter->bus_adapter_model, n_node->scalar, NULL, 0, NULL);
             simbus_adapter_init_channel(
                 adapter->bus_adapter_model, n_node->scalar, _model_count);
         }
@@ -100,8 +100,8 @@ int main(int argc, char** argv)
         log_error("No channel configuration found, fallback ...");
         log_error(
             "  Channel: %s (expected models=%u)", ADAPTER_FALLBACK_CHANNEL, 1);
-        adapter_init_channel(
-            adapter->bus_adapter_model, ADAPTER_FALLBACK_CHANNEL, NULL, 0);
+        adapter_init_channel(adapter->bus_adapter_model,
+            ADAPTER_FALLBACK_CHANNEL, NULL, 0, NULL);
         simbus_adapter_init_channel(
             adapter->bus_adapter_model, ADAPTER_FALLBACK_CHANNEL, 1);
     }

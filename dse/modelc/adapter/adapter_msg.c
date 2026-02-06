@@ -214,8 +214,16 @@ static int adapter_msg_register(AdapterModel* am)
             signal_name = flatbuffers_string_create_str(B, sv->name);
             notify(SignalLookup_start(B));
             notify(SignalLookup_name_add(B, signal_name));
+            const char* mime_type = controller_get_signal_annotation(
+                ch->mfc, sv->name, "mime_type");
+            if (mime_type != NULL) {
+                flatbuffers_string_ref_t _ref;
+                _ref = flatbuffers_string_create_str(B, mime_type);
+                notify(SignalLookup_mime_type_add(B, _ref));
+            }
             signal_lookup_list[i] = notify(SignalLookup_end(B));
-            log_simbus("    SignalLookup: %s [UID=%u]", sv->name, sv->uid);
+            log_simbus("    SignalLookup: %s [UID=%u] [mime_type=%s]", sv->name,
+                sv->uid, mime_type ? mime_type : "<none>");
         }
         notify(SignalLookup_vec_ref_t) signal_lookup_vector;
         notify(SignalLookup_vec_start(B));

@@ -357,7 +357,7 @@ int model_configure_channel(ModelInstanceSpec* model_instance, const char* name,
 
     /* Init the channel and register signals. */
     controller_init_channel(model_instance, channel_spec->name,
-        signal_list.names, signal_list.length);
+        signal_list.names, signal_list.length, mfc);
 
     free(channel_spec);
 

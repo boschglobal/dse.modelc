@@ -328,6 +328,12 @@ void simbus_handle_notify_message(
             notify(SignalLookup_start(B));
             notify(SignalLookup_name_add(B, resp__signal_name));
             notify(SignalLookup_signal_uid_add(B, signal_uid));
+            if (notify(SignalLookup_mime_type_is_present(signal_lookup))) {
+                flatbuffers_string_ref_t resp__mime_type;
+                resp__mime_type = flatbuffers_string_create_str(
+                    B, notify(SignalLookup_mime_type(signal_lookup)));
+                notify(SignalLookup_mime_type_add(B, resp__mime_type));
+            }
             resp__signal_lookup_list[_vi] = notify(SignalLookup_end(B));
         }
         notify(SignalLookup_vec_ref_t) resp__signal_lookup_vector;

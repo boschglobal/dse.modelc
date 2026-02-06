@@ -7,6 +7,7 @@
 #include <assert.h>
 #include <dse/testing.h>
 #include <dse/logger.h>
+#include <dse/clib/util/yaml.h>
 #include <dse/clib/collections/hashmap.h>
 #include <dse/modelc/controller/controller.h>
 #include <dse/modelc/controller/model_private.h>
@@ -53,5 +54,28 @@ ModelFunction* controller_get_model_function(
 
     ModelFunction* mf = hashmap_get(mf_map, model_function_name);
     if (mf) return mf;
+    return NULL;
+}
+
+
+const char* controller_get_signal_annotation(
+    ModelFunctionChannel* mfc, const char* signal_name, const char* name)
+{
+    if (mfc == NULL) return NULL;
+    if (mfc->signal_names == NULL) return NULL;
+    if (mfc->signal_annotation == NULL) return NULL;
+    assert(signal_name);
+    assert(name);
+
+    for (uint32_t i = 0; i < mfc->signal_count; i++) {
+        if (strcmp(mfc->signal_names[i], signal_name) == 0) {
+            const char* value = NULL;
+            if (mfc->signal_annotation[i]) {
+                value = dse_yaml_get_scalar(mfc->signal_annotation[i], name);
+            }
+            return value;
+        }
+    }
+
     return NULL;
 }

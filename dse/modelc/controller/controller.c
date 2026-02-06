@@ -73,14 +73,15 @@ error_clean_up:
 
 
 int controller_init_channel(ModelInstanceSpec* model_instance,
-    const char* channel_name, const char** signal_name, uint32_t signal_count)
+    const char* channel_name, const char** signal_name, uint32_t signal_count,
+    ModelFunctionChannel* mfc)
 {
     assert(model_instance);
     ModelInstancePrivate* mip = model_instance->private;
     AdapterModel*         am = mip->adapter_model;
 
     log_notice("Init Controller channel: %s", channel_name);
-    adapter_init_channel(am, channel_name, signal_name, signal_count);
+    adapter_init_channel(am, channel_name, signal_name, signal_count, mfc);
 
     return 0;
 }

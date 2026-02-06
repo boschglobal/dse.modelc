@@ -117,12 +117,14 @@ int controller_init(Endpoint* endpoint, SimulationSpec* sim)
 }
 
 int controller_init_channel(ModelInstanceSpec* model_instance,
-    const char* channel_name, const char** signal_name, uint32_t signal_count)
+    const char* channel_name, const char** signal_name, uint32_t signal_count,
+    ModelFunctionChannel* mfc)
 {
     UNUSED(model_instance);
     UNUSED(channel_name);
     UNUSED(signal_name);
     UNUSED(signal_count);
+    UNUSED(mfc);
 
     return 0;
 }

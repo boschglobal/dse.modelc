@@ -92,13 +92,14 @@ error_clean_up:
 }
 
 Channel* adapter_init_channel(AdapterModel* am, const char* channel_name,
-    const char** signal_name, uint32_t signal_count)
+    const char** signal_name, uint32_t signal_count, void* mfc)
 {
     assert(am);
 
     errno = 0;
     Channel* ch = _create_channel(am, channel_name);
     assert(ch);
+    ch->mfc = mfc;
 
     /* Initialise the Signal properties. */
     for (uint32_t i = 0; i < signal_count; i++) {

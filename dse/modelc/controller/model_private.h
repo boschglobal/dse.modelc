@@ -34,5 +34,9 @@ DLL_PRIVATE int        mcl_builtin_model_step(
            ModelDesc* model, double* model_time, double stop_time);
 DLL_PRIVATE void mcl_builtin_model_destroy(ModelDesc* model);
 
+/* model_function.c */
+DLL_PRIVATE const char* controller_get_signal_annotation(
+    ModelFunctionChannel* mfc, const char* signal_name, const char* name);
+
 
 #endif  // DSE_MODELC_CONTROLLER_MODEL_PRIVATE_H_
