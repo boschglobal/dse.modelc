@@ -14,12 +14,15 @@
 #include <dse/logger.h>
 #include <dse/platform.h>
 #include <dse/clib/collections/hashmap.h>
+#include <dse/clib/collections/vector.h>
+#include <dse/clib/util/cleanup.h>
 #include <dse/clib/util/strings.h>
 #include <dse/clib/util/yaml.h>
 #include <dse/modelc/adapter/transport/endpoint.h>
 #include <dse/modelc/controller/controller.h>
 #include <dse/modelc/controller/model_private.h>
 #include <dse/modelc/model/lua.h>
+#include <dse/modelc/pdunet.h>
 #include <dse/modelc/model.h>
 
 
@@ -50,6 +53,16 @@ static void _destroy_model_instances(SimulationSpec* sim)
     ModelInstanceSpec* _instptr = sim->instance_list;
     while (_instptr && _instptr->name) {
         ModelInstancePrivate* mip = _instptr->private;
+
+        /* PDU Net. */
+        for (size_t i = 0; i < vector_len(&mip->pdunet); i++) {
+            PduNetworkDesc* net = NULL;
+            vector_at(&mip->pdunet, i, &net);
+            if (net) pdunet_destroy(net);
+        }
+        vector_reset(&mip->pdunet);
+
+        /* Model Desc and Signal Vectors. */
         free(_instptr->name);
         free(_instptr->model_definition.full_path);
         if (_instptr->model_desc) {
@@ -57,6 +70,7 @@ static void _destroy_model_instances(SimulationSpec* sim)
                 model_sv_destroy(_instptr->model_desc->sv);
             free(_instptr->model_desc);
         }
+
         /* ControllerModel */
         ControllerModel* cm = mip->controller_model;
         if (cm) {
@@ -67,12 +81,14 @@ static void _destroy_model_instances(SimulationSpec* sim)
             free(cm);
             cm = NULL;
         }
+
         /* Adapter Model. */
         AdapterModel* am = mip->adapter_model;
         if (am) {
             adapter_destroy_adapter_model(am);
             am = NULL;
         }
+
 
         /* Private data. */
         free(mip);
@@ -318,6 +334,8 @@ int modelc_configure(ModelCArguments* args, SimulationSpec* sim)
                 if (errno == 0) errno = ENOMEM;
                 log_fatal("Hashmap init failed for channels!");
             }
+            /* Allocate PDU Net vector. */
+            mip->pdunet = vector_make(sizeof(PduNetworkDesc*), 4, NULL);
 
             /* Next instance? */
             _nameptr = strtok_r(NULL, MODEL_NAME_SEP, &_saveptr);
@@ -438,6 +456,48 @@ int modelc_model_create(
     model_desc->sim = sim;
     model_desc->mi = mi;
     model_desc->sv = sv;
+    mi->model_desc = model_desc; /* May be modified later, finalise. */
+
+    /* Create PDU Network objects (if configuration is available). */
+    for (SignalVector* sv_p = sv; sv_p->name; sv_p++) {
+        if (sv_p->is_binary == false) continue;
+        for (uint32_t i = 0; i < sv_p->count; i++) {
+            /* NCodec */
+            void* ncodec = sv_p->ncodec[i];
+            if (ncodec == NULL) continue;
+
+            /* PDU Net annotation */
+            const char* pdunet_name =
+                signal_annotation(sv_p, i, "pdunet", NULL);
+            if (pdunet_name) {
+                /* Network labels. */
+                SchemaLabel net_labels[] = {
+                    { .name = "signal", .value = sv_p->signal[i] },
+                    { .name = "pdunet", .value = pdunet_name },
+                    {},
+                };
+                /* SignalGroup Labels. */
+                CLEANUP_P(void, sg_labels) = NULL;
+                const char* channel_name =
+                    signal_annotation(sv_p, i, "channel", NULL);
+                if (channel_name) {
+                    SchemaLabel labels[] = {
+                        { .name = "model", .value = mi->name },
+                        { .name = "channel", .value = channel_name },
+                        {},
+                    };
+                    sg_labels = malloc(sizeof(labels));
+                    memcpy(sg_labels, labels, sizeof(labels));
+                }
+                /* Create the PDU Network. */
+                PduNetworkDesc* net = pdunet_create(
+                    mi, ncodec, net_labels, sg_labels, NULL, NULL);
+                if (net) {
+                    vector_push(&mip->pdunet, &net);
+                }
+            }
+        }
+    }
 
     /* Call create (if it exists). */
     if (model_desc->vtable.create) {
@@ -457,6 +517,17 @@ int modelc_model_create(
         model_desc->sim = sim;
         model_desc->mi = mi;
         model_desc->sv = sv;
+    }
+
+    /* PDU Net - Set initial condition to prevent Tx of entire network state
+    on first step. */
+    for (size_t i = 0; i < vector_len(&mip->pdunet); i++) {
+        PduNetworkDesc* net = NULL;
+        vector_at(&mip->pdunet, i, &net);
+        if (net) {
+            pdunet_visit(net, NULL, pdunet_visit_needs_tx, NULL);
+            pdunet_visit(net, NULL, pdunet_visit_clear_tx_flag, NULL);
+        }
     }
 
     /* Finalise the ModelDesc object. */

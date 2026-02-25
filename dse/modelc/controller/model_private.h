@@ -6,6 +6,7 @@
 #define DSE_MODELC_CONTROLLER_MODEL_PRIVATE_H_
 
 
+#include <dse/clib/collections/vector.h>
 #include <dse/modelc/adapter/adapter.h>
 #include <dse/modelc/controller/controller.h>
 #include <dse/modelc/runtime.h>
@@ -26,6 +27,9 @@ typedef struct ModelInstancePrivate {
     const char* mcl_name;
     MclCreate   mcl_create_func;
     MclDestroy  mcl_destroy_func;
+
+    /* PDU Network objects (locate by NCodec pointer/address). */
+    Vector pdunet; /* PduNetworkDesc* */
 } ModelInstancePrivate;
 
 

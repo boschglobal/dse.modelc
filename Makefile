@@ -27,7 +27,7 @@ DSE_SCHEMA_VERSION ?= 1.2.39
 export DSE_SCHEMA_URL ?= $(DSE_SCHEMA_REPO)/releases/download/v$(DSE_SCHEMA_VERSION)/dse-schemas.tar.gz
 
 DSE_NCODEC_REPO ?= https://github.com/boschglobal/dse.ncodec
-DSE_NCODEC_VERSION ?= 1.2.1
+DSE_NCODEC_VERSION ?= 1.2.2
 export DSE_NCODEC_URL ?= $(DSE_NCODEC_REPO)/archive/refs/tags/v$(DSE_NCODEC_VERSION).zip
 
 
@@ -75,6 +75,7 @@ TESTSCRIPT_E2E_FILES = \
 	$(TESTSCRIPT_E2E_DIR)/runtime.txtar \
 	$(TESTSCRIPT_E2E_DIR)/sequential.txtar \
 	$(TESTSCRIPT_E2E_DIR)/lua.txtar \
+	$(TESTSCRIPT_E2E_DIR)/pdunet.txtar \
 	$(TESTSCRIPT_E2E_DIR)/benchmark.txtar
 
 ifneq ($(CI), true)

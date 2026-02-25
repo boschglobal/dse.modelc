@@ -475,8 +475,6 @@ int simmock_step(SimMock* mock, bool assert_rc)
                 if (model->sv_network->reset_called[i] == false) {
                     model->sv_network->length[i] = 0;
                 }
-                mock->sv_network_tx->vtable.append(mock->sv_network_tx, i,
-                    model->sv_network->binary[i], model->sv_network->length[i]);
             }
         }
         /* Copy scalars to simmock->scalars. */

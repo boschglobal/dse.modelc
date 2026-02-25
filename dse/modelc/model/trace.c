@@ -483,7 +483,7 @@ static void _trace_log(NCODEC* nc, NCodecTraceLogLevel level, const char* msg)
 /* Trace Configuration
    ------------------- */
 DLL_PRIVATE void ncodec_trace_configure(
-    NCodecInstance* nc, ModelInstanceSpec* mi)
+    NCodecInstance* nc, ModelInstanceSpec* mi, bool force)
 {
     bool        type_can = false;
     bool        type_pdu = false;
@@ -493,7 +493,7 @@ DLL_PRIVATE void ncodec_trace_configure(
     if (strcmp(codec_type, "pdu") == 0) type_pdu = true;
 
     /* Install the log function. */
-    if (getenv("NCODEC_TRACE_LOG") != NULL) {
+    if (getenv("NCODEC_TRACE_LOG") != NULL || force == true) {
         nc->trace.log = _trace_log;
     }
 

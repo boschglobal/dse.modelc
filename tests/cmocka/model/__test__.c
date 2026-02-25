@@ -21,6 +21,7 @@ extern int run_transform_tests(void);
 extern int run_ncodec_can_tests(void);
 extern int run_ncodec_pdu_tests(void);
 extern int run_stack_tests(void);
+extern int run_model_pdu_tests(void);
 
 
 int main()
@@ -34,5 +35,6 @@ int main()
     rc |= run_ncodec_can_tests();
     rc |= run_ncodec_pdu_tests();
     rc |= run_stack_tests();
+    rc |= run_model_pdu_tests();
     return rc;
 }

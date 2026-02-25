@@ -1,0 +1,312 @@
+---
+kind: Stack
+metadata:
+  name: stack
+spec:
+  connection:
+    transport:
+      redispubsub:
+        uri: redis://redis:6379
+        timeout: 60
+  models:
+    - name: flexray
+      model:
+        name: Stub
+      uid: 42
+      channels:
+        - name: network
+          alias: network_vector
+---
+kind: Model
+metadata:
+  name: Stub
+spec:
+  runtime:
+    dynlib:
+      - os: linux
+        arch: amd64
+        path: lib/model.so
+  channels:
+    - alias: network_vector
+      selectors:
+        channel: network
+---
+kind: SignalGroup
+metadata:
+  name: test_binary_signals
+  labels:
+    name: flexray
+    channel: network_vector
+  annotations:
+    vector_type: binary
+spec:
+  signals:
+    - signal: FlexRay
+      annotations:
+        mime_type: application/x-automotive-bus; interface=stream; type=pdu; model=flexray; schema=fbs; swc_id=4; ecu_id=5
+---
+kind: Network
+metadata:
+  name: FR
+  labels:
+    name: FlexRay
+    model: flexray
+spec:
+  # FlexRay cluster configuration (NetworkMetadata → FlexrayConfig)
+  metadata:
+    flexray:
+      inhibit_null_frames: true
+      macrotick_per_cycle: 8000
+      microtick_per_cycle: 80
+      network_idle_start: 10
+      static_slot_length: 64
+      static_slot_count: 48
+      minislot_length: 10
+      minislot_count: 300
+      static_slot_payload_length: 32
+      bit_rate: BR10Mbps
+      channel_enable: AB
+      wakeup_channel_select: A
+      single_slot_enabled: true
+  functions:
+    global:
+      - lua: |
+          function inc_counter(v, floor, limit)
+              v = v + 1
+              if v >= limit or v < floor then
+                  v = floor
+              end
+              return v
+          end
+
+          function calc_checksum(payload, start_idx, end_idx)
+              local checksum = 0
+              for i = start_idx, end_idx do
+                  checksum = (checksum + payload[i]) & 0xFF
+              end
+              return checksum
+          end
+  pdus:
+    # ONE_TX and ONE_RX operate as a pair (same payload layout).
+    - pdu: ONE_TX
+      id: 101
+      length: 64
+      dir: Tx
+      metadata:
+        flexray:
+          slot_id: 11
+          payload_length: 64
+          cycle_repetition: 8
+          base_cycle: 4
+          direction: Tx
+          channel: A
+          transmit_mode: Continuous
+          inhibit_null: true
+      functions:
+        encode:
+          - lua: |
+              function encode__FR__ONE_TX(ctx)
+                  -- Set CRC.
+                  ctx.payload[1] = calc_checksum(ctx.payload, 2, 64)
+              end
+        decode:
+          - lua: |
+              -- NOP
+      signals:
+        - signal: Crc
+          encoding:
+            start: 0
+            length: 8
+          functions:
+            encode:
+              - lua: |
+                  -- NOP
+            decode:
+              - lua: |
+                  -- NOP
+        - signal: Alive
+          encoding:
+            start: 8
+            length: 8
+            factor: 1
+            offset: 0
+          functions:
+            encode:
+              - lua: |
+                  -- Set physical, no encoding, copy to raw TODO:
+                  function encode__FR__ONE_TX__Alive(ctx)
+                      ctx.phys = inc_counter(ctx.phys, 1, 240)
+                      return ctx
+                  end
+        - signal: FOO
+          encoding:
+            start: 16
+            length: 8
+            factor: 3.0
+            offset: -30
+          functions:
+            encode:
+              - lua: |
+                  -- Set physical, call encode.
+                  function encode__FR__ONE_TX__FOO(ctx)
+                      ctx.phys = 42
+                      return ctx
+                  end
+        - signal: BAR
+          encoding:
+            start: 24
+            length: 8
+            factor: 2.0
+            offset: -20
+          functions:
+            encode:
+              - lua: |
+                  -- Set raw, no encode/decode (phys not changed).
+                  function encode__FR__ONE_TX__BAR(ctx)
+                      ctx.raw = 42
+                      return ctx
+                  end
+        - signal: FUBAR
+          encoding:
+            start: 32
+            length: 8
+          functions:
+            encode:
+              - lua: |
+                  -- Set phys and raw, then error, no change survives.
+                  function encode__FR__ONE_TX__FUBAR(ctx)
+                      ctx.phys = 42
+                      ctx.raw = 24
+                      ctx.err = 1
+                      ctx.errmsg = "skip this signal"
+                      return ctx
+                  end
+    - pdu: ONE_RX
+      id: 202
+      length: 64
+      dir: Rx
+      metadata:
+        flexray:
+          slot_id: 22
+          payload_length: 64
+          cycle_repetition: 4
+          base_cycle: 2
+          direction: Rx
+          channel: A
+          transmit_mode: Continuous
+          inhibit_null: true
+      functions:
+        decode:
+          - lua: |
+              function decode__FR__ONE_RX(ctx)
+                  -- Check CRC.
+                  local crc = calc_checksum(ctx.payload, 2, 64)
+                  if crc == ctx.payload[1] then
+                      ctx.payload[1] = 43
+                  end
+              end
+      signals:
+        - signal: FOO
+          encoding:
+            start: 16
+            length: 8
+            factor: 3.0
+            offset: -30
+          functions:
+            decode:
+              - lua: |
+                  -- Set physical.
+                  function decode__FR__ONE_RX__FOO(ctx)
+                      ctx.phys = 42
+                      return ctx
+                  end
+        - signal: BAR
+          encoding:
+            start: 24
+            length: 8
+            factor: 2.0
+            offset: -20
+          functions:
+            encode:
+              - lua: |
+                  -- Set raw, decode (phys changed).
+                  function decode__FR__ONE_RX__BAR(ctx)
+                      ctx.raw = 44
+                      return ctx
+                  end
+
+    # ONE_TX_ERR and ONE_RX_ERR operate as a pair (same payload layout).
+    - pdu: ONE_TX_ERR
+      id: 303
+      length: 64
+      dir: Tx
+      metadata:
+        flexray:
+          slot_id: 33
+          payload_length: 64
+          cycle_repetition: 8
+          base_cycle: 8
+          direction: Tx
+          channel: A
+          transmit_mode: Continuous
+          inhibit_null: true
+      functions:
+        encode:
+          - lua: |
+              function encode__FR__ONE_TX_ERR(ctx)
+                  ctx.err = 1
+                  ctx.errmsg = "pack error"
+                  return ctx
+              end
+      signals:
+        - signal: Alive
+          encoding:
+            start: 8
+            length: 8
+            factor: 1
+            offset: 0
+          functions:
+            encode:
+              - lua: |
+                  function encode__FR__ONE_TX_ERR__Alive(ctx)
+                      ctx.err = 2
+                      ctx.errmsg = "encode error"
+                      return ctx
+                  end
+    - pdu: ONE_RX_ERR
+      id: 404
+      length: 64
+      dir: Rx
+      metadata:
+        flexray:
+          slot_id: 44
+          payload_length: 64
+          cycle_repetition: 4
+          base_cycle: 2
+          direction: Rx
+          channel: A
+          transmit_mode: Continuous
+          inhibit_null: true
+      functions:
+        decode:
+          - lua: |
+              function decode__FR__ONE_RX_ERR(ctx)
+                  ctx.err = 3
+                  ctx.errmsg = "unpack error"
+                  return ctx
+              end
+      signals:
+        - signal: Alive
+          encoding:
+            start: 8
+            length: 8
+            factor: 1
+            offset: 0
+          functions:
+            decode:
+              - lua: |
+                  function encode__FR__ONE_RX_ERR__Alive(ctx)
+                      ctx.err = 4
+                      ctx.errmsg = "decode error"
+                      return ctx
+                  end

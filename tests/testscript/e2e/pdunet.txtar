@@ -1,0 +1,36 @@
+env NAME_FRNET=pdunet_inst
+env SIM=dse/modelc/build/_out/examples/pdunet/frnet
+
+
+# TEST: frnet example
+
+exec sh -e $WORK/test.sh
+
+stderr 'Using Valgrind'
+stdout 'Load YAML File: data/network.yaml'
+stdout 'Loading symbol: model_create ... ok'
+stdout 'Loading symbol: model_step ... ok'
+stdout 'Loading symbol: model_destroy ... not found'
+stdout 'Run the Simulation ...'
+stdout 'Controller exit ...'
+
+stdout 'PDU Net: FlexRay Network Config: FR_A'
+stdout 'PDU Net:   FlexRay: PDU\[0\] id=101, slot=11, dir=Tx, name=ONE_TX'
+stdout 'PDU Net:   FlexRay: PDU\[1\] id=101, slot=11, dir=Rx, name=ONE_RX'
+stdout 'PDU Net:   FlexRay: cycle_time=0.005000'
+stdout 'step\[0.000000\]: Alive=0.000000, AliveRx=0.000000, FOO=42.000000, BAR=0.000000'
+stdout 'step\[0.004500\]: Alive=1.000000, AliveRx=0.000000, FOO=42.000000, BAR=0.000000'
+stdout 'step\[0.005000\]: Alive=1.000000, AliveRx=0.000000, FOO=42.000000, BAR=0.000000'
+stdout 'step\[0.005500\]: Alive=1.000000, AliveRx=0.000000, FOO=42.000000, BAR=0.000000'
+stdout 'step\[0.006000\]: Alive=1.000000, AliveRx=1.000000, FOO=24.000000, BAR=42.000000'
+stdout 'step\[0.008500\]: Alive=1.000000, AliveRx=1.000000, FOO=24.000000, BAR=42.000000'
+stdout 'step\[0.009000\]: Alive=2.000000, AliveRx=1.000000, FOO=24.000000, BAR=42.000000'
+
+
+-- test.sh --
+SIMER="${SIMER:-ghcr.io/boschglobal/dse-simer:latest}"
+docker run --name simer -i --rm -v $ENTRYHOSTDIR/$SIM:/sim \
+    $SIMER -valgrind $NAME_FRNET \
+        -env $NAME_FRNET:SIMBUS_LOGLEVEL=3 \
+        -env NCODEC_TRACE_LOG=1 \
+        -endtime 0.010
