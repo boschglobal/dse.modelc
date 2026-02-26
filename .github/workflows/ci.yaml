@@ -130,6 +130,7 @@ jobs:
       - name: Set environment
         run: |
           echo "HOST_DOCKER_WORKSPACE=${{ github.workspace }}" >> $GITHUB_ENV
+          echo "SIMER_IMAGE=simer:test" >> $GITHUB_ENV
 
       - name: Test
         run: |
@@ -250,10 +251,14 @@ jobs:
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE_BASE_NAME }}-simer
+          images: |
+            name=${{ env.REGISTRY }}/${{ env.IMAGE_BASE_NAME }}-simer,enable=${{ startsWith(github.ref, 'refs/tags/') }}
+            name=simer,enable=${{ !startsWith(github.ref, 'refs/tags/') }}
+            name=simer,enable=true
           tags: |
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
+            type=raw,value=test
 
       - name: Version
         if: startsWith(github.ref, 'refs/tags/')
