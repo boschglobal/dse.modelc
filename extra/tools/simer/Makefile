@@ -7,6 +7,7 @@ SRC           := $(shell find . -type f -name '*.go' -print)
 BIN_DIR       := $(CURDIR)/bin
 BUILD_DIR     := $(CURDIR)/build/stage
 CLI_TOOLS     ?= $(BIN_DIR)/simer
+CLI_TOOLS_WIN := $(addsuffix .exe,$(CLI_TOOLS))
 GOFLAGS       :=
 GOPRIVATE     ?= github.com/boschglobal
 
@@ -33,6 +34,11 @@ cmd: $(CLI_TOOLS)
 $(CLI_TOOLS): $(SRC)
 	go build $(GOFLAGS) -o $@ ./cmd/$(subst $(BIN_DIR)/,,$@)
 
+.PHONY: win
+win: $(CLI_TOOLS_WIN)
+
+$(CLI_TOOLS_WIN): $(SRC)
+	GOOS=windows GOARCH=amd64 go build $(GOFLAGS) -o $@ ./cmd/$(basename $(subst $(BIN_DIR)/,,$@))
 
 .PHONY: test
 test:

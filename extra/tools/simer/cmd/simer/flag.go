@@ -17,10 +17,10 @@ import (
 
 var usage = `
 SIMER (SIMulation runnER)
-  
-  Containerised simulation run-time. 
+
+  Containerised simulation run-time.
   Part of the Dynamic Simulation Environment Core Platform.
-  
+
   repo: https://github.com/boschglobal/dse.modelc
   doc:  https://boschglobal.github.io/dse.doc/docs/user/simer
 
