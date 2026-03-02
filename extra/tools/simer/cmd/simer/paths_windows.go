@@ -8,8 +8,8 @@ package main
 
 const (
 	defaultRedisPath      = "bin\\redis-server.exe"
-	defaultSimbusPath     = "bin\\simbus.exe"
-	defaultModelcPath     = "bin\\modelc.exe"
-	defaultModelcX32Path  = "bin\\modelc32_x86.exe"
-	defaultModelcI386Path = "bin\\modelc32_i386.exe"
+	defaultSimbusPath     = "bin\\x64\\simbus.exe"
+	defaultModelcPath     = "bin\\x64\\modelc.exe"
+	defaultModelcX32Path  = "bin\\x86\\modelc.exe"
+	defaultModelcI386Path = "bin\\x86\\modelc.exe"
 )
