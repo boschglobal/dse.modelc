@@ -21,8 +21,8 @@ ENV REDIS_DOWNLOAD_SHA=173d4c5f44b5d7186da96c4adc5cb20e8018b50ec3a8dfe0d191dbbab
 
 
 RUN set -eux; \
-	groupadd -r -g 999 redis; \
-	useradd -r -g redis -u 999 redis
+	groupadd -g 1000 simer; \
+	useradd -u 1000 -g simer -m -s /bin/bash simer
 
 RUN set -eux; \
 	apt-get update; \
@@ -75,8 +75,8 @@ LABEL maintainer="timothy.rule@de.bosch.com"
 ENV DEBIAN_FRONTEND=noninteractive
 
 RUN set -eux; \
-	groupadd -r -g 999 redis; \
-	useradd -r -g redis -u 999 redis
+	groupadd -g 1000 simer; \
+	useradd -u 1000 -g simer -m -s /bin/bash simer;
 
 RUN set -eux; \
     dpkg --add-architecture i386; \
@@ -88,6 +88,7 @@ RUN set -eux; \
         curl \
 		gdb \
         gdbserver \
+		gosu \
         jq \
         less \
 		libc6-i386 \
@@ -108,9 +109,9 @@ COPY build/package/redis.conf /usr/local/etc/redis/redis.conf
 COPY --from=redis /usr/local/bin/redis-cli /usr/local/bin/redis-cli
 COPY --from=redis /usr/local/bin/redis-server /usr/local/bin/redis-server
 RUN mkdir -p /data/redis \
-	&& chown redis:redis /data/redis \
+	&& chown simer:simer /data/redis \
 	&& mkdir -p /var/run/redis \
-	&& chown redis:redis /var/run/redis
+	&& chown simer:simer /var/run/redis
 VOLUME /data/redis
 EXPOSE 6379
 

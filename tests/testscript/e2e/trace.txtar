@@ -3,6 +3,7 @@ env SIM=dse/modelc/build/_out/examples/binary
 env TRACEFILE=data/trace/simbus.bin
 
 mkdir /repo/$SIM/data/trace
+chmod 777 /repo/$SIM/data/trace
 
 # TEST: Collect a Trace
 env SIMBUS_TRANSPORT=redis

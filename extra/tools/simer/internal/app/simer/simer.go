@@ -10,6 +10,7 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
+	"runtime"
 	"slices"
 	"strconv"
 	"strings"
@@ -47,12 +48,21 @@ func RedisCommand(redisPath string, quiet bool) *session.Command {
 		return nil
 	}
 	slog.Debug("Build Redis Server command...")
-	return &session.Command{
-		Name:       "Redis",
-		Prog:       redisPath,
-		Args:       []string{"/usr/local/etc/redis/redis.conf"},
-		Quiet:      quiet,
-		KillNoWait: true,
+	if runtime.GOOS == "linux" {
+		return &session.Command{
+			Name:       "Redis",
+			Prog:       redisPath,
+			Args:       []string{"/usr/local/etc/redis/redis.conf"},
+			Quiet:      quiet,
+			KillNoWait: true,
+		}
+	} else {
+		return &session.Command{
+			Name:       "Redis",
+			Prog:       redisPath,
+			Quiet:      quiet,
+			KillNoWait: true,
+		}
 	}
 }
 

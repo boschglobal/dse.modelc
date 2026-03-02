@@ -18,4 +18,4 @@ if [ -n "$SIM_PATH" ]; then cd $SIM_PATH; fi
 
 # Run the SIMER command.
 SIMER_CMD="$SIMER_EXE"
-$SIMER_CMD $@
+exec gosu simer $SIMER_CMD "$@"
