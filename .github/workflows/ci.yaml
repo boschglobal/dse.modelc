@@ -272,6 +272,10 @@ jobs:
   tools:
     runs-on: [ubuntu-latest]
     needs: [simer, simer_win]
+    steps:
+      - name: Consolidation Job
+        run: |
+          echo "NOP"
 
   simer_win:
     runs-on: [ubuntu-latest]
