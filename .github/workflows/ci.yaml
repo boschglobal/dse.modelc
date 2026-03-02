@@ -322,13 +322,24 @@ jobs:
           cp -r sandbox/${{ env.package_name }}-windows-x64-sandbox/${{ env.build_dir }}/_out/licenses -t win/simer
           ls -R win/simer
 
-      - name: Simer exe
+      - name: Simer
         run: |
           (cd extra/tools/simer; make win)
           mkdir -p win/simer/bin
           cp extra/tools/simer/bin/simer.exe win/simer/bin/simer.exe
           echo "$PACKAGE_VERSION" > win/simer/version.txt
           ls -R win/simer
+
+      - name: Fetch Redis Server
+        uses: dawidd6/action-download-artifact@v3
+        with:
+          workflow: redis_win.yaml
+          name: redis-server-windows
+          path: redis
+
+      - name: Redis Server
+        run: |
+          cp redis/redis-server.exe win/simer/bin/redis-server.exe
 
       - name: Package
         run: |
