@@ -9,13 +9,13 @@ import (
 	"slices"
 	"testing"
 
-	"github.com/boschglobal/dse.schemas/code/go/dse/schemas/fbs/channel"
 	flatbuffers "github.com/google/flatbuffers/go"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/boschglobal/dse.modelc/extra/go/modelgo/pkg/connection"
 	"github.com/boschglobal/dse.modelc/extra/go/modelgo/pkg/errors"
+	"github.com/boschglobal/dse.schemas/code/go/dse/schemas/fbs/notify"
 )
 
 func TestConfiguration(t *testing.T) {
@@ -40,11 +40,11 @@ func TestConfiguration(t *testing.T) {
 			err: errors.ErrGatewayConfig("gateway signal vectors not configured"),
 		},
 		{
-			gw:  Gateway{Name: "foo", Uid: 42, ScalarSignalVector: map[string]*SignalVector[float64]{"foo": &SignalVector[float64]{}}},
+			gw:  Gateway{Name: "foo", Uid: 42, ScalarSignalVector: map[string]*SignalVector[float64]{"foo": {}}},
 			err: errors.ErrModelNoConnection,
 		},
 		{
-			gw:  Gateway{Name: "foo", Uid: 42, BinarySignalVector: map[string]*SignalVector[[]byte]{"bar": &SignalVector[[]byte]{}}},
+			gw:  Gateway{Name: "foo", Uid: 42, BinarySignalVector: map[string]*SignalVector[[]byte]{"bar": {}}},
 			err: errors.ErrModelNoConnection,
 		},
 	}
@@ -54,12 +54,12 @@ func TestConfiguration(t *testing.T) {
 	}
 }
 
-func checkTraceChannelMessage(t *testing.T, stub *connection.StubConnection, index uint, channelName string, chMsgType channel.MessageType) {
-	assert.Equal(t, channelName, stub.Trace[index].Channel)
+func checkTraceNotifyMessage(t *testing.T, stub *connection.StubConnection, index uint, channelName string) {
+	_ = channelName
+	t.Helper()
 	msg := stub.Trace[index].Msg
-	assert.True(t, flatbuffers.BufferHasIdentifier(msg[4:], channelMessageIdentifier))
-	cm := channel.GetSizePrefixedRootAsChannelMessage(msg, 0)
-	assert.Equal(t, chMsgType, cm.MessageType())
+	assert.True(t, flatbuffers.BufferHasIdentifier(msg[4:], notifyMessageIdentifier),
+		"trace[%d] expected SBNO identifier", index)
 }
 
 func TestConnect(t *testing.T) {
@@ -77,16 +77,14 @@ func TestConnect(t *testing.T) {
 	_gw.ScalarSignalVector["scalar"].indexSignals(names, uids)
 	_gw.ScalarSignalVector["scalar"].SetByName(names, values)
 
+	// ModelRegister ACKs (one per channel).
 	pushRegisterAck(_gw, stub, "scalar", 1)
 	pushRegisterAck(_gw, stub, "binary", 2)
-	pushSignalIndex(_gw, stub, "scalar", names, uids)
-	pushSignalIndex(_gw, stub, "binary", bnames, buids)
-	mpBuf, _ := _gw.ScalarSignalVector["scalar"].toMsgPack()
-	pushSignalValue(_gw, stub, "scalar", mpBuf)
-	mpBuf, _ = _gw.BinarySignalVector["binary"].toMsgPack()
-	pushSignalValue(_gw, stub, "binary", mpBuf)
+	// SignalIndex ACKs (one per channel).
+	pushSignalIndexAck(_gw, stub, "scalar", names, uids)
+	pushSignalIndexAck(_gw, stub, "binary", bnames, buids)
 
-	require.Len(t, stub.Stack, 6)
+	require.Len(t, stub.Stack, 4)
 	require.Len(t, stub.Trace, 0)
 
 	// Start the test with a new GW object, stub is now primed.
@@ -97,7 +95,7 @@ func TestConnect(t *testing.T) {
 	err := gw.Connect()
 	assert.Nil(t, err)
 
-	// Check the UIDs.
+	// Check the UIDs were indexed from the SignalIndex ACK.
 	assert.ElementsMatch(t, uids, slices.Collect(maps.Keys(gw.ScalarSignalVector["scalar"].Index.Uid)))
 	assert.ElementsMatch(t, buids, slices.Collect(maps.Keys(gw.BinarySignalVector["binary"].Index.Uid)))
 	for i := range len(uids) {
@@ -110,26 +108,30 @@ func TestConnect(t *testing.T) {
 		nameIdx := gw.BinarySignalVector["binary"].Index.Name[bnames[i]]
 		assert.Equal(t, uidIdx, nameIdx)
 	}
-	for i := range len(uids) {
-		uidIdx := gw.ScalarSignalVector["scalar"].Index.Uid[uids[i]]
-		assert.Equal(t, values[i], gw.ScalarSignalVector["scalar"].Signal[uidIdx].Value)
-	}
 
-	// Check the Trace.
+	// Check Trace:
 	require.Len(t, stub.Stack, 0)
-	require.Len(t, stub.Trace, 12)
-	checkTraceChannelMessage(t, stub, 0, "scalar", channel.MessageTypeModelRegister)
-	checkTraceChannelMessage(t, stub, 1, "binary", channel.MessageTypeModelRegister)
-	checkTraceChannelMessage(t, stub, 2, "scalar", channel.MessageTypeModelRegister)
-	checkTraceChannelMessage(t, stub, 3, "binary", channel.MessageTypeModelRegister)
-	checkTraceChannelMessage(t, stub, 4, "scalar", channel.MessageTypeSignalIndex)
-	checkTraceChannelMessage(t, stub, 5, "binary", channel.MessageTypeSignalIndex)
-	checkTraceChannelMessage(t, stub, 6, "scalar", channel.MessageTypeSignalIndex)
-	checkTraceChannelMessage(t, stub, 7, "binary", channel.MessageTypeSignalIndex)
-	checkTraceChannelMessage(t, stub, 8, "scalar", channel.MessageTypeSignalRead)
-	checkTraceChannelMessage(t, stub, 9, "binary", channel.MessageTypeSignalRead)
-	checkTraceChannelMessage(t, stub, 10, "scalar", channel.MessageTypeSignalValue)
-	checkTraceChannelMessage(t, stub, 11, "binary", channel.MessageTypeSignalValue)
+	require.Len(t, stub.Trace, 8)
+	// Sent messages are at indices 0,1 (register) and 4,5 (signalindex).
+	checkTraceNotifyMessage(t, stub, 0, "scalar") // sent ModelRegister
+	checkTraceNotifyMessage(t, stub, 1, "binary") // sent ModelRegister
+	checkTraceNotifyMessage(t, stub, 4, "scalar") // sent SignalIndex
+	checkTraceNotifyMessage(t, stub, 5, "binary") // sent SignalIndex
+
+	// Verify trace[0] has ModelRegister embedded.
+	{
+		msg := stub.Trace[0].Msg
+		nMsg := notify.GetSizePrefixedRootAsNotifyMessage(msg, 0)
+		mr := nMsg.ModelRegister(nil)
+		assert.NotNil(t, mr, "trace[0] should have model_register")
+	}
+	// Verify trace[4] has SignalIndex embedded.
+	{
+		msg := stub.Trace[4].Msg
+		nMsg := notify.GetSizePrefixedRootAsNotifyMessage(msg, 0)
+		si := nMsg.SignalIndex(nil)
+		assert.NotNil(t, si, "trace[4] should have signal_index")
+	}
 }
 
 func TestSync(t *testing.T) {
@@ -177,15 +179,11 @@ func TestSync(t *testing.T) {
 
 	// Check the Trace.
 	require.Len(t, stub.Trace, 8)
-	//checkTraceChannelMessage(t, stub, 0, "", channel.MessageTypeModelExit)
 }
 
 func TestExit(t *testing.T) {
 	names := []string{"one", "two", "three"}
-	//uids := []uint32{123, 456, 789}
 	bnames := []string{"four"}
-	//buids := []uint32{321}
-	//values := []float64{1.1, 22.22, 333.333}
 
 	stub := &connection.StubConnection{}
 	gw := NewGateway("foo", 42, stub)
@@ -193,11 +191,18 @@ func TestExit(t *testing.T) {
 	gw.BinarySignalVector["binary"] = NewSignalVector[[]byte]("binary").Add(bnames)
 	gw.Disconnect()
 
-	// Check the Trace.
+	// Check the Trace — ModelExit for scalar and binary.
 	require.Len(t, stub.Trace, 2)
-	checkTraceChannelMessage(t, stub, 0, "scalar", channel.MessageTypeModelExit)
-	checkTraceChannelMessage(t, stub, 1, "binary", channel.MessageTypeModelExit)
+	checkTraceNotifyMessage(t, stub, 0, "scalar")
+	checkTraceNotifyMessage(t, stub, 1, "binary")
 
+	// Verify model_exit is embedded.
+	for _, idx := range []uint{0, 1} {
+		msg := stub.Trace[idx].Msg
+		nMsg := notify.GetSizePrefixedRootAsNotifyMessage(msg, 0)
+		me := nMsg.ModelExit(nil)
+		assert.NotNil(t, me, "trace[%d] should have model_exit", idx)
+	}
 }
 
 func TestTimes(t *testing.T) {

@@ -5,21 +5,17 @@
 package model
 
 import (
-	"bytes"
 	"fmt"
 	"log/slog"
 	"maps"
 	"slices"
 
 	flatbuffers "github.com/google/flatbuffers/go"
-	"github.com/vmihailenco/msgpack/v5"
 
 	"github.com/boschglobal/dse.modelc/extra/go/modelgo/pkg/errors"
-	"github.com/boschglobal/dse.schemas/code/go/dse/schemas/fbs/channel"
 	"github.com/boschglobal/dse.schemas/code/go/dse/schemas/fbs/notify"
 )
 
-const channelMessageIdentifier string = "SBCH"
 const notifyMessageIdentifier string = "SBNO"
 
 type Message struct {
@@ -36,132 +32,143 @@ func (msg *Message) reset() {
 	msg.builder.Reset()
 }
 
-func (msg *Message) sendChannelMsg(gw *Gateway, channelName string,
-	chMsg flatbuffers.UOffsetT, chMsgType channel.MessageType, withToken bool) (token int32) {
-
-	token = 0
-	channel.ChannelMessageStart(msg.builder)
-	channel.ChannelMessageAddModelUid(msg.builder, gw.Uid)
-	channel.ChannelMessageAddMessageType(msg.builder, chMsgType)
-	channel.ChannelMessageAddMessage(msg.builder, chMsg)
-	if withToken {
-		token = gw.connection.Token()
-		channel.ChannelMessageAddToken(msg.builder, token)
-	}
-	cm := channel.ChannelMessageEnd(msg.builder)
-
-	msg.builder.FinishSizePrefixedWithFileIdentifier(cm, []byte(channelMessageIdentifier))
-	msg.buffer = msg.builder.FinishedBytes()
-	gw.connection.SendMessage(msg.buffer, channelName)
-
-	return
-}
-
 func (msg *Message) sendNotifyMsg(gw *Gateway, nMsg flatbuffers.UOffsetT) {
 	msg.builder.FinishSizePrefixedWithFileIdentifier(nMsg, []byte(notifyMessageIdentifier))
 	msg.buffer = msg.builder.FinishedBytes()
-
-	gw.connection.SendMessage(msg.buffer, "")
+	gw.connection.SendMessage(msg.buffer)
 }
 
+func (msg *Message) buildModelUidVector(uid uint32) flatbuffers.UOffsetT {
+	notify.NotifyMessageStartModelUidVector(msg.builder, 1)
+	msg.builder.PrependUint32(uid)
+	return msg.builder.EndVector(1)
+}
+
+// ModelRegister sends a NotifyMessage(SBNO) containing a ModelRegister table
+// for each channel, requesting an ACK token per channel.
 func (msg *Message) ModelRegister(gw *Gateway) (tokens []int32) {
 	tokens = []int32{}
-	buildMsg := func() flatbuffers.UOffsetT {
+
+	sendForChannel := func(chName string) {
 		msg.reset()
-		channel.ModelRegisterStart(msg.builder)
-		channel.ModelRegisterAddModelUid(msg.builder, gw.Uid)
-		channel.ModelRegisterAddNotifyUid(msg.builder, gw.Uid)
-		return channel.ModelReadyEnd(msg.builder)
+
+		token := gw.connection.Token()
+
+		// ModelRegister sub-table.
+		notify.ModelRegisterStart(msg.builder)
+		notify.ModelRegisterAddModelUid(msg.builder, gw.Uid)
+		notify.ModelRegisterAddNotifyUid(msg.builder, gw.Uid)
+		mrOffset := notify.ModelRegisterEnd(msg.builder)
+
+		// model_uid vector.
+		modelUidVec := msg.buildModelUidVector(gw.Uid)
+
+		// channel_name string.
+		chNameOffset := msg.builder.CreateString(chName)
+
+		// NotifyMessage container.
+		notify.NotifyMessageStart(msg.builder)
+		notify.NotifyMessageAddToken(msg.builder, token)
+		notify.NotifyMessageAddModelUid(msg.builder, modelUidVec)
+		notify.NotifyMessageAddChannelName(msg.builder, chNameOffset)
+		notify.NotifyMessageAddModelRegister(msg.builder, mrOffset)
+		nMsg := notify.NotifyMessageEnd(msg.builder)
+
+		slog.Debug(fmt.Sprintf("ModelRegister --> [%s]", chName))
+		msg.sendNotifyMsg(gw, nMsg)
+		tokens = append(tokens, token)
 	}
 
-	for name, _ := range gw.ScalarSignalVector {
-		slog.Debug(fmt.Sprintf("ModelRegister --> [%s]", name))
-		token := msg.sendChannelMsg(gw, name, buildMsg(), channel.MessageTypeModelRegister, true)
-		tokens = append(tokens, token)
+	for name := range gw.ScalarSignalVector {
+		sendForChannel(name)
 	}
-	for name, _ := range gw.BinarySignalVector {
-		slog.Debug(fmt.Sprintf("ModelRegister --> [%s]", name))
-		token := msg.sendChannelMsg(gw, name, buildMsg(), channel.MessageTypeModelRegister, true)
-		tokens = append(tokens, token)
+	for name := range gw.BinarySignalVector {
+		sendForChannel(name)
 	}
 	return
 }
 
+// ModelExit sends a NotifyMessage(SBNO) containing a ModelExit table for each
+// channel.
 func (msg *Message) ModelExit(gw *Gateway) {
-	buildMsg := func() flatbuffers.UOffsetT {
+	sendForChannel := func(chName string) {
 		msg.reset()
-		channel.ModelExitStart(msg.builder)
-		return channel.ModelExitEnd(msg.builder)
+
+		// model_uid vector.
+		modelUidVec := msg.buildModelUidVector(gw.Uid)
+
+		// channel_name string.
+		chNameOffset := msg.builder.CreateString(chName)
+
+		// ModelExit sub-table.
+		notify.ModelExitStart(msg.builder)
+		meOffset := notify.ModelExitEnd(msg.builder)
+
+		// NotifyMessage container.
+		notify.NotifyMessageStart(msg.builder)
+		notify.NotifyMessageAddModelUid(msg.builder, modelUidVec)
+		notify.NotifyMessageAddChannelName(msg.builder, chNameOffset)
+		notify.NotifyMessageAddModelExit(msg.builder, meOffset)
+		nMsg := notify.NotifyMessageEnd(msg.builder)
+
+		slog.Debug(fmt.Sprintf("ModelExit --> [%s]", chName))
+		msg.sendNotifyMsg(gw, nMsg)
 	}
 
-	for name, _ := range gw.ScalarSignalVector {
-		slog.Debug(fmt.Sprintf("ModelExit --> [%s]", name))
-		msg.sendChannelMsg(gw, name, buildMsg(), channel.MessageTypeModelExit, false)
+	for name := range gw.ScalarSignalVector {
+		sendForChannel(name)
 	}
-	for name, _ := range gw.BinarySignalVector {
-		slog.Debug(fmt.Sprintf("ModelExit --> [%s]", name))
-		msg.sendChannelMsg(gw, name, buildMsg(), channel.MessageTypeModelExit, false)
+	for name := range gw.BinarySignalVector {
+		sendForChannel(name)
 	}
 }
 
+// SignalIndex sends a NotifyMessage(SBNO) containing a SignalIndex table for
+// each channel.
 func (msg *Message) SignalIndex(gw *Gateway) {
-	buildMsg := func(names []string) flatbuffers.UOffsetT {
+	sendSignalIndex := func(chName string, signalNames []string) {
 		msg.reset()
+
+		token := gw.connection.Token()
+
+		// SignalLookup vector.
 		slVec := []flatbuffers.UOffsetT{}
-		for _, name := range names {
-			signalName := msg.builder.CreateString(name)
-			channel.SignalLookupStart(msg.builder)
-			channel.SignalLookupAddName(msg.builder, signalName)
-			slVec = append(slVec, channel.SignalLookupEnd(msg.builder))
+		for _, name := range signalNames {
+			nameOff := msg.builder.CreateString(name)
+			notify.SignalLookupStart(msg.builder)
+			notify.SignalLookupAddName(msg.builder, nameOff)
+			slVec = append(slVec, notify.SignalLookupEnd(msg.builder))
 		}
 		slVecOffset := msg.builder.CreateVectorOfTables(slVec)
-		channel.SignalIndexStart(msg.builder)
-		channel.SignalIndexAddIndexes(msg.builder, slVecOffset)
-		return channel.SignalIndexEnd(msg.builder)
+
+		// SignalIndex sub-table.
+		notify.SignalIndexStart(msg.builder)
+		notify.SignalIndexAddIndexes(msg.builder, slVecOffset)
+		siOffset := notify.SignalIndexEnd(msg.builder)
+
+		// model_uid vector.
+		modelUidVec := msg.buildModelUidVector(gw.Uid)
+
+		// channel_name string.
+		chNameOffset := msg.builder.CreateString(chName)
+
+		// NotifyMessage container.
+		notify.NotifyMessageStart(msg.builder)
+		notify.NotifyMessageAddToken(msg.builder, token)
+		notify.NotifyMessageAddModelUid(msg.builder, modelUidVec)
+		notify.NotifyMessageAddChannelName(msg.builder, chNameOffset)
+		notify.NotifyMessageAddSignalIndex(msg.builder, siOffset)
+		nMsg := notify.NotifyMessageEnd(msg.builder)
+
+		slog.Debug(fmt.Sprintf("SignalIndex --> [%s]", chName))
+		msg.sendNotifyMsg(gw, nMsg)
 	}
 
 	for _, sv := range gw.ScalarSignalVector {
-		slog.Debug(fmt.Sprintf("SignalIndex --> [%s]", sv.Name))
-		msg.sendChannelMsg(gw, sv.Name,
-			buildMsg(slices.Collect(maps.Keys(sv.Index.Name))),
-			channel.MessageTypeSignalIndex, false)
-	}
-
-	for _, sv := range gw.BinarySignalVector {
-		slog.Debug(fmt.Sprintf("SignalIndex --> [%s]", sv.Name))
-		msg.sendChannelMsg(gw, sv.Name,
-			buildMsg(slices.Collect(maps.Keys(sv.Index.Name))),
-			channel.MessageTypeSignalIndex, false)
-	}
-}
-
-func (msg *Message) SignalRead(gw *Gateway) {
-	buildMsg := func(names []string) flatbuffers.UOffsetT {
-		buf := new(bytes.Buffer)
-		enc := msgpack.NewEncoder(buf)
-		enc.EncodeArrayLen(1)
-		enc.EncodeArrayLen(len(names))
-		for _, name := range names {
-			enc.EncodeString(name)
-		}
-		msg.reset()
-		mpOffset := msg.builder.CreateByteVector(buf.Bytes())
-		channel.SignalReadStart(msg.builder)
-		channel.SignalReadAddData(msg.builder, mpOffset)
-		return channel.SignalReadEnd(msg.builder)
-	}
-
-	for _, sv := range gw.ScalarSignalVector {
-		slog.Debug(fmt.Sprintf("SignalRead --> [%s]", sv.Name))
-		msg.sendChannelMsg(gw, sv.Name,
-			buildMsg(slices.Collect(maps.Keys(sv.Index.Name))),
-			channel.MessageTypeSignalRead, false)
+		sendSignalIndex(sv.Name, slices.Collect(maps.Keys(sv.Index.Name)))
 	}
 	for _, sv := range gw.BinarySignalVector {
-		slog.Debug(fmt.Sprintf("SignalRead --> [%s]", sv.Name))
-		msg.sendChannelMsg(gw, sv.Name,
-			buildMsg(slices.Collect(maps.Keys(sv.Index.Name))),
-			channel.MessageTypeSignalRead, false)
+		sendSignalIndex(sv.Name, slices.Collect(maps.Keys(sv.Index.Name)))
 	}
 }
 
@@ -192,13 +199,21 @@ func (msg *Message) Notify(gw *Gateway) flatbuffers.UOffsetT {
 
 	for _, sv := range gw.BinarySignalVector {
 		slog.Debug(fmt.Sprintf("Notify --> [%s]", sv.Name))
+		// Build BinarySignal entries for each signal in the vector.
+		bsVec := []flatbuffers.UOffsetT{}
+		for _, sig := range sv.Signal {
+			dataOffset := msg.builder.CreateByteVector(sig.Value)
+			notify.BinarySignalStart(msg.builder)
+			notify.BinarySignalAddUid(msg.builder, sig.Uid)
+			notify.BinarySignalAddData(msg.builder, dataOffset)
+			bsVec = append(bsVec, notify.BinarySignalEnd(msg.builder))
+		}
+		bsVecOffset := msg.builder.CreateVectorOfTables(bsVec)
 		nameOffset := msg.builder.CreateString(sv.Name)
-		mpBuf, _ := sv.toMsgPack()
-		mpOffset := msg.builder.CreateByteVector(mpBuf.Bytes())
 		notify.SignalVectorStart(msg.builder)
 		notify.SignalVectorAddName(msg.builder, nameOffset)
 		notify.SignalVectorAddModelUid(msg.builder, gw.Uid)
-		notify.SignalVectorAddData(msg.builder, mpOffset)
+		notify.SignalVectorAddBinarySignal(msg.builder, bsVecOffset)
 		svOffset := notify.SignalVectorEnd(msg.builder)
 		svVev = append(svVev, svOffset)
 	}
@@ -206,11 +221,7 @@ func (msg *Message) Notify(gw *Gateway) flatbuffers.UOffsetT {
 	signalVectorVector := msg.builder.CreateVectorOfTables(svVev)
 
 	// Model UID vector.
-	// TODO refactor (somehow) the UID Vector to be variable length.
-	// For GW its always 1, but for reuse of code, support a vector.
-	notify.NotifyMessageStartModelUidVector(msg.builder, 1)
-	msg.builder.PlaceUint32(gw.Uid)
-	modelUidVector := msg.builder.EndVector(1)
+	modelUidVector := msg.buildModelUidVector(gw.Uid)
 
 	// NotifyMessage message.
 	notify.NotifyMessageStart(msg.builder)
@@ -224,86 +235,49 @@ func (msg *Message) Notify(gw *Gateway) flatbuffers.UOffsetT {
 	}
 	nMsg := notify.NotifyMessageEnd(msg.builder)
 
-	if msg.buildOnly == false {
+	if !msg.buildOnly {
 		msg.sendNotifyMsg(gw, nMsg)
 	}
 	return nMsg
 }
 
-func HandleChannelMessage(gw *Gateway, channelName string, msg []byte) (err error) {
-	if !flatbuffers.BufferHasIdentifier(msg[4:], channelMessageIdentifier) {
-		return errors.ErrModelUnexpectedMessageId(channelMessageIdentifier)
+func handleNotifySignalIndex(gw *Gateway, channelName string, si *notify.SignalIndex) error {
+	names := []string{}
+	uids := []uint32{}
+	for i := range si.IndexesLength() {
+		slTable := new(notify.SignalLookup)
+		if ok := si.Indexes(slTable, i); !ok {
+			return errors.ErrModelMessageDecode(fmt.Sprintf("unable to decode SignalLookup (i=%d)", i))
+		}
+		names = append(names, string(slTable.Name()))
+		uids = append(uids, slTable.SignalUid())
 	}
-	cm := channel.GetSizePrefixedRootAsChannelMessage(msg, 0)
-	if cm.ModelUid() != gw.Uid {
-		slog.Debug(fmt.Sprintf("Message not for this model, continuing to wait (message uid=%d)", cm.ModelUid()))
-		return nil
+	if sv, ok := gw.ScalarSignalVector[channelName]; ok {
+		sv.indexSignals(names, uids)
+	} else if sv, ok := gw.BinarySignalVector[channelName]; ok {
+		sv.indexSignals(names, uids)
+	} else {
+		return errors.ErrModelMissingSignalVector(channelName)
 	}
-
-	switch cm.MessageType() {
-	case channel.MessageTypeModelRegister:
-	case channel.MessageTypeModelReady:
-	case channel.MessageTypeModelStart:
-	case channel.MessageTypeModelExit:
-	case channel.MessageTypeSignalIndex:
-		slog.Debug(fmt.Sprintf("SignalIndex <-- [%s]", channelName))
-		ut := new(flatbuffers.Table)
-		if ok := cm.Message(ut); !ok {
-			return errors.ErrModelMessageDecode("unable to decode SignalIndex")
-		}
-		names := []string{}
-		uids := []uint32{}
-		siMsg := new(channel.SignalIndex)
-		siMsg.Init(ut.Bytes, ut.Pos)
-		for i := range siMsg.IndexesLength() {
-			slTable := new(channel.SignalLookup)
-			if ok := siMsg.Indexes(slTable, i); !ok {
-				return errors.ErrModelMessageDecode(fmt.Sprintf("unable to decode SignalLookup (i=%d)", i))
-			}
-			names = append(names, string(slTable.Name()))
-			uids = append(uids, slTable.SignalUid())
-		}
-		// FIXME need to ensure that channel name is unique over both scalar and binary.
-		if sv, ok := gw.ScalarSignalVector[channelName]; ok {
-			sv.indexSignals(names, uids)
-		} else if sv, ok := gw.BinarySignalVector[channelName]; ok {
-			sv.indexSignals(names, uids)
-		} else {
-			return errors.ErrModelMissingSignalVector(channelName)
-		}
-	case channel.MessageTypeSignalRead:
-	case channel.MessageTypeSignalValue:
-		slog.Debug(fmt.Sprintf("SignalValue <-- [%s]", channelName))
-		ut := new(flatbuffers.Table)
-		if ok := cm.Message(ut); !ok {
-			return errors.ErrModelMessageDecode("unable to decode SignalValue")
-		}
-		svMsg := new(channel.SignalValue)
-		svMsg.Init(ut.Bytes, ut.Pos)
-
-		if sv, ok := gw.ScalarSignalVector[channelName]; ok {
-			buf := bytes.NewBuffer(svMsg.DataBytes())
-			if err := sv.fromMsgPack(buf); err != nil {
-				slog.Debug(fmt.Sprint("SignalValue not decoded, err: ", err))
-			}
-		} else if _, ok := gw.BinarySignalVector[channelName]; ok {
-			// Currently binary data is not expected in a SV message.
-		} else {
-			return errors.ErrModelMissingSignalVector(channelName)
-		}
-	case channel.MessageTypeSignalWrite:
-	case channel.MessageTypeNONE:
-	default:
-	}
-
 	return nil
 }
 
+// HandleNotifyMessage processes an inbound SBNO NotifyMessage.
 func HandleNotifyMessage(gw *Gateway, msg []byte) (discard bool, err error) {
 	if !flatbuffers.BufferHasIdentifier(msg[4:], notifyMessageIdentifier) {
 		return false, errors.ErrModelUnexpectedMessageId(notifyMessageIdentifier)
 	}
 	nMsg := notify.GetSizePrefixedRootAsNotifyMessage(msg, 0)
+
+	// ACK messages carry a non-zero token — discard them in the step loop.
+	if nMsg.Token() != 0 {
+		return true, nil
+	}
+
+	// ModelRegister ACKs embedded without token: also discard.
+	if nMsg.ModelRegister(nil) != nil {
+		return true, nil
+	}
 
 	slog.Debug(fmt.Sprintf("Notify/ModelStart <-- [%d]", gw.Uid))
 
@@ -326,7 +300,6 @@ func HandleNotifyMessage(gw *Gateway, msg []byte) (discard bool, err error) {
 		svName := string(nSv.Name())
 		if sv, ok := gw.ScalarSignalVector[svName]; ok {
 			slog.Debug(fmt.Sprintf("SignalVector <-- [%s]", svName))
-
 			sUids := []uint32{}
 			sValues := []float64{}
 			for i := range nSv.SignalLength() {
@@ -339,12 +312,14 @@ func HandleNotifyMessage(gw *Gateway, msg []byte) (discard bool, err error) {
 				sValues = append(sValues, sTable.Value())
 			}
 			sv.setByUid(sUids, sValues)
-
 		} else if sv, ok := gw.BinarySignalVector[svName]; ok {
 			slog.Debug(fmt.Sprintf("SignalVector <-- [%s]", svName))
-			buf := bytes.NewBuffer(nSv.DataBytes())
-			if err := sv.fromMsgPack(buf); err != nil {
-				slog.Debug(fmt.Sprint("SignalVector not decoded, err: ", err))
+			for j := range nSv.BinarySignalLength() {
+				bsTable := new(notify.BinarySignal)
+				if ok := nSv.BinarySignal(bsTable, j); !ok {
+					continue
+				}
+				sv.setByUid([]uint32{bsTable.Uid()}, [][]byte{bsTable.DataBytes()})
 			}
 		} else {
 			slog.Debug(fmt.Sprint("SignalVector not present in this model, SV name: ", svName))
@@ -357,65 +332,57 @@ func HandleNotifyMessage(gw *Gateway, msg []byte) (discard bool, err error) {
 
 func WaitForNotifyMessage(gw *Gateway) (found bool, err error) {
 	for {
-		msg, channelName, err := gw.connection.WaitMessage(false)
+		msg, err := gw.connection.WaitMessage(false)
 		if err != nil {
 			return false, err
 		}
-		// FIXME loop over more than one message in buffer?
-		if len(channelName) > 0 {
-			if err := HandleChannelMessage(gw, channelName, msg); err != nil {
-				slog.Debug(fmt.Sprint("Error while waiting for Notify:", err))
-			}
-		} else {
-			discard, err := HandleNotifyMessage(gw, msg)
-			if discard {
-				continue
-			}
-			return true, err
+		discard, err := HandleNotifyMessage(gw, msg)
+		if discard {
+			continue
+		}
+		return true, err
+	}
+}
+
+func WaitForNotifyAck(gw *Gateway, token int32) (channelName string, err error) {
+	for {
+		msg, err := gw.connection.WaitMessage(true)
+		if err != nil {
+			return "", err
+		}
+		if !flatbuffers.BufferHasIdentifier(msg[4:], notifyMessageIdentifier) {
+			slog.Debug("WaitForNotifyAck: unexpected message identifier, continuing")
+			continue
+		}
+		nMsg := notify.GetSizePrefixedRootAsNotifyMessage(msg, 0)
+		if nMsg.Token() == token {
+			slog.Debug(fmt.Sprintf("ModelRegister ACK <-- token=%d channel=%s", token, string(nMsg.ChannelName())))
+			return string(nMsg.ChannelName()), nil
 		}
 	}
 }
 
-func WaitForChannelMessage(gw *Gateway, msgType channel.MessageType) (name string, err error, token int32) {
+func WaitForSignalIndexAck(gw *Gateway) (channelName string, err error) {
 	for {
-		immediate := false
-		if msgType == channel.MessageTypeModelRegister {
-			immediate = true
-		}
-		msg, channelName, err := gw.connection.WaitMessage(immediate)
+		msg, err := gw.connection.WaitMessage(true)
 		if err != nil {
-			return "", err, 0
+			return "", err
 		}
-		// FIXME loop over more than one message in buffer?
-		if len(channelName) > 0 {
-			if !flatbuffers.BufferHasIdentifier(msg[4:], channelMessageIdentifier) {
-				slog.Debug(fmt.Sprint("Error, unexpected message identifier, continuing to wait!"))
-				continue
-			}
-			cm := channel.GetSizePrefixedRootAsChannelMessage(msg, 0)
-			if cm.ModelUid() != gw.Uid {
-				slog.Debug(fmt.Sprintf("Message not for this model, continuing to wait (message uid=%d, model uid=%d)", cm.ModelUid(), gw.Uid))
-				continue
-			}
-			if token := cm.Token(); token > 0 {
-				//if (token > 0) && (token == cm.Token()) {
-				// This is an Ack message.
-				return channelName, nil, token
-			}
-			if err := HandleChannelMessage(gw, channelName, msg); err != nil {
-				return "", err, 0
-			}
-			if cm.MessageType() == msgType {
-				return channelName, nil, 0
-			}
-		} else {
-			discard, err := HandleNotifyMessage(gw, msg)
-			if discard {
-				continue
-			}
-			if err != nil {
-				slog.Debug(fmt.Sprint("Error while waiting for Channel Msg:", err))
-			}
+		if !flatbuffers.BufferHasIdentifier(msg[4:], notifyMessageIdentifier) {
+			slog.Debug("WaitForSignalIndexAck: unexpected message identifier, continuing")
+			continue
 		}
+		nMsg := notify.GetSizePrefixedRootAsNotifyMessage(msg, 0)
+		chName := string(nMsg.ChannelName())
+
+		siTable := nMsg.SignalIndex(nil)
+		if siTable != nil {
+			slog.Debug(fmt.Sprintf("SignalIndex ACK <-- [%s]", chName))
+			if err := handleNotifySignalIndex(gw, chName, siTable); err != nil {
+				return "", err
+			}
+			return chName, nil
+		}
+		// ACK for ModelRegister or unrelated — discard.
 	}
 }

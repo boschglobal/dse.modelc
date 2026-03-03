@@ -9,8 +9,6 @@ import (
 	"log/slog"
 	"slices"
 
-	"github.com/boschglobal/dse.schemas/code/go/dse/schemas/fbs/channel"
-
 	"github.com/boschglobal/dse.modelc/extra/go/modelgo/pkg/connection"
 	"github.com/boschglobal/dse.modelc/extra/go/modelgo/pkg/errors"
 )
@@ -57,7 +55,6 @@ func (gw *Gateway) getAllChannelNames() (chNames []string) {
 	for name, _ := range gw.BinarySignalVector {
 		chNames = append(chNames, name)
 	}
-
 	return
 }
 
@@ -95,19 +92,17 @@ func (gw *Gateway) Connect() error {
 		msg.reset()
 		tokens := msg.ModelRegister(gw)
 		for len(tokens) > 0 {
-			// Wait for ACKs.
-			_, err, token := WaitForChannelMessage(gw, channel.MessageTypeModelRegister)
+			// Wait for ACKs — SimBus sends NotifyMessage(SBNO) with matching token.
+			_, err := WaitForNotifyAck(gw, tokens[0])
 			if err != nil {
 				slog.Debug(fmt.Sprint(err))
 				registerErr = err
 				break
 			}
-			tokens = slices.DeleteFunc(tokens, func(n int32) bool {
-				return n == token
-			})
+			tokens = tokens[1:]
 		}
 		if len(tokens) == 0 {
-			// ModelRegister are ACKed.
+			// All ModelRegister ACKs received.
 			break
 		}
 	}
@@ -120,7 +115,7 @@ func (gw *Gateway) Connect() error {
 	msg.SignalIndex(gw)
 	chNames := gw.getAllChannelNames()
 	for len(chNames) > 0 {
-		chName, err, _ := WaitForChannelMessage(gw, channel.MessageTypeSignalIndex)
+		chName, err := WaitForSignalIndexAck(gw)
 		if err != nil {
 			return errors.ErrModelChannelWait(err)
 		}
@@ -128,21 +123,6 @@ func (gw *Gateway) Connect() error {
 			return n == chName
 		})
 	}
-
-	// SignalRead
-	msg.reset()
-	msg.SignalRead(gw)
-	chNames = gw.getAllChannelNames()
-	for len(chNames) > 0 {
-		chName, err, _ := WaitForChannelMessage(gw, channel.MessageTypeSignalValue)
-		if err != nil {
-			return errors.ErrModelChannelWait(err)
-		}
-		chNames = slices.DeleteFunc(chNames, func(n string) bool {
-			return n == chName
-		})
-	}
-
 	return nil
 }
 

@@ -5,7 +5,6 @@
 package connection
 
 import (
-	"bytes"
 	"context"
 	"fmt"
 	"log/slog"
@@ -15,7 +14,6 @@ import (
 
 	"github.com/boschglobal/dse.modelc/extra/go/modelgo/pkg/errors"
 	red "github.com/redis/go-redis/v9"
-	"github.com/vmihailenco/msgpack/v5"
 )
 
 var (
@@ -72,7 +70,7 @@ func (r *RedisConnection) Connect(channels []string) error {
 
 	c := r.client.InfoMap(r.ctx, "server")
 	if c.Err() != nil {
-		return err
+		return c.Err()
 	}
 	r.version = c.Item("Server", "redis_version")
 	slog.Info(fmt.Sprintf("Redis: Version: %s", r.version))
@@ -86,26 +84,14 @@ func (r *RedisConnection) Disconnect() {
 	r.client = nil
 }
 
-func (r *RedisConnection) SendMessage(msg []byte, channel string) (err error) {
-	encodeFbs := func() []byte {
-		buf := new(bytes.Buffer)
-		enc := msgpack.NewEncoder(buf)
-		if len(channel) > 0 {
-			enc.EncodeString("SBCH")
-		} else {
-			enc.EncodeString("SBNO")
-		}
-		enc.EncodeString(channel)
-		enc.EncodeBytes(msg)
-		return buf.Bytes()
-	}
-	d := encodeFbs()
-	slog.Debug(fmt.Sprintf("Redis: LPUSH -> %s (%d bytes)", r.endpoint.push, len(d)))
-	r.client.LPush(r.ctx, r.endpoint.push, d)
+func (r *RedisConnection) SendMessage(msg []byte) (err error) {
+
+	slog.Debug(fmt.Sprintf("Redis: LPUSH -> %s (%d bytes)", r.endpoint.push, len(msg)))
+	r.client.LPush(r.ctx, r.endpoint.push, msg)
 	return
 }
 
-func (r *RedisConnection) WaitMessage(immediate bool) (msg []byte, channel string, err error) {
+func (r *RedisConnection) WaitMessage(immediate bool) (msg []byte, err error) {
 	timeout := r.endpoint.recvTimeout
 	if immediate {
 		timeout = time.Second
@@ -113,31 +99,16 @@ func (r *RedisConnection) WaitMessage(immediate bool) (msg []byte, channel strin
 	slog.Debug(fmt.Sprintf("Redis: BRPOP <- %s (timeout=%v)", r.endpoint.pull, timeout))
 	c := r.client.BRPop(r.ctx, timeout, r.endpoint.pull)
 	if c.Err() != nil {
-		return nil, "", errors.ErrConnTimeoutWait
+		return nil, errors.ErrConnTimeoutWait
 	}
 	if len(c.Val()) != 2 {
-		return nil, "", errors.ErrConnRedisRespIncomplete
+		return nil, errors.ErrConnRedisRespIncomplete
 	}
-
-	decodeFbs := func(buf []byte) {
-		reader := bytes.NewReader(buf)
-		dec := msgpack.NewDecoder(reader)
-		_, err := dec.DecodeString() // message indicator
-		if err != nil {
-			return
-		}
-		channel, err = dec.DecodeString()
-		if err != nil {
-			return
-		}
-		msg, err = dec.DecodeBytes()
-	}
-	decodeFbs([]byte(c.Val()[1]))
-
+	msg = []byte(c.Val()[1])
 	return
 }
 
-func (r *RedisConnection) PeekMessage() (msg []byte, channel string, err error) {
+func (r *RedisConnection) PeekMessage() (msg []byte, err error) {
 	err = fmt.Errorf("no message error")
 	return
 }
