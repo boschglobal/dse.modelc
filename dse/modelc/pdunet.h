@@ -232,7 +232,10 @@ typedef struct PduNetworkDesc {
     PduTransformMatrix matrix;
 
     /* Marshal Signal Map (to SignalVector, NTL). */
-    MarshalSignalMap* msm;
+    struct {
+        MarshalSignalMap* in;  /* Bus Rx. */
+        MarshalSignalMap* out; /* Bus Tx. */
+    } msm;
 } PduNetworkDesc;
 
 

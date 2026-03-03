@@ -228,30 +228,69 @@ void pdunet_build_msm(PduNetworkDesc* net, const char* sv_name)
     assert(net->mi);
     assert(net->mi->model_desc);
 
-    for (SignalVector* sv = net->mi->model_desc->sv; sv && sv->name; sv++) {
-        if (strcmp(sv->alias, sv_name) != 0) continue;
+    /* Locate the signal vector. */
+    SignalVector* sv = NULL;
+    for (SignalVector* _ = net->mi->model_desc->sv; _ && _->name; _++) {
+        if (strcmp(_->alias, sv_name) != 0) continue;
+        sv = _;
+        break;
+    }
+    if (sv == NULL) return;
+    MarshalMapSpec signal = (MarshalMapSpec){
+        .name = sv->name,
+        .count = sv->count,
+        .signal = sv->signal,
+        .scalar = sv->scalar,
+    };
+
+    /* Loop over matrix ranges and emit a MSM for each range. */
+    Vector in = vector_make(sizeof(MarshalSignalMap), 0, NULL);
+    Vector out = vector_make(sizeof(MarshalSignalMap), 0, NULL);
+    for (size_t range_idx = 0; range_idx < vector_len(&net->matrix.range);
+        range_idx++) {
+        PduRange* r = vector_at(&net->matrix.range, range_idx, NULL);
+        assert(r);
         MarshalMapSpec source = (MarshalMapSpec){
-            .count = net->matrix.signal.count,
-            .signal =
-                (const char**)vector_at(&net->matrix.signal.name, 0, NULL),
-            .scalar = (double*)vector_at(&net->matrix.signal.phys, 0, NULL),
+            .count = r->length,
+            .signal = (const char**)vector_at(
+                &net->matrix.signal.name, r->offset, NULL),
+            .scalar =
+                (double*)vector_at(&net->matrix.signal.phys, r->offset, NULL),
         };
-        MarshalMapSpec signal = (MarshalMapSpec){
-            .name = sv->name,
-            .count = sv->count,
-            .signal = sv->signal,
-            .scalar = sv->scalar,
-        };
+
+        /* Build the MSM object for this range item. */
         errno = 0;
         MarshalSignalMap* msm =
             marshal_generate_signalmap(signal, source, NULL, false);
-        if (errno == 0) {
-            net->msm = calloc(2, sizeof(MarshalSignalMap));
-            net->msm[0] = *msm; /* Shallow copy. */
+        if (errno != 0 || msm == NULL) {
+            log_info(
+                "Call to marshal_generate_signalmap() failed: errno=%d", errno);
+            continue;
+        }
+        log_debug("MSM for range[%d]: dir=%u, offset=%u, length=%u", range_idx,
+            r->dir, r->offset, r->length);
+
+        /* Shallow copy the MSM object into a vector. */
+        switch (r->dir) {
+        case PduDirectionRx:
+            vector_push(&in, msm);
+            break;
+        case PduDirectionTx:
+            vector_push(&out, msm);
+            break;
+        default:
+            break;
         }
         free(msm);
-        break;
     }
+
+    /* Add empty MSM object to each vector (creating an NTL). */
+    vector_push(&in, &(MarshalSignalMap){});
+    vector_push(&out, &(MarshalSignalMap){});
+
+    /* Use the internal vector objects, which are NTLs. */
+    net->msm.in = in.items;
+    net->msm.out = out.items;
 }
 
 

@@ -105,20 +105,31 @@ PduNetworkDesc* pdunet_create(ModelInstanceSpec* mi, void* ncodec,
             return net;
         }
         pdunet_build_msm(net, channel->value);
-        if (net->msm == NULL) {
+        if ((net->msm.in == NULL) && (net->msm.out == NULL)) {
             log_error("Marshal table not created");
             return net;
         }
         for (SignalVector* sv = net->mi->model_desc->sv; sv && sv->name; sv++) {
             if (strcmp(sv->alias, channel->value) != 0) continue;
-            log_notice("  SignalVector <-> Network Mapping for: %s", sv->name);
-            for (uint32_t i = 0; i < net->msm->count; i++) {
+            log_notice(
+                "  SignalVector <-> Network Rx Mapping for: %s", sv->name);
+            for (uint32_t i = 0; net->msm.in && i < net->msm.in->count; i++) {
                 log_notice("    Signal: %s (%d) <-> %s (%d)",
-                    sv->signal[net->msm->signal.index[i]],
-                    net->msm->signal.index[i],
+                    sv->signal[net->msm.in->signal.index[i]],
+                    net->msm.in->signal.index[i],
                     *(const char**)vector_at(&net->matrix.signal.name,
-                        net->msm->source.index[i], NULL),
-                    net->msm->source.index[i]);
+                        net->msm.in->source.index[i], NULL),
+                    net->msm.in->source.index[i]);
+            }
+            log_notice(
+                "  SignalVector <-> Network Tx Mapping for: %s", sv->name);
+            for (uint32_t i = 0; net->msm.out && i < net->msm.out->count; i++) {
+                log_notice("    Signal: %s (%d) <-> %s (%d)",
+                    sv->signal[net->msm.out->signal.index[i]],
+                    net->msm.out->signal.index[i],
+                    *(const char**)vector_at(&net->matrix.signal.name,
+                        net->msm.out->source.index[i], NULL),
+                    net->msm.out->source.index[i]);
             }
             break;
         }
@@ -232,7 +243,7 @@ void pdunet_tx(PduNetworkDesc* net, PduRange* range, PduNetworkVisitFunc visit,
     if (simulation_time < 0) simulation_time = 0.0;
 
     /* Marshal from SignalVector to PDU Network. */
-    marshal_signalmap_out(net->msm);
+    marshal_signalmap_out(net->msm.out);
 
     log_debug("PDU Net: TX");
     ncodec_truncate(net->ncodec);
@@ -266,7 +277,7 @@ void pdunet_tx(PduNetworkDesc* net, PduRange* range, PduNetworkVisitFunc visit,
 
     /* Marshal from PDU Network to SignalVector (update changed signals). */
     // TODO: trigger on actual Tx to reduce CPU consumption in idle steps.
-    marshal_signalmap_in(net->msm);
+    marshal_signalmap_in(net->msm.out);
 }
 
 
@@ -316,7 +327,7 @@ void pdunet_rx(
     pdunet_visit(net, NULL, pdunet_visit_clear_update_flag, NULL);
 
     /* Marshal from PDU Network to SignalVector. */
-    marshal_signalmap_in(net->msm);
+    marshal_signalmap_in(net->msm.in);
 }
 
 
@@ -383,7 +394,8 @@ void pdunet_destroy(PduNetworkDesc* net)
             if (pdu->metadata.config) free(pdu->metadata.config);
         }
         vector_reset(&net->pdus);
-        marshal_signalmap_destroy(net->msm);
+        marshal_signalmap_destroy(net->msm.in);
+        marshal_signalmap_destroy(net->msm.out);
         pdunet_matrix_clear(net);
         pdunet_lua_teardown(net);
         if (net->network.metadata.config) free(net->network.metadata.config);
