@@ -12,12 +12,14 @@ permissions:
 jobs:
   redis-server:
     runs-on: ubuntu-latest
+    env:
+      REDIS_WIN_VERSION: 7.2.13
 
     steps:
-      - name: Get latest release from redis-windows/redis-windows
+      - name: Get Redis ${{ env.REDIS_WIN_VERSION }} release from redis-windows/redis-windows
         id: get-release
         run: |
-          RELEASE_DATA=$(curl -s https://api.github.com/repos/redis-windows/redis-windows/releases/latest)
+          RELEASE_DATA=$(curl -s https://api.github.com/repos/redis-windows/redis-windows/releases/tags/${REDIS_WIN_VERSION})
           DOWNLOAD_URL=$(echo "$RELEASE_DATA" | jq -r '.assets[] | select(.name | test("Redis-.*-Windows-x64-cygwin\\.zip")) | .browser_download_url')
           echo "download_url=$DOWNLOAD_URL" >> $GITHUB_OUTPUT
 
