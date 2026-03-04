@@ -1,9 +1,8 @@
-env NAME_FRNET=pdunet_inst
-env SIM=dse/modelc/build/_out/examples/pdunet/frnet
-
 
 # TEST: frnet example
 
+env NAME_FRNET=pdunet_inst
+env SIM=dse/modelc/build/_out/examples/pdunet/frnet
 exec sh -e $WORK/test.sh
 
 stderr 'Using Valgrind'
@@ -13,6 +12,41 @@ stdout 'Loading symbol: model_step ... ok'
 stdout 'Loading symbol: model_destroy ... not found'
 stdout 'Run the Simulation ...'
 stdout 'Controller exit ...'
+
+stdout 'PDU Net: FlexRay Network Config: FR_A'
+stdout 'PDU Net:   FlexRay: PDU\[0\] id=101, slot=11, dir=Tx, name=ONE_TX'
+stdout 'PDU Net:   FlexRay: PDU\[1\] id=101, slot=11, dir=Rx, name=ONE_RX'
+stdout 'PDU Net:   FlexRay: cycle_time=0.005000'
+stdout 'step\[0.000000\]: Alive=0.000000, AliveRx=0.000000, FOO=42.000000, BAR=0.000000'
+stdout 'step\[0.004500\]: Alive=1.000000, AliveRx=0.000000, FOO=42.000000, BAR=0.000000'
+stdout 'step\[0.005000\]: Alive=1.000000, AliveRx=0.000000, FOO=42.000000, BAR=0.000000'
+stdout 'step\[0.005500\]: Alive=1.000000, AliveRx=0.000000, FOO=42.000000, BAR=0.000000'
+stdout 'step\[0.006000\]: Alive=1.000000, AliveRx=1.000000, FOO=24.000000, BAR=42.000000'
+stdout 'step\[0.008500\]: Alive=1.000000, AliveRx=1.000000, FOO=24.000000, BAR=42.000000'
+stdout 'step\[0.009000\]: Alive=2.000000, AliveRx=1.000000, FOO=24.000000, BAR=42.000000'
+
+
+
+# TEST: Lua frnet example
+
+env NAME_FRNET=pdunet_inst
+env SIM=dse/modelc/build/_out/examples/pdunet/luafrnet
+exec sh -e $WORK/test.sh
+
+stderr 'Using Valgrind'
+stdout 'Load YAML File: data/simulation.yaml'
+stdout 'Load YAML File: model/pdunet_inst/data/network.yaml'
+stdout 'SignalVector <-> Network Rx Mapping for: scalar'
+stdout 'Signal: AliveRx \(1\) <-> AliveRx \(0\)'
+stdout 'Signal: BAR \(3\) <-> BAR \(1\)'
+stdout 'SignalVector <-> Network Tx Mapping for: scalar'
+stdout 'Signal: Alive \(0\) <-> AliveRx \(0\)'
+stdout 'Signal: FOO \(2\) <-> BAR \(1\)'
+stdout 'Lua MCL: loading model: model/pdunet_inst/model.lua'
+stdout 'Run the Simulation ...'
+stdout 'Controller exit ...'
+
+stdout 'model_create\(\)'
 
 stdout 'PDU Net: FlexRay Network Config: FR_A'
 stdout 'PDU Net:   FlexRay: PDU\[0\] id=101, slot=11, dir=Tx, name=ONE_TX'

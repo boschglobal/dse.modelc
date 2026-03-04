@@ -21,7 +21,7 @@ typedef struct LuaMclModel {
 
 
 /* lua.c */
-DLL_PRIVATE lua_State* lua_model_create(ModelDesc* m);
+DLL_PRIVATE lua_State* lua_model_create(lua_State* L, ModelDesc* m);
 DLL_PRIVATE void       lua_model_destroy(lua_State* L);
 DLL_PRIVATE MclDesc*   lua_mcl_create(ModelDesc* model);
 DLL_PRIVATE void       lua_mcl_destroy(MclDesc* model);

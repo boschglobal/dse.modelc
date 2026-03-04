@@ -365,12 +365,10 @@ int pdunet_lua_setup(PduNetworkDesc* net)
     ModelInstancePrivate* mip = net->mi->private;
 
     /* Establish the Lua interpreter. */
-    if (mip->lua_state == NULL) {
-        mip->lua_state = lua_model_create(NULL);
-        // FIXME: do we have a model object at this point ???
-        assert(mip->lua_state);
-    }
+    mip->lua_state = lua_model_create(mip->lua_state, NULL);
+    assert(mip->lua_state);
 
+    /* Setup Lua interpreter for PDU Net. */
     lua_State* L = mip->lua_state;
     _create_payload_metatable(L);
 

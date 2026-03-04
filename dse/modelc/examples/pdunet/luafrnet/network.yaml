@@ -1,0 +1,106 @@
+# Copyright 2026 Robert Bosch GmbH
+#
+# SPDX-License-Identifier: Apache-2.0
+
+---
+kind: Network
+metadata:
+  name: FR_A
+  labels:
+    signal: FlexRay_A
+    pdunet: flexray
+spec:
+  metadata:
+    flexray:
+      inhibit_null_frames: true
+      macrotick_per_cycle: 3361
+      microtick_per_cycle: 200000
+      network_idle_start: 3355
+      static_slot_length: 55
+      static_slot_count: 40
+      minislot_length: 6
+      minislot_count: 200
+      static_slot_payload_length: 64  # Bytes, from Words (32 * 2)
+      bit_rate: BR10Mbps
+      channel_enable: AB
+      wakeup_channel_select: A
+      single_slot_enabled: true
+  schedule:
+    epoch_offset: 0.000
+  functions:
+    global:
+      - lua: |
+          function inc_counter(v, floor, limit)
+              v = v + 1
+              if v >= limit or v < floor then
+                  v = floor
+              end
+              return v
+          end
+  pdus:
+    # ONE_TX and ONE_RX operate as a pair (same payload layout) with different
+    # signal names (so that signals can map to a SignalGroup).
+    - pdu: ONE_TX
+      id: 101
+      length: 64
+      dir: Tx
+      schedule:
+        phase: -0.001
+        interval: 0.005
+      metadata:
+        flexray:
+          slot_id: 11
+          payload_length: 64
+          cycle_repetition: 1
+          base_cycle: 0
+          direction: Tx
+          channel: A
+          transmit_mode: Continuous
+          inhibit_null: true
+      signals:
+        - signal: Alive
+          encoding:
+            start: 0
+            length: 8
+            factor: 1
+            offset: 0
+          functions:
+            encode:
+              - lua: |
+                  function encode__FR_A__ONE_TX__Alive(ctx)
+                      ctx.phys = inc_counter(ctx.phys, 1, 240)
+                      return ctx
+                  end
+        - signal: FOO
+          encoding:
+            start: 8
+            length: 16
+            factor: 1
+            offset: 0
+    - pdu: ONE_RX
+      id: 101  # This PDU shadows the ONE_TX PDU (eff. loopback of the TX).
+      length: 64
+      dir: Rx
+      metadata:
+        flexray:
+          slot_id: 11
+          payload_length: 64
+          cycle_repetition: 1
+          base_cycle: 0
+          direction: Rx
+          channel: A
+          transmit_mode: Continuous
+          inhibit_null: true
+      signals:
+        - signal: AliveRx
+          encoding:
+            start: 0
+            length: 8
+            factor: 1
+            offset: 0
+        - signal: BAR
+          encoding:
+            start: 8
+            length: 16
+            factor: 1
+            offset: 0

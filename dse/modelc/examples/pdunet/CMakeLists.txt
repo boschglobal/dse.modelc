@@ -51,3 +51,32 @@ install(
     COMPONENT
         ${MODEL_NAME}
 )
+
+# Lua example
+set(MODEL_NAME "luafrnet")
+set(MODEL_INST "pdunet_inst")
+set(MODEL_PATH "examples/pdunet/${MODEL_NAME}")
+install(
+    FILES
+        ${MODEL_NAME}/simulation.yaml
+    DESTINATION
+        ${MODEL_PATH}/data
+    COMPONENT
+        ${MODEL_NAME}
+)
+install(
+    FILES
+        ${MODEL_NAME}/network.yaml
+    DESTINATION
+        ${MODEL_PATH}/model/${MODEL_INST}/data
+    COMPONENT
+        ${MODEL_NAME}
+)
+install(
+    FILES
+        ${MODEL_NAME}/model.lua
+    DESTINATION
+        ${MODEL_PATH}/model/${MODEL_INST}
+    COMPONENT
+        ${MODEL_NAME}
+)

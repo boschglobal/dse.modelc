@@ -34,10 +34,11 @@ Lua Model API
 =============
 */
 
-lua_State* lua_model_create(ModelDesc* m)
+lua_State* lua_model_create(lua_State* L, ModelDesc* m)
 {
-    lua_State* L;
-    L = luaL_newstate();
+    if (L == NULL) {
+        L = luaL_newstate();
+    }
     luaL_openlibs(L);
     if (m != NULL) {
         lua_modellib_open(L, m);
@@ -97,10 +98,8 @@ static int32_t lua_mcl_load(MclDesc* mcl)
     ModelInstancePrivate* mip = m->mcl.model.mi->private;
 
     /* Establish the Lua interpreter. */
-    if (mip->lua_state == NULL) {
-        mip->lua_state = lua_model_create(&m->mcl.model);
-        assert(mip->lua_state);
-    }
+    mip->lua_state = lua_model_create(mip->lua_state, &m->mcl.model);
+    assert(mip->lua_state);
     m->L = mip->lua_state;
 
     /* Parse runtime parameters. */
