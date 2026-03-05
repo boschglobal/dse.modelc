@@ -338,6 +338,7 @@ jobs:
 
       - name: Redis Server
         run: |
+          ls -R
           cp redis-server-windows/redis-server.exe win/simer/bin/redis-server.exe
           cp redis-server-windows/*.dll win/simer/bin/
 
