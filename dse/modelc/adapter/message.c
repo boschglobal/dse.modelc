@@ -130,8 +130,8 @@ static void send_trace(
 {
     size_t offset = 0;
     while (offset < payload_len) {
-        ssize_t sent = send(adapter->trace.client_fd, payload + offset,
-            payload_len - offset, 0);
+        ssize_t sent = send(adapter->trace.client_fd,
+            (const char*)(payload + offset), payload_len - offset, 0);
         if (sent <= 0) break;
         offset += sent;
     }

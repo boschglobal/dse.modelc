@@ -2,7 +2,6 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-#include <arpa/inet.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdbool.h>
@@ -101,11 +100,12 @@ static int simbus_open_trace_tcp(Adapter* adapter, const char* port)
 }
 
 
-static int simbus_open_trace_unix(Adapter* adapter, const char* path)
+#ifndef _WIN32
+static int simbus_open_trace_unix_socket(Adapter* adapter, const char* path)
 {
     assert(adapter);
     assert(path);
-    struct sockaddr_un* addr = &adapter->trace.sunix.server_addr;
+    struct sockaddr_un* addr = &adapter->trace.socket.server_addr;
 
     log_notice("SimBus Trace: setup on socket %s", path);
 
@@ -136,7 +136,7 @@ static int simbus_open_trace_unix(Adapter* adapter, const char* path)
         return -1;
     }
     adapter->trace.server_fd = sockfd;
-    adapter->trace.sunix.path = path;
+    adapter->trace.socket.path = path;
 
     log_notice("SimBus Trace: server is listening on socket %s", path);
     log_notice("SimBus Trace: waiting for client (%ds) ...",
@@ -151,7 +151,7 @@ static int simbus_open_trace_unix(Adapter* adapter, const char* path)
     if (ret > 0 && FD_ISSET(adapter->trace.server_fd, &fds)) {
         socklen_t client_len = sizeof(struct sockaddr_un);
         sockfd = accept(adapter->trace.server_fd,
-            (struct sockaddr*)&adapter->trace.sunix.client_addr, &client_len);
+            (struct sockaddr*)&adapter->trace.socket.client_addr, &client_len);
         if (sockfd < 0) {
             log_error("Call to accept() failed");
             close(adapter->trace.server_fd);
@@ -169,6 +169,7 @@ static int simbus_open_trace_unix(Adapter* adapter, const char* path)
     adapter->trace.server_fd = 0;
     return 0;
 }
+#endif
 
 
 Adapter* simbus_adapter_create(Endpoint* endpoint, double bus_step_size)
@@ -218,10 +219,12 @@ Adapter* simbus_adapter_create(Endpoint* endpoint, double bus_step_size)
             log_error("Unable to create SimBus TCP socket");
         }
     } else if (getenv(ENV_SIMBUS_TRACE_UNIX)) {
+#ifndef _WIN32
         char* _socket_file = getenv(ENV_SIMBUS_TRACE_UNIX);
-        if (simbus_open_trace_unix(adapter, _socket_file) < 0) {
+        if (simbus_open_trace_unix_socket(adapter, _socket_file) < 0) {
             log_error("Unable to create SimBus UNIX socket");
         }
+#endif
     }
 
     return adapter;

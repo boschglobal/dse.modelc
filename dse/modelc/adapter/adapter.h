@@ -10,9 +10,14 @@
 #include <stdbool.h>
 #include <stdio.h>
 #include <time.h>
+#ifdef _WIN32
+#include <winsock2.h>
+#include <ws2tcpip.h>
+#else
 #include <arpa/inet.h>
 #include <sys/socket.h>
 #include <sys/un.h>
+#endif
 #include <dse/clib/collections/set.h>
 #include <dse/clib/collections/hashmap.h>
 #include <dse/modelc/adapter/transport/endpoint.h>
@@ -150,10 +155,13 @@ typedef struct Adapter {
         int   server_fd;
         int   client_fd;
         struct {
+#ifdef _WIN32
+#else
             struct sockaddr_un server_addr;
             struct sockaddr_un client_addr;
             const char*        path;
-        } sunix;
+#endif
+        } socket;
         struct {
             struct sockaddr_in server_addr;
             struct sockaddr_in client_addr;

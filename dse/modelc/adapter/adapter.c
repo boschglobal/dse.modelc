@@ -318,10 +318,13 @@ void adapter_destroy(Adapter* adapter)
         close(adapter->trace.server_fd);
         adapter->trace.server_fd = 0;
     }
-    if (adapter->trace.sunix.path) {
-        unlink(adapter->trace.sunix.path);
-        adapter->trace.sunix.path = NULL;
+#ifdef _WIN32
+#else
+    if (adapter->trace.socket.path) {
+        unlink(adapter->trace.socket.path);
+        adapter->trace.socket.path = NULL;
     }
+#endif
     free(adapter);
 }
 
