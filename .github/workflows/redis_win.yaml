@@ -14,29 +14,29 @@ jobs:
     runs-on: ubuntu-latest
     env:
       REDIS_WIN_VERSION: 7.2.13
+      BUILD_VARIANT: msys2
 
     steps:
       - name: Get Redis ${{ env.REDIS_WIN_VERSION }} release from redis-windows/redis-windows
         id: get-release
         run: |
           RELEASE_DATA=$(curl -s https://api.github.com/repos/redis-windows/redis-windows/releases/tags/${REDIS_WIN_VERSION})
-          DOWNLOAD_URL=$(echo "$RELEASE_DATA" | jq -r '.assets[] | select(.name | test("Redis-.*-Windows-x64-cygwin\\.zip")) | .browser_download_url')
+          DOWNLOAD_URL=$(echo "$RELEASE_DATA" | jq -r '.assets[] | select(.name | test("Redis-.*-Windows-x64-${BUILD_VARIANT}\\.zip")) | .browser_download_url')
           echo "download_url=$DOWNLOAD_URL" >> $GITHUB_OUTPUT
 
-      - name: Download Redis Windows zip
+      - name: Download Redis Windows package
         run: |
           curl -L -o redis-windows.zip "${{ steps.get-release.outputs.download_url }}"
+          mkdir -p redis-windows
+          unzip redis-windows.zip -d redis-windows
+          ls -l redis-windows
 
-      - name: Extract redis-server.exe
-        run: |
-          unzip redis-windows.zip "*/redis-server.exe" || unzip redis-windows.zip "redis-server.exe"
-          find . -name "redis-server.exe" -exec mv {} . \;
-          ls -la redis-server.exe
-
-      - name: Upload redis-server.exe as artifact
+      - name: Upload redis-server as artifact
         uses: actions/upload-artifact@v4
         with:
           name: redis-server-windows
-          path: redis-server.exe
+          path: |
+            redis-windows/redis-server.exe
+            redis-windows/*.dll
           retention-days: 90  # Adjust as needed
           if-no-files-found: error
