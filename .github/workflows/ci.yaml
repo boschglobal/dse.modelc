@@ -335,12 +335,12 @@ jobs:
         with:
           workflow: redis_win.yaml
           name: redis-server-windows
+          path: redis-windows
 
       - name: Redis Server
         run: |
-          ls -R
-          cp redis-server-windows/redis-server.exe win/simer/bin/redis-server.exe
-          cp redis-server-windows/*.dll win/simer/bin/
+          cp redis-windows/redis-server.exe win/simer/bin/redis-server.exe
+          cp redis-windows/*.dll win/simer/bin/
 
       - name: Package
         run: |
