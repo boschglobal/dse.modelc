@@ -84,7 +84,7 @@ typedef struct MclDesc {
         int* kind;
     } source;
     int* msm;
-    uint64_t [4] __reserved__;
+    uint64_t[4] __reserved__;
 }
 ```
 

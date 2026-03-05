@@ -125,6 +125,19 @@ static bool process_sbno_message(
 }
 
 
+static void send_trace(
+    Adapter* adapter, const uint8_t* payload, size_t payload_len)
+{
+    size_t offset = 0;
+    while (offset < payload_len) {
+        ssize_t sent = send(adapter->trace.client_fd, payload + offset,
+            payload_len - offset, 0);
+        if (sent <= 0) break;
+        offset += sent;
+    }
+}
+
+
 static bool process_message_stream(Adapter* adapter, const char* channel_name,
     uint8_t* buffer, size_t length, int32_t token)
 {
@@ -143,9 +156,13 @@ static bool process_message_stream(Adapter* adapter, const char* channel_name,
             break;
         };
         /* Trace the incoming message, before processing. */
-        if (adapter->trace) {
+        if (adapter->trace.file) {
             fwrite(raw_msg_ptr, sizeof(raw_msg_ptr[0]),
-                msg_len + sizeof(flatbuffers_uoffset_t), adapter->trace);
+                msg_len + sizeof(flatbuffers_uoffset_t), adapter->trace.file);
+        }
+        if (adapter->trace.client_fd > 0) {
+            send_trace(
+                adapter, raw_msg_ptr, msg_len + sizeof(flatbuffers_uoffset_t));
         }
         /* Process the message. */
         if (flatbuffers_has_identifier(msg_ptr, "SBNO")) {
@@ -235,8 +252,11 @@ int32_t send_notify_message(
     uint8_t* buf = flatcc_builder_finalize_buffer(B, &size);
 
     /* Trace. */
-    if (adapter->trace) {
-        fwrite(buf, sizeof(buf[0]), size, adapter->trace);
+    if (adapter->trace.file) {
+        fwrite(buf, sizeof(buf[0]), size, adapter->trace.file);
+    }
+    if (adapter->trace.client_fd > 0) {
+        send_trace(adapter, buf, size);
     }
 
     /* Send the Channel Message with the configured Transport. */

@@ -306,9 +306,21 @@ void adapter_destroy(Adapter* adapter)
         free(adapter->vtable);
         adapter->vtable = NULL;
     }
-    if (adapter->trace) {
-        fclose(adapter->trace);
-        adapter->trace = NULL;
+    if (adapter->trace.file) {
+        fclose(adapter->trace.file);
+        adapter->trace.file = NULL;
+    }
+    if (adapter->trace.client_fd) {
+        close(adapter->trace.client_fd);
+        adapter->trace.client_fd = 0;
+    }
+    if (adapter->trace.server_fd) {
+        close(adapter->trace.server_fd);
+        adapter->trace.server_fd = 0;
+    }
+    if (adapter->trace.sunix.path) {
+        unlink(adapter->trace.sunix.path);
+        adapter->trace.sunix.path = NULL;
     }
     free(adapter);
 }

@@ -40,7 +40,7 @@ docker run --name simer -i --rm \
     $SIMER -valgrind $NAME \
         -env simbus:SIMBUS_TRANSPORT=$SIMBUS_TRANSPORT \
         -env simbus:SIMBUS_URI=$SIMBUS_URI \
-        -env simbus:SIMBUS_TRACEFILE=$TRACEFILE \
+        -env simbus:SIMBUS_TRACE_FILE=$TRACEFILE \
         -env $NAME:SIMBUS_TRANSPORT=$SIMBUS_TRANSPORT \
         -env $NAME:SIMBUS_URI=$SIMBUS_URI \
         -env $NAME:SIMBUS_LOGLEVEL=2

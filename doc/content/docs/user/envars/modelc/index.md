@@ -25,13 +25,15 @@ github_subdir: "doc"
 
 ### SimBus
 
-| Variable           | CLI Option    | Default |
-| ------------------ | ------------- | ------- |
-| `SIMBUS_LOGLEVEL`  | `--logger`    | `4` (LOG_NOTICE) |
-| `SIMBUS_TRACEFILE` | _N/A_         | _None_ (trace disabled, path to trace file) |
-| `SIMBUS_TRANSPORT` | `--transport` | `redispubsub` |
-| `SIMBUS_URI`       | `--uri`       | `redis://localhost:6379` |
-| `SIMBUS_TIMEOUT`   | `--timeout`   | `60` (seconds) |
+| Variable            | CLI Option    | Default |
+| ------------------- | ------------- | ------- |
+| `SIMBUS_LOGLEVEL`   | `--logger`    | `4` (LOG_NOTICE) |
+| `SIMBUS_TRACE_FILE` | _N/A_         | _None_ (trace disabled, path to trace file) |
+| `SIMBUS_TRACE_PORT` | _N/A_         | _None_ (trace disabled, UDP port for trace) |
+| `SIMBUS_TRACE_UNIX` | _N/A_         | _None_ (trace disabled, path to socket, e.g. /tmp/simbus_trace.sock) |
+| `SIMBUS_TRANSPORT`  | `--transport` | `redispubsub` |
+| `SIMBUS_URI`        | `--uri`       | `redis://localhost:6379` |
+| `SIMBUS_TIMEOUT`    | `--timeout`   | `60` (seconds) |
 
 
 ### Examples
@@ -60,4 +62,4 @@ github_subdir: "doc"
 | Variable           | CLI Option    | Default |
 | ------------------ | ------------- | ------- |
 | `CSV_FILE`         | _N/A_         | _None_ (path to CSV file) |
-| `CSV_LINE_MAXLEN`  | _N/A_         | `1ß24` |
+| `CSV_LINE_MAXLEN`  | _N/A_         | `1024` |

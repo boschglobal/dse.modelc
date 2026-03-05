@@ -18,19 +18,27 @@ Simulation trace tool.
 # Create the trace folder.
 $ mkdir examples/binary/data/trace
 
-# Collect a SimBus trace from a simulation run.
+# Trace to a binary file. Run the simulation, and then print the trace.
 $ docker run --name simer -i --rm \
     --volume ./examples/binary:/sim \
-    --env SIMBUS_TRACEFILE=data/trace/simbus.bin \
+    --env SIMBUS_TRACE_FILE=data/trace/simbus.bin \
     ghcr.io/boschglobal/dse-simer:latest
-
-# Print a long-form summary of the trace file.
 $ docker run --name simer -i --rm \
     --volume ./examples/binary:/sim \
     --entrypoint /usr/local/bin/trace \
     ghcr.io/boschglobal/dse-simer:latest
         summary -long data/trace/simbus.bin
 
+# Trace with a TCP port. Start the TCP trace monitor, and then run the simulation.
+$ docker run --name simer -i --rm \
+    --volume ./examples/binary:/sim \
+    --entrypoint /usr/local/bin/trace \
+    ghcr.io/boschglobal/dse-simer:latest
+        monitor -port 2159
+$ docker run --name simer -i --rm \
+    --volume ./examples/binary:/sim \
+    --env SIMBUS_TRACE_PORT=2159 \
+    ghcr.io/boschglobal/dse-simer:latest
 ```
 
 

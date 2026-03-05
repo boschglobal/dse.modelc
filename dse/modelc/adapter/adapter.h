@@ -10,6 +10,9 @@
 #include <stdbool.h>
 #include <stdio.h>
 #include <time.h>
+#include <arpa/inet.h>
+#include <sys/socket.h>
+#include <sys/un.h>
 #include <dse/clib/collections/set.h>
 #include <dse/clib/collections/hashmap.h>
 #include <dse/modelc/adapter/transport/endpoint.h>
@@ -140,7 +143,22 @@ typedef struct Adapter {
     struct timespec bench_notifysend_ts;
 
     /* Message trace. */
-    FILE* trace;
+    struct {
+        /* File trace. */
+        FILE* file;
+        /* Socket trace. */
+        int   server_fd;
+        int   client_fd;
+        struct {
+            struct sockaddr_un server_addr;
+            struct sockaddr_un client_addr;
+            const char*        path;
+        } sunix;
+        struct {
+            struct sockaddr_in server_addr;
+            struct sockaddr_in client_addr;
+        } tcp;
+    } trace;
 } Adapter;
 
 

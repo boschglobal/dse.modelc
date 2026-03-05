@@ -44,7 +44,7 @@ typedef struct ModelCArguments {
     int log_level_set_by_cli;
     int steps;
     const char* sim_path;
-    int [4] __reserved__;
+    int[4] __reserved__;
 }
 ```
 
@@ -72,7 +72,7 @@ typedef struct ModelInstanceSpec {
     void* spec;
     void* yaml_doc_list;
     void* private;
-    int [8] __reserved__;
+    int[8] __reserved__;
 }
 ```
 
@@ -96,7 +96,7 @@ typedef struct RuntimeModelDesc {
         int binary_signals_reset;
         RuntimeModelVTable vtable;
     } runtime;
-    int [5] __reserved__;
+    int[5] __reserved__;
 }
 ```
 
@@ -124,7 +124,7 @@ typedef struct SimulationSpec {
     int mode_loopback;
     int sequential_cosim;
     void* spec;
-    int [3] __reserved__;
+    int[3] __reserved__;
 }
 ```
 
