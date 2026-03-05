@@ -26,8 +26,11 @@ jobs:
       - name: Download Redis Windows package
         run: |
           curl -L -o redis-windows.zip "${{ steps.get-release.outputs.download_url }}"
+          unzip redis-windows.zip
           mkdir -p redis-windows
-          unzip redis-windows.zip -d redis-windows
+          topdir=$(unzip -Z1 redis-windows.zip | head -1 | cut -d/ -f1)
+          rsync -a "${topdir}/" redis-windows/
+          rm -rf "$topdir"
           ls -l redis-windows
 
       - name: Upload redis-server as artifact
