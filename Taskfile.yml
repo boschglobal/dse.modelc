@@ -96,10 +96,8 @@ tasks:
       - echo "UNZIP DIR {{.ZIP}}/{{.ZIPDIR}} -> {{.DIR}}"
       - mkdir -p {{.DIR}}
       - unzip -o {{.ZIP}} {{.ZIPDIR}}/* -d {{.DIR}}
-      - rsync -a {{.DIR}}/{{.ZIPDIR}}/ {{.DIR}}/
-      - rm -rf {{.DIR}}/$(basename {{.ZIP}} {{ext .ZIP}})
     dir: '{{.OUTDIR}}'
-    label: dse:unzip-dir:{{.ZIPFILE}}-{{.DIR}}
+    label: dse:unzip-dir:{{.ZIPFILE}}-{{.DIR}}-{{.ZIPDIR}}
     run: when_changed
     vars:
       ZIP: '{{.ZIP}}'
@@ -108,7 +106,7 @@ tasks:
     sources:
       - '{{.ZIP}}'
     generates:
-      - '{{.DIR}}/**'
+      - '{{.DIR}}/{{.ZIPDIR}}/**'
 
   download-simer-windows:
     desc: |
@@ -175,7 +173,7 @@ tasks:
       - echo "PACKAGE SIM {{.SIMDIR}} -> {{.PACKAGE_PATH}}"
       - rm -f {{.PACKAGE_PATH}}
       - zip -r {{.PACKAGE_PATH}} {{.SIMDIR}}
-    dir:  '{{.OUTDIR}}'
+    dir: '{{.OUTDIR}}'
     label: dse:modelc:package-sim
     vars:
       REPO: '{{.REPO}}'
