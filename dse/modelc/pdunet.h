@@ -70,11 +70,11 @@ typedef struct PduItem {
     /* PDU properties. */
     uint32_t     id;
     size_t       length;
-    PduDirection dir;  // TODO: schema update
+    PduDirection dir;
     /* Schedule. */
     struct {
-        double phase;     // TODO: schema update
-        double interval;  // TODO: schema update
+        double phase;
+        double interval;
     } schedule;
     /* Functions. */
     struct {
@@ -217,7 +217,7 @@ typedef struct PduNetworkDesc {
     struct {
         uint32_t simulation_time; /* Normalised (to step_size). */
         double   step_size;
-        double   epoch_offset;  // TODO: schema update
+        double   epoch_offset;
     } schedule;
 
     /* Functions. */

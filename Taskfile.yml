@@ -39,16 +39,149 @@ vars:
   # Docker commands) must be set to the host relative path.
   ENTRYDIR: '{{if .SIM}}{{.ENTRYWORKDIR}}/{{.SIM}}{{else}}{{.PWD}}{{end}}'
   # Container image specification.
-  MODELC_IMAGE: '{{.MODELC_IMAGE | default "ghcr.io/boschglobal/dse-modelc"}}'
-  IMAGE_TAG: '{{if .MODELC_TAG}}{{.MODELC_TAG}}{{else}}{{if .IMAGE_TAG}}{{.IMAGE_TAG}}{{else}}latest{{end}}{{end}}'
+  REPO: 'https://github.com/boschglobal/dse.modelc'
+  REGISTRY: ghcr.io/boschglobal
+  TAG: '{{.TAG | default "latest"}}'
+  MODELC_IMAGE: '{{if .MODELC_IMAGE}}{{.MODELC_IMAGE}}/{{.MODELC_IMAGE}}{{else}}{{.REGISTRY}}/dse-modelc:{{.TAG}}{{end}}'
+  SIMER_IMAGE: '{{if .SIMER_IMAGE}}{{.SIMER_IMAGE}}/{{.SIMER_IMAGE}}{{else}}{{.REGISTRY}}/dse-simer:{{.TAG}}{{end}}'
+  USER:
+    sh: id -u
+  GROUP:
+    sh: id -g
 
 tasks:
 
   info:
+    desc: |
+      Print general information and operating info for this Taskfile.
+    summary: |
+      $ OUTDIR=foo SIMDIR=bar task -t Taskfile.yml info
     run: always
+    silent: true
     dir: '{{.USER_WORKING_DIR}}'
     label: dse:modelc:info
     cmds:
-      - echo "{{.ENTRYDIR}}"
-      - echo "{{.MODELC_IMAGE}}"
-      - echo "{{.IMAGE_TAG}}"
+      - echo "ENTRYDIR={{.ENTRYDIR}}"
+      - echo "REPO={{.REPO}}"
+      - echo "REGISTRY={{.REGISTRY}}"
+      - echo "TAG={{.TAG}}"
+      - echo "MODELC_IMAGE={{.MODELC_IMAGE}}"
+      - echo "SIMER_IMAGE={{.SIMER_IMAGE}}"
+      - echo "USER={{.USER}}"
+      - echo "GROUP={{.GROUP}}"
+      - echo "OUTDIR={{.OUTDIR}}"
+      - echo "SIMDIR={{.SIMDIR}}"
+
+  download-file:
+    internal: true
+    cmds:
+      - echo "CURL {{.URL}} -> {{.FILE}}"
+      - mkdir -p $(dirname {{.FILE}})
+      - curl --retry 5 {{.AUTH}} -fL {{.URL}} -o {{.FILE}}
+    dir: '{{.OUTDIR}}'
+    label: dse:download-file:{{.URL}}-{{.FILE}}
+    run: when_changed
+    vars:
+      URL: '{{.URL}}'
+      FILE: '{{.FILE}}'
+      AUTH: '{{if all .USER .TOKEN}}-u {{.USER}}:{{.TOKEN}}{{else}}{{end}}'
+    generates:
+      - '{{.FILE}}'
+    status:
+      - test -f {{.FILE}}
+
+  unzip-dir:
+    internal: true
+    cmds:
+      - echo "UNZIP DIR {{.ZIP}}/{{.ZIPDIR}} -> {{.DIR}}"
+      - mkdir -p {{.DIR}}
+      - unzip -o {{.ZIP}} {{.ZIPDIR}}/* -d {{.DIR}}
+      - rsync -a {{.DIR}}/{{.ZIPDIR}}/ {{.DIR}}/
+      - rm -rf {{.DIR}}/$(basename {{.ZIP}} {{ext .ZIP}})
+    dir: '{{.OUTDIR}}'
+    label: dse:unzip-dir:{{.ZIPFILE}}-{{.DIR}}
+    run: when_changed
+    vars:
+      ZIP: '{{.ZIP}}'
+      ZIPDIR: '{{.ZIPDIR}}'
+      DIR: '{{.DIR}}'
+    sources:
+      - '{{.ZIP}}'
+    generates:
+      - '{{.DIR}}/**'
+
+  download-simer-windows:
+    desc: |
+      Download and extract a Simer windows package.
+    summary: |
+      $ OUTDIR=out SIMDIR=sim task -t Taskfile.yml download-simer-windows
+    cmds:
+      - echo "DOWNLOAD SIMER WINDOWS {{.PACKAGE_URL}} -> {{.PATH}}"
+      - task: unzip-dir
+        vars:
+          DIR: '{{.PATH}}/bin'
+          ZIP: downloads/{{base .PACKAGE_URL}}
+          ZIPDIR: 'bin'
+      - task: unzip-dir
+        vars:
+          DIR: '{{.PATH}}/licenses'
+          ZIP: downloads/{{base .PACKAGE_URL}}
+          ZIPDIR: 'licenses'
+    dir: '{{.OUTDIR}}'
+    label: dse:modelc:download-simer-windows
+    vars:
+      REPO: '{{.REPO}}'
+      TAG: '{{.TAG}}'
+      PATH: '{{.SIMDIR}}'
+      PACKAGE_URL: '{{.REPO}}/releases/download/v{{.TAG}}/Simer-{{.TAG}}-windows.zip'
+    deps:
+      - task: download-file
+        vars:
+          URL: '{{.PACKAGE_URL}}'
+          FILE: 'downloads/{{base .PACKAGE_URL}}'
+    sources: []
+    generates:
+      - downloads/{{base .PACKAGE_URL}}
+      - '{{.PATH}}/bin/**'
+      - '{{.PATH}}/licenses/**'
+
+  download-simer-docker:
+    desc: |
+      Download and package the Simer docker image.
+    summary: |
+      $ OUTDIR=out SIMDIR=sim TAG=2.3.7 task -t Taskfile.yml download-simer-docker
+    cmds:
+      - echo "DOWNLOAD SIMER DOCKER {{.SIMER_IMAGE}} -> {{.PATH}}/{{.TAR}}"
+      - docker pull {{.SIMER_IMAGE}}
+      - docker save -o {{.PATH}}/{{.TAR}} {{.SIMER_IMAGE}}
+    dir: '{{.OUTDIR}}'
+    label: dse:modelc:download-simer-docker
+    vars:
+      REPO: '{{.REPO}}'
+      TAG: '{{.TAG}}'
+      PATH: '{{.SIMDIR}}/bin'
+      TAR: 'simer-{{.TAG}}.tar'
+    sources: []
+    generates:
+      - '{{.PATH}}/{{.TAR}}'
+
+  package-sim:
+    run: always
+    desc: |
+      Package the out/sim folder into a versioned ZIP file.
+    summary: |
+      $ OUTDIR=out SIMDIR=sim PROJECT=proj VERSION=1.0.0 task -t Taskfile.yml package-sim
+    cmds:
+      - echo "PACKAGE SIM {{.SIMDIR}} -> {{.PACKAGE_PATH}}"
+      - rm -f {{.PACKAGE_PATH}}
+      - zip -r {{.PACKAGE_PATH}} {{.SIMDIR}}
+    dir:  '{{.OUTDIR}}'
+    label: dse:modelc:package-sim
+    vars:
+      REPO: '{{.REPO}}'
+      TAG: '{{.TAG}}'
+      PATH: '{{.SIMDIR}}'
+      PACKAGE_PATH: '{{.PROJECT}}-{{.VERSION}}-sim-windows.zip'
+    sources: []
+    generates:
+      - '{{.PACKAGE_PATH}}'
