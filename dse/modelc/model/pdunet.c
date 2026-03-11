@@ -263,6 +263,8 @@ void pdunet_tx(PduNetworkDesc* net, PduRange* range, PduNetworkVisitFunc visit,
     /* Encode PDUs, call visitor, then Tx. */
     pdunet_encode_linear(net, NULL);
     pdunet_encode_pack(net, NULL);
+    pdunet_visit(net, range, pdunet_visit_needs_tx, NULL);
+    pdunet_visit(net, range, pdunet_visit_container_mapto, NULL);
     if (visit) pdunet_visit(net, range, visit, data);
     if (net->network.vtable.lpdu_tx) {
         net->network.vtable.lpdu_tx(net);
@@ -363,15 +365,17 @@ void pdunet_visit_needs_tx(PduNetworkDesc* net, PduObject* pdu, void* data)
     UNUSED(data);
     if (pdu == NULL || pdu->pdu == NULL) return;
 
+    pdu->needs_tx = false;
     if (pdu->pdu->dir == PduDirectionTx) {
-        uint32_t checksum = pdunet_checksum(
-            pdu->ncodec.pdu.payload, pdu->ncodec.pdu.payload_len);
-        if (checksum != pdu->checksum) {
-            pdu->needs_tx = true;
-            pdu->checksum = checksum;
+        if (pdu->container.header == HeaderFormatNone) {
+            uint32_t checksum = pdunet_checksum(
+                pdu->ncodec.pdu.payload, pdu->ncodec.pdu.payload_len);
+            if (checksum != pdu->checksum) {
+                pdu->needs_tx = true;
+                pdu->checksum = checksum;
+            }
         }
-    } else {
-        pdu->needs_tx = false;
+        log_trace("Pdu: [%u] needs_tx=%u", pdu->matrix.pdu_idx, pdu->needs_tx);
     }
 }
 
