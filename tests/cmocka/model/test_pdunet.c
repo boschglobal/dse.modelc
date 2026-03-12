@@ -1015,8 +1015,25 @@ void test_pdunet_container_tx(void** state)
     PduObject* o;
     pdunet_visit(net, NULL, pdunet_visit_needs_tx, NULL);
     pdunet_visit(net, NULL, pdunet_visit_clear_tx_flag, NULL);
+    // Schedule the Container.
+    o = vector_at(&net->matrix.pdu, 4, NULL);
+    o->needs_tx = true;
     pdunet_encode_pack(net, NULL);
     pdunet_visit(net, NULL, pdunet_visit_needs_tx, NULL);
+    // Check needs_tx.
+    o = vector_at(&net->matrix.pdu, 4, NULL);
+    assert_true(o->needs_tx);
+    assert_true(o->checksum == 0);
+    o = vector_at(&net->matrix.pdu, 5, NULL);
+    assert_true(o->needs_tx);       // Tx reset but PDU not sent.
+    assert_true(o->checksum == 0);  // Reset so that Tx is set next cycle.
+    o = vector_at(&net->matrix.pdu, 6, NULL);
+    assert_true(o->needs_tx);
+    assert_true(o->checksum == 0);
+    o = vector_at(&net->matrix.pdu, 7, NULL);
+    assert_true(o->needs_tx);
+    assert_true(o->checksum == 0);
+    // Container map.
     pdunet_visit(net, NULL, pdunet_visit_container_mapto, NULL);
     // Check needs_tx.
     o = vector_at(&net->matrix.pdu, 4, NULL);
@@ -1112,6 +1129,8 @@ void test_pdunet_container_rx(void** state)
     payload[14] = 0x93;
     payload[15] = 0x08;  // header - 8bit : 8
     payload[16] = 0x03;  // SIG_3" : 3
+    // __log_level__ = LOG_TRACE;
+    pdunet_visit(net, NULL, pdunet_visit_container_mapfrom, NULL);
     pdunet_decode_unpack(net, NULL);
 
     // Check some signal values.

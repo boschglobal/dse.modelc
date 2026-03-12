@@ -17,7 +17,7 @@ HTTP_PASSWORD       $ENV{GHE_TOKEN}
 FetchContent_MakeAvailable(dse_clib)
 set(DSE_CLIB_INCLUDE_DIR ${dse_clib_SOURCE_DIR})
 
-# Flexray example
+# Flexray example.
 set(MODEL_NAME "frnet")
 set(MODEL_PATH "examples/pdunet/${MODEL_NAME}")
 add_library(${MODEL_NAME} SHARED
@@ -52,7 +52,7 @@ install(
         ${MODEL_NAME}
 )
 
-# Lua example
+# Lua example.
 set(MODEL_NAME "luafrnet")
 set(MODEL_INST "pdunet_inst")
 set(MODEL_PATH "examples/pdunet/${MODEL_NAME}")
@@ -77,6 +77,41 @@ install(
         ${MODEL_NAME}/model.lua
     DESTINATION
         ${MODEL_PATH}/model/${MODEL_INST}
+    COMPONENT
+        ${MODEL_NAME}
+)
+
+# Container PDU example
+set(MODEL_NAME "container")
+set(MODEL_PATH "examples/pdunet/${MODEL_NAME}")
+add_library(${MODEL_NAME} SHARED
+    ${MODEL_NAME}/model.c
+)
+target_include_directories(${MODEL_NAME}
+    PRIVATE
+        ${DSE_CLIB_INCLUDE_DIR}
+        ${DSE_NCODEC_INCLUDE_DIR}
+        ../../../..
+)
+target_link_libraries(${MODEL_NAME}
+    PRIVATE
+        ${modelc_shared_lib}
+)
+install(TARGETS ${MODEL_NAME}
+    LIBRARY DESTINATION
+        ${MODEL_PATH}/lib
+    RUNTIME DESTINATION
+        ${MODEL_PATH}/lib
+    COMPONENT
+        ${MODEL_NAME}
+)
+install(
+    FILES
+        ${MODEL_NAME}/model.yaml
+        ${MODEL_NAME}/network.yaml
+        ${MODEL_NAME}/simulation.yaml
+    DESTINATION
+        ${MODEL_PATH}/data
     COMPONENT
         ${MODEL_NAME}
 )

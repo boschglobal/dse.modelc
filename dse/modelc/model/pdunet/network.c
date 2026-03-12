@@ -24,9 +24,20 @@ uint32_t pdunet_checksum(const uint8_t* payload, size_t len)
     return csum;
 }
 
+static void _set_skip(
+    PduNetworkDesc* net, size_t offset, size_t count, bool skip)
+{
+    bool* skip_vec = (bool*)vector_at(&net->matrix.signal.skip, offset, NULL);
+    for (size_t i = 0; i < count; i++) {
+        skip_vec[i] = skip;
+    }
+}
 
 void pdunet_schedule(PduNetworkDesc* net)
 {
+    /* Signals not calculated. */
+    _set_skip(net, 0, net->matrix.signal.count, true);
+
     for (size_t pdu_idx = 0; pdu_idx < vector_len(&net->matrix.pdu);
         pdu_idx++) {
         PduObject* o = vector_at(&(net->matrix.pdu), pdu_idx, NULL);
@@ -36,7 +47,6 @@ void pdunet_schedule(PduNetworkDesc* net)
             continue;
         }
 
-        bool    schedule_skip = true; /* Signals are not calculated. */
         int32_t epoch_offset =
             (net->schedule.step_size)
                 ? net->schedule.epoch_offset / net->schedule.step_size
@@ -54,18 +64,26 @@ void pdunet_schedule(PduNetworkDesc* net)
                     to ensure PDU are sent _even_ if signals are unchanged
                     after signal calculation (skip==false, default).*/
                     log_trace("Schedule TX: PDU %u: trigger", o->pdu->id);
-                    schedule_skip = false;
+                    _set_skip(net, o->matrix.range.offset,
+                        o->matrix.range.count, false);
                     o->checksum = 0;
-                    /* This is a Container PDU, reset checksum for all
-                    encapsulated PDUs. */
+                    /* This is a Container PDU. */
                     if (o->container.header != HeaderFormatNone) {
+                        /* A Container PDU may have no signals so force the
+                        Tx condition here. */
+                        o->needs_tx = true;
+                        /* Clear skip for all contained PDUS. */
                         for (size_t i = 0;
                             i < vector_len(&o->container.pdu_list); i++) {
                             MPduItem* pi =
                                 vector_at(&o->container.pdu_list, i, NULL);
                             assert(pi);
                             assert(pi->pdu);
-                            pi->pdu->checksum = 0;
+                            _set_skip(net, pi->pdu->matrix.range.offset,
+                                pi->pdu->matrix.range.count, false);
+                            /* Contained I-PDU are only sent if their signals
+                            have changed. Therefore do _not_ force Tx by setting
+                            the checksum to 0. */
                         }
                     }
                 }
@@ -73,14 +91,8 @@ void pdunet_schedule(PduNetworkDesc* net)
         } else {
             /* No schedule, always calculate signals (and send PDU's if the
             resultant payload has changed). */
-            schedule_skip = false;
-        }
-
-        /* Apply the skip value to associated signals in the matrix. */
-        bool* skip = (bool*)vector_at(
-            &net->matrix.signal.skip, o->matrix.range.offset, NULL);
-        for (size_t i = 0; i < o->matrix.range.count; i++) {
-            skip[i] = schedule_skip;
+            _set_skip(
+                net, o->matrix.range.offset, o->matrix.range.count, false);
         }
     }
 }
@@ -296,6 +308,9 @@ void pdunet_build_msm(PduNetworkDesc* net, const char* sv_name)
         log_debug("MSM for range[%d]: dir=%u, offset=%u, length=%u", range_idx,
             r->dir, r->offset, r->length);
 
+        /* Save the offset, used when logging the map. */
+        msm->offset = r->offset;
+
         /* Shallow copy the MSM object into a vector. */
         switch (r->dir) {
         case PduDirectionRx:
@@ -465,6 +480,7 @@ void pdunet_visit_container_mapto(
     if (pdu == NULL || pdu->pdu == NULL) return;
     if (pdu->pdu->dir != PduDirectionTx) return;
     if (pdu->container.header == HeaderFormatNone) return;
+    if (pdu->needs_tx == false) return;
 
     // L-PDU.
     uint8_t* payload = NULL;
@@ -473,12 +489,15 @@ void pdunet_visit_container_mapto(
     size_t payload_len = pdu->pdu->length;
     size_t payload_offset = 0;
 
+    pdu->needs_tx = false; /* Will be set to true if I-PDU mapped. */
+
     // I-PDUs (sorted by container.priority).
     size_t count = vector_len(&pdu->container.pdu_list);
     for (size_t i = 0; i < count; i++) {
         MPduItem* pi = vector_at(&pdu->container.pdu_list, i, NULL);
         assert(pi);
         assert(pi->pdu);
+        assert(pi->pdu->pdu);
         if (pi->pdu->needs_tx != true) continue;
         size_t len = pi->pdu->pdu->length;
         if ((len + header_length[pdu->container.header]) >
@@ -526,7 +545,9 @@ void pdunet_visit_container_mapto(
         memcpy(payload + payload_offset, pi_payload, len);
         payload_offset += len;
         pdu->needs_tx = true;
+        /* Update the checksum (as pdunet_visit_needs_tx() will not). */
         pi->pdu->needs_tx = false;
+        pi->pdu->checksum = pdunet_checksum(pi_payload, len);
     }
     pdu->checksum = pdunet_checksum(payload, payload_len);
 }
@@ -534,9 +555,90 @@ void pdunet_visit_container_mapto(
 void pdunet_visit_container_mapfrom(
     PduNetworkDesc* net, PduObject* pdu, void* data)
 {
-    UNUSED(net);
-    UNUSED(pdu);
     UNUSED(data);
+    assert(net);
+    if (pdu == NULL || pdu->pdu == NULL) return;
+    if (pdu->pdu->dir != PduDirectionRx) return;
+    if (pdu->container.header == HeaderFormatNone) return;
+
+    // L-PDU.
+    uint8_t* payload = NULL;
+    vector_at(&(net->matrix.payload), pdu->matrix.pdu_idx, &payload);
+    assert(payload);
+    size_t payload_len = pdu->pdu->length;
+    size_t payload_offset = 0;
+
+    while (payload_offset < payload_len) {
+        uint32_t id = 0;
+        size_t   len = 0;
+        // Is there a header.
+        switch (pdu->container.header) {
+        case HeaderFormatStatic:
+            break;
+        case HeaderFormatShort:
+            if (header_length[pdu->container.header] <=
+                (payload_len - payload_offset)) {
+                id = (payload[payload_offset + 0] << 16) |
+                     (payload[payload_offset + 1] << 8) |
+                     payload[payload_offset + 2];
+                len = payload[payload_offset + 3];
+            }
+            payload_offset += header_length[pdu->container.header];
+            break;
+        case HeaderFormatFull:
+            if (header_length[pdu->container.header] <=
+                (payload_len - payload_offset)) {
+                id = (payload[payload_offset + 0] << 24) |
+                     (payload[payload_offset + 1] << 16) |
+                     (payload[payload_offset + 2] << 8) |
+                     payload[payload_offset + 3];
+                len = (payload[payload_offset + 4] << 24) |
+                      (payload[payload_offset + 5] << 16) |
+                      (payload[payload_offset + 6] << 8) |
+                      payload[payload_offset + 7];
+            }
+            payload_offset += header_length[pdu->container.header];
+            break;
+        default:
+            break;
+        }
+        if (id == 0) {
+            // No more mapped I-PDUs in payload.
+            break;
+        }
+        if ((payload_offset + len) > payload_len) {
+            // Length exceeds remaining payload.
+            break;
+        }
+        // Locate the I-PDU and copy the payload.
+        size_t count = vector_len(&pdu->container.pdu_list);
+        for (size_t i = 0; i < count; i++) {
+            MPduItem* pi = vector_at(&pdu->container.pdu_list, i, NULL);
+            assert(pi);
+            assert(pi->pdu);
+            if (pi->id != id) continue;
+
+            // I-PDU located.
+            uint8_t* pi_payload = NULL;
+            vector_at(
+                &(net->matrix.payload), pi->pdu->matrix.pdu_idx, &pi_payload);
+            assert(pi_payload);
+            size_t pi_payload_len = pi->pdu->pdu->length;
+            if (pi_payload_len > len) {
+                pi_payload_len = len;
+            }
+            memcpy(pi_payload, payload + payload_offset, pi_payload_len);
+            log_debug(
+                "Map from Container: [%u] L-PDU[%u] <-map- [%u] I-PDU[%u], "
+                "offset=%u, len=%u/%u",
+                pdu->matrix.pdu_idx, pdu->pdu->id, pi->pdu->pdu->id,
+                pi->pdu->matrix.pdu_idx, payload_offset, len,
+                len + header_length[pdu->container.header]);
+            break;
+        }
+        // Position to the next mapped I-PDU.
+        payload_offset += len;
+    }
 }
 
 
