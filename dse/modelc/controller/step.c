@@ -76,7 +76,7 @@ int step_model(ModelInstanceSpec* mi, double* model_time)
         PduNetworkDesc* net = NULL;
         vector_at(&mip->pdunet, i, &net);
         if (net) {
-            pdunet_tx(net, NULL, pdunet_visit_needs_tx, NULL, am->model_time);
+            pdunet_tx(net, NULL, NULL, NULL, am->model_time);
         }
     }
 

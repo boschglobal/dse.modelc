@@ -139,6 +139,7 @@ void pdunet_matrix_clear(PduNetworkDesc* net)
     for (size_t i = 0; i < vector_len(&net->matrix.pdu); i++) {
         PduObject* pdu = vector_at(&net->matrix.pdu, i, NULL);
         if (pdu->ncodec.metadata.lpdu) free(pdu->ncodec.metadata.lpdu);
+        vector_reset(&pdu->container.pdu_list);
     }
     for (size_t i = 0; i < ARRAY_SIZE(matrix_vector_offset_list); i++) {
         const matrix_item_spec* m = &matrix_vector_offset_list[i];
@@ -194,6 +195,7 @@ int pdunet_matrix_transform(PduNetworkDesc* net, PduNetworkSortFunc sort)
         // PDU -> matrix.pdu.
         PduObject o = {
             .pdu = p,
+            .container.header = p->container.header,
             .matrix = {
                 .range = {
                     .offset = signal_offset,

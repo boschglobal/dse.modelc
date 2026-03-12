@@ -235,6 +235,7 @@ install(
         model/ncodec.yaml
         model/pdunet.yaml
         model/pdunet_lua.yaml
+        model/pdunet_container.yaml
         model/sequential.yaml
         model/signal.yaml
         model/transform.yaml

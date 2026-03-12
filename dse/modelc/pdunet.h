@@ -64,6 +64,14 @@ typedef enum {
     __PduDirectionCount = 3,
 } PduDirection;
 
+typedef enum {
+    HeaderFormatNone = 0,
+    HeaderFormatStatic = 1, /* No header, static layout */
+    HeaderFormatShort = 2,  /* ID 24 bit, DLC 8 bit */
+    HeaderFormatFull = 3,   /* ID 32 bit, DLC 32 bit */
+    __HeaderFormatCount = 4,
+} HeaderFormat;
+
 
 typedef struct PduItem {
     const char*  name;
@@ -71,6 +79,14 @@ typedef struct PduItem {
     uint32_t     id;
     size_t       length;
     PduDirection dir;
+    /* Container. */
+    struct {
+        /* Container PDU. */
+        HeaderFormat header;
+        /* I-PDU (contained) */
+        uint32_t     id;
+        uint16_t     priority;
+    } container;
     /* Schedule. */
     struct {
         double phase;
@@ -104,6 +120,10 @@ typedef struct PduObject {  // FIXME: internal type ??
             size_t count;
         } range;
     } matrix;
+    struct {
+        HeaderFormat header;   /* When set this is a Container-PDU (L-PDU). */
+        Vector       pdu_list; /* Sorted (by priority) list of I-PDUs*/
+    } container;
     struct {
         uint32_t interval; /* Normalised value, factor of step_size. */
         uint32_t phase;    /* Normalised value, factor of step_size. */

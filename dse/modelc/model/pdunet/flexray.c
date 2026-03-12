@@ -95,22 +95,26 @@ void pdunet_flexray_config(PduNetworkDesc* net)
     CLEANUP_P(void, _ft) =
         calloc(vector_len(&net->pdus), sizeof(NCodecPduFlexrayLpduConfig));
     NCodecPduFlexrayLpduConfig* frame_table = _ft;
+    size_t                      frame_idx = 0;
     for (size_t i = 0; i < vector_len(&net->pdus); i++) {
         PduItem* pdu = vector_at(&net->pdus, i, NULL);
         if (pdu == NULL || pdu->metadata.config == NULL) continue;
-        NCodecPduFlexrayLpduConfig* pdu_config = pdu->metadata.config;
-        pdu_config->index.frame_table = i;
-        frame_table[i] = *pdu_config;
+        if (pdu->container.id != 0) continue; /* Container I-PDU. */
 
+        /* Configure the frame table. */
+        NCodecPduFlexrayLpduConfig* pdu_config = pdu->metadata.config;
+        pdu_config->index.frame_table = frame_idx;
+        frame_table[frame_idx] = *pdu_config;
         log_notice(
-            "PDU Net:   FlexRay: PDU[%u] id=%u, slot=%u, dir=%s, name=%s", i,
-            pdu->id, pdu_config->slot_id, _frdir[pdu_config->direction],
-            pdu->name);
+            "PDU Net:   FlexRay: PDU[%u] id=%u, slot=%u, dir=%s, name=%s",
+            frame_idx, pdu->id, pdu_config->slot_id,
+            _frdir[pdu_config->direction], pdu->name);
+        frame_idx++;
     }
     NCodecPduFlexrayConfig config =
         *(NCodecPduFlexrayConfig*)net->network.metadata.config;
     config.frame_config.table = frame_table;
-    config.frame_config.count = vector_len(&net->pdus);
+    config.frame_config.count = frame_idx;
 
     /* Write config to NCodec. */
     ncodec_write(net->ncodec, &(struct NCodecPdu){
@@ -124,7 +128,8 @@ void pdunet_flexray_config(PduNetworkDesc* net)
     /* Allocate and configure LPDU metadata. */
     for (size_t i = 0; i < vector_len(&net->matrix.pdu); i++) {
         PduObject* pdu = vector_at(&net->matrix.pdu, i, NULL);
-        if (pdu == NULL) continue;
+        if (pdu == NULL || pdu->pdu == NULL) continue;
+        if (pdu->pdu->container.id != 0) continue; /* Container I-PDU. */
         NCodecPduFlexrayLpduConfig* pdu_config = pdu->pdu->metadata.config;
         assert(pdu_config);
         if (pdu->ncodec.metadata.lpdu == NULL) {
@@ -151,6 +156,7 @@ void pdunet_flexray_lpdu_tx(PduNetworkDesc* net)
         PduObject* pdu = vector_at(&net->matrix.pdu, i, NULL);
         if (pdu == NULL) continue;
         assert(pdu->pdu);
+        if (pdu->pdu->container.id != 0) continue; /* Container I-PDU. */
         assert(pdu->ncodec.metadata.lpdu);
         NCodecPduFlexrayLpduConfig* pdu_config = pdu->pdu->metadata.config;
         assert(pdu_config);
@@ -245,6 +251,7 @@ void pdunet_flexray_lpdu_rx(PduNetworkDesc* net)
             if (pdu == NULL) continue;
             assert(pdu->pdu);
             if (pdu->pdu->dir != PduDirectionRx) continue;
+            if (pdu->pdu->container.id != 0) continue; /* Container I-PDU. */
             NCodecPduFlexrayLpduConfig* pdu_config = pdu->pdu->metadata.config;
             assert(pdu_config);
             if (pdu_config->index.frame_table !=

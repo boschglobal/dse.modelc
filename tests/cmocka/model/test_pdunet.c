@@ -78,6 +78,34 @@ static int test_setup_lua(void** state)
 }
 
 
+static int test_setup_container(void** state)
+{
+    ModelCMock* mock = calloc(1, sizeof(ModelCMock));
+    assert_non_null(mock);
+
+    int             rc;
+    ModelCArguments args;
+    char*           argv[] = {
+        (char*)"test_pdunet",
+        (char*)"--name=flexray",
+        (char*)"resources/model/pdunet_container.yaml",
+    };
+
+    modelc_set_default_args(&args, "test", 0.005, 0.005);
+    args.log_level = __log_level__;
+    modelc_parse_arguments(&args, ARRAY_SIZE(argv), argv, "PDU-Network");
+    rc = modelc_configure(&args, &mock->sim);
+    assert_int_equal(rc, 0);
+    ModelInstanceSpec* mi = modelc_get_model_instance(&mock->sim, args.name);
+    assert_non_null(mi);
+    mock->mi = mi;
+
+    /* Return the mock. */
+    *state = mock;
+    return 0;
+}
+
+
 static int test_teardown(void** state)
 {
     ModelCMock* mock = *state;
@@ -216,6 +244,16 @@ typedef struct matrix_check {
     } expect;
 } matrix_check;
 
+
+void _visit_count_needs_tx(PduNetworkDesc* net, PduObject* pdu, void* data)
+{
+    assert_non_null(net);
+    assert_non_null(data);
+    int* counter = data;
+    if (pdu->needs_tx != false) {
+        (*counter)++;
+    }
+}
 
 typedef struct matrix_pdu_check {
     size_t   idx;  // Index to matrix.pdu
@@ -824,7 +862,7 @@ void test_pdunet_lua_rx(void** state)
         { .name = "model", .value = "flexray" },
         {},
     };
-    // __log_level__ = LOG_TRACE;
+    //__log_level__ = LOG_TRACE;
     rc = pdunet_parse(net, labels);
     assert_int_equal(rc, 0);
     assert_int_equal(vector_len(&net->pdus), 4);
@@ -895,10 +933,242 @@ void test_pdunet_lua_rx(void** state)
 }
 
 
+void test_pdunet_container_tx(void** state)
+{
+    ModelCMock* mock = *state;
+    int         rc = 0;
+    assert_non_null(mock->mi);
+
+    void*           ncodec = NULL;
+    PduNetworkDesc* net =
+        pdunet_create(mock->mi, ncodec, NULL, NULL, NULL, NULL);
+    mock->net = net;  // Teardown will destroy.
+    SchemaLabel labels[] = {
+        { .name = "name", .value = "FlexRay" },
+        { .name = "model", .value = "flexray" },
+        {},
+    };
+    // __log_level__ = LOG_TRACE;
+    rc = pdunet_parse(net, labels);
+    assert_int_equal(rc, 0);
+    assert_int_equal(vector_len(&net->pdus), 8);
+
+    PduItem pdu;
+    vector_at(&net->pdus, 0, &pdu);
+    assert_int_equal(pdu.id, 400);
+    assert_int_equal(pdu.length, 24);
+    assert_int_equal(pdu.dir, 2);
+    assert_non_null(pdu.name);
+    assert_string_equal(pdu.name, "LPDU-TX");
+    assert_int_equal(pdu.container.header, 2);
+    assert_int_equal(pdu.container.id, 0);
+
+    vector_at(&net->pdus, 1, &pdu);
+    assert_int_equal(pdu.id, 401);
+    assert_int_equal(pdu.length, 8);
+    assert_int_equal(pdu.dir, 2);
+    assert_non_null(pdu.name);
+    assert_string_equal(pdu.name, "IPDU-TX-1");
+    assert_int_equal(pdu.container.header, 0);
+    assert_int_equal(pdu.container.id, 400);
+    assert_int_equal(pdu.container.priority, 50);
+
+
+    rc = pdunet_configure(net);
+    assert_int_equal(rc, 0);
+    assert_int_equal(vector_len(&net->pdus), 8);
+    rc = pdunet_transform(net, NULL);
+    assert_int_equal(rc, 0);
+    assert_int_equal(vector_len(&net->matrix.pdu), 8);
+
+
+    // Set some signal values and then Pack.
+    matrix_check values[] = {
+        { .idx = 3, .name = "SIG_1", .phys = 1, .raw = 1 },
+        { .idx = 4, .name = "SIG_2", .phys = 2, .raw = 2 },
+        { .idx = 5, .name = "SIG_3", .phys = 3, .raw = 3 },
+    };
+    for (size_t i = 0; i < ARRAY_SIZE(values); i++) {
+        matrix_check c = values[i];
+        log_info("Check TX[%u] idx=%u, name=%s, phys=%f, raw=%u (expect)", i,
+            c.idx, c.name, c.phys, c.raw);
+
+        // Check the name is as expected.
+        size_t pdu_idx =
+            *(size_t*)vector_at(&net->matrix.signal.pdu_idx, c.idx, NULL);
+        size_t signal_idx =
+            *(size_t*)vector_at(&net->matrix.signal.signal_idx, c.idx, NULL);
+        PduObject*     o = vector_at(&net->matrix.pdu, pdu_idx, NULL);
+        PduSignalItem* s = vector_at(&o->pdu->signals, signal_idx, NULL);
+        assert_string_equal(s->name, c.name);
+
+        double* phys =
+            (double*)vector_at(&net->matrix.signal.phys, c.idx, NULL);
+        uint64_t* raw =
+            (uint64_t*)vector_at(&net->matrix.signal.raw, c.idx, NULL);
+        *phys = c.phys;
+        pdunet_encode_linear(net, NULL);
+        assert_int_equal(*raw, c.raw);
+    }
+
+    // Pack the raw values and check the payload.
+    PduObject* o;
+    pdunet_visit(net, NULL, pdunet_visit_needs_tx, NULL);
+    pdunet_visit(net, NULL, pdunet_visit_clear_tx_flag, NULL);
+    // Schedule the Container.
+    o = vector_at(&net->matrix.pdu, 4, NULL);
+    o->needs_tx = true;
+    pdunet_encode_pack(net, NULL);
+    pdunet_visit(net, NULL, pdunet_visit_needs_tx, NULL);
+    // Check needs_tx.
+    o = vector_at(&net->matrix.pdu, 4, NULL);
+    assert_true(o->needs_tx);
+    assert_true(o->checksum == 0);
+    o = vector_at(&net->matrix.pdu, 5, NULL);
+    assert_true(o->needs_tx);       // Tx reset but PDU not sent.
+    assert_true(o->checksum == 0);  // Reset so that Tx is set next cycle.
+    o = vector_at(&net->matrix.pdu, 6, NULL);
+    assert_true(o->needs_tx);
+    assert_true(o->checksum == 0);
+    o = vector_at(&net->matrix.pdu, 7, NULL);
+    assert_true(o->needs_tx);
+    assert_true(o->checksum == 0);
+    // Container map.
+    pdunet_visit(net, NULL, pdunet_visit_container_mapto, NULL);
+    // Check needs_tx.
+    o = vector_at(&net->matrix.pdu, 4, NULL);
+    assert_true(o->needs_tx);
+    assert_false(o->checksum == 0);
+    o = vector_at(&net->matrix.pdu, 5, NULL);
+    assert_false(o->needs_tx);      // Tx reset but PDU not sent.
+    assert_true(o->checksum == 0);  // Reset so that Tx is set next cycle.
+    o = vector_at(&net->matrix.pdu, 6, NULL);
+    assert_false(o->needs_tx);
+    assert_false(o->checksum == 0);
+    o = vector_at(&net->matrix.pdu, 7, NULL);
+    assert_false(o->needs_tx);
+    assert_false(o->checksum == 0);
+    // Check payload.
+    o = vector_at(&net->matrix.pdu, 4, NULL);
+    uint8_t payload[24] = {
+        [0] = 0x00,  // header - 24bit : 402
+        [1] = 0x01,
+        [2] = 0x92,
+        [3] = 0x08,   // header - 8bit : 8
+        [4] = 0x02,   // SIG_2" : 2
+        [12] = 0x00,  // header - 24bit : 403
+        [13] = 0x01,
+        [14] = 0x93,
+        [15] = 0x08,  // header - 8bit : 8
+        [16] = 0x03,  // SIG_3" : 3
+    };
+    assert_memory_equal(o->ncodec.pdu.payload, payload, 24);
+    int count = 0;
+    pdunet_visit(net, NULL, _visit_count_needs_tx, &count);
+    assert_int_equal(count, 1);
+}
+
+
+void test_pdunet_container_rx(void** state)
+{
+    ModelCMock* mock = *state;
+    int         rc = 0;
+    assert_non_null(mock->mi);
+
+    void*           ncodec = NULL;
+    PduNetworkDesc* net =
+        pdunet_create(mock->mi, ncodec, NULL, NULL, NULL, NULL);
+    mock->net = net;  // Teardown will destroy.
+    SchemaLabel labels[] = {
+        { .name = "name", .value = "FlexRay" },
+        { .name = "model", .value = "flexray" },
+        {},
+    };
+    // __log_level__ = LOG_TRACE;
+    rc = pdunet_parse(net, labels);
+    assert_int_equal(rc, 0);
+    assert_int_equal(vector_len(&net->pdus), 8);
+
+    PduItem pdu;
+    vector_at(&net->pdus, 4, &pdu);
+    assert_int_equal(pdu.id, 400);
+    assert_int_equal(pdu.length, 24);
+    assert_int_equal(pdu.dir, 1);
+    assert_non_null(pdu.name);
+    assert_string_equal(pdu.name, "LPDU-RX");
+    assert_int_equal(pdu.container.header, 2);
+    assert_int_equal(pdu.container.id, 0);
+
+    vector_at(&net->pdus, 5, &pdu);
+    assert_int_equal(pdu.id, 401);
+    assert_int_equal(pdu.length, 8);
+    assert_int_equal(pdu.dir, 1);
+    assert_non_null(pdu.name);
+    assert_string_equal(pdu.name, "IPDU-RX-1");
+    assert_int_equal(pdu.container.header, 0);
+    assert_int_equal(pdu.container.id, 400);
+    assert_int_equal(pdu.container.priority, 0);
+
+    rc = pdunet_configure(net);
+    assert_int_equal(rc, 0);
+    assert_int_equal(vector_len(&net->pdus), 8);
+    rc = pdunet_transform(net, NULL);
+    assert_int_equal(rc, 0);
+    assert_int_equal(vector_len(&net->matrix.pdu), 8);
+
+    // Pack the raw values and check the payload.
+    uint8_t** _ = vector_at(&net->matrix.payload, 0, NULL);
+    uint8_t*  payload = *_;
+    payload[0] = 0x00;  // header - 24bit : 402
+    payload[1] = 0x01;
+    payload[2] = 0x92;
+    payload[3] = 0x08;   // header - 8bit : 8
+    payload[4] = 0x02;   // SIG_2" : 2
+    payload[12] = 0x00;  // header - 24bit : 403
+    payload[13] = 0x01;
+    payload[14] = 0x93;
+    payload[15] = 0x08;  // header - 8bit : 8
+    payload[16] = 0x03;  // SIG_3" : 3
+    // __log_level__ = LOG_TRACE;
+    pdunet_visit(net, NULL, pdunet_visit_container_mapfrom, NULL);
+    pdunet_decode_unpack(net, NULL);
+
+    // Check some signal values.
+    matrix_check values[] = {
+        { .idx = 0, .name = "SIG_4", .phys = 0, .raw = 0 },
+        { .idx = 1, .name = "SIG_5", .phys = 2, .raw = 2 },
+        { .idx = 2, .name = "SIG_6", .phys = 3, .raw = 3 },
+    };
+    for (size_t i = 0; i < ARRAY_SIZE(values); i++) {
+        matrix_check c = values[i];
+        log_info("Check RX[%u] idx=%u, name=%s, phys=%f, raw=%u (expect)", i,
+            c.idx, c.name, c.phys, c.raw);
+
+        // Check the name is as expected.
+        size_t pdu_idx =
+            *(size_t*)vector_at(&net->matrix.signal.pdu_idx, c.idx, NULL);
+        size_t signal_idx =
+            *(size_t*)vector_at(&net->matrix.signal.signal_idx, c.idx, NULL);
+        PduObject*     o = vector_at(&net->matrix.pdu, pdu_idx, NULL);
+        PduSignalItem* s = vector_at(&o->pdu->signals, signal_idx, NULL);
+        assert_string_equal(s->name, c.name);
+
+        double* phys =
+            (double*)vector_at(&net->matrix.signal.phys, c.idx, NULL);
+        uint64_t* raw =
+            (uint64_t*)vector_at(&net->matrix.signal.raw, c.idx, NULL);
+        pdunet_decode_linear(net, NULL);
+        assert_int_equal(*raw, c.raw);
+        assert_double_equal(*phys, c.phys, 0);
+    }
+}
+
+
 int run_model_pdu_tests(void)
 {
     void* s = test_setup;
     void* sl = test_setup_lua;
+    void* sc = test_setup_container;
     void* t = test_teardown;
 
     const struct CMUnitTest tests[] = {
@@ -912,6 +1182,8 @@ int run_model_pdu_tests(void)
         cmocka_unit_test_setup_teardown(test_pdunet_config, sl, t),
         cmocka_unit_test_setup_teardown(test_pdunet_lua_tx, sl, t),
         cmocka_unit_test_setup_teardown(test_pdunet_lua_rx, sl, t),
+        cmocka_unit_test_setup_teardown(test_pdunet_container_tx, sc, t),
+        cmocka_unit_test_setup_teardown(test_pdunet_container_rx, sc, t),
     };
 
     return cmocka_run_group_tests_name("PDU Network", tests, NULL, NULL);

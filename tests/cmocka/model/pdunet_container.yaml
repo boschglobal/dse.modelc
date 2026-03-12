@@ -1,0 +1,189 @@
+---
+kind: Stack
+metadata:
+  name: stack
+spec:
+  connection:
+    transport:
+      redispubsub:
+        uri: redis://redis:6379
+        timeout: 60
+  models:
+    - name: flexray
+      model:
+        name: Stub
+      uid: 42
+      channels:
+        - name: network
+          alias: network_vector
+---
+kind: Model
+metadata:
+  name: Stub
+spec:
+  runtime:
+    dynlib:
+      - os: linux
+        arch: amd64
+        path: lib/model.so
+  channels:
+    - alias: network_vector
+      selectors:
+        channel: network
+---
+kind: SignalGroup
+metadata:
+  name: test_binary_signals
+  labels:
+    name: flexray
+    channel: network_vector
+  annotations:
+    vector_type: binary
+spec:
+  signals:
+    - signal: FlexRay
+      annotations:
+        mime_type: application/x-automotive-bus; interface=stream; type=pdu; model=flexray; schema=fbs; swc_id=4; ecu_id=5
+---
+kind: Network
+metadata:
+  name: FR
+  labels:
+    name: FlexRay
+    model: flexray
+spec:
+  metadata:
+    flexray:
+      inhibit_null_frames: true
+      macrotick_per_cycle: 8000
+      microtick_per_cycle: 80
+      network_idle_start: 10
+      static_slot_length: 64
+      static_slot_count: 48
+      minislot_length: 10
+      minislot_count: 300
+      static_slot_payload_length: 32
+      bit_rate: BR10Mbps
+      channel_enable: AB
+      wakeup_channel_select: A
+      single_slot_enabled: true
+  pdus:
+    - pdu: LPDU-TX
+      id: 400
+      length: 24
+      dir: Tx
+      container:
+        header: Short
+      schedule:
+        phase: -0.001
+        interval: 0.005
+      metadata:
+        flexray:
+          slot_id: 11
+          payload_length: 24
+          cycle_repetition: 8
+          base_cycle: 4
+          direction: Tx
+          channel: A
+          transmit_mode: Continuous
+          inhibit_null: true
+    - pdu: IPDU-TX-1
+      id: 401
+      length: 8
+      dir: Tx
+      container:
+        id: 400
+        priority: 50
+      signals:
+        - signal: SIG_1
+          encoding:
+            start: 0
+            length: 8
+            factor: 1
+            offset: 0
+    - pdu: IPDU-TX-2
+      id: 402
+      length: 8
+      dir: Tx
+      container:
+        id: 400
+        priority: 5
+      signals:
+        - signal: SIG_2
+          encoding:
+            start: 0
+            length: 8
+            factor: 1
+            offset: 0
+    - pdu: IPDU-TX-3
+      id: 403
+      length: 8
+      dir: Tx
+      container:
+        id: 400
+        priority: 25
+      signals:
+        - signal: SIG_3
+          encoding:
+            start: 0
+            length: 8
+            factor: 1
+            offset: 0
+    - pdu: LPDU-RX
+      id: 400
+      length: 24
+      dir: Rx
+      container:
+        header: Short
+      schedule:
+        phase: -0.001
+        interval: 0.005
+      metadata:
+        flexray:
+          slot_id: 11
+          payload_length: 24
+          cycle_repetition: 8
+          base_cycle: 4
+          direction: Rx
+          channel: A
+          transmit_mode: Continuous
+          inhibit_null: true
+    - pdu: IPDU-RX-1
+      id: 401
+      length: 8
+      dir: Rx
+      container:
+        id: 400
+      signals:
+        - signal: SIG_4
+          encoding:
+            start: 0
+            length: 8
+            factor: 1
+            offset: 0
+    - pdu: IPDU-RX-2
+      id: 402
+      length: 8
+      dir: Rx
+      container:
+        id: 400
+      signals:
+        - signal: SIG_5
+          encoding:
+            start: 0
+            length: 8
+            factor: 1
+            offset: 0
+    - pdu: IPDU-RX-3
+      id: 403
+      length: 8
+      dir: Rx
+      container:
+        id: 400
+      signals:
+        - signal: SIG_6
+          encoding:
+            start: 0
+            length: 8
+            factor: 1
+            offset: 0

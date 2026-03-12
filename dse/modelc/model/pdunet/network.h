@@ -32,6 +32,13 @@
 #define U32  SchemaFieldTypeU32
 
 
+typedef struct MPduItem {
+    uint32_t   id;
+    uint16_t   priority;
+    PduObject* pdu;
+} MPduItem;
+
+
 /* network.c */
 DLL_PRIVATE uint32_t pdunet_checksum(const uint8_t* payload, size_t len);
 DLL_PRIVATE void     pdunet_schedule(PduNetworkDesc* net);
@@ -44,6 +51,12 @@ DLL_PRIVATE void pdunet_parse_pdus(PduNetworkDesc* net, SchemaObject* object);
 DLL_PRIVATE PduItem pdunet_pdu_generator(PduNetworkDesc* net, YamlNode* n);
 DLL_PRIVATE PduSignalItem pdunet_signal_generator(
     ModelInstanceSpec* mi, YamlNode* n, PduItem* pdu);
+DLL_PRIVATE void pdunet_visit_setup_containers(
+    PduNetworkDesc* net, PduObject* pdu, void* data);
+DLL_PRIVATE void pdunet_visit_container_mapto(
+    PduNetworkDesc* net, PduObject* pdu, void* data);
+DLL_PRIVATE void pdunet_visit_container_mapfrom(
+    PduNetworkDesc* net, PduObject* pdu, void* data);
 
 /* matrix.c */
 DLL_PRIVATE int pdunet_matrix_transform(

@@ -520,6 +520,125 @@ void test_model__pdunet_frnet(void** state)
 }
 
 
+#define PDUNET_CONTAINER_INST_NAME    "pdunet_inst"
+#define PDUNET_CONTAINER_SIGNAL_SIG_1 0
+#define PDUNET_CONTAINER_SIGNAL_SIG_2 1
+#define PDUNET_CONTAINER_SIGNAL_SIG_3 2
+#define PDUNET_CONTAINER_SIGNAL_SIG_4 3
+#define PDUNET_CONTAINER_SIGNAL_SIG_5 4
+#define PDUNET_CONTAINER_SIGNAL_SIG_6 5
+
+void test_model__pdunet_container(void** state)
+{
+    chdir("../../../../dse/modelc/build/_out/examples/pdunet/container");
+
+    const char* inst_names[] = {
+        PDUNET_CONTAINER_INST_NAME,
+    };
+    char* argv[] = {
+        (char*)"test_model_interface",
+        (char*)"--name=" PDUNET_CONTAINER_INST_NAME,
+        (char*)"--logger=5",  // 1=debug, 5=QUIET (commit with 5!)
+        (char*)"data/simulation.yaml",
+        (char*)"data/network.yaml",
+        (char*)"data/model.yaml",
+    };
+    SimMock* mock = *state = simmock_alloc(inst_names, ARRAY_SIZE(inst_names));
+    simmock_configure(mock, argv, ARRAY_SIZE(argv), ARRAY_SIZE(inst_names));
+    ModelMock* model = simmock_find_model(mock, PDUNET_CONTAINER_INST_NAME);
+    simmock_load(mock);
+    simmock_load_model_check(model, true, true, false);
+    simmock_setup(mock, "scalar", "network");
+    assert_non_null(model->sv_network);
+    assert_non_null(model->sv_signal);
+
+    /* Install the trace. */
+    ncodec_trace_destroy(model->sv_network->ncodec[0]);
+    ncodec_trace_configure(model->sv_network->ncodec[0], model->mi, true);
+
+    /* Initial value. */
+    double sig_1 = 0;
+    double sig_2 = 0;
+    double sig_3 = 0;
+    double sig_4 = 0;
+    double sig_5 = 0;
+    double sig_6 = 0;
+    simmock_print_scalar_signals(mock, LOG_DEBUG);
+    simmock_print_binary_signals(mock, LOG_TRACE);
+    /* T0 */
+    for (uint32_t i = 0; i < 1; i++) {
+        /* Do the check. */
+        SignalCheck checks[] = {
+            { .index = PDUNET_CONTAINER_SIGNAL_SIG_1, .value = sig_1 },
+            { .index = PDUNET_CONTAINER_SIGNAL_SIG_2, .value = sig_2 },
+            { .index = PDUNET_CONTAINER_SIGNAL_SIG_3, .value = sig_3 },
+            { .index = PDUNET_CONTAINER_SIGNAL_SIG_4, .value = sig_4 },
+            { .index = PDUNET_CONTAINER_SIGNAL_SIG_5, .value = sig_5 },
+            { .index = PDUNET_CONTAINER_SIGNAL_SIG_6, .value = sig_6 },
+        };
+        simmock_signal_check(
+            mock, PDUNET_CONTAINER_INST_NAME, checks, ARRAY_SIZE(checks), NULL);
+        /* Step the model. */
+        assert_int_equal(simmock_step(mock, true), 0);
+        simmock_print_scalar_signals(mock, LOG_DEBUG);
+        simmock_print_binary_signals(mock, LOG_TRACE);
+        /* Set check conditions (for next step). */
+    }
+
+    /* T0 ... 6.0 - first schedule Tx. */
+    sig_1 = 1;
+    sig_2 = 2;
+    sig_3 = 3;
+    sig_4 = 0;
+    sig_5 = 2;
+    sig_6 = 3;
+    for (uint32_t i = 0; i < 12; i++) {
+        /* Step the model. */
+        assert_int_equal(simmock_step(mock, true), 0);
+        simmock_print_scalar_signals(mock, LOG_DEBUG);
+        simmock_print_binary_signals(mock, LOG_TRACE);
+        /* Set check conditions (for next step). */
+    }
+    /* Do the check. */
+    SignalCheck checks1[] = {
+        { .index = PDUNET_CONTAINER_SIGNAL_SIG_1, .value = sig_1 },
+        { .index = PDUNET_CONTAINER_SIGNAL_SIG_2, .value = sig_2 },
+        { .index = PDUNET_CONTAINER_SIGNAL_SIG_3, .value = sig_3 },
+        { .index = PDUNET_CONTAINER_SIGNAL_SIG_4, .value = sig_4 },
+        { .index = PDUNET_CONTAINER_SIGNAL_SIG_5, .value = sig_5 },
+        { .index = PDUNET_CONTAINER_SIGNAL_SIG_6, .value = sig_6 },
+    };
+    simmock_signal_check(
+        mock, PDUNET_CONTAINER_INST_NAME, checks1, ARRAY_SIZE(checks1), NULL);
+
+    /* T6.5 ... 12.0 - second schedule Tx. */
+    sig_1 = 1;
+    sig_2 = 2;
+    sig_3 = 3;
+    sig_4 = 1;
+    sig_5 = 2;
+    sig_6 = 3;
+    for (uint32_t i = 0; i < 12; i++) {
+        /* Step the model. */
+        assert_int_equal(simmock_step(mock, true), 0);
+        simmock_print_scalar_signals(mock, LOG_DEBUG);
+        simmock_print_binary_signals(mock, LOG_TRACE);
+        /* Set check conditions (for next step). */
+    }
+    /* Do the check. */
+    SignalCheck checks2[] = {
+        { .index = PDUNET_CONTAINER_SIGNAL_SIG_1, .value = sig_1 },
+        { .index = PDUNET_CONTAINER_SIGNAL_SIG_2, .value = sig_2 },
+        { .index = PDUNET_CONTAINER_SIGNAL_SIG_3, .value = sig_3 },
+        { .index = PDUNET_CONTAINER_SIGNAL_SIG_4, .value = sig_4 },
+        { .index = PDUNET_CONTAINER_SIGNAL_SIG_5, .value = sig_5 },
+        { .index = PDUNET_CONTAINER_SIGNAL_SIG_6, .value = sig_6 },
+    };
+    simmock_signal_check(
+        mock, PDUNET_CONTAINER_INST_NAME, checks2, ARRAY_SIZE(checks2), NULL);
+}
+
+
 int run_model_examples_tests(void)
 {
     void* s = test_setup;
@@ -535,6 +654,7 @@ int run_model_examples_tests(void)
         cmocka_unit_test_setup_teardown(test_model__ncodec_pdu, s, t),
         cmocka_unit_test_setup_teardown(test_model__lua, s, t),
         cmocka_unit_test_setup_teardown(test_model__pdunet_frnet, s, t),
+        cmocka_unit_test_setup_teardown(test_model__pdunet_container, s, t),
 #ifndef _WIN32
         cmocka_unit_test_setup_teardown(test_model__benchmark, s, t),
 #endif
