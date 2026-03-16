@@ -16,7 +16,7 @@ typedef struct LuaMclModel {
 
     /* Lua MCL properties. */
     lua_State*  L; /* Lua State object (shadows mi->lua_state). */
-    const char* lua_model_path;
+    char* lua_model_path;
 } LuaMclModel;
 
 
