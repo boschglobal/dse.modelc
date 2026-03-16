@@ -15,6 +15,7 @@
 #include <dse/modelc/model/lua.h>
 #include <dse/platform.h>
 #include <dse/logger.h>
+#include <dse/clib/util/strings.h>
 
 
 #define UNUSED(x)               ((void)x)
@@ -123,7 +124,8 @@ static int32_t lua_mcl_load(MclDesc* mcl)
         if (strlen(files[i]) < strlen(LUA_FILE_EXTENSION)) continue;
         if (strncmp(files[i] + (strlen(files[i]) - strlen(LUA_FILE_EXTENSION)),
                 LUA_FILE_EXTENSION, strlen(LUA_FILE_EXTENSION)) == 0) {
-            m->lua_model_path = files[i];
+            m->lua_model_path = dse_path_cat(
+                m->mcl.model.sim->sim_path, files[i]);
             break;
         }
     }
@@ -242,7 +244,7 @@ static int32_t lua_mcl_unload(MclDesc* mcl)
     default:
         break;
     }
-
+    free(m->lua_model_path);
     lua_model_destroy(m->L);
     m->L = NULL;
 
