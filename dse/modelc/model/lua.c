@@ -9,6 +9,7 @@
 #include <lualib.h>
 #include <dse/clib/util/yaml.h>
 #include <dse/clib/util/cleanup.h>
+#include <dse/clib/util/strings.h>
 #include <dse/modelc/mcl.h>
 #include <dse/modelc/controller/model_private.h>
 #include <dse/modelc/runtime.h>
@@ -123,7 +124,8 @@ static int32_t lua_mcl_load(MclDesc* mcl)
         if (strlen(files[i]) < strlen(LUA_FILE_EXTENSION)) continue;
         if (strncmp(files[i] + (strlen(files[i]) - strlen(LUA_FILE_EXTENSION)),
                 LUA_FILE_EXTENSION, strlen(LUA_FILE_EXTENSION)) == 0) {
-            m->lua_model_path = files[i];
+            m->lua_model_path =
+                dse_path_cat(m->mcl.model.sim->sim_path, files[i]);
             break;
         }
     }
@@ -242,9 +244,10 @@ static int32_t lua_mcl_unload(MclDesc* mcl)
     default:
         break;
     }
-
     lua_model_destroy(m->L);
     m->L = NULL;
+
+    free(m->lua_model_path);
 
     /* m->L shadows mip->lua_state, so clear that too. */
     assert(m->mcl.model.mi);
