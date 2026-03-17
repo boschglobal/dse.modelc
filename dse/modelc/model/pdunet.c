@@ -364,7 +364,6 @@ void pdunet_visit_clear_checksum(
 
 void pdunet_visit_needs_tx(PduNetworkDesc* net, PduObject* pdu, void* data)
 {
-    UNUSED(net);
     UNUSED(data);
     if (pdu == NULL || pdu->pdu == NULL) return;
 
@@ -374,13 +373,20 @@ void pdunet_visit_needs_tx(PduNetworkDesc* net, PduObject* pdu, void* data)
         } else {
             uint32_t checksum = pdunet_checksum(
                 pdu->ncodec.pdu.payload, pdu->ncodec.pdu.payload_len);
+            log_trace("Pdu: [%u] checksum=%u, new checksum=%u",
+                pdu->matrix.pdu_idx, pdu->checksum, checksum);
             if (checksum != pdu->checksum) {
                 pdu->needs_tx = true;
                 if (pdu->pdu->container.id == 0) {
-                    /* Container I-PDU checksums are updated in
+                    pdu->checksum = checksum;
+                    /* Apply Tx payload modifications. */
+                    if (pdu->lua.tx_ref) {
+                        pdunet_call_tx_func(net, pdu);
+                    }
+                } else {
+                    /* Container I-PDU (id != 0) checksums are updated in
                      * pdunet_visit_container_mapto(), and only after being
                      * mapped into the Container (eff. Tx). */
-                    pdu->checksum = checksum;
                 }
             } else {
                 pdu->needs_tx = false;
@@ -390,6 +396,72 @@ void pdunet_visit_needs_tx(PduNetworkDesc* net, PduObject* pdu, void* data)
     } else {
         pdu->needs_tx = false;
     }
+}
+
+
+void pdunet_call_tx_func(PduNetworkDesc* net, PduObject* pdu)
+{
+    if (pdu == NULL || pdu->pdu == NULL) return;
+    if ((pdu->needs_tx != true) || (pdu->lua.tx_ref == 0)) return;
+
+    /* Evaluate the Lua Tx function which may apply post-checksum payload
+    modifications or _reject_ the PDU. */
+    assert(net);
+    assert(net->mi);
+    assert(net->mi->private);
+    ModelInstancePrivate* mip = net->mi->private;
+    lua_State*            L = mip->lua_state;
+
+    log_trace("Lua Call: PDU Tx Tx[%u]: func=%d", pdu->matrix.pdu_idx,
+        pdu->lua.tx_ref);
+
+    uint8_t* payload = NULL;
+    vector_at(&(net->matrix.payload), pdu->matrix.pdu_idx, &payload);
+    int rc = pdunet_lua_pdu_call(
+        L, pdu->lua.tx_ref, payload, pdu->pdu->length, true);
+    if (rc == 0) {
+        /* The PDU may have its payload modified. */
+        if (pdu->pdu->container.id == 0) {
+            pdu->checksum = pdunet_checksum(
+                pdu->ncodec.pdu.payload, pdu->ncodec.pdu.payload_len);
+        } else {
+            /* Container I-PDU (id != 0) checksums are updated in
+             * pdunet_visit_container_mapto(), and only after being
+             * mapped into the Container (eff. Tx). */
+        }
+    } else {
+        /* The PDU was rejected. */
+        pdu->needs_tx = false;
+        pdu->checksum = pdunet_checksum(
+            pdu->ncodec.pdu.payload, pdu->ncodec.pdu.payload_len);
+        log_trace("Pdu: [%u] rejected, reason=%d", pdu->matrix.pdu_idx, rc);
+    }
+}
+
+
+int pdunet_call_rx_func(
+    PduNetworkDesc* net, PduObject* pdu, uint8_t* payload, size_t payload_len)
+{
+    if (pdu == NULL || pdu->pdu == NULL) return 0;
+    if (pdu->lua.rx_ref == 0) return 0;
+
+    /* Evaluate the Lua Rx function which may apply payload
+    modifications or _reject_ the PDU. */
+    assert(net);
+    assert(net->mi);
+    assert(net->mi->private);
+    ModelInstancePrivate* mip = net->mi->private;
+    lua_State*            L = mip->lua_state;
+
+    log_trace("Lua Call: PDU Rx Rx[%u]: func=%d", pdu->matrix.pdu_idx,
+        pdu->lua.rx_ref);
+
+    int rc =
+        pdunet_lua_pdu_call(L, pdu->lua.rx_ref, payload, payload_len, true);
+    if (rc != 0) {
+        log_trace("Pdu: [%u] rejected, reason=%d", pdu->matrix.pdu_idx, rc);
+    }
+    return rc;
 }
 
 

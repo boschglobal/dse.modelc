@@ -168,6 +168,8 @@ PduItem pdunet_pdu_generator(PduNetworkDesc* net, YamlNode* n)
     schema_load_object(n, &pdu, spec, ARRAY_SIZE(spec));
     pdunet_load_lua_func(n, "functions/encode", &pdu.lua.encode);
     pdunet_load_lua_func(n, "functions/decode", &pdu.lua.decode);
+    pdunet_load_lua_func(n, "functions/tx", &pdu.lua.tx);
+    pdunet_load_lua_func(n, "functions/rx", &pdu.lua.rx);
 
     // Metadata.
     if (net->network.vtable.parse_pdu) {
@@ -508,6 +510,15 @@ void pdunet_visit_container_mapto(
             continue;
         }
 
+        /* Apply Tx payload modifications. */
+        if (pi->pdu->lua.tx_ref) {
+            pdunet_call_tx_func(net, pi->pdu);
+            if (pi->pdu->needs_tx == false) {
+                /* This PDU was rejected. */
+                continue;
+            }
+        }
+
         // Map in this I-PDU.
         log_trace("Map to Container: [%u] L-PDU[%u] <-map- [%u] I-PDU[%u], "
                   "offset=%u, len=%u/%u",
@@ -618,7 +629,12 @@ void pdunet_visit_container_mapfrom(
             assert(pi->pdu);
             if (pi->id != id) continue;
 
-            // I-PDU located.
+            // I-PDU - call rx function.
+            int rc = pdunet_call_rx_func(
+                net, pi->pdu, payload + payload_offset, len);
+            if (rc != 0) continue; /* Discarded. */
+
+            // I-PDU - copy payload
             uint8_t* pi_payload = NULL;
             vector_at(
                 &(net->matrix.payload), pi->pdu->matrix.pdu_idx, &pi_payload);
@@ -679,6 +695,11 @@ int pdunet_configure(PduNetworkDesc* net)
         p->lua.encode_ref = pdunet_lua_install_func(L, name, p->lua.encode);
         name = pdunet_build_func_name(net, p, NULL, "decode");
         p->lua.decode_ref = pdunet_lua_install_func(L, name, p->lua.decode);
+
+        name = pdunet_build_func_name(net, p, NULL, "tx");
+        p->lua.tx_ref = pdunet_lua_install_func(L, name, p->lua.tx);
+        name = pdunet_build_func_name(net, p, NULL, "rx");
+        p->lua.rx_ref = pdunet_lua_install_func(L, name, p->lua.rx);
 
         for (size_t sig_idx = 0; sig_idx < vector_len(&p->signals); sig_idx++) {
             PduSignalItem* s = vector_at(&p->signals, sig_idx, NULL);

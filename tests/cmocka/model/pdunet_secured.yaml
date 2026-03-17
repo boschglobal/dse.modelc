@@ -1,0 +1,341 @@
+---
+kind: Stack
+metadata:
+  name: stack
+spec:
+  connection:
+    transport:
+      redispubsub:
+        uri: redis://redis:6379
+        timeout: 60
+  models:
+    - name: flexray
+      model:
+        name: Stub
+      uid: 42
+      channels:
+        - name: network
+          alias: network_vector
+---
+kind: Model
+metadata:
+  name: Stub
+spec:
+  runtime:
+    dynlib:
+      - os: linux
+        arch: amd64
+        path: lib/model.so
+  channels:
+    - alias: network_vector
+      selectors:
+        channel: network
+---
+kind: SignalGroup
+metadata:
+  name: test_binary_signals
+  labels:
+    name: flexray
+    channel: network_vector
+  annotations:
+    vector_type: binary
+spec:
+  signals:
+    - signal: FlexRay
+      annotations:
+        mime_type: application/x-automotive-bus; interface=stream; type=pdu; model=flexray; schema=fbs; swc_id=4; ecu_id=5
+---
+kind: Network
+metadata:
+  name: FR
+  labels:
+    name: FlexRay
+    model: flexray
+spec:
+  metadata:
+    flexray:
+      inhibit_null_frames: true
+      macrotick_per_cycle: 8000
+      microtick_per_cycle: 80
+      network_idle_start: 10
+      static_slot_length: 64
+      static_slot_count: 48
+      minislot_length: 10
+      minislot_count: 300
+      static_slot_payload_length: 32
+      bit_rate: BR10Mbps
+      channel_enable: AB
+      wakeup_channel_select: A
+      single_slot_enabled: true
+  pdus:
+    - pdu: PDU-TX-1
+      id: 200
+      length: 8
+      dir: Tx
+      schedule:
+        phase: -0.001
+        interval: 0.005
+      metadata:
+        flexray:
+          slot_id: 10
+          payload_length: 8
+          cycle_repetition: 8
+          base_cycle: 4
+          direction: Tx
+          channel: A
+          transmit_mode: Continuous
+          inhibit_null: true
+      functions:
+        encode:
+          - lua: |
+              function encode__FR__PDU_TX_1(ctx)
+                  ctx.payload[1] = 0x20
+              end
+        tx:
+          - lua: |
+              function tx__FR__PDU_TX_1(ctx)
+                  ctx.payload[2] = 0x21
+              end
+      signals:
+        - signal: SIG_200_1
+          encoding:
+            start: 0
+            length: 8
+            factor: 1
+            offset: 0
+    - pdu: PDU-TX-2
+      id: 201
+      length: 8
+      dir: Tx
+      schedule:
+        phase: -0.001
+        interval: 0.005
+      metadata:
+        flexray:
+          slot_id: 11
+          payload_length: 8
+          cycle_repetition: 8
+          base_cycle: 4
+          direction: Tx
+          channel: A
+          transmit_mode: Continuous
+          inhibit_null: true
+      functions:
+        encode:
+          - lua: |
+              function encode__FR__PDU_TX_2(ctx)
+                  ctx.payload[1] = 0x22
+                  return ctx
+              end
+        tx:
+          - lua: |
+              function tx__FR__PDU_TX_2(ctx)
+                  ctx.err = 1
+                  return ctx
+              end
+      signals:
+        - signal: SIG_200_1
+          encoding:
+            start: 0
+            length: 8
+            factor: 1
+            offset: 0
+    - pdu: LPDU-TX
+      id: 400
+      length: 24
+      dir: Tx
+      container:
+        header: Short
+      schedule:
+        phase: -0.001
+        interval: 0.005
+      metadata:
+        flexray:
+          slot_id: 12
+          payload_length: 24
+          cycle_repetition: 8
+          base_cycle: 4
+          direction: Tx
+          channel: A
+          transmit_mode: Continuous
+          inhibit_null: true
+    - pdu: IPDU-TX-1
+      id: 401
+      length: 8
+      dir: Tx
+      container:
+        id: 400
+        priority: 50
+      functions:
+        encode:
+          - lua: |
+              function encode__FR__IPDU_TX_1(ctx)
+                  ctx.payload[1] = 0x40
+                  return ctx
+              end
+        tx:
+          - lua: |
+              function tx__FR__IPDU_TX_1(ctx)
+                  ctx.payload[2] = 0x41
+                  return ctx
+              end
+      signals:
+        - signal: SIG_400_1
+          encoding:
+            start: 0
+            length: 8
+            factor: 1
+            offset: 0
+    - pdu: IPDU-TX-2
+      id: 402
+      length: 8
+      dir: Tx
+      container:
+        id: 400
+        priority: 5
+      functions:
+        encode:
+          - lua: |
+              function encode__FR__IPDU_TX_2(ctx)
+                  ctx.payload[1] = 0x42
+                  return ctx
+              end
+        tx:
+          - lua: |
+              function tx__FR__IPDU_TX_2(ctx)
+                  ctx.err = 1
+                  return ctx
+              end
+      signals:
+        - signal: SIG_400_2
+          encoding:
+            start: 0
+            length: 8
+            factor: 1
+            offset: 0
+
+    - pdu: PDU-RX-1
+      id: 200
+      length: 8
+      dir: Rx
+      schedule:
+        phase: -0.001
+        interval: 0.005
+      metadata:
+        flexray:
+          slot_id: 10
+          payload_length: 8
+          cycle_repetition: 8
+          base_cycle: 4
+          direction: Rx
+          channel: A
+          transmit_mode: Continuous
+          inhibit_null: true
+      functions:
+        rx:
+          - lua: |
+              function rx__FR__PDU_RX_1(ctx)
+                  ctx.payload[3] = 0x31
+                  return ctx
+              end
+      signals:
+        - signal: SIG_200_1
+          encoding:
+            start: 0
+            length: 8
+            factor: 1
+            offset: 0
+    - pdu: PDU-RX-2
+      id: 201
+      length: 8
+      dir: Rx
+      schedule:
+        phase: -0.001
+        interval: 0.005
+      metadata:
+        flexray:
+          slot_id: 11
+          payload_length: 8
+          cycle_repetition: 8
+          base_cycle: 4
+          direction: Rx
+          channel: A
+          transmit_mode: Continuous
+          inhibit_null: true
+      functions:
+        rx:
+          - lua: |
+              function rx__FR__PDU_RX_2(ctx)
+                  ctx.payload[3] = 0x32
+                  ctx.err = 1
+                  return ctx
+              end
+      signals:
+        - signal: SIG_200_1
+          encoding:
+            start: 0
+            length: 8
+            factor: 1
+            offset: 0
+    - pdu: LPDU-RX
+      id: 400
+      length: 24
+      dir: Rx
+      container:
+        header: Short
+      schedule:
+        phase: -0.001
+        interval: 0.005
+      metadata:
+        flexray:
+          slot_id: 12
+          payload_length: 24
+          cycle_repetition: 8
+          base_cycle: 4
+          direction: Rx
+          channel: A
+          transmit_mode: Continuous
+          inhibit_null: true
+    - pdu: IPDU-RX-1
+      id: 401
+      length: 8
+      dir: Rx
+      container:
+        id: 400
+        priority: 50
+      functions:
+        rx:
+          - lua: |
+              function rx__FR__IPDU_RX_1(ctx)
+                  ctx.payload[3] = 0x33
+                  ctx.err = 1
+                  return ctx
+              end
+      signals:
+        - signal: SIG_400_1
+          encoding:
+            start: 0
+            length: 8
+            factor: 1
+            offset: 0
+    - pdu: IPDU-RX-2
+      id: 402
+      length: 8
+      dir: Rx
+      container:
+        id: 400
+        priority: 5
+      functions:
+        rx:
+          - lua: |
+              function rx__FR__IPDU_RX_2(ctx)
+                  ctx.payload[3] = 0x34
+                  return ctx
+              end
+      signals:
+        - signal: SIG_400_2
+          encoding:
+            start: 0
+            length: 8
+            factor: 1
+            offset: 0

@@ -126,8 +126,8 @@ static void lua_model_error(lua_State* L, const char* msg)
 }
 
 
-int pdunet_lua_pdu_call(
-    lua_State* L, int32_t func_ref, uint8_t* payload, uint32_t payload_len)
+int pdunet_lua_pdu_call(lua_State* L, int32_t func_ref, uint8_t* payload,
+    uint32_t payload_len, bool no_err_log)
 {
     if (L == NULL) return -EINVAL;
     if (payload == NULL) return -EINVAL;
@@ -162,8 +162,13 @@ int pdunet_lua_pdu_call(
         if (lua_isstring(L, -1)) {
             const char* msg = lua_tostring(L, -1);
             if (msg) {
-                if (__log_level__ != LOG_QUIET)
-                    log_error("lua call returned error: %s (%d)", msg, err);
+                if (no_err_log) {
+                    log_trace("lua call returned error: %s (%d)", msg, err);
+                } else {
+                    if (__log_level__ != LOG_QUIET) {
+                        log_error("lua call returned error: %s (%d)", msg, err);
+                    }
+                }
             }
         }
         lua_pop(L, 2);

@@ -95,6 +95,12 @@ spec:
         decode:
           - lua: |
               function FR__ONE-decode(ctx) return ctx end
+        tx:
+          - lua: |
+              function FR__ONE-tx(ctx) return ctx end
+        rx:
+          - lua: |
+              function FR__ONE-rx(ctx) return ctx end
       signals:
         - signal: SIG_A
           encoding:

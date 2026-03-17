@@ -25,6 +25,16 @@ dse/modelc
         └── model.lua                   <-- Lua model script.
         └── network.yaml                <-- FlexRay network definition.
         └── simulation.yaml             <-- Stack and Signal Group definitions.
+    └── container
+        └── model.c                     <-- Container PDU example model code.
+        └── model.yaml                  <-- Model definition.
+        └── network.yaml                <-- FlexRay network definition.
+        └── simulation.yaml             <-- Stack and Signal Group definitions.
+    └── sec
+        └── model.c                     <-- Secure PDU example model code.
+        └── model.yaml                  <-- Model definition.
+        └── network.yaml                <-- FlexRay network definition.
+        └── simulation.yaml             <-- Stack and Signal Group definitions.
     └── README.md
 ```
 
@@ -47,6 +57,20 @@ dse/modelc/build/_out
             └── model.lua
             └── data
                 └── network.yaml
+    └── container                       <-- Container PDU network example.
+        └── data
+            └── model.yaml
+            └── network.yaml
+            └── simulation.yaml
+        └── lib
+            └── libcontainer.so
+    └── sec                             <-- Secure PDU network example.
+        └── data
+            └── model.yaml
+            └── network.yaml
+            └── simulation.yaml
+        └── lib
+            └── libsec.so
 ```
 
 

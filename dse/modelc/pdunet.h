@@ -36,6 +36,7 @@ PDU API
 */
 
 typedef struct PduNetworkDesc PduNetworkDesc;
+typedef int                   lua_func_t;
 
 
 typedef struct PduSignalItem {
@@ -51,8 +52,8 @@ typedef struct PduSignalItem {
     struct {
         const char* encode;
         const char* decode;
-        int         encode_ref;
-        int         decode_ref;
+        lua_func_t  encode_ref;
+        lua_func_t  decode_ref;
     } lua;
 } PduSignalItem;
 
@@ -94,10 +95,16 @@ typedef struct PduItem {
     } schedule;
     /* Functions. */
     struct {
+        /* Called on Signal pack/unpack. */
         const char* encode;
         const char* decode;
-        int         encode_ref;
-        int         decode_ref;
+        lua_func_t  encode_ref;
+        lua_func_t  decode_ref;
+        /* Called on PDU tx/rx. */
+        const char* tx;
+        const char* rx;
+        lua_func_t  tx_ref;
+        lua_func_t  rx_ref;
     } lua;
     /* Metadata. */
     struct {
@@ -129,8 +136,12 @@ typedef struct PduObject {  // FIXME: internal type ??
         uint32_t phase;    /* Normalised value, factor of step_size. */
     } schedule;
     struct {
-        int encode_ref;
-        int decode_ref;
+        /* Called on Signal pack/unpack. */
+        lua_func_t encode_ref;
+        lua_func_t decode_ref;
+        /* Called on PDU tx/rx. */
+        lua_func_t tx_ref;
+        lua_func_t rx_ref;
     } lua;
     struct {
         /* NCodec Objects. */
@@ -184,8 +195,8 @@ typedef struct PduTransformMatrix {  // FIXME: internal type ??
         Vector min;    /* double, clamps value */
         Vector max;    /* double, clamps value */
         /* Complex (Lua) Transform. */
-        Vector encode; /* Lua function handle (int32_t) */
-        Vector decode; /* Lua function handle (int32_t) */
+        Vector encode; /* Lua function handle (lua_func_t) */
+        Vector decode; /* Lua function handle (lua_func_t) */
         /* Encoding. */
         Vector start_bit;   /* uint16_t */
         Vector length_bits; /* uint16_t */
@@ -288,5 +299,9 @@ DLL_PUBLIC void pdunet_visit_clear_checksum(
     PduNetworkDesc* net, PduObject* pdu, void* data);
 DLL_PUBLIC void pdunet_visit_needs_tx(
     PduNetworkDesc* net, PduObject* pdu, void* data);
+
+DLL_PUBLIC void pdunet_call_tx_func(PduNetworkDesc* net, PduObject* pdu);
+DLL_PUBLIC int  pdunet_call_rx_func(
+     PduNetworkDesc* net, PduObject* pdu, uint8_t* payload, size_t payload_len);
 
 #endif  // DSE_MODELC_PDUNET_H_

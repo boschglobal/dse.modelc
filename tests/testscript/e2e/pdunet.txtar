@@ -62,7 +62,6 @@ stdout 'step\[0.009000\]: Alive=2.000000, AliveRx=1.000000, FOO=24.000000, BAR=4
 
 
 
-
 # TEST: container example
 
 env NAME_FRNET=pdunet_inst
@@ -95,6 +94,42 @@ stdout 'step\[0.010500\]: 1=1, 2=2, 3=3, 4=0, 5=2, 6=3'
 stdout 'step\[0.011000\]: 1=1, 2=2, 3=3, 4=1, 5=2, 6=3'
 stdout 'step\[0.020000\]: 1=2, 2=4, 3=6, 4=1, 5=2, 6=3'
 stdout 'step\[0.031000\]: 1=2, 2=4, 3=6, 4=2, 5=4, 6=6'
+
+
+
+# TEST: sec example
+
+env NAME_FRNET=pdunet_inst
+env SIM=dse/modelc/build/_out/examples/pdunet/sec
+env END_TIME=0.032
+exec sh -e $WORK/test.sh
+
+stderr 'Using Valgrind'
+stdout 'Load YAML File: data/network.yaml'
+stdout 'Loading symbol: model_create ... ok'
+stdout 'Loading symbol: model_step ... ok'
+stdout 'Loading symbol: model_destroy ... not found'
+stdout 'Run the Simulation ...'
+stdout 'Controller exit ...'
+
+stdout 'Signal: SIG_1 \(0\) <-> SIG_1 \(3\)'
+stdout 'Signal: SIG_2 \(1\) <-> SIG_2 \(4\)'
+stdout 'Signal: SIG_3 \(2\) <-> SIG_3 \(5\)'
+stdout 'Signal: SIG_4 \(3\) <-> SIG_4 \(0\)'
+stdout 'Signal: SIG_5 \(4\) <-> SIG_5 \(1\)'
+stdout 'Signal: SIG_6 \(5\) <-> SIG_6 \(2\)'
+stdout 'PDU Net: FlexRay Network Config: FR_A'
+stdout 'PDU Net:   FlexRay: PDU\[0\] id=400, slot=11, dir=Tx, name=LPDU-TX'
+stdout 'PDU Net:   FlexRay: PDU\[1\] id=400, slot=11, dir=Rx, name=LPDU-RX'
+stdout 'PDU Net:   FlexRay: cycle_time=0.005000'
+stdout 'step\[0.000000\]: 1=1, 2=2, 3=3, 4=0, 5=0, 6=0'
+stdout 'step\[0.005500\]: 1=1, 2=2, 3=3, 4=0, 5=0, 6=0'
+stdout 'step\[0.006000\]: 1=1, 2=2, 3=3, 4=16, 5=0, 6=3'
+stdout 'step\[0.010500\]: 1=1, 2=2, 3=3, 4=16, 5=0, 6=3'
+stdout 'step\[0.011000\]: 1=1, 2=2, 3=3, 4=16, 5=0, 6=3'
+stdout 'step\[0.020000\]: 1=2, 2=4, 3=6, 4=16, 5=0, 6=3'
+stdout 'step\[0.031000\]: 1=2, 2=4, 3=6, 4=32, 5=0, 6=6'
+
 
 
 -- test.sh --

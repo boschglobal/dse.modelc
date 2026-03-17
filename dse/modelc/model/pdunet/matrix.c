@@ -92,8 +92,8 @@ static const matrix_item_spec matrix_vector_offset_list[] = {
     { offsetof(PduTransformMatrix, signal.offset), sizeof(double), NULL },
     { offsetof(PduTransformMatrix, signal.min), sizeof(double), NULL },
     { offsetof(PduTransformMatrix, signal.max), sizeof(double), NULL },
-    { offsetof(PduTransformMatrix, signal.encode), sizeof(int32_t), NULL },
-    { offsetof(PduTransformMatrix, signal.decode), sizeof(int32_t), NULL },
+    { offsetof(PduTransformMatrix, signal.encode), sizeof(lua_func_t), NULL },
+    { offsetof(PduTransformMatrix, signal.decode), sizeof(lua_func_t), NULL },
     { offsetof(PduTransformMatrix, signal.start_bit), sizeof(uint16_t), NULL },
     { offsetof(PduTransformMatrix, signal.length_bits), sizeof(uint16_t),
         NULL },
@@ -205,6 +205,8 @@ int pdunet_matrix_transform(PduNetworkDesc* net, PduNetworkSortFunc sort)
             .lua = {
                 .encode_ref = p->lua.encode_ref,
                 .decode_ref = p->lua.decode_ref,
+                .tx_ref = p->lua.tx_ref,
+                .rx_ref = p->lua.rx_ref,
             }
         };
         vector_push(&(net->matrix.pdu), &o);
@@ -348,8 +350,8 @@ void pdunet_pdu_calculate_linear_range(PduNetworkDesc* net, PduRange* r)
     double* min = (double*)vector_at(&net->matrix.signal.min, r->offset, NULL);
     double* max = (double*)vector_at(&net->matrix.signal.max, r->offset, NULL);
     uint64_t* raw = (uint64_t*)vector_at(&net->matrix.signal.raw, r->offset, NULL);
-    int32_t* encode = (int32_t*)vector_at(&net->matrix.signal.encode, r->offset, NULL);
-    int32_t* decode = (int32_t*)vector_at(&net->matrix.signal.decode, r->offset, NULL);
+    lua_func_t* encode = (lua_func_t*)vector_at(&net->matrix.signal.encode, r->offset, NULL);
+    lua_func_t* decode = (lua_func_t*)vector_at(&net->matrix.signal.decode, r->offset, NULL);
     size_t* pdu_idx = (size_t*)vector_at(&net->matrix.signal.pdu_idx, r->offset, NULL);
     // clang-format on
 
@@ -524,7 +526,7 @@ void pdunet_pdu_pack_range(PduNetworkDesc* net, PduRange* r)
                 log_trace("Lua Call: PDU Pack Tx[%u]: func=%d", pdu_idx,
                     o->lua.encode_ref);
                 pdunet_lua_pdu_call(
-                    L, o->lua.encode_ref, payload, o->pdu->length);
+                    L, o->lua.encode_ref, payload, o->pdu->length, false);
             }
         }
         break;
@@ -540,7 +542,7 @@ void pdunet_pdu_pack_range(PduNetworkDesc* net, PduRange* r)
                 log_trace("Lua Call: PDU Unpack Rx[%u]: func=%d", pdu_idx,
                     o->lua.encode_ref);
                 pdunet_lua_pdu_call(
-                    L, o->lua.decode_ref, payload, o->pdu->length);
+                    L, o->lua.decode_ref, payload, o->pdu->length, false);
             }
         }
         /* Unpack from payload to raw. */

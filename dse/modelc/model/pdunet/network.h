@@ -81,8 +81,8 @@ DLL_PRIVATE const char* pdunet_build_func_name(PduNetworkDesc* net,
     PduItem* pdu, PduSignalItem* signal, const char* prefix);
 DLL_PRIVATE int         pdunet_lua_install_func(
             lua_State* L, const char* func_name, const char* lua_script);
-DLL_PRIVATE int pdunet_lua_pdu_call(
-    lua_State* L, int32_t func_ref, uint8_t* payload, uint32_t payload_len);
+DLL_PRIVATE int  pdunet_lua_pdu_call(lua_State* L, int32_t func_ref,
+     uint8_t* payload, uint32_t payload_len, bool no_err_log);
 DLL_PRIVATE int  pdunet_lua_signal_call(lua_State* L, int32_t func_ref,
      double* phys, uint64_t* raw, uint8_t* payload, uint32_t payload_len);
 DLL_PRIVATE void pdunet_lua_teardown(PduNetworkDesc* net);

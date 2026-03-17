@@ -257,16 +257,19 @@ void pdunet_flexray_lpdu_rx(PduNetworkDesc* net)
             if (pdu_config->index.frame_table !=
                 nc_pdu.transport.flexray.metadata.lpdu.frame_config_index)
                 continue;
+            size_t len = nc_pdu.payload_len;
+            if (len > pdu->ncodec.pdu.payload_len) {
+                len = pdu->ncodec.pdu.payload_len;
+            }
+            /* Call the rx function. */
+            int rc = pdunet_call_rx_func(net, pdu, nc_pdu.payload, len);
+            if (rc != 0) continue; /* Discarded. */
             /* Update the LPDU status (will trigger Tx loop). */
             NCodecPduFlexrayLpdu* lpdu = pdu->ncodec.metadata.lpdu;
             if (lpdu) {
                 lpdu->status = nc_pdu.transport.flexray.metadata.lpdu.status;
             }
             /* Process the payload. */
-            size_t len = nc_pdu.payload_len;
-            if (len > pdu->ncodec.pdu.payload_len) {
-                len = pdu->ncodec.pdu.payload_len;
-            }
             uint8_t* payload = NULL;
             vector_at(&(net->matrix.payload), pdu->matrix.pdu_idx, &payload);
             memcpy(payload, nc_pdu.payload, len);

@@ -1,0 +1,165 @@
+# Copyright 2026 Robert Bosch GmbH
+#
+# SPDX-License-Identifier: Apache-2.0
+
+---
+kind: Network
+metadata:
+  name: FR_A
+  labels:
+    signal: FlexRay_A
+    pdunet: flexray
+spec:
+  metadata:
+    flexray:
+      inhibit_null_frames: true
+      macrotick_per_cycle: 3361
+      microtick_per_cycle: 200000
+      network_idle_start: 3355
+      static_slot_length: 55
+      static_slot_count: 40
+      minislot_length: 6
+      minislot_count: 200
+      static_slot_payload_length: 64  # Bytes, from Words (32 * 2)
+      bit_rate: BR10Mbps
+      channel_enable: AB
+      wakeup_channel_select: A
+      single_slot_enabled: true
+  schedule:
+    epoch_offset: 0.000
+  pdus:
+    # Tx and Rx PDUs are in loop-back configuration.
+    - pdu: LPDU-TX
+      id: 400
+      length: 24
+      dir: Tx
+      container:
+        header: Short
+      schedule:
+        phase: -0.001
+        interval: 0.005
+      metadata:
+        flexray:
+          slot_id: 11
+          payload_length: 24
+          cycle_repetition: 1
+          base_cycle: 0
+          direction: Tx
+          channel: A
+          transmit_mode: Continuous
+          inhibit_null: true
+    - pdu: IPDU-TX-1
+      id: 401
+      length: 8
+      dir: Tx
+      container:
+        id: 400
+        priority: 50
+      functions:
+        tx:
+          - lua: |
+              -- This PDU is securely encoded.
+              function tx__FR_A__IPDU_TX_1(ctx)
+                  local left  = (ctx.payload[1] << 4) & 0xF0
+                  local right = (ctx.payload[1] >> 4) & 0x0F
+                  ctx.payload[1] = left | right
+                  return ctx
+              end
+      signals:
+        - signal: SIG_1
+          encoding:
+            start: 0
+            length: 8
+            factor: 1
+            offset: 0
+    - pdu: IPDU-TX-2
+      id: 402
+      length: 8
+      dir: Tx
+      container:
+        id: 400
+        priority: 5
+      functions:
+        tx:
+          - lua: |
+              -- This PDU is blocked from TX (discarded).
+              function tx__FR_A__IPDU_TX_2(ctx)
+                  ctx.err = 1
+                  return ctx
+              end
+      signals:
+        - signal: SIG_2
+          encoding:
+            start: 0
+            length: 8
+            factor: 1
+            offset: 0
+    - pdu: IPDU-TX-3
+      id: 403
+      length: 8
+      dir: Tx
+      container:
+        id: 400
+        priority: 25
+      signals:
+        - signal: SIG_3
+          encoding:
+            start: 0
+            length: 8
+            factor: 1
+            offset: 0
+    - pdu: LPDU-RX
+      id: 400
+      length: 24
+      dir: Rx
+      container:
+        header: Short
+      metadata:
+        flexray:
+          slot_id: 11
+          payload_length: 24
+          cycle_repetition: 1
+          base_cycle: 0
+          direction: Rx
+          channel: A
+          transmit_mode: Continuous
+          inhibit_null: true
+    - pdu: IPDU-RX-1
+      id: 401
+      length: 8
+      dir: Rx
+      container:
+        id: 400
+      signals:
+        - signal: SIG_4
+          encoding:
+            start: 0
+            length: 8
+            factor: 1
+            offset: 0
+    - pdu: IPDU-RX-2
+      id: 402
+      length: 8
+      dir: Rx
+      container:
+        id: 400
+      signals:
+        - signal: SIG_5
+          encoding:
+            start: 0
+            length: 8
+            factor: 1
+            offset: 0
+    - pdu: IPDU-RX-3
+      id: 403
+      length: 8
+      dir: Rx
+      container:
+        id: 400
+      signals:
+        - signal: SIG_6
+          encoding:
+            start: 0
+            length: 8
+            factor: 1
+            offset: 0
