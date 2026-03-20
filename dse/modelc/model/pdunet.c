@@ -64,6 +64,7 @@ PduNetworkDesc* pdunet_create(ModelInstanceSpec* mi, void* ncodec,
     if (net->schedule.step_size <= 0) {
         net->schedule.step_size = MODEL_DEFAULT_STEP_SIZE;
     }
+    net->schedule.step_size_epsilon = net->schedule.step_size * 0.01;
     log_notice("PDU Net: Step size: %f", net->schedule.step_size);
     if (ncodec == NULL || net_labels == NULL) return net;
 
@@ -259,7 +260,7 @@ void pdunet_tx(PduNetworkDesc* net, PduRange* range, PduNetworkVisitFunc visit,
     }
 
     /* Schedule, based on normalised simulation time. */
-    net->schedule.simulation_time = simulation_time / net->schedule.step_size;
+    net->schedule.simulation_time = (simulation_time + net->schedule.step_size_epsilon) / net->schedule.step_size;
     pdunet_schedule(net);
 
     /* Encode PDUs, call visitor, then Tx. */

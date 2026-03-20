@@ -248,6 +248,7 @@ typedef struct PduNetworkDesc {
     struct {
         uint32_t simulation_time; /* Normalised (to step_size). */
         double   step_size;
+        double   step_size_epsilon;
         double   epoch_offset;
     } schedule;
 
