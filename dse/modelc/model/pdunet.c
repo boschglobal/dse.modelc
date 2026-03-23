@@ -260,7 +260,9 @@ void pdunet_tx(PduNetworkDesc* net, PduRange* range, PduNetworkVisitFunc visit,
     }
 
     /* Schedule, based on normalised simulation time. */
-    net->schedule.simulation_time = (simulation_time + net->schedule.step_size_epsilon) / net->schedule.step_size;
+    net->schedule.simulation_time =
+        (simulation_time + net->schedule.step_size_epsilon) /
+        net->schedule.step_size;
     pdunet_schedule(net);
 
     /* Encode PDUs, call visitor, then Tx. */
