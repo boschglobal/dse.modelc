@@ -83,7 +83,16 @@ install(
     COMPONENT
         gateway_model
 )
-if(WIN32)
+if (UNIX)
+install(
+    TARGETS
+        ${modelc_shared_lib}
+    DESTINATION
+        ${EXE_PATH}/lib
+    COMPONENT
+        gateway_model
+)
+elseif(WIN32)
 install(
     TARGETS
         ${modelc_shared_lib}
