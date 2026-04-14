@@ -5,6 +5,7 @@
 package session
 
 import (
+	"context"
 	"fmt"
 	"log/slog"
 	"os"
@@ -34,7 +35,7 @@ type Command struct {
 	KillNoWait bool
 }
 
-func (c Command) Environ() []string {
+func (c *Command) Environ() []string {
 	e := make([]string, 0)
 	for k, v := range c.Env {
 		e = append(e, fmt.Sprintf("%s=%s", k, v))
@@ -62,15 +63,15 @@ func (c *Command) Execute() error {
 	out, err := cmd.CombinedOutput()
 	if err != nil {
 		slog.Debug(err.Error())
+		return err
 	}
 	fmt.Printf("%s\n", out)
 
 	return nil
 }
 
-func (c *Command) Start(redirect func(c *Command)) error {
-
-	c.cmd = exec.Command(c.Prog, c.Args...)
+func (c *Command) Start(ctx context.Context, redirect func(c *Command)) error {
+	c.cmd = exec.CommandContext(ctx, c.Prog, c.Args...)
 	if c.Dir != "" {
 		c.cmd.Dir = c.Dir
 	}
@@ -91,6 +92,7 @@ func (c *Command) Start(redirect func(c *Command)) error {
 
 	if err := c.cmd.Start(); err != nil {
 		slog.Error(err.Error())
+		return err
 	}
 
 	return nil

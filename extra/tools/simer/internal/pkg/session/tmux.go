@@ -5,6 +5,7 @@
 package session
 
 import (
+	"context"
 	"fmt"
 	"strings"
 )
@@ -12,10 +13,11 @@ import (
 type TmuxSession struct {
 	Name string
 	Cmd  string
+	ctx  context.Context
 }
 
 func NewTmuxSession() *TmuxSession {
-	return &TmuxSession{Name: "simer", Cmd: "/usr/bin/tmux"}
+	return &TmuxSession{Name: "simer", Cmd: "/usr/bin/tmux", ctx: context.Background()}
 }
 
 func (s *TmuxSession) Create() error {
@@ -23,9 +25,7 @@ func (s *TmuxSession) Create() error {
 		Prog: s.Cmd,
 		Args: []string{"new-session", "-d", "-s", s.Name},
 	}
-	c.Run()
-
-	return nil
+	return c.Run()
 }
 
 func (s *TmuxSession) Attach(c *Command) error {
@@ -56,9 +56,7 @@ func (s *TmuxSession) Attach(c *Command) error {
 	// Modify the Command object, and Start().
 	c.Prog = s.Cmd
 	c.Args = tmuxArgs
-	c.Start(nil)
-
-	return nil
+	return c.Start(s.ctx, nil)
 }
 
 func (s *TmuxSession) Wait() error {
@@ -66,7 +64,5 @@ func (s *TmuxSession) Wait() error {
 		Prog: s.Cmd,
 		Args: []string{"new-session", "-t", s.Name},
 	}
-	c.Run()
-
-	return nil
+	return c.Run()
 }

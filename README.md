@@ -19,11 +19,20 @@ Model C Library of the Dynamic Simulation Environment (DSE) Core Platform.
 ### Project Structure
 
 ```text
-L- dse/modelc   Model C Library source code.
-L- extra        Build infrastructure.
-  L- tools      Containerised tools.
-L- licenses     Third Party Licenses.
-L- tests        Unit and integration tests.
+dse.modelc
+└── doc                     <-- Project documentation.
+└── dse/modelc              <-- Model C Library source code.
+└── extra
+    └── go                  <-- Go packages.
+    └── tools
+        └── simer           <-- Simulation Runner.
+        └── trace           <-- Simulation trace tool.
+└── licenses                <-- Third Party Licenses.
+└── tests
+    └── cmocka              <-- Unit and integration tests (C/CMocka).
+    └── e2e                 <-- End-to-end tests (Testscript/Docker).
+└── Makefile                <-- Repo level Makefile.
+└── Taskfile.yml            <-- Workflow automation via Task.
 ```
 
 
@@ -64,13 +73,17 @@ $ export GCC_BUILDER_IMAGE=ghcr.io/boschglobal/dse-gcc-builder:latest
 # Build.
 $ make
 
-# Run tests.
-$ make test
-
 # Build containerised tools.
 $ make simer
 $ make tools
 $ make docker
+
+# Run tests (using local images).
+$ export SIMER_IMAGE=simer:test
+$ make test
+
+# Build check for all architectures.
+$ make arch
 
 # Remove (clean) temporary build artifacts.
 $ make clean
