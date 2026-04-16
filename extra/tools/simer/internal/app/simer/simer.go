@@ -52,7 +52,7 @@ func RedisCommand(redisPath string, quiet bool) *session.Command {
 		return &session.Command{
 			Name:       "Redis",
 			Prog:       redisPath,
-			Args:       []string{"/usr/local/etc/redis/redis.conf"},
+			Args:       []string{"/usr/local/etc/valkey/valkey.conf"},
 			Quiet:      quiet,
 			KillNoWait: true,
 		}

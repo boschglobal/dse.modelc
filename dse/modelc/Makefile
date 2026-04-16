@@ -53,6 +53,8 @@ clean:
 	@-for d in $(SUBDIRS); do ($(MAKE) -C $$d $@ ); done
 	$(MAKE) -j $(MAKE_NPROC) -C ../../extra/external clean
 	rm -rf build
+	rm -rf examples/benchmark/charts/*.txt
+	rm -rf examples/benchmark/charts/*.png
 
 cleanall: clean
 	$(MAKE) -j $(MAKE_NPROC) -C ../../extra/external cleanall

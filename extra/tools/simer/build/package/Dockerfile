@@ -11,13 +11,13 @@
 #	simer dse/modelc/build/_out/examples/minimal -endtime 0.002
 
 
-# Redis Builder
-# =============
-FROM debian:bookworm-slim AS redis
+# Valkey Builder
+# ==============
+FROM debian:bookworm-slim AS valkey
 
-ENV REDIS_VERSION=6.0.20
-ENV REDIS_DOWNLOAD_URL=http://download.redis.io/releases/redis-6.0.20.tar.gz
-ENV REDIS_DOWNLOAD_SHA=173d4c5f44b5d7186da96c4adc5cb20e8018b50ec3a8dfe0d191dbbab53952f0
+ENV VALKEY_VERSION=8.0.1
+ENV VALKEY_DOWNLOAD_URL=https://github.com/valkey-io/valkey/archive/refs/tags/8.0.1.tar.gz
+ENV VALKEY_DOWNLOAD_SHA=1e1d6dfbed2f932a87afbc7402be050a73974a9b19a9116897e537a6638e5e1d
 
 
 RUN set -eux; \
@@ -37,20 +37,14 @@ RUN set -eux; \
 	; \
 	rm -rf /var/lib/apt/lists/*; \
 	\
-	wget -O redis.tar.gz "$REDIS_DOWNLOAD_URL"; \
-	echo "$REDIS_DOWNLOAD_SHA *redis.tar.gz" | sha256sum -c -; \
-	mkdir -p /usr/src/redis; \
-	tar -xzf redis.tar.gz -C /usr/src/redis --strip-components=1; \
-	rm redis.tar.gz; \
+	wget -O valkey.tar.gz "$VALKEY_DOWNLOAD_URL"; \
+	mkdir -p /usr/src/valkey; \
+	tar -xzf valkey.tar.gz -C /usr/src/valkey --strip-components=1; \
+	rm valkey.tar.gz; \
 	\
-    # Disable Redis protected mode.
-	grep -E '^ *createBoolConfig[(]"protected-mode",.*, *1 *,.*[)],$' /usr/src/redis/src/config.c; \
-	sed -ri 's!^( *createBoolConfig[(]"protected-mode",.*, *)1( *,.*[)],)$!\10\2!' /usr/src/redis/src/config.c; \
-	grep -E '^ *createBoolConfig[(]"protected-mode",.*, *0 *,.*[)],$' /usr/src/redis/src/config.c; \
-	\
-	make -C /usr/src/redis -j "$(nproc)" all; \
-	make -C /usr/src/redis install; \
-	rm -r /usr/src/redis;
+	make -C /usr/src/valkey -j "$(nproc)" all; \
+	make -C /usr/src/valkey install; \
+	rm -r /usr/src/valkey;
 
 
 # Simer Builder
@@ -103,16 +97,16 @@ RUN set -eux; \
     rm -rf /var/lib/apt/lists/*;
 
 
-# Install Redis
-# =============
-COPY build/package/redis.conf /usr/local/etc/redis/redis.conf
-COPY --from=redis /usr/local/bin/redis-cli /usr/local/bin/redis-cli
-COPY --from=redis /usr/local/bin/redis-server /usr/local/bin/redis-server
-RUN mkdir -p /data/redis \
-	&& chown simer:simer /data/redis \
-	&& mkdir -p /var/run/redis \
-	&& chown simer:simer /var/run/redis
-VOLUME /data/redis
+# Install Valkey
+# ==============
+COPY build/package/valkey.conf /usr/local/etc/valkey/valkey.conf
+COPY --from=valkey /usr/local/bin/valkey-cli /usr/local/bin/valkey-cli
+COPY --from=valkey /usr/local/bin/valkey-server /usr/local/bin/valkey-server
+RUN mkdir -p /data/valkey \
+	&& chown simer:simer /data/valkey \
+	&& mkdir -p /var/run/valkey \
+	&& chown simer:simer /var/run/valkey
+VOLUME /data/valkey
 EXPOSE 6379
 
 

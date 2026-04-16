@@ -183,6 +183,10 @@ clean:
 	done;
 	docker images -q simer:test | xargs -r docker rmi -f
 	docker images -qf dangling=true | xargs -r docker rmi
+	for d in $(TOOL_DIRS) ;\
+	do \
+		$(MAKE) -C extra/tools/$$d $@; \
+	done;
 
 .PHONY: cleanall
 cleanall:

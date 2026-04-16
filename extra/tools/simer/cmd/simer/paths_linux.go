@@ -7,7 +7,7 @@
 package main
 
 const (
-	defaultRedisPath      = "redis-server"
+	defaultRedisPath      = "valkey-server"
 	defaultSimbusPath     = "/usr/local/bin/simbus"
 	defaultModelcPath     = "/usr/local/bin/modelc"
 	defaultModelcX32Path  = "/usr/local/bin/modelc32_x86"
