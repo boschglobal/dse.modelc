@@ -90,17 +90,17 @@ spec:
           inhibit_null: true
       functions:
         encode:
-          - lua: |
-              function FR__ONE-encode(ctx) return ctx end
+          lua: |
+            return function(ctx) return ctx end
         decode:
-          - lua: |
-              function FR__ONE-decode(ctx) return ctx end
+          lua: |
+            return function(ctx) return ctx end
         tx:
-          - lua: |
-              function FR__ONE-tx(ctx) return ctx end
+          lua: |
+            return function(ctx) return ctx end
         rx:
-          - lua: |
-              function FR__ONE-rx(ctx) return ctx end
+          lua: |
+            return function(ctx) return ctx end
       signals:
         - signal: SIG_A
           encoding:
@@ -112,11 +112,11 @@ spec:
             max: 215
           functions:
             encode:
-              - lua: |
-                  function FR__ONE__SIG_A-encode(ctx) return ctx end
+              lua: |
+                return function(ctx) return ctx end
             decode:
-              - lua: |
-                  function FR__ONE__SIG_A-decode(ctx) return ctx end
+              lua: |
+                return function(ctx) return ctx end
         - signal: SIG_B
           encoding:
             start: 13
@@ -127,11 +127,11 @@ spec:
             max: 50
           functions:
             encode:
-              - lua: |
-                  function FR__ONE__SIG_B-encode(ctx) return ctx end
+              lua: |
+                return function(ctx) return ctx end
             decode:
-              - lua: |
-                  function FR__ONE__SIG_B-decode(ctx) return ctx end
+              lua: |
+                return function(ctx) return ctx end
     - pdu: TWO
       id: 202
       length: 64
@@ -148,11 +148,11 @@ spec:
           inhibit_null: true
       functions:
         encode:
-          - lua: |
-              function FR__TWO-encode(ctx) return ctx end
+          lua: |
+            return function(ctx) return ctx end
         decode:
-          - lua: |
-              function FR__TWO-decode(ctx) return ctx end
+          lua: |
+            return function(ctx) return ctx end
       signals:
         - signal: SIG_C
           encoding:
@@ -162,11 +162,11 @@ spec:
             offset: 0
           functions:
             encode:
-              - lua: |
-                  function FR__TWO__SIG_C-encode(ctx) return ctx end
+              lua: |
+                return function(ctx) return ctx end
             decode:
-              - lua: |
-                  function FR__TWO__SIG_C-decode(ctx) return ctx end
+              lua: |
+                return function(ctx) return ctx end
         - signal: SIG_D
           encoding:
             start: 10
@@ -177,11 +177,11 @@ spec:
             max: 200
           functions:
             encode:
-              - lua: |
-                  function FR__TWO__SIG_D-encode(ctx) return ctx end
+              lua: |
+                return function(ctx) return ctx end
             decode:
-              - lua: |
-                  function FR__TWO__SIG_D-decode(ctx) return ctx end
+              lua: |
+                return function(ctx) return ctx end
     - pdu: THREE
       id: 303
       length: 64
@@ -201,11 +201,11 @@ spec:
           inhibit_null: true
       functions:
         encode:
-          - lua: |
-              function FR__THREE-encode(ctx) return ctx end
+          lua: |
+            return function(ctx) return ctx end
         decode:
-          - lua: |
-              function FR__THREE-decode(ctx) return ctx end
+          lua: |
+            return function(ctx) return ctx end
       signals:
         - signal: SIG_E
           encoding:
@@ -215,11 +215,11 @@ spec:
             offset: 0
           functions:
             encode:
-              - lua: |
-                  function FR__THREE__SIG_E-encode(ctx) return ctx end
+              lua: |
+                return function(ctx) return ctx end
             decode:
-              - lua: |
-                  function FR__THREE__SIG_E-decode(ctx) return ctx end
+              lua: |
+                return function(ctx) return ctx end
         - signal: SIG_F
           encoding:
             start: 10
@@ -230,11 +230,11 @@ spec:
             max: 200
           functions:
             encode:
-              - lua: |
-                  function FR__THREE__SIG_F-encode(ctx) return ctx end
+              lua: |
+                return function(ctx) return ctx end
             decode:
-              - lua: |
-                  function FR__THREE__SIG_F-decode(ctx) return ctx end
+              lua: |
+                return function(ctx) return ctx end
     - pdu: FOUR
       id: 404
       length: 64
@@ -251,11 +251,11 @@ spec:
           inhibit_null: true
       functions:
         encode:
-          - lua: |
-              function FR__FOUR-encode(ctx) return ctx end
+          lua: |
+            return function(ctx) return ctx end
         decode:
-          - lua: |
-              function FR__FOUR-decode(ctx) return ctx end
+          lua: |
+            return function(ctx) return ctx end
       signals:
         - signal: SIG_G  # Test default values.
           encoding:
@@ -271,11 +271,11 @@ spec:
             max: 300
           functions:
             encode:
-              - lua: |
-                  function FR__FOUR__SIG_H-encode(ctx) return ctx end
+              lua: |
+                return function(ctx) return ctx end
             decode:
-              - lua: |
-                  function FR__FOUR__SIG_H-decode(ctx) return ctx end
+              lua: |
+                return function(ctx) return ctx end
         - signal: SIG_I  # Discarded, no encoding.start or encoding.length.
         - signal: SIG_J  # Discarded, factor is 0.0.
           encoding:

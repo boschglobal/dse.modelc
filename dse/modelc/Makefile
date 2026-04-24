@@ -30,11 +30,16 @@ build: external
 	fi
 # Build incremental.
 	cd build; cmake --build . -j $(MAKE_NPROC)
-	cd build; cmake --build . -j $(MAKE_NPROC) -t install
+	@cd build; cmake --build . -j $(MAKE_NPROC) -t install > /dev/null 2>&1
 	@echo ""
 	@echo "Sandbox files: - $$(pwd)/build/_out"
 	@echo "--------------"
-	@find build/_out/ -type f -name '*' -exec ls -sh --color=auto {} \;
+	@cd build/_out && find . -type f \
+	! -name '*.yaml' \
+	! -name '*.yml' \
+	! -path './*license*' \
+	! -path './*LICENSE*' \
+	-printf '%s %P\n' | numfmt --to=iec --suffix=B --padding=6
 
 package:
 	@echo "Package parameters:"

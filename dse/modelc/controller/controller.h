@@ -21,6 +21,20 @@ typedef struct SignalTransform {
         double factor;
         double offset;
     } linear;
+    struct FunctionTransform {
+        struct ModelFT {
+            const char* lua_script;
+            int32_t     ref;
+        } model;
+        struct VectorFT {
+            const char* lua_script;
+            int32_t     ref;
+        } vector;
+    } function;
+    struct TimingTransform {
+        float interval;
+        float phase;
+    } timing;
 } SignalTransform;
 
 

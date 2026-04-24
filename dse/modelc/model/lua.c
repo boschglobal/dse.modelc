@@ -35,6 +35,17 @@ Lua Model API
 =============
 */
 
+static void lua_model_error(lua_State* L, const char* msg)
+{
+    log_error("Lua Error: %s (%s)", msg, lua_tostring(L, -1));
+}
+
+static void lua_model_fatal(lua_State* L, const char* msg)
+{
+    log_fatal("Lua Error: %s (%s)", msg, lua_tostring(L, -1));
+}
+
+
 lua_State* lua_model_create(lua_State* L, ModelDesc* m)
 {
     if (L == NULL) {
@@ -52,14 +63,106 @@ void lua_model_destroy(lua_State* L)
     lua_close(L);
 }
 
-static void lua_model_error(lua_State* L, const char* msg)
+int lua_install_script(lua_State* L, const char* lua_script)
 {
-    log_error("Lua Error: %s (%s)", msg, lua_tostring(L, -1));
+    if (lua_script == NULL) return 0;
+    assert(L);
+
+    /* Run the Lua script. */
+    int top = lua_gettop(L);
+    if (lua_script != NULL && luaL_dostring(L, lua_script) != 0) {
+        log_error(
+            "Lua Error: luaL_dostring() failed (%s)", lua_tostring(L, -1));
+        lua_pop(L, 1);
+        return 0;
+    }
+
+    /* If the script returned a function, store and return a reference. */
+    if (lua_isfunction(L, -1)) {
+        int ref = luaL_ref(L, LUA_REGISTRYINDEX);
+        if (ref < 0) {
+            log_error("Failed to create reference for returned Lua function");
+            lua_settop(L, top);
+            return 0;
+        }
+        log_notice(
+            "Lua: anonymous function installed: (ref=%d)\n%s", ref, lua_script);
+        return ref;
+    }
+
+    lua_settop(L, top);
+    log_notice("Lua: script installed: \n%s", lua_script);
+    return 0;
 }
 
-static void lua_model_fatal(lua_State* L, const char* msg)
+int lua_push_ctx(lua_State* L)
 {
-    log_fatal("Lua Error: %s (%s)", msg, lua_tostring(L, -1));
+    // clang-format off
+    lua_newtable(L);                                        // [ctx]
+    return 0;
+    // clang-format on
+}
+
+int lua_call_ctx(lua_State* L, int32_t func_ref)
+{
+    // clang-format off
+    /* A ctx table should already be pushed on the stack. */
+    if (lua_gettop(L) < 1 || !lua_istable(L, -1)) {         // [ctx]
+        return -EINVAL;
+    }
+
+    /* Call function(ctx). */
+    lua_rawgeti(L, LUA_REGISTRYINDEX, func_ref);            // [ctx][func]
+    if (!lua_isfunction(L, -1)) {                           // [ctx][val]
+        lua_pop(L, 2);                                      // []
+        return -EINVAL;
+    }
+    if (lua_pcall(L, 1, 1, 0) != LUA_OK) {                  // [ret|err]
+        lua_model_error(L, "lua_pcall() failed");
+        lua_pop(L, 1);                                      // []
+        return -1;
+    }
+
+    /* If the function did not return a table, return now. */
+    if (!lua_istable(L, -1)) {                              // [ret]
+        lua_pop(L, 1);                                      // []
+        return 0;
+    }
+
+    /* If the function returned a ctx table, check the err state. */
+    int idx = lua_gettop(L);                                // [ctx]
+    int err = 0;                                            // [ctx]
+    lua_getfield(L, idx, "err");                            // [ctx][err]
+    if (lua_isinteger(L, -1)) {                             // [ctx][err]
+        err = (int)lua_tointeger(L, -1);                    // [ctx][err]
+    }
+    lua_pop(L, 1);                                          // [ctx]
+    if (err) {
+        lua_getfield(L, idx, "errmsg");                     // [ctx][errmsg]
+        if (lua_isstring(L, -1)) {
+            const char* msg = lua_tostring(L, -1);          // [ctx][errmsg]
+            if (msg) {
+                if (__log_level__ != LOG_QUIET)
+                    log_error("lua call returned error: %s (%d)", msg, err);
+            }
+        }
+        lua_pop(L, 2);                                      // []
+        return -1;
+    }
+
+    /* Return with the ctx table still on the stack. */
+    return 1;                                               // [ctx]
+    // clang-format on
+}
+
+int lua_pop_ctx(lua_State* L)
+{
+    // clang-format off
+    if (lua_gettop(L) > 0 && lua_istable(L, -1)) {          // [ctx]
+        lua_pop(L, 1);                                      // []
+    }
+    return 0;
+    // clang-format on
 }
 
 

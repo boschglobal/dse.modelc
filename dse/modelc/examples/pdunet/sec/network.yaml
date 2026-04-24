@@ -57,14 +57,14 @@ spec:
         priority: 50
       functions:
         tx:
-          - lua: |
-              -- This PDU is securely encoded.
-              function tx__FR_A__IPDU_TX_1(ctx)
-                  local left  = (ctx.payload[1] << 4) & 0xF0
-                  local right = (ctx.payload[1] >> 4) & 0x0F
-                  ctx.payload[1] = left | right
-                  return ctx
-              end
+          lua: |
+            -- This PDU is securely encoded.
+            return function(ctx)
+                local left  = (ctx.payload[1] << 4) & 0xF0
+                local right = (ctx.payload[1] >> 4) & 0x0F
+                ctx.payload[1] = left | right
+                return ctx
+            end
       signals:
         - signal: SIG_1
           encoding:
@@ -81,12 +81,12 @@ spec:
         priority: 5
       functions:
         tx:
-          - lua: |
-              -- This PDU is blocked from TX (discarded).
-              function tx__FR_A__IPDU_TX_2(ctx)
-                  ctx.err = 1
-                  return ctx
-              end
+          lua: |
+            -- This PDU is blocked from TX (discarded).
+            return function(ctx)
+                ctx.err = 1
+                return ctx
+            end
       signals:
         - signal: SIG_2
           encoding:

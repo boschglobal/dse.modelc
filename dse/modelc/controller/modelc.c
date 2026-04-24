@@ -54,6 +54,12 @@ static void _destroy_model_instances(SimulationSpec* sim)
     while (_instptr && _instptr->name) {
         ModelInstancePrivate* mip = _instptr->private;
 
+        /* Lua Runtime. */
+        if (mip && mip->lua_state != NULL) {
+            lua_model_destroy(mip->lua_state);
+            mip->lua_state = NULL;
+        }
+
         /* PDU Net. */
         for (size_t i = 0; i < vector_len(&mip->pdunet); i++) {
             PduNetworkDesc* net = NULL;
@@ -457,6 +463,12 @@ int modelc_model_create(
     model_desc->mi = mi;
     model_desc->sv = sv;
     mi->model_desc = model_desc; /* May be modified later, finalise. */
+
+    /* Install the Lua Runtime. */
+    // TODO: Decide if Lua MCL (i.e. modellib should be installed). If so
+    // allocate the correct object (see lua_mcl_create()).
+    mip->lua_state = lua_model_create(mip->lua_state, NULL);
+    assert(mip->lua_state);
 
     /* Create PDU Network objects (if configuration is available). */
     for (SignalVector* sv_p = sv; sv_p->name; sv_p++) {

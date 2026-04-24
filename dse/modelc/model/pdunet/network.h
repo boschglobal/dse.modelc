@@ -76,11 +76,7 @@ DLL_PRIVATE void pdunet_parse_network_functions(PduNetworkDesc* net);
 DLL_PRIVATE void pdunet_load_lua_func(
     YamlNode* n, const char* path, const char** out);
 
-DLL_PRIVATE int         pdunet_lua_setup(PduNetworkDesc* net);
-DLL_PRIVATE const char* pdunet_build_func_name(PduNetworkDesc* net,
-    PduItem* pdu, PduSignalItem* signal, const char* prefix);
-DLL_PRIVATE int         pdunet_lua_install_func(
-            lua_State* L, const char* func_name, const char* lua_script);
+DLL_PRIVATE int  pdunet_lua_setup(PduNetworkDesc* net);
 DLL_PRIVATE int  pdunet_lua_pdu_call(lua_State* L, int32_t func_ref,
      uint8_t* payload, uint32_t payload_len, bool no_err_log);
 DLL_PRIVATE int  pdunet_lua_signal_call(lua_State* L, int32_t func_ref,

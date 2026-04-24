@@ -29,14 +29,14 @@ spec:
     epoch_offset: 0.000
   functions:
     global:
-      - lua: |
-          function inc_counter(v, floor, limit)
-              v = v + 1
-              if v >= limit or v < floor then
-                  v = floor
-              end
-              return v
-          end
+      lua: |
+        function inc_counter(v, floor, limit)
+            v = v + 1
+            if v >= limit or v < floor then
+                v = floor
+            end
+            return v
+        end
   pdus:
     # ONE_TX and ONE_RX operate as a pair (same payload layout) with different
     # signal names (so that signals can map to a SignalGroup).
@@ -66,11 +66,11 @@ spec:
             offset: 0
           functions:
             encode:
-              - lua: |
-                  function encode__FR_A__ONE_TX__Alive(ctx)
-                      ctx.phys = inc_counter(ctx.phys, 1, 240)
-                      return ctx
-                  end
+              lua: |
+                return function(ctx)
+                    ctx.phys = inc_counter(ctx.phys, 1, 240)
+                    return ctx
+                end
         - signal: FOO
           encoding:
             start: 8

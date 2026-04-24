@@ -126,6 +126,9 @@ static SignalTransform* _parse_signal_transform(SchemaSignalObject* so)
             so->signal);
     }
 
+    // FIXME: LUA parse the new transform elements.
+    // FIXME: call lua_install_script(lua_State* L, const char* lua_script);
+
     return st;
 }
 
@@ -135,6 +138,9 @@ static int _signal_group_match_handler(
 {
     uint32_t           index = 0;
     SignalHandlerData* handler_data = object->data;
+
+    // FIXME: LUA parse the new elements.
+    // FIXME: call lua_install_script(lua_State* L, const char* lua_script);
 
     /* Enumerate over the signals. */
     SchemaSignalObject* so;

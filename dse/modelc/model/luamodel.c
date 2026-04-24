@@ -375,13 +375,27 @@ static const luaL_Reg luasv_instance_methods[] = {
 static void luasv_push_registry_key(lua_State* L, int idx)
 {
     char key[32];
-    snprintf(key, sizeof(key), "model:sv::%d", idx), lua_pushstring(L, key);
+    int  n = snprintf(key, sizeof(key), "model:sv:%d", idx);
+    if (n < 0 || n >= (int)sizeof(key)) {
+        lua_pushnil(L);
+        return;
+    }
+    lua_pushstring(L, key);
 }
 
 static void luasv_push_registry_key_by_alias(lua_State* L, const char* alias)
 {
     char key[64];
-    snprintf(key, sizeof(key), "model:sv:%s", alias), lua_pushstring(L, key);
+    if (alias == NULL) {
+        lua_pushnil(L);
+        return;
+    }
+    int n = snprintf(key, sizeof(key), "model:sv:%s", alias);
+    if (n < 0 || n >= (int)sizeof(key)) {
+        lua_pushnil(L);
+        return;
+    }
+    lua_pushstring(L, key);
 }
 
 
@@ -495,7 +509,7 @@ static int luasv__tostring(lua_State* L)
     luaL_addstring(&b, "[signal vectors] (");
     for (SignalVector* _sv = sv; _sv && _sv->alias; _sv++) {
         luaL_addstring(&b, " ");
-        luaL_addstring(&b, sv->alias);
+        luaL_addstring(&b, _sv->alias);
     }
     luaL_addstring(&b, " )");
     luaL_pushresult(&b);

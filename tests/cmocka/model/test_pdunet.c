@@ -218,16 +218,14 @@ void test_pdu_flexray_network_parse(void** state)
     // Functions.
     assert_non_null(pdu.lua.encode);
     assert_string_equal(
-        pdu.lua.encode, "function FR__ONE-encode(ctx) return ctx end\n");
+        pdu.lua.encode, "return function(ctx) return ctx end\n");
     assert_non_null(pdu.lua.decode);
     assert_string_equal(
-        pdu.lua.decode, "function FR__ONE-decode(ctx) return ctx end\n");
+        pdu.lua.decode, "return function(ctx) return ctx end\n");
     assert_non_null(pdu.lua.tx);
-    assert_string_equal(
-        pdu.lua.tx, "function FR__ONE-tx(ctx) return ctx end\n");
+    assert_string_equal(pdu.lua.tx, "return function(ctx) return ctx end\n");
     assert_non_null(pdu.lua.rx);
-    assert_string_equal(
-        pdu.lua.rx, "function FR__ONE-rx(ctx) return ctx end\n");
+    assert_string_equal(pdu.lua.rx, "return function(ctx) return ctx end\n");
     // PDU Metadata Flexray
     assert_non_null(net->network.metadata.config);
     NCodecPduFlexrayLpduConfig* pdu_metadata = pdu.metadata.config;
@@ -251,11 +249,11 @@ void test_pdu_flexray_network_parse(void** state)
     assert_double_equal(signal.offset, -40, 0);
     assert_double_equal(signal.min, -30, 0);
     assert_double_equal(signal.max, 215, 0);
-    assert_string_equal(signal.lua.encode,
-        "function FR__ONE__SIG_A-encode(ctx) return ctx end\n");
+    assert_string_equal(
+        signal.lua.encode, "return function(ctx) return ctx end\n");
     assert_non_null(signal.lua.decode);
-    assert_string_equal(signal.lua.decode,
-        "function FR__ONE__SIG_A-decode(ctx) return ctx end\n");
+    assert_string_equal(
+        signal.lua.decode, "return function(ctx) return ctx end\n");
 }
 
 
@@ -912,7 +910,7 @@ void test_pdunet_lua_rx(void** state)
         { .name = "model", .value = "flexray" },
         {},
     };
-    //__log_level__ = LOG_TRACE;
+    // __log_level__ = LOG_TRACE;
     rc = pdunet_parse(net, labels);
     assert_int_equal(rc, 0);
     assert_int_equal(vector_len(&net->pdus), 6);

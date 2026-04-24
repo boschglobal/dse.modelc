@@ -70,22 +70,22 @@ spec:
       single_slot_enabled: true
   functions:
     global:
-      - lua: |
-          function inc_counter(v, floor, limit)
-              v = v + 1
-              if v >= limit or v < floor then
-                  v = floor
-              end
-              return v
-          end
+      lua: |
+        function inc_counter(v, floor, limit)
+            v = v + 1
+            if v >= limit or v < floor then
+                v = floor
+            end
+            return v
+        end
 
-          function calc_checksum(payload, start_idx, end_idx)
-              local checksum = 0
-              for i = start_idx, end_idx do
-                  checksum = (checksum + payload[i]) & 0xFF
-              end
-              return checksum
-          end
+        function calc_checksum(payload, start_idx, end_idx)
+            local checksum = 0
+            for i = start_idx, end_idx do
+                checksum = (checksum + payload[i]) & 0xFF
+            end
+            return checksum
+        end
   pdus:
     # ONE_TX and ONE_RX operate as a pair (same payload layout).
     - pdu: ONE_TX
@@ -104,14 +104,14 @@ spec:
           inhibit_null: true
       functions:
         encode:
-          - lua: |
-              function encode__FR__ONE_TX(ctx)
-                  -- Set CRC.
-                  ctx.payload[1] = calc_checksum(ctx.payload, 2, 64)
-              end
+          lua: |
+            return function(ctx)
+                -- Set CRC.
+                ctx.payload[1] = calc_checksum(ctx.payload, 2, 64)
+            end
         decode:
-          - lua: |
-              -- NOP
+          lua: |
+            -- NOP
       signals:
         - signal: Crc
           encoding:
@@ -119,11 +119,11 @@ spec:
             length: 8
           functions:
             encode:
-              - lua: |
-                  -- NOP
+              lua: |
+                -- NOP
             decode:
-              - lua: |
-                  -- NOP
+              lua: |
+                -- NOP
         - signal: Alive
           encoding:
             start: 8
@@ -132,12 +132,12 @@ spec:
             offset: 0
           functions:
             encode:
-              - lua: |
-                  -- Set physical, no encoding, copy to raw TODO:
-                  function encode__FR__ONE_TX__Alive(ctx)
-                      ctx.phys = inc_counter(ctx.phys, 1, 240)
-                      return ctx
-                  end
+              lua: |
+                -- Set physical, no encoding, copy to raw TODO:
+                return function(ctx)
+                    ctx.phys = inc_counter(ctx.phys, 1, 240)
+                    return ctx
+                end
         - signal: FOO
           encoding:
             start: 16
@@ -146,12 +146,12 @@ spec:
             offset: -30
           functions:
             encode:
-              - lua: |
-                  -- Set physical, call encode.
-                  function encode__FR__ONE_TX__FOO(ctx)
-                      ctx.phys = 42
-                      return ctx
-                  end
+              lua: |
+                -- Set physical, call encode.
+                return function(ctx)
+                    ctx.phys = 42
+                    return ctx
+                end
         - signal: BAR
           encoding:
             start: 24
@@ -160,27 +160,27 @@ spec:
             offset: -20
           functions:
             encode:
-              - lua: |
-                  -- Set raw, no encode/decode (phys not changed).
-                  function encode__FR__ONE_TX__BAR(ctx)
-                      ctx.raw = 42
-                      return ctx
-                  end
+              lua: |
+                -- Set raw, no encode/decode (phys not changed).
+                return function(ctx)
+                    ctx.raw = 42
+                    return ctx
+                end
         - signal: FUBAR
           encoding:
             start: 32
             length: 8
           functions:
             encode:
-              - lua: |
-                  -- Set phys and raw, then error, no change survives.
-                  function encode__FR__ONE_TX__FUBAR(ctx)
-                      ctx.phys = 42
-                      ctx.raw = 24
-                      ctx.err = 1
-                      ctx.errmsg = "skip this signal"
-                      return ctx
-                  end
+              lua: |
+                -- Set phys and raw, then error, no change survives.
+                return function(ctx)
+                    ctx.phys = 42
+                    ctx.raw = 24
+                    ctx.err = 1
+                    ctx.errmsg = "skip this signal"
+                    return ctx
+                end
     - pdu: ONE_RX
       id: 202
       length: 64
@@ -197,14 +197,14 @@ spec:
           inhibit_null: true
       functions:
         decode:
-          - lua: |
-              function decode__FR__ONE_RX(ctx)
-                  -- Check CRC.
-                  local crc = calc_checksum(ctx.payload, 2, 64)
-                  if crc == ctx.payload[1] then
-                      ctx.payload[1] = 43
-                  end
-              end
+          lua: |
+            return function(ctx)
+                -- Check CRC.
+                local crc = calc_checksum(ctx.payload, 2, 64)
+                if crc == ctx.payload[1] then
+                    ctx.payload[1] = 43
+                end
+            end
       signals:
         - signal: FOO
           encoding:
@@ -214,12 +214,12 @@ spec:
             offset: -30
           functions:
             decode:
-              - lua: |
-                  -- Set physical.
-                  function decode__FR__ONE_RX__FOO(ctx)
-                      ctx.phys = 42
-                      return ctx
-                  end
+              lua: |
+                -- Set physical.
+                return function(ctx)
+                    ctx.phys = 42
+                    return ctx
+                end
         - signal: BAR
           encoding:
             start: 24
@@ -227,13 +227,13 @@ spec:
             factor: 2.0
             offset: -20
           functions:
-            encode:
-              - lua: |
-                  -- Set raw, decode (phys changed).
-                  function decode__FR__ONE_RX__BAR(ctx)
-                      ctx.raw = 44
-                      return ctx
-                  end
+            decode:
+              lua: |
+                -- Set raw, decode (phys changed).
+                return function(ctx)
+                    ctx.raw = 44
+                    return ctx
+                end
 
     # ONE_TX_ERR and ONE_RX_ERR operate as a pair (same payload layout).
     - pdu: ONE_TX_ERR
@@ -252,12 +252,12 @@ spec:
           inhibit_null: true
       functions:
         encode:
-          - lua: |
-              function encode__FR__ONE_TX_ERR(ctx)
-                  ctx.err = 1
-                  ctx.errmsg = "pack error"
-                  return ctx
-              end
+          lua: |
+            return function(ctx)
+                ctx.err = 1
+                ctx.errmsg = "pack error"
+                return ctx
+            end
       signals:
         - signal: Alive
           encoding:
@@ -267,12 +267,12 @@ spec:
             offset: 0
           functions:
             encode:
-              - lua: |
-                  function encode__FR__ONE_TX_ERR__Alive(ctx)
-                      ctx.err = 2
-                      ctx.errmsg = "encode error"
-                      return ctx
-                  end
+              lua: |
+                return function(ctx)
+                    ctx.err = 2
+                    ctx.errmsg = "encode error"
+                    return ctx
+                end
     - pdu: ONE_RX_ERR
       id: 404
       length: 64
@@ -289,12 +289,12 @@ spec:
           inhibit_null: true
       functions:
         decode:
-          - lua: |
-              function decode__FR__ONE_RX_ERR(ctx)
-                  ctx.err = 3
-                  ctx.errmsg = "unpack error"
-                  return ctx
-              end
+          lua: |
+            return function(ctx)
+                ctx.err = 3
+                ctx.errmsg = "unpack error"
+                return ctx
+            end
       signals:
         - signal: Alive
           encoding:
@@ -304,12 +304,12 @@ spec:
             offset: 0
           functions:
             decode:
-              - lua: |
-                  function encode__FR__ONE_RX_ERR__Alive(ctx)
-                      ctx.err = 4
-                      ctx.errmsg = "decode error"
-                      return ctx
-                  end
+              lua: |
+                return function(ctx)
+                    ctx.err = 4
+                    ctx.errmsg = "decode error"
+                    return ctx
+                end
 
 
     - pdu: C_PDU_TX
@@ -330,10 +330,10 @@ spec:
           inhibit_null: true
       functions:
         encode:
-          - lua: |
-              function encode__FR__C_PDU_TX(ctx)
-                  ctx.payload[1] = 42
-              end
+          lua: |
+            return function(ctx)
+                ctx.payload[1] = 42
+            end
     - pdu: I_PDU_TX
       id: 201
       length: 8
@@ -343,10 +343,10 @@ spec:
         priority: 50
       functions:
         encode:
-          - lua: |
-              function encode__FR__I_PDU_TX(ctx)
-                  ctx.payload[2] = 43
-              end
+          lua: |
+            return function(ctx)
+                ctx.payload[2] = 43
+            end
       signals:
         - signal: Crc
           encoding:

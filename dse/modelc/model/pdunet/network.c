@@ -658,8 +658,7 @@ net (PduNetworkDesc*)
 int pdunet_configure(PduNetworkDesc* net)
 {
     assert(net);
-    const char* name;
-    int         rc = 0;
+    int rc = 0;
 
     rc = pdunet_lua_setup(net);
     if (rc != 0) return rc;
@@ -672,30 +671,24 @@ int pdunet_configure(PduNetworkDesc* net)
 
     pdunet_parse_network_functions(net);
     if (net->lua.global != NULL) {
-        pdunet_lua_install_func(L, NULL, net->lua.global);
+        lua_install_script(L, net->lua.global);
     }
 
     size_t pdu_count = vector_len(&net->pdus);
     for (size_t pdu_idx = 0; pdu_idx < pdu_count; pdu_idx++) {
         PduItem* p = vector_at(&net->pdus, pdu_idx, NULL);
         // PDU -> install lua func.
-        name = pdunet_build_func_name(net, p, NULL, "encode");
-        p->lua.encode_ref = pdunet_lua_install_func(L, name, p->lua.encode);
-        name = pdunet_build_func_name(net, p, NULL, "decode");
-        p->lua.decode_ref = pdunet_lua_install_func(L, name, p->lua.decode);
+        p->lua.encode_ref = lua_install_script(L, p->lua.encode);
+        p->lua.decode_ref = lua_install_script(L, p->lua.decode);
 
-        name = pdunet_build_func_name(net, p, NULL, "tx");
-        p->lua.tx_ref = pdunet_lua_install_func(L, name, p->lua.tx);
-        name = pdunet_build_func_name(net, p, NULL, "rx");
-        p->lua.rx_ref = pdunet_lua_install_func(L, name, p->lua.rx);
+        p->lua.tx_ref = lua_install_script(L, p->lua.tx);
+        p->lua.rx_ref = lua_install_script(L, p->lua.rx);
 
         for (size_t sig_idx = 0; sig_idx < vector_len(&p->signals); sig_idx++) {
             PduSignalItem* s = vector_at(&p->signals, sig_idx, NULL);
             // Signal -> install lua func.
-            name = pdunet_build_func_name(net, p, s, "encode");
-            s->lua.encode_ref = pdunet_lua_install_func(L, name, s->lua.encode);
-            name = pdunet_build_func_name(net, p, s, "decode");
-            s->lua.decode_ref = pdunet_lua_install_func(L, name, s->lua.decode);
+            s->lua.encode_ref = lua_install_script(L, s->lua.encode);
+            s->lua.decode_ref = lua_install_script(L, s->lua.decode);
         }
     }
 

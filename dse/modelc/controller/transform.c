@@ -13,6 +13,8 @@ DLL_PRIVATE void controller_transform_to_model(
     ModelFunctionChannel* mfc, SignalMap* sm)
 {
     if (mfc->signal_transform) {
+        // FIXME: call lua_call_ctx(lua_State* L, int32_t func_ref);
+
         for (uint32_t si = 0; si < mfc->signal_count; si++) {
             if (mfc->signal_transform[si].linear.factor != 0) {
                 // Linear transform: value * factor + offset
@@ -37,6 +39,8 @@ DLL_PRIVATE void controller_transform_from_model(
     ModelFunctionChannel* mfc, SignalMap* sm)
 {
     if (mfc->signal_transform) {
+        // FIXME: call lua_call_ctx(lua_State* L, int32_t func_ref);
+
         for (uint32_t si = 0; si < mfc->signal_count; si++) {
             if (mfc->signal_transform[si].linear.factor != 0) {
                 // Linear transform: value * factor + offset

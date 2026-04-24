@@ -84,15 +84,15 @@ spec:
           inhibit_null: true
       functions:
         encode:
-          - lua: |
-              function encode__FR__PDU_TX_1(ctx)
-                  ctx.payload[1] = 0x20
-              end
+          lua: |
+            return function(ctx)
+                ctx.payload[1] = 0x20
+            end
         tx:
-          - lua: |
-              function tx__FR__PDU_TX_1(ctx)
-                  ctx.payload[2] = 0x21
-              end
+          lua: |
+            return function(ctx)
+                ctx.payload[2] = 0x21
+            end
       signals:
         - signal: SIG_200_1
           encoding:
@@ -116,17 +116,17 @@ spec:
           inhibit_null: true
       functions:
         encode:
-          - lua: |
-              function encode__FR__PDU_TX_2(ctx)
-                  ctx.payload[1] = 0x22
-                  return ctx
-              end
+          lua: |
+            return function(ctx)
+                ctx.payload[1] = 0x22
+                return ctx
+            end
         tx:
-          - lua: |
-              function tx__FR__PDU_TX_2(ctx)
-                  ctx.err = 1
-                  return ctx
-              end
+          lua: |
+            return function(ctx)
+                ctx.err = 1
+                return ctx
+            end
       signals:
         - signal: SIG_200_1
           encoding:
@@ -159,17 +159,17 @@ spec:
         priority: 50
       functions:
         encode:
-          - lua: |
-              function encode__FR__IPDU_TX_1(ctx)
-                  ctx.payload[1] = 0x40
-                  return ctx
-              end
+          lua: |
+            return function(ctx)
+                ctx.payload[1] = 0x40
+                return ctx
+            end
         tx:
-          - lua: |
-              function tx__FR__IPDU_TX_1(ctx)
-                  ctx.payload[2] = 0x41
-                  return ctx
-              end
+          lua: |
+            return function(ctx)
+                ctx.payload[2] = 0x41
+                return ctx
+            end
       signals:
         - signal: SIG_400_1
           encoding:
@@ -186,17 +186,17 @@ spec:
         priority: 5
       functions:
         encode:
-          - lua: |
-              function encode__FR__IPDU_TX_2(ctx)
-                  ctx.payload[1] = 0x42
-                  return ctx
-              end
+          lua: |
+            return function(ctx)
+                ctx.payload[1] = 0x42
+                return ctx
+            end
         tx:
-          - lua: |
-              function tx__FR__IPDU_TX_2(ctx)
-                  ctx.err = 1
-                  return ctx
-              end
+          lua: |
+            return function(ctx)
+                ctx.err = 1
+                return ctx
+            end
       signals:
         - signal: SIG_400_2
           encoding:
@@ -221,11 +221,11 @@ spec:
           inhibit_null: true
       functions:
         rx:
-          - lua: |
-              function rx__FR__PDU_RX_1(ctx)
-                  ctx.payload[3] = 0x31
-                  return ctx
-              end
+          lua: |
+            return function(ctx)
+                ctx.payload[3] = 0x31
+                return ctx
+            end
       signals:
         - signal: SIG_200_1
           encoding:
@@ -249,12 +249,12 @@ spec:
           inhibit_null: true
       functions:
         rx:
-          - lua: |
-              function rx__FR__PDU_RX_2(ctx)
-                  ctx.payload[3] = 0x32
-                  ctx.err = 1
-                  return ctx
-              end
+          lua: |
+            return function(ctx)
+                ctx.payload[3] = 0x32
+                ctx.err = 1
+                return ctx
+            end
       signals:
         - signal: SIG_200_1
           encoding:
@@ -287,12 +287,12 @@ spec:
         priority: 50
       functions:
         rx:
-          - lua: |
-              function rx__FR__IPDU_RX_1(ctx)
-                  ctx.payload[3] = 0x33
-                  ctx.err = 1
-                  return ctx
-              end
+          lua: |
+            return function(ctx)
+                ctx.payload[3] = 0x33
+                ctx.err = 1
+                return ctx
+            end
       signals:
         - signal: SIG_400_1
           encoding:
@@ -309,11 +309,11 @@ spec:
         priority: 5
       functions:
         rx:
-          - lua: |
-              function rx__FR__IPDU_RX_2(ctx)
-                  ctx.payload[3] = 0x34
-                  return ctx
-              end
+          lua: |
+            return function(ctx)
+                ctx.payload[3] = 0x34
+                return ctx
+            end
       signals:
         - signal: SIG_400_2
           encoding:
