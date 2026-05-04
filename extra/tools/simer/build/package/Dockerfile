@@ -17,8 +17,6 @@ FROM debian:bookworm-slim AS valkey
 
 ENV VALKEY_VERSION=8.0.1
 ENV VALKEY_DOWNLOAD_URL=https://github.com/valkey-io/valkey/archive/refs/tags/8.0.1.tar.gz
-ENV VALKEY_DOWNLOAD_SHA=1e1d6dfbed2f932a87afbc7402be050a73974a9b19a9116897e537a6638e5e1d
-
 
 RUN set -eux; \
 	groupadd -g 1000 simer; \

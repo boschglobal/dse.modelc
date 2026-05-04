@@ -763,10 +763,10 @@ void test_pdunet_config(void** state)
     };
     rc = pdunet_parse(net, labels);
     assert_int_equal(rc, 0);
-    assert_int_equal(vector_len(&net->pdus), 4);
+    assert_int_equal(vector_len(&net->pdus), 6);
     rc = pdunet_configure(net);
     assert_int_equal(rc, 0);
-    assert_int_equal(vector_len(&net->pdus), 4);
+    assert_int_equal(vector_len(&net->pdus), 6);
 
     // Check Lua functions were parsed.
     assert_non_null(net->lua.global);
@@ -809,15 +809,15 @@ void test_pdunet_lua_tx(void** state)
     // __log_level__ = LOG_TRACE;
     rc = pdunet_parse(net, labels);
     assert_int_equal(rc, 0);
-    assert_int_equal(vector_len(&net->pdus), 4);
+    assert_int_equal(vector_len(&net->pdus), 6);
 
     rc = pdunet_configure(net);
     assert_int_equal(rc, 0);
-    assert_int_equal(vector_len(&net->pdus), 4);
+    assert_int_equal(vector_len(&net->pdus), 6);
 
     rc = pdunet_transform(net, NULL);
     assert_int_equal(rc, 0);
-    assert_int_equal(vector_len(&net->matrix.pdu), 4);
+    assert_int_equal(vector_len(&net->matrix.pdu), 6);
 
     matrix_check signal_checks[] = {
         // clang-format off
@@ -880,6 +880,20 @@ void test_pdunet_lua_tx(void** state)
         [4] = 0x09,  // 9
     };
     assert_memory_equal(o->ncodec.pdu.payload, payload, 64);
+
+    // Check tx_func called for Container PDU
+    o = vector_at(&net->matrix.pdu, 4, NULL);
+    uint8_t payload2[64] = {
+        [0] = 0x2a,  // checksum
+    };
+    assert_memory_equal(o->ncodec.pdu.payload, payload2, 64);
+
+    // Check tx_func called for I-PDU
+    o = vector_at(&net->matrix.pdu, 5, NULL);
+    uint8_t payload3[8] = {
+        [1] = 0x2b,  // checksum
+    };
+    assert_memory_equal(o->ncodec.pdu.payload, payload3, 8);
 }
 
 
@@ -901,15 +915,15 @@ void test_pdunet_lua_rx(void** state)
     //__log_level__ = LOG_TRACE;
     rc = pdunet_parse(net, labels);
     assert_int_equal(rc, 0);
-    assert_int_equal(vector_len(&net->pdus), 4);
+    assert_int_equal(vector_len(&net->pdus), 6);
 
     rc = pdunet_configure(net);
     assert_int_equal(rc, 0);
-    assert_int_equal(vector_len(&net->pdus), 4);
+    assert_int_equal(vector_len(&net->pdus), 6);
 
     rc = pdunet_transform(net, NULL);
     assert_int_equal(rc, 0);
-    assert_int_equal(vector_len(&net->matrix.pdu), 4);
+    assert_int_equal(vector_len(&net->matrix.pdu), 6);
 
     // Pack the raw values and check the payload.
     uint8_t** _ = vector_at(&net->matrix.payload, 0, NULL);
@@ -1102,6 +1116,63 @@ void test_pdunet_container_tx(void** state)
     int count = 0;
     pdunet_visit(net, NULL, _visit_count_needs_tx, &count);
     assert_int_equal(count, 1);
+
+    // Send again to catch 401, ensure tail of payload is wiped.
+    // Pack the raw values and check the payload.
+    pdunet_visit(net, NULL, pdunet_visit_needs_tx, NULL);
+    pdunet_visit(net, NULL, pdunet_visit_clear_tx_flag, NULL);
+    // Schedule the Container.
+    o = vector_at(&net->matrix.pdu, 4, NULL);
+    o->needs_tx = true;
+    pdunet_encode_pack(net, NULL);
+    pdunet_visit(net, NULL, pdunet_visit_needs_tx, NULL);
+    // Check needs_tx.
+    o = vector_at(&net->matrix.pdu, 4, NULL);
+    assert_true(o->needs_tx);
+    assert_false(o->checksum == 0);
+    o = vector_at(&net->matrix.pdu, 5, NULL);
+    assert_true(o->needs_tx);       // Tx reset but PDU not sent.
+    assert_true(o->checksum == 0);  // Reset so that Tx is set next cycle.
+    o = vector_at(&net->matrix.pdu, 6, NULL);
+    assert_false(o->needs_tx);
+    assert_false(o->checksum == 0);
+    o = vector_at(&net->matrix.pdu, 7, NULL);
+    assert_false(o->needs_tx);
+    assert_false(o->checksum == 0);
+    // Container map.
+    pdunet_visit(net, NULL, pdunet_visit_container_mapto, NULL);
+
+    // Check needs_tx.
+    o = vector_at(&net->matrix.pdu, 4, NULL);
+    assert_true(o->needs_tx);
+    assert_false(o->checksum == 0);
+    o = vector_at(&net->matrix.pdu, 5, NULL);
+    assert_false(o->needs_tx);       // Tx reset but PDU not sent.
+    assert_false(o->checksum == 0);  // Reset so that Tx is set next cycle.
+    o = vector_at(&net->matrix.pdu, 6, NULL);
+    assert_false(o->needs_tx);
+    assert_false(o->checksum == 0);
+    o = vector_at(&net->matrix.pdu, 7, NULL);
+    assert_false(o->needs_tx);
+    assert_false(o->checksum == 0);
+
+    o = vector_at(&net->matrix.pdu, 4, NULL);
+    uint8_t payload2[24] = {
+        [0] = 0x00,  // header - 24bit : 402
+        [1] = 0x01,
+        [2] = 0x91,
+        [3] = 0x08,  // header - 8bit : 8
+        [4] = 0x01,  // SIG_1" : 1
+        [12] = 0x00,
+        [13] = 0x00,
+        [14] = 0x00,
+        [15] = 0x00,
+        [16] = 0x00,
+    };
+    assert_memory_equal(o->ncodec.pdu.payload, payload2, 24);
+    count = 0;
+    pdunet_visit(net, NULL, _visit_count_needs_tx, &count);
+    assert_int_equal(count, 1);
 }
 
 
@@ -1165,6 +1236,9 @@ void test_pdunet_container_rx(void** state)
     payload[14] = 0x93;
     payload[15] = 0x08;  // header - 8bit : 8
     payload[16] = 0x03;  // SIG_3" : 3
+    PduObject* o400 = vector_at(&net->matrix.pdu, 0, NULL);
+    assert_int_equal(o400->pdu->id, 400);
+    o400->update_signals = true;
     // __log_level__ = LOG_TRACE;
     pdunet_visit(net, NULL, pdunet_visit_container_mapfrom, NULL);
     pdunet_decode_unpack(net, NULL);
@@ -1375,6 +1449,9 @@ void test_pdunet_secured_pdu_rx(void** state)
         }
         memcpy(payload, c.set_payload, c.payload_len);
     }
+    PduObject* o400 = vector_at(&net->matrix.pdu, 2, NULL);
+    assert_int_equal(o400->pdu->id, 400);
+    o400->update_signals = true;
     pdunet_visit(net, NULL, pdunet_visit_container_mapfrom, NULL);
 
     // Run checks.

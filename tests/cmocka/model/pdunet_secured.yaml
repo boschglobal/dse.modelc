@@ -72,9 +72,6 @@ spec:
       id: 200
       length: 8
       dir: Tx
-      schedule:
-        phase: -0.001
-        interval: 0.005
       metadata:
         flexray:
           slot_id: 10
@@ -107,9 +104,6 @@ spec:
       id: 201
       length: 8
       dir: Tx
-      schedule:
-        phase: -0.001
-        interval: 0.005
       metadata:
         flexray:
           slot_id: 11
@@ -146,9 +140,6 @@ spec:
       dir: Tx
       container:
         header: Short
-      schedule:
-        phase: -0.001
-        interval: 0.005
       metadata:
         flexray:
           slot_id: 12
@@ -218,9 +209,6 @@ spec:
       id: 200
       length: 8
       dir: Rx
-      schedule:
-        phase: -0.001
-        interval: 0.005
       metadata:
         flexray:
           slot_id: 10
@@ -249,9 +237,6 @@ spec:
       id: 201
       length: 8
       dir: Rx
-      schedule:
-        phase: -0.001
-        interval: 0.005
       metadata:
         flexray:
           slot_id: 11
@@ -283,9 +268,6 @@ spec:
       dir: Rx
       container:
         header: Short
-      schedule:
-        phase: -0.001
-        interval: 0.005
       metadata:
         flexray:
           slot_id: 12

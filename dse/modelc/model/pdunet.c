@@ -372,7 +372,14 @@ void pdunet_visit_needs_tx(PduNetworkDesc* net, PduObject* pdu, void* data)
 
     if (pdu->pdu->dir == PduDirectionTx) {
         if (pdu->container.header != HeaderFormatNone) {
-            /* Container PDU, preserve the needs_tx set by schedule. */
+            /* Container PDU, preserve the needs_tx set by schedule. Later
+            call to pdunet_visit_container_mapto will call tx function. */
+        } else if (pdu->schedule.interval != 0) {
+            /* PDU (or I-PDU) with a schedule, preserve the needs_tx set by
+             * schedule (unless the tx_func rejects). */
+            if (pdu->needs_tx && pdu->lua.tx_ref) {
+                pdunet_call_tx_func(net, pdu);
+            }
         } else {
             uint32_t checksum = pdunet_checksum(
                 pdu->ncodec.pdu.payload, pdu->ncodec.pdu.payload_len);
@@ -418,10 +425,8 @@ void pdunet_call_tx_func(PduNetworkDesc* net, PduObject* pdu)
     log_trace("Lua Call: PDU Tx Tx[%u]: func=%d", pdu->matrix.pdu_idx,
         pdu->lua.tx_ref);
 
-    uint8_t* payload = NULL;
-    vector_at(&(net->matrix.payload), pdu->matrix.pdu_idx, &payload);
-    int rc = pdunet_lua_pdu_call(
-        L, pdu->lua.tx_ref, payload, pdu->pdu->length, true);
+    int rc = pdunet_lua_pdu_call(L, pdu->lua.tx_ref, pdu->ncodec.pdu.payload,
+        pdu->ncodec.pdu.payload_len, true);
     if (rc == 0) {
         /* The PDU may have its payload modified. */
         if (pdu->pdu->container.id == 0) {

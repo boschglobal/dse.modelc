@@ -589,8 +589,8 @@ void test_model__pdunet_container(void** state)
     sig_1 = 1;
     sig_2 = 2;
     sig_3 = 3;
-    sig_4 = 0;
-    sig_5 = 2;
+    sig_4 = 1;
+    sig_5 = 0;
     sig_6 = 3;
     for (uint32_t i = 0; i < 12; i++) {
         /* Step the model. */
@@ -616,7 +616,7 @@ void test_model__pdunet_container(void** state)
     sig_2 = 2;
     sig_3 = 3;
     sig_4 = 1;
-    sig_5 = 2;
+    sig_5 = 0;
     sig_6 = 3;
     for (uint32_t i = 0; i < 12; i++) {
         /* Step the model. */
@@ -635,7 +635,34 @@ void test_model__pdunet_container(void** state)
         { .index = PDUNET_CONTAINER_SIGNAL_SIG_6, .value = sig_6 },
     };
     simmock_signal_check(
-        mock, PDUNET_CONTAINER_INST_NAME, checks2, ARRAY_SIZE(checks2), NULL);
+        mock, PDUNET_CONTAINER_INST_NAME, checks2, ARRAY_SIZE(checks1), NULL);
+
+    /* T12.5 ... 18.0 - second schedule Tx. */
+    sig_1 = 1;
+    sig_2 = 2;
+    sig_3 = 3;
+    sig_4 = 1;
+    sig_5 = 2;
+    sig_6 = 3;
+    for (uint32_t i = 0; i < 12; i++) {
+        /* Step the model. */
+        assert_int_equal(simmock_step(mock, true), 0);
+        simmock_print_scalar_signals(mock, LOG_DEBUG);
+        simmock_print_binary_signals(mock, LOG_TRACE);
+        /* Set check conditions (for next step). */
+    }
+    /* Do the check. */
+    SignalCheck checks3[] = {
+        { .index = PDUNET_CONTAINER_SIGNAL_SIG_1, .value = sig_1 },
+        { .index = PDUNET_CONTAINER_SIGNAL_SIG_2, .value = sig_2 },
+        { .index = PDUNET_CONTAINER_SIGNAL_SIG_3, .value = sig_3 },
+        { .index = PDUNET_CONTAINER_SIGNAL_SIG_4, .value = sig_4 },
+        { .index = PDUNET_CONTAINER_SIGNAL_SIG_5, .value = sig_5 },
+        { .index = PDUNET_CONTAINER_SIGNAL_SIG_6, .value = sig_6 },
+    };
+
+    simmock_signal_check(
+        mock, PDUNET_CONTAINER_INST_NAME, checks3, ARRAY_SIZE(checks2), NULL);
 }
 
 

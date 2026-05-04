@@ -262,7 +262,8 @@ void pdunet_flexray_lpdu_rx(PduNetworkDesc* net)
                 len = pdu->ncodec.pdu.payload_len;
             }
             /* Call the rx function. */
-            int rc = pdunet_call_rx_func(net, pdu, nc_pdu.payload, len);
+            int rc =
+                pdunet_call_rx_func(net, pdu, (uint8_t*)nc_pdu.payload, len);
             if (rc != 0) continue; /* Discarded. */
             /* Update the LPDU status (will trigger Tx loop). */
             NCodecPduFlexrayLpdu* lpdu = pdu->ncodec.metadata.lpdu;

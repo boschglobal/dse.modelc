@@ -126,7 +126,7 @@ static void lua_model_error(lua_State* L, const char* msg)
 }
 
 
-int pdunet_lua_pdu_call(lua_State* L, int32_t func_ref, uint8_t* payload,
+int pdunet_lua_pdu_call(lua_State* L, int32_t func_ref, uint8_t* const payload,
     uint32_t payload_len, bool no_err_log)
 {
     if (L == NULL) return -EINVAL;

@@ -310,3 +310,45 @@ spec:
                       ctx.errmsg = "decode error"
                       return ctx
                   end
+
+
+    - pdu: C_PDU_TX
+      id: 200
+      length: 64
+      dir: Tx
+      container:
+        header: Short
+      metadata:
+        flexray:
+          slot_id: 11
+          payload_length: 64
+          cycle_repetition: 8
+          base_cycle: 4
+          direction: Tx
+          channel: A
+          transmit_mode: Continuous
+          inhibit_null: true
+      functions:
+        encode:
+          - lua: |
+              function encode__FR__C_PDU_TX(ctx)
+                  ctx.payload[1] = 42
+              end
+    - pdu: I_PDU_TX
+      id: 201
+      length: 8
+      dir: Tx
+      container:
+        id: 200
+        priority: 50
+      functions:
+        encode:
+          - lua: |
+              function encode__FR__I_PDU_TX(ctx)
+                  ctx.payload[2] = 43
+              end
+      signals:
+        - signal: Crc
+          encoding:
+            start: 0
+            length: 8

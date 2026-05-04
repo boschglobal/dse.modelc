@@ -147,9 +147,9 @@ typedef struct PduObject {  // FIXME: internal type ??
         /* NCodec Objects. */
         // NCodecPdu pdu;
         struct {
-            uint32_t       id;
-            const uint8_t* payload;
-            size_t         payload_len;
+            uint32_t id;
+            uint8_t* payload;
+            size_t   payload_len;
         } pdu;
         struct {
             void* lpdu;

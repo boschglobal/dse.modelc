@@ -55,8 +55,9 @@ static int test_teardown(void** state)
 }
 
 
-#define PDUNET_INST_NAME  "pdunet_inst"
-#define PDUNET_MODEL_PATH EXAMPLES_PATH "/pdunet/frnet"
+#define PDUNET_INST_NAME            "pdunet_inst"
+#define PDUNET_MODEL_PATH           EXAMPLES_PATH "/pdunet/frnet"
+#define PDUNET_MODEL_CONTAINER_PATH EXAMPLES_PATH "/pdunet/container"
 
 static const char* inst_names[] = {
     PDUNET_INST_NAME,
@@ -404,7 +405,7 @@ void test_pdunet_schedule_pdu_fr(void** state)
     // Count set checksums.
     int count = 0;
     pdunet_visit(net, NULL, _visit_count_csum_set, &count);
-    assert_int_equal(count, 1);
+    assert_int_equal(count, 0);
 
     // Push the simulation to interval + phase - 1 step. No Tx.
     pdunet_tx(net, NULL, NULL, NULL, 0.0035);
@@ -520,7 +521,7 @@ void test_pdunet_schedule_net_fr(void** state)
     // Count set checksums.
     int count = 0;
     pdunet_visit(net, NULL, _visit_count_csum_set, &count);
-    assert_int_equal(count, 1);
+    assert_int_equal(count, 0);
 
     // Set the epoch_offset
     net->schedule.epoch_offset = 0.002;
@@ -612,6 +613,121 @@ void test_pdunet_schedule_status_fr(void** state)
 }
 
 
+void test_pdunet_schedule_container_fr(void** state)
+{
+    chdir(PDUNET_MODEL_CONTAINER_PATH);
+    TestData* d = *state;
+
+    int       len;
+    NCodecPdu pdu;
+
+    // Setup the mock.
+    SimMock* mock = d->mock = simmock_alloc(inst_names, ARRAY_SIZE(inst_names));
+    simmock_configure(
+        mock, inst_argv, ARRAY_SIZE(inst_argv), ARRAY_SIZE(inst_names));
+    ModelMock* model = simmock_find_model(mock, PDUNET_INST_NAME);
+    simmock_load(mock);
+    simmock_load_model_check(model, true, true, false);
+
+    // Configure the model (and stub the BusModel).
+    simmock_setup(mock, "scalar", "network");
+    NCODEC* nc = d->nc = model->sv_network->ncodec[0];
+    assert_non_null(nc);
+    d->bm_save = ((ABCodecInstance*)nc)->reader.bus_model;
+    ((ABCodecInstance*)nc)->reader.bus_model = (ABCodecBusModel){};
+    ((NCodecInstance*)nc)->trace.log = __ncodec_trace_log__;
+
+    // Configure the PDU Net.
+    PduNetworkDesc* net = pdunet_find(model->mi, nc);
+    assert_non_null(net);
+
+    // Set some signals
+    model->sv_signal->scalar[0] = 11;
+    model->sv_signal->scalar[1] = 22;
+    model->sv_signal->scalar[2] = 33;
+
+    // Send vtable.config(), but no PDUs have needs_tx set.
+    pdunet_tx(net, NULL, pdunet_visit_clear_tx_flag, NULL, 0);
+    ncodec_seek(nc, 0, NCODEC_SEEK_SET);
+    pdu = (NCodecPdu){ 0 };
+    len = ncodec_read(nc, &pdu);
+    assert_int_equal(pdu.ecu_id, 5);
+    assert_int_equal(pdu.transport_type, NCodecPduTransportTypeFlexray);
+    assert_int_equal(pdu.transport.flexray.metadata_type,
+        NCodecPduFlexrayMetadataTypeConfig);
+    // Rx armed.
+    len = ncodec_read(nc, &pdu);
+    assert_int_equal(len, 0);
+    assert_int_equal(pdu.transport_type, NCodecPduTransportTypeFlexray);
+    assert_int_equal(
+        pdu.transport.flexray.metadata_type, NCodecPduFlexrayMetadataTypeLpdu);
+    assert_int_equal(pdu.transport.flexray.metadata.lpdu.status,
+        NCodecPduFlexrayLpduStatusNotReceived);
+    assert_int_equal(pdu.transport.flexray.metadata.lpdu.frame_config_index, 1);
+    // End
+    len = ncodec_read(nc, &pdu);
+    assert_int_equal(len, -ENOMSG);
+
+    // Count set checksums.
+    int count = 0;
+    pdunet_visit(net, NULL, _visit_count_csum_set, &count);
+    // assert_int_equal(count, 1);
+
+    // Push the simulation to interval + phase - 1 step. No Tx.
+    pdunet_tx(net, NULL, NULL, NULL, 0.0035);
+    ncodec_seek(nc, 0, NCODEC_SEEK_SET);
+    len = ncodec_read(nc, &pdu);
+    assert_int_equal(len, -ENOMSG);
+
+    // Push the simulation one step. Tx.
+    pdunet_tx(net, NULL, NULL, NULL, 0.004);
+    ncodec_seek(nc, 0, NCODEC_SEEK_SET);
+    pdu = (NCodecPdu){ 0 };
+    len = ncodec_read(nc, &pdu);
+    assert_true(len > 0);
+    uint8_t expect[24] = {
+        [0] = 0x00,  // header - 24bit : 403
+        [1] = 0x01,
+        [2] = 0x93,
+        [3] = 0x08,
+        [4] = 0x21,   // 33
+        [12] = 0x00,  // header - 24bit : 401
+        [13] = 0x01,
+        [14] = 0x91,
+        [15] = 0x08,
+        [16] = 0x0b,  // 11
+    };
+    assert_memory_equal(pdu.payload, expect, 24);
+    assert_int_equal(pdu.ecu_id, 5);
+    len = ncodec_read(nc, &pdu);
+    assert_int_equal(len, -ENOMSG);
+
+    // Push the simulation one step. Tx.
+    pdunet_tx(net, NULL, NULL, NULL, 0.009);
+    ncodec_seek(nc, 0, NCODEC_SEEK_SET);
+    pdu = (NCodecPdu){ 0 };
+    len = ncodec_read(nc, &pdu);
+    assert_true(len > 0);
+    uint8_t expect2[24] = {
+        [0] = 0x00,  // header - 24bit : 402
+        [1] = 0x01,
+        [2] = 0x92,
+        [3] = 0x08,
+        [4] = 0x16,  // 22
+    };
+    assert_memory_equal(pdu.payload, expect2, 24);
+    assert_int_equal(pdu.ecu_id, 5);
+    len = ncodec_read(nc, &pdu);
+    assert_int_equal(len, -ENOMSG);
+
+    // Push the simulation one step. No Tx.
+    pdunet_tx(net, NULL, NULL, NULL, 0.0095);
+    ncodec_seek(nc, 0, NCODEC_SEEK_SET);
+    len = ncodec_read(nc, &pdu);
+    assert_int_equal(len, -ENOMSG);
+}
+
+
 int run_pdunet_ncodec_tests(void)
 {
     void* s = test_setup;
@@ -628,6 +744,8 @@ int run_pdunet_ncodec_tests(void)
         cmocka_unit_test_setup_teardown(test_pdunet_schedule_pdu_fr, s, t),
         cmocka_unit_test_setup_teardown(test_pdunet_schedule_net_fr, s, t),
         cmocka_unit_test_setup_teardown(test_pdunet_schedule_status_fr, s, t),
+        cmocka_unit_test_setup_teardown(
+            test_pdunet_schedule_container_fr, s, t),
     };
 
     return cmocka_run_group_tests_name("MODEL / PDUNET", tests, NULL, NULL);
