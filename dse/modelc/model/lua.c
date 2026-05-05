@@ -103,6 +103,37 @@ int lua_push_ctx(lua_State* L)
     // clang-format on
 }
 
+int lua_ctx_set_double(lua_State* L, const char* name, double value)
+{
+    // clang-format off
+    if (lua_gettop(L) < 1 || !lua_istable(L, -1)) {         // [ctx]
+        lua_newtable(L);                                    // [ctx]
+    }
+    lua_pushnumber(L, value);                               // [ctx][value]
+    lua_setfield(L, -2, name);                              // [ctx]
+    return 0;
+    // clang-format on
+}
+
+int lua_ctx_get_double(lua_State* L, const char* name, double* value)
+{
+    // clang-format off
+    if (value == NULL) {
+        return -EINVAL;
+    }
+    if (lua_gettop(L) < 1 || !lua_istable(L, -1)) {
+        return -EINVAL;
+    }
+
+    lua_getfield(L, -1, name);                              // [ctx][value]
+    if (lua_isnumber(L, -1)) {
+        *value = lua_tonumber(L, -1);
+    }
+    lua_pop(L, 1);                                          // [ctx]
+    return 0;
+    // clang-format on
+}
+
 int lua_call_ctx(lua_State* L, int32_t func_ref)
 {
     // clang-format off

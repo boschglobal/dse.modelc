@@ -59,6 +59,7 @@ add_library(apis OBJECT
 target_include_directories(apis
     PRIVATE
         ${DSE_CLIB_INCLUDE_DIR}
+        ${LUA_SOURCE_DIR}
         ../../../../..
 )
 target_compile_definitions(apis

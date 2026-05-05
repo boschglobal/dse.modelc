@@ -451,13 +451,16 @@ int simmock_step(SimMock* mock, bool assert_rc)
 
     int rc = 0;
     for (ModelMock* model = mock->model; model->name; model++) {
+        ModelInstancePrivate* mip = model->mi->private;
+
         /* Copy scalars from simmock->scalars. */
         if (mock->sv_signal) {
             // mock -> [signal->val -> [transform]] -> model
             for (uint32_t i = 0; i < mock->sv_signal->count; i++) {
                 model->sm_signal[i].signal->val = mock->sv_signal->scalar[i];
             }
-            controller_transform_to_model(model->mfc_signal, model->sm_signal);
+            controller_transform_to_model(
+                model->mfc_signal, model->sm_signal, mip->lua_state);
         }
         /* Copy binary from simmock->binary_rx. */
         if (mock->sv_network_rx && mock->sv_network_tx) {
@@ -481,7 +484,7 @@ int simmock_step(SimMock* mock, bool assert_rc)
         if (mock->sv_signal) {
             // model -> [[transform] -> signal->val] -> mock
             controller_transform_from_model(
-                model->mfc_signal, model->sm_signal);
+                model->mfc_signal, model->sm_signal, mip->lua_state);
             for (uint32_t i = 0; i < mock->sv_signal->count; i++) {
                 mock->sv_signal->scalar[i] =
                     model->sm_signal[i].signal->final_val;

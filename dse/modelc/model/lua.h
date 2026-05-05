@@ -25,8 +25,12 @@ DLL_PRIVATE lua_State* lua_model_create(lua_State* L, ModelDesc* m);
 DLL_PRIVATE void       lua_model_destroy(lua_State* L);
 DLL_PRIVATE int        lua_install_script(lua_State* L, const char* lua_script);
 DLL_PRIVATE int        lua_push_ctx(lua_State* L);
-DLL_PRIVATE int        lua_call_ctx(lua_State* L, int32_t func_ref);
-DLL_PRIVATE int        lua_pop_ctx(lua_State* L);
+DLL_PRIVATE int        lua_ctx_set_double(
+           lua_State* L, const char* name, double value);
+DLL_PRIVATE int lua_ctx_get_double(
+    lua_State* L, const char* name, double* value);
+DLL_PRIVATE int lua_call_ctx(lua_State* L, int32_t func_ref);
+DLL_PRIVATE int lua_pop_ctx(lua_State* L);
 
 DLL_PRIVATE MclDesc* lua_mcl_create(ModelDesc* model);
 DLL_PRIVATE void     lua_mcl_destroy(MclDesc* model);

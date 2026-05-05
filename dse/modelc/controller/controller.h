@@ -12,6 +12,7 @@
 #include <dse/modelc/adapter/transport/endpoint.h>
 #include <dse/clib/collections/hashmap.h>
 #include <dse/modelc/model.h>
+#include <dse/modelc/model/lua.h>
 #include <dse/platform.h>
 
 
@@ -154,9 +155,9 @@ DLL_PUBLIC void model_function_destroy(ModelFunction* model_function);
 
 /* transform.c */
 DLL_PRIVATE void controller_transform_to_model(
-    ModelFunctionChannel* mfc, SignalMap* sm);
+    ModelFunctionChannel* mfc, SignalMap* sm, lua_State* L);
 DLL_PRIVATE void controller_transform_from_model(
-    ModelFunctionChannel* mfc, SignalMap* sm);
+    ModelFunctionChannel* mfc, SignalMap* sm, lua_State* L);
 
 
 #endif  // DSE_MODELC_CONTROLLER_CONTROLLER_H_

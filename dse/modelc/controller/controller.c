@@ -101,7 +101,7 @@ static int __marshal__adapter2model(void* _mfc, void* _spec)
     SignalMap* sm = mfc->signal_map;
 
     if (mfc->signal_value_double) {
-        controller_transform_to_model(mfc, sm);
+        controller_transform_to_model(mfc, sm, mip->lua_state);
     }
     if (spec->dir == MARSHAL_ADAPTER2MODEL_SCALAR_ONLY) return 0;
 
@@ -136,7 +136,7 @@ static int __marshal__model2adapter(void* _mfc, void* _spec)
     if (spec->dir == MARSHAL_MODEL2ADAPTER ||
         spec->dir == MARSHAL_MODEL2ADAPTER_SCALAR_ONLY) {
         if (mfc->signal_value_double) {
-            controller_transform_from_model(mfc, sm);
+            controller_transform_from_model(mfc, sm, mip->lua_state);
         }
     }
 
