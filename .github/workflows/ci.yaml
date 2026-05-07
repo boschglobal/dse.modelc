@@ -59,7 +59,7 @@ jobs:
         env:
           PACKAGE_ARCH: ${{ matrix.package_arch }}
         run: |
-          make
+          make build
 
       - name: Test
         if: ${{ matrix.package_arch == 'linux-amd64' }}
