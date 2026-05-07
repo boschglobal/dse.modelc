@@ -107,7 +107,8 @@ DSE_CLANG_FORMAT_CMD := docker run -it --rm \
 	${DSE_CLANG_FORMAT_IMAGE}
 
 
-default: help
+default: build
+
 help:
 	@echo "Available targets:"
 	@echo "  build         Build all project subdirectories and copy example outputs to out/examples."
