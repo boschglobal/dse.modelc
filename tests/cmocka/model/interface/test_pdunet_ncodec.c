@@ -380,6 +380,15 @@ void test_pdunet_schedule_pdu_fr(void** state)
     model->sv_signal->scalar[0] = 24;
     model->sv_signal->scalar[2] = 42;
 
+    // Set initial condition (calculate checksum, set needs_tx to false).
+    pdunet_visit(net, NULL, pdunet_visit_set_checksum, NULL);
+    pdunet_visit(net, NULL, pdunet_visit_clear_tx_flag, NULL);
+    {
+        int count = 0;
+        pdunet_visit(net, NULL, _visit_count_csum_set, &count);
+        assert_int_equal(count, 1);
+    }
+
     // Send vtable.config(), but no PDUs have needs_tx set.
     pdunet_tx(net, NULL, pdunet_visit_clear_tx_flag, NULL, 0);
     ncodec_seek(nc, 0, NCODEC_SEEK_SET);
@@ -403,9 +412,11 @@ void test_pdunet_schedule_pdu_fr(void** state)
     assert_int_equal(len, -ENOMSG);
 
     // Count set checksums.
-    int count = 0;
-    pdunet_visit(net, NULL, _visit_count_csum_set, &count);
-    assert_int_equal(count, 0);
+    {
+        int count = 0;
+        pdunet_visit(net, NULL, _visit_count_csum_set, &count);
+        assert_int_equal(count, 1);
+    }
 
     // Push the simulation to interval + phase - 1 step. No Tx.
     pdunet_tx(net, NULL, NULL, NULL, 0.0035);
@@ -496,6 +507,15 @@ void test_pdunet_schedule_net_fr(void** state)
     model->sv_signal->scalar[0] = 24;
     model->sv_signal->scalar[2] = 42;
 
+    // Set initial condition (calculate checksum, set needs_tx to false).
+    pdunet_visit(net, NULL, pdunet_visit_set_checksum, NULL);
+    pdunet_visit(net, NULL, pdunet_visit_clear_tx_flag, NULL);
+    {
+        int count = 0;
+        pdunet_visit(net, NULL, _visit_count_csum_set, &count);
+        assert_int_equal(count, 1);
+    }
+
     // Send vtable.config(), but no PDUs have needs_tx set.
     pdunet_tx(net, NULL, pdunet_visit_clear_tx_flag, NULL, 0);
     ncodec_seek(nc, 0, NCODEC_SEEK_SET);
@@ -519,9 +539,11 @@ void test_pdunet_schedule_net_fr(void** state)
     assert_int_equal(len, -ENOMSG);
 
     // Count set checksums.
-    int count = 0;
-    pdunet_visit(net, NULL, _visit_count_csum_set, &count);
-    assert_int_equal(count, 0);
+    {
+        int count = 0;
+        pdunet_visit(net, NULL, _visit_count_csum_set, &count);
+        assert_int_equal(count, 1);
+    }
 
     // Set the epoch_offset
     net->schedule.epoch_offset = 0.002;
@@ -646,6 +668,15 @@ void test_pdunet_schedule_container_fr(void** state)
     model->sv_signal->scalar[1] = 22;
     model->sv_signal->scalar[2] = 33;
 
+    // Set initial condition (calculate checksum, set needs_tx to false).
+    pdunet_visit(net, NULL, pdunet_visit_set_checksum, NULL);
+    pdunet_visit(net, NULL, pdunet_visit_clear_tx_flag, NULL);
+    {
+        int count = 0;
+        pdunet_visit(net, NULL, _visit_count_csum_set, &count);
+        assert_int_equal(count, 4);
+    }
+
     // Send vtable.config(), but no PDUs have needs_tx set.
     pdunet_tx(net, NULL, pdunet_visit_clear_tx_flag, NULL, 0);
     ncodec_seek(nc, 0, NCODEC_SEEK_SET);
@@ -669,9 +700,11 @@ void test_pdunet_schedule_container_fr(void** state)
     assert_int_equal(len, -ENOMSG);
 
     // Count set checksums.
-    int count = 0;
-    pdunet_visit(net, NULL, _visit_count_csum_set, &count);
-    // assert_int_equal(count, 1);
+    {
+        int count = 0;
+        pdunet_visit(net, NULL, _visit_count_csum_set, &count);
+        assert_int_equal(count, 4);  // FIXME why not 4?
+    }
 
     // Push the simulation to interval + phase - 1 step. No Tx.
     pdunet_tx(net, NULL, NULL, NULL, 0.0035);
@@ -680,6 +713,7 @@ void test_pdunet_schedule_container_fr(void** state)
     assert_int_equal(len, -ENOMSG);
 
     // Push the simulation one step. Tx.
+    //__log_level__ = LOG_TRACE;
     pdunet_tx(net, NULL, NULL, NULL, 0.004);
     ncodec_seek(nc, 0, NCODEC_SEEK_SET);
     pdu = (NCodecPdu){ 0 };

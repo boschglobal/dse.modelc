@@ -133,7 +133,7 @@ spec:
           functions:
             encode:
               lua: |
-                -- Set physical, no encoding, copy to raw TODO:
+                -- Set physical, no encoding, copy to raw
                 return function(ctx)
                     ctx.phys = inc_counter(ctx.phys, 1, 240)
                     return ctx
@@ -332,7 +332,7 @@ spec:
         encode:
           lua: |
             return function(ctx)
-                ctx.payload[1] = 42
+                ctx.payload[1] = ctx.payload[1] + 42
             end
     - pdu: I_PDU_TX
       id: 201
@@ -345,7 +345,7 @@ spec:
         encode:
           lua: |
             return function(ctx)
-                ctx.payload[2] = 43
+                ctx.payload[2] = ctx.payload[1] + 43
             end
       signals:
         - signal: Crc

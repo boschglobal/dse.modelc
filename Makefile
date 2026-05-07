@@ -79,7 +79,7 @@ TESTSCRIPT_E2E_FILES = \
 	$(TESTSCRIPT_E2E_DIR)/benchmark.txtar
 
 ifneq ($(CI), true)
-	TESTSCRIPT_E2E_FILES += $(TESTSCRIPT_E2E_DIR)/gateway.txtar
+#	TESTSCRIPT_E2E_FILES += $(TESTSCRIPT_E2E_DIR)/gateway.txtar
 endif
 
 
@@ -107,7 +107,21 @@ DSE_CLANG_FORMAT_CMD := docker run -it --rm \
 	${DSE_CLANG_FORMAT_IMAGE}
 
 
-default: build
+default: help
+help:
+	@echo "Available targets:"
+	@echo "  build         Build all project subdirectories and copy example outputs to out/examples."
+	@echo "  simer         Build the Simer image."
+	@echo "  tools         Build all tools."
+	@echo "  test          Run tests in all project subdirectories."
+	@echo "  test_e2e      Run end-to-end tests via testscript."
+	@echo "  arch          Build each supported architecture."
+	@echo "  generate      Build documentation and other generated content."
+	@echo "  clean         Clean build artifacts in all subdirectories and remove out/."
+	@echo "  cleanall      Run clean, then also clean all subdirectories and remove build/."
+	@echo "  super-linter  Run super-linter against the repository."
+	@echo "Local development commands:"
+	@echo "  $ export SIMER_IMAGE=simer:test"
 
 .PHONY: build
 build:

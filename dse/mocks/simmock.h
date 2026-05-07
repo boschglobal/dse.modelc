@@ -182,7 +182,7 @@ typedef int (*SignalCheckFunc)(SignalCheck* check, SignalVector* sv);
 typedef int (*BinaryCheckFunc)(BinaryCheck* check, SignalVector* sv);
 
 void simmock_signal_check(SimMock* mock, const char* model_name,
-    SignalCheck* checks, size_t count, SignalCheckFunc func);
+    SignalCheck* checks, size_t count, SignalCheckFunc func, const char* hint);
 void simmock_binary_check(SimMock* mock, const char* model_name,
     BinaryCheck* checks, size_t count, BinaryCheckFunc func);
 void simmock_frame_check(SimMock* mock, const char* model_name,

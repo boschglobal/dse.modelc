@@ -298,6 +298,8 @@ DLL_PUBLIC void pdunet_visit_clear_tx_flag(
     PduNetworkDesc* net, PduObject* pdu, void* data);
 DLL_PUBLIC void pdunet_visit_clear_checksum(
     PduNetworkDesc* net, PduObject* pdu, void* data);
+DLL_PUBLIC void pdunet_visit_set_checksum(
+    PduNetworkDesc* net, PduObject* pdu, void* data);
 DLL_PUBLIC void pdunet_visit_needs_tx(
     PduNetworkDesc* net, PduObject* pdu, void* data);
 

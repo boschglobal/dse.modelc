@@ -537,7 +537,7 @@ int modelc_model_create(
         PduNetworkDesc* net = NULL;
         vector_at(&mip->pdunet, i, &net);
         if (net) {
-            pdunet_visit(net, NULL, pdunet_visit_needs_tx, NULL);
+            pdunet_visit(net, NULL, pdunet_visit_set_checksum, NULL);
             pdunet_visit(net, NULL, pdunet_visit_clear_tx_flag, NULL);
         }
     }

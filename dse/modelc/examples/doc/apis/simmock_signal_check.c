@@ -21,6 +21,6 @@ void test_network__signal_check(void** state)
         };
         simmock_print_scalar_signals(mock, LOG_DEBUG);
         simmock_signal_check(
-            mock, "network_inst", s_checks, ARRAY_SIZE(s_checks), NULL);
+            mock, "network_inst", s_checks, ARRAY_SIZE(s_checks), NULL, NULL);
     }
 }

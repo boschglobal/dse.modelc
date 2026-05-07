@@ -68,9 +68,9 @@ void test_network__network2target2network(void** state)
             { .index = SIG_task_20_counter, .value = 0.0 },
         };
         simmock_signal_check(
-            mock, "target_inst", s_checks, ARRAY_SIZE(s_checks), NULL);
+            mock, "target_inst", s_checks, ARRAY_SIZE(s_checks), NULL, NULL);
         simmock_signal_check(
-            mock, "network_inst", s_checks, ARRAY_SIZE(s_checks), NULL);
+            mock, "network_inst", s_checks, ARRAY_SIZE(s_checks), NULL, NULL);
     }
     /* Inject a message carrying the reset_counters signal. */
     uint8_t buffer[8] = { 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
@@ -101,7 +101,7 @@ void test_network__network2target2network(void** state)
         simmock_print_network_frames(mock, LOG_DEBUG);
         assert_int_equal(network_model->sv_network->length[0] > 0, true);
         simmock_signal_check(
-            mock, "network_inst", s_checks, ARRAY_SIZE(s_checks), NULL);
+            mock, "network_inst", s_checks, ARRAY_SIZE(s_checks), NULL, NULL);
         simmock_frame_check(
             mock, "network_inst", "can_bus", f_checks, ARRAY_SIZE(f_checks));
     }

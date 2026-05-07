@@ -593,7 +593,7 @@ func (SignalCheckFunc)
 : Optional function pointer for performing the signal check.
 */
 void simmock_signal_check(SimMock* mock, const char* model_name,
-    SignalCheck* checks, size_t count, SignalCheckFunc func)
+    SignalCheck* checks, size_t count, SignalCheckFunc func, const char* hint)
 {
     assert_non_null(mock);
     ModelMock* check_model = simmock_find_model(mock, model_name);
@@ -604,6 +604,12 @@ void simmock_signal_check(SimMock* mock, const char* model_name,
             assert_int_equal(rc, 0);
         } else {
             assert_true(checks[i].index < check_model->sv_signal->count);
+            if (check_model->sv_signal->scalar[checks[i].index] !=
+                checks[i].value) {
+                log_error("Check[%d] is suspect, expect %f (hint: %s)", i,
+                    checks[i].value, hint);
+                simmock_print_scalar_signals(mock, LOG_ERROR);
+            }
             assert_double_equal(check_model->sv_signal->scalar[checks[i].index],
                 checks[i].value, 0.0);
         }

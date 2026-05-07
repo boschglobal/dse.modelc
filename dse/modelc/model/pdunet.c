@@ -365,6 +365,21 @@ void pdunet_visit_clear_checksum(
 }
 
 
+void pdunet_visit_set_checksum(PduNetworkDesc* net, PduObject* pdu, void* data)
+{
+    UNUSED(net);
+    UNUSED(data);
+    if (pdu == NULL || pdu->pdu == NULL) return;
+    if (pdu->pdu->dir == PduDirectionTx) {
+        uint8_t* payload = NULL;
+        vector_at(&(net->matrix.payload), pdu->matrix.pdu_idx, &payload);
+        assert(payload);
+        size_t payload_len = pdu->pdu->length;
+        pdu->checksum = pdunet_checksum(payload, payload_len);
+    }
+}
+
+
 void pdunet_visit_needs_tx(PduNetworkDesc* net, PduObject* pdu, void* data)
 {
     UNUSED(data);
@@ -374,12 +389,6 @@ void pdunet_visit_needs_tx(PduNetworkDesc* net, PduObject* pdu, void* data)
         if (pdu->container.header != HeaderFormatNone) {
             /* Container PDU, preserve the needs_tx set by schedule. Later
             call to pdunet_visit_container_mapto will call tx function. */
-        } else if (pdu->schedule.interval != 0) {
-            /* PDU (or I-PDU) with a schedule, preserve the needs_tx set by
-             * schedule (unless the tx_func rejects). */
-            if (pdu->needs_tx && pdu->lua.tx_ref) {
-                pdunet_call_tx_func(net, pdu);
-            }
         } else {
             uint32_t checksum = pdunet_checksum(
                 pdu->ncodec.pdu.payload, pdu->ncodec.pdu.payload_len);
@@ -390,9 +399,7 @@ void pdunet_visit_needs_tx(PduNetworkDesc* net, PduObject* pdu, void* data)
                 if (pdu->pdu->container.id == 0) {
                     pdu->checksum = checksum;
                     /* Apply Tx payload modifications. */
-                    if (pdu->lua.tx_ref) {
-                        pdunet_call_tx_func(net, pdu);
-                    }
+                    pdunet_call_tx_func(net, pdu);
                 } else {
                     /* Container I-PDU (id != 0) checksums are updated in
                      * pdunet_visit_container_mapto(), and only after being

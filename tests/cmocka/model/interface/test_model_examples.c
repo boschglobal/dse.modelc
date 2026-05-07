@@ -67,7 +67,7 @@ void test_model__minimal(void** state)
             { .index = MINIMAL_SIGNAL_COUNTER, .value = counter },
         };
         simmock_signal_check(
-            mock, MINIMAL_INST_NAME, checks, ARRAY_SIZE(checks), NULL);
+            mock, MINIMAL_INST_NAME, checks, ARRAY_SIZE(checks), NULL, NULL);
         /* Step the model. */
         assert_int_equal(simmock_step(mock, true), 0);
         simmock_print_scalar_signals(mock, LOG_DEBUG);
@@ -116,7 +116,7 @@ void test_model__extended(void** state)
             { .index = EXTENDED_SIGNAL_EVEN, .value = even },
         };
         simmock_signal_check(
-            mock, EXTENDED_INST_NAME, checks, ARRAY_SIZE(checks), NULL);
+            mock, EXTENDED_INST_NAME, checks, ARRAY_SIZE(checks), NULL, NULL);
         /* Step the model. */
         assert_int_equal(simmock_step(mock, true), 0);
         simmock_print_scalar_signals(mock, LOG_DEBUG);
@@ -172,7 +172,7 @@ void test_model__binary(void** state)
                 .len = len },
         };
         simmock_signal_check(
-            mock, BINARY_INST_NAME, checks, ARRAY_SIZE(checks), NULL);
+            mock, BINARY_INST_NAME, checks, ARRAY_SIZE(checks), NULL, NULL);
         simmock_binary_check(
             mock, BINARY_INST_NAME, b_checks, ARRAY_SIZE(b_checks), NULL);
         /* Step the model. */
@@ -221,7 +221,7 @@ void test_model__benchmark(void** state)
             { .index = BENCHMARK_SIGNAL_COUNTER, .value = counter },
         };
         simmock_signal_check(
-            mock, BENCHMARK_INST_NAME, checks, ARRAY_SIZE(checks), NULL);
+            mock, BENCHMARK_INST_NAME, checks, ARRAY_SIZE(checks), NULL, NULL);
         /* Step the model. */
         assert_int_equal(simmock_step(mock, true), 0);
         simmock_print_scalar_signals(mock, LOG_DEBUG);
@@ -363,7 +363,7 @@ void test_model__lua(void** state)
             { .index = LUA_SIGNAL_COUNTER, .value = counter },
         };
         simmock_signal_check(
-            mock, LUA_INST_NAME, checks, ARRAY_SIZE(checks), NULL);
+            mock, LUA_INST_NAME, checks, ARRAY_SIZE(checks), NULL, NULL);
         /* Step the model. */
         assert_int_equal(simmock_step(mock, true), 0);
         simmock_print_scalar_signals(mock, LOG_DEBUG);
@@ -384,6 +384,7 @@ extern void ncodec_trace_destroy(void* nc);
 void test_model__pdunet_frnet(void** state)
 {
     chdir("../../../../dse/modelc/build/_out/examples/pdunet/frnet");
+    char hint[100];
 
     const char* inst_names[] = {
         PDUNET_FRNET_INST_NAME,
@@ -425,8 +426,8 @@ void test_model__pdunet_frnet(void** state)
             { .index = PDUNET_FRNET_SIGNAL_FOO, .value = foo },
             { .index = PDUNET_FRNET_SIGNAL_BAR, .value = bar },
         };
-        simmock_signal_check(
-            mock, PDUNET_FRNET_INST_NAME, checks, ARRAY_SIZE(checks), NULL);
+        simmock_signal_check(mock, PDUNET_FRNET_INST_NAME, checks,
+            ARRAY_SIZE(checks), NULL, "T0");
         /* Step the model. */
         assert_int_equal(simmock_step(mock, true), 0);
         simmock_print_scalar_signals(mock, LOG_DEBUG);
@@ -446,8 +447,9 @@ void test_model__pdunet_frnet(void** state)
             { .index = PDUNET_FRNET_SIGNAL_FOO, .value = foo },
             { .index = PDUNET_FRNET_SIGNAL_BAR, .value = bar },
         };
-        simmock_signal_check(
-            mock, PDUNET_FRNET_INST_NAME, checks, ARRAY_SIZE(checks), NULL);
+        snprintf(hint, sizeof(hint), "T0-4 i=%d", i);
+        simmock_signal_check(mock, PDUNET_FRNET_INST_NAME, checks,
+            ARRAY_SIZE(checks), NULL, hint);
         /* Step the model. */
         assert_int_equal(simmock_step(mock, true), 0);
         simmock_print_scalar_signals(mock, LOG_DEBUG);
@@ -467,8 +469,8 @@ void test_model__pdunet_frnet(void** state)
             { .index = PDUNET_FRNET_SIGNAL_FOO, .value = foo },
             { .index = PDUNET_FRNET_SIGNAL_BAR, .value = bar },
         };
-        simmock_signal_check(
-            mock, PDUNET_FRNET_INST_NAME, checks, ARRAY_SIZE(checks), NULL);
+        simmock_signal_check(mock, PDUNET_FRNET_INST_NAME, checks,
+            ARRAY_SIZE(checks), NULL, "T4.5 ... 5.5");
         /* Step the model. */
         assert_int_equal(simmock_step(mock, true), 0);
         simmock_print_scalar_signals(mock, LOG_DEBUG);
@@ -488,8 +490,8 @@ void test_model__pdunet_frnet(void** state)
             { .index = PDUNET_FRNET_SIGNAL_FOO, .value = foo },
             { .index = PDUNET_FRNET_SIGNAL_BAR, .value = bar },
         };
-        simmock_signal_check(
-            mock, PDUNET_FRNET_INST_NAME, checks, ARRAY_SIZE(checks), NULL);
+        simmock_signal_check(mock, PDUNET_FRNET_INST_NAME, checks,
+            ARRAY_SIZE(checks), NULL, NULL);
         /* Step the model. */
         assert_int_equal(simmock_step(mock, true), 0);
         simmock_print_scalar_signals(mock, LOG_DEBUG);
@@ -509,8 +511,8 @@ void test_model__pdunet_frnet(void** state)
             { .index = PDUNET_FRNET_SIGNAL_FOO, .value = foo },
             { .index = PDUNET_FRNET_SIGNAL_BAR, .value = bar },
         };
-        simmock_signal_check(
-            mock, PDUNET_FRNET_INST_NAME, checks, ARRAY_SIZE(checks), NULL);
+        simmock_signal_check(mock, PDUNET_FRNET_INST_NAME, checks,
+            ARRAY_SIZE(checks), NULL, NULL);
         /* Step the model. */
         assert_int_equal(simmock_step(mock, true), 0);
         simmock_print_scalar_signals(mock, LOG_DEBUG);
@@ -531,6 +533,7 @@ void test_model__pdunet_frnet(void** state)
 void test_model__pdunet_container(void** state)
 {
     chdir("../../../../dse/modelc/build/_out/examples/pdunet/container");
+    char hint[100];
 
     const char* inst_names[] = {
         PDUNET_CONTAINER_INST_NAME,
@@ -576,8 +579,8 @@ void test_model__pdunet_container(void** state)
             { .index = PDUNET_CONTAINER_SIGNAL_SIG_5, .value = sig_5 },
             { .index = PDUNET_CONTAINER_SIGNAL_SIG_6, .value = sig_6 },
         };
-        simmock_signal_check(
-            mock, PDUNET_CONTAINER_INST_NAME, checks, ARRAY_SIZE(checks), NULL);
+        simmock_signal_check(mock, PDUNET_CONTAINER_INST_NAME, checks,
+            ARRAY_SIZE(checks), NULL, "T0");
         /* Step the model. */
         assert_int_equal(simmock_step(mock, true), 0);
         simmock_print_scalar_signals(mock, LOG_DEBUG);
@@ -608,8 +611,9 @@ void test_model__pdunet_container(void** state)
         { .index = PDUNET_CONTAINER_SIGNAL_SIG_5, .value = sig_5 },
         { .index = PDUNET_CONTAINER_SIGNAL_SIG_6, .value = sig_6 },
     };
-    simmock_signal_check(
-        mock, PDUNET_CONTAINER_INST_NAME, checks1, ARRAY_SIZE(checks1), NULL);
+    snprintf(hint, sizeof(hint), "T0-6");
+    simmock_signal_check(mock, PDUNET_CONTAINER_INST_NAME, checks1,
+        ARRAY_SIZE(checks1), NULL, hint);
 
     /* T6.5 ... 12.0 - second schedule Tx. */
     sig_1 = 1;
@@ -634,10 +638,10 @@ void test_model__pdunet_container(void** state)
         { .index = PDUNET_CONTAINER_SIGNAL_SIG_5, .value = sig_5 },
         { .index = PDUNET_CONTAINER_SIGNAL_SIG_6, .value = sig_6 },
     };
-    simmock_signal_check(
-        mock, PDUNET_CONTAINER_INST_NAME, checks2, ARRAY_SIZE(checks1), NULL);
+    simmock_signal_check(mock, PDUNET_CONTAINER_INST_NAME, checks2,
+        ARRAY_SIZE(checks1), NULL, NULL);
 
-    /* T12.5 ... 18.0 - second schedule Tx. */
+    /* T12.5 ... 18.0 - third schedule Tx. */
     sig_1 = 1;
     sig_2 = 2;
     sig_3 = 3;
@@ -661,8 +665,8 @@ void test_model__pdunet_container(void** state)
         { .index = PDUNET_CONTAINER_SIGNAL_SIG_6, .value = sig_6 },
     };
 
-    simmock_signal_check(
-        mock, PDUNET_CONTAINER_INST_NAME, checks3, ARRAY_SIZE(checks2), NULL);
+    simmock_signal_check(mock, PDUNET_CONTAINER_INST_NAME, checks3,
+        ARRAY_SIZE(checks2), NULL, NULL);
 }
 
 
@@ -714,8 +718,8 @@ void test_model__pdunet_sec(void** state)
             { .index = PDUNET_CONTAINER_SIGNAL_SIG_5, .value = sig_5 },
             { .index = PDUNET_CONTAINER_SIGNAL_SIG_6, .value = sig_6 },
         };
-        simmock_signal_check(
-            mock, PDUNET_CONTAINER_INST_NAME, checks, ARRAY_SIZE(checks), NULL);
+        simmock_signal_check(mock, PDUNET_CONTAINER_INST_NAME, checks,
+            ARRAY_SIZE(checks), NULL, NULL);
         /* Step the model. */
         assert_int_equal(simmock_step(mock, true), 0);
         simmock_print_scalar_signals(mock, LOG_DEBUG);
@@ -746,8 +750,8 @@ void test_model__pdunet_sec(void** state)
         { .index = PDUNET_CONTAINER_SIGNAL_SIG_5, .value = sig_5 },
         { .index = PDUNET_CONTAINER_SIGNAL_SIG_6, .value = sig_6 },
     };
-    simmock_signal_check(
-        mock, PDUNET_CONTAINER_INST_NAME, checks1, ARRAY_SIZE(checks1), NULL);
+    simmock_signal_check(mock, PDUNET_CONTAINER_INST_NAME, checks1,
+        ARRAY_SIZE(checks1), NULL, NULL);
 
     /* T6.5 ... 12.0 - second schedule Tx. */
     sig_1 = 1;
@@ -772,8 +776,8 @@ void test_model__pdunet_sec(void** state)
         { .index = PDUNET_CONTAINER_SIGNAL_SIG_5, .value = sig_5 },
         { .index = PDUNET_CONTAINER_SIGNAL_SIG_6, .value = sig_6 },
     };
-    simmock_signal_check(
-        mock, PDUNET_CONTAINER_INST_NAME, checks2, ARRAY_SIZE(checks2), NULL);
+    simmock_signal_check(mock, PDUNET_CONTAINER_INST_NAME, checks2,
+        ARRAY_SIZE(checks2), NULL, NULL);
 }
 
 

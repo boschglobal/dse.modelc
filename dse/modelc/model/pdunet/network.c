@@ -41,9 +41,11 @@ void pdunet_schedule(PduNetworkDesc* net)
     for (size_t pdu_idx = 0; pdu_idx < vector_len(&net->matrix.pdu);
         pdu_idx++) {
         PduObject* o = vector_at(&(net->matrix.pdu), pdu_idx, NULL);
+        if (o->pdu->dir != PduDirectionTx) continue;
         if (o->schedule.interval == 0) {
             /* No schedule, always calculate signals (and send PDU's if the
              resultant payload has changed). */
+            log_trace("Schedule TX: PDU %u: on_change", o->pdu->id);
             _set_skip(
                 net, o->matrix.range.offset, o->matrix.range.count, false);
             continue;
@@ -60,10 +62,20 @@ void pdunet_schedule(PduNetworkDesc* net)
             o->pdu->id, net->schedule.simulation_time, base, epoch_offset,
             o->schedule.phase, o->schedule.interval);
         if (base < 0 || net->schedule.simulation_time < (uint32_t)base) {
+            log_trace("Schedule TX: PDU %u: wait", o->pdu->id);
+            if (o->checksum == 0) {
+                /* Ensure that needs_tx is not set by updating checksum. */
+                pdunet_visit_set_checksum(net, o, NULL);
+            }
             continue;
         }
         uint32_t delta = net->schedule.simulation_time - base;
         if (delta % o->schedule.interval != 0) {
+            log_trace("Schedule TX: PDU %u: wait", o->pdu->id);
+            if (o->checksum == 0) {
+                /* Ensure that needs_tx is not set by updating checksum. */
+                pdunet_visit_set_checksum(net, o, NULL);
+            }
             continue;
         }
 
@@ -71,7 +83,6 @@ void pdunet_schedule(PduNetworkDesc* net)
         and ensure PDU are sent _even_ if signals are unchanged. */
         log_trace("Schedule TX: PDU %u: trigger", o->pdu->id);
         _set_skip(net, o->matrix.range.offset, o->matrix.range.count, false);
-        o->needs_tx = true;
         o->checksum = 0;
         /* For a Container PDU force the Tx condition. */
         if (o->container.header != HeaderFormatNone) {
