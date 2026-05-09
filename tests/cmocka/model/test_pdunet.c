@@ -1086,7 +1086,7 @@ void test_pdunet_container_tx(void** state)
     // Check needs_tx.
     o = vector_at(&net->matrix.pdu, 4, NULL);
     assert_true(o->needs_tx);
-    assert_false(o->checksum == 0);
+    assert_true(o->checksum == 0);  // Container does not set checksum.
     o = vector_at(&net->matrix.pdu, 5, NULL);
     assert_false(o->needs_tx);      // Tx reset but PDU not sent.
     assert_true(o->checksum == 0);  // Reset so that Tx is set next cycle.
@@ -1127,7 +1127,7 @@ void test_pdunet_container_tx(void** state)
     // Check needs_tx.
     o = vector_at(&net->matrix.pdu, 4, NULL);
     assert_true(o->needs_tx);
-    assert_false(o->checksum == 0);
+    assert_true(o->checksum == 0);  // Container does not set checksum.
     o = vector_at(&net->matrix.pdu, 5, NULL);
     assert_true(o->needs_tx);       // Tx reset but PDU not sent.
     assert_true(o->checksum == 0);  // Reset so that Tx is set next cycle.
@@ -1143,7 +1143,7 @@ void test_pdunet_container_tx(void** state)
     // Check needs_tx.
     o = vector_at(&net->matrix.pdu, 4, NULL);
     assert_true(o->needs_tx);
-    assert_false(o->checksum == 0);
+    assert_true(o->checksum == 0);  // Container does not set checksum.
     o = vector_at(&net->matrix.pdu, 5, NULL);
     assert_false(o->needs_tx);       // Tx reset but PDU not sent.
     assert_false(o->checksum == 0);  // Reset so that Tx is set next cycle.

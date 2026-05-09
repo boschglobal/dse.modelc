@@ -80,7 +80,7 @@ spec:
           base_cycle: 4
           direction: Tx
           channel: A
-          transmit_mode: Continuous
+          transmit_mode: SingleShot
           inhibit_null: true
       functions:
         encode:
@@ -112,7 +112,7 @@ spec:
           base_cycle: 4
           direction: Tx
           channel: A
-          transmit_mode: Continuous
+          transmit_mode: SingleShot
           inhibit_null: true
       functions:
         encode:
@@ -148,7 +148,7 @@ spec:
           base_cycle: 4
           direction: Tx
           channel: A
-          transmit_mode: Continuous
+          transmit_mode: SingleShot
           inhibit_null: true
     - pdu: IPDU-TX-1
       id: 401
@@ -217,7 +217,7 @@ spec:
           base_cycle: 4
           direction: Rx
           channel: A
-          transmit_mode: Continuous
+          transmit_mode: SingleShot
           inhibit_null: true
       functions:
         rx:
@@ -245,7 +245,7 @@ spec:
           base_cycle: 4
           direction: Rx
           channel: A
-          transmit_mode: Continuous
+          transmit_mode: SingleShot
           inhibit_null: true
       functions:
         rx:
@@ -276,7 +276,7 @@ spec:
           base_cycle: 4
           direction: Rx
           channel: A
-          transmit_mode: Continuous
+          transmit_mode: SingleShot
           inhibit_null: true
     - pdu: IPDU-RX-1
       id: 401

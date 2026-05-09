@@ -42,8 +42,19 @@ void pdunet_schedule(PduNetworkDesc* net)
         pdu_idx++) {
         PduObject* o = vector_at(&(net->matrix.pdu), pdu_idx, NULL);
         if (o->pdu->dir != PduDirectionTx) continue;
+
+        /* Container PDU, force the Tx. */
+        if (o->container.header != HeaderFormatNone) {
+            /* The later call to pdunet_visit_container_mapto() will evaluate
+            the Container PDU and adjust needs_tx/checksum accordingly.
+            No need to call _set_skip() (Container will have no signals). */
+            o->needs_tx = true;
+            continue;
+        }
+
+        /* No schedule, Tx on-change only. */
         if (o->schedule.interval == 0) {
-            /* No schedule, always calculate signals (and send PDU's if the
+            /* Always calculate signals (and send PDU's if the
              resultant payload has changed). */
             log_trace("Schedule TX: PDU %u: on_change", o->pdu->id);
             _set_skip(
@@ -51,7 +62,7 @@ void pdunet_schedule(PduNetworkDesc* net)
             continue;
         }
 
-        /* Determine if the schedule will fire. */
+        /* Schedule: determine if schedule will fire. */
         int32_t epoch_offset =
             (net->schedule.step_size)
                 ? net->schedule.epoch_offset / net->schedule.step_size
@@ -61,6 +72,8 @@ void pdunet_schedule(PduNetworkDesc* net)
                   "phase=%u, interval=%u",
             o->pdu->id, net->schedule.simulation_time, base, epoch_offset,
             o->schedule.phase, o->schedule.interval);
+
+        /* Schedule: did not fire.*/
         if (base < 0 || net->schedule.simulation_time < (uint32_t)base) {
             log_trace("Schedule TX: PDU %u: wait", o->pdu->id);
             if (o->checksum == 0) {
@@ -79,15 +92,11 @@ void pdunet_schedule(PduNetworkDesc* net)
             continue;
         }
 
-        /* The schedule will fire, force recalculation of payload
-        and ensure PDU are sent _even_ if signals are unchanged. */
+        /* Schedule: did fire. Force recalculation of payload and ensure
+        PDU is sent _even_ if signals are unchanged. */
         log_trace("Schedule TX: PDU %u: trigger", o->pdu->id);
         _set_skip(net, o->matrix.range.offset, o->matrix.range.count, false);
         o->checksum = 0;
-        /* For a Container PDU force the Tx condition. */
-        if (o->container.header != HeaderFormatNone) {
-            o->needs_tx = true;
-        }
     }
 }
 
@@ -488,7 +497,7 @@ void pdunet_visit_container_mapto(
 
     pdu->needs_tx = false; /* Will be set to true if I-PDU mapped. */
 
-    // I-PDUs (sorted by container.priority).
+    /* I-PDUs (sorted by container.priority). */
     size_t count = vector_len(&pdu->container.pdu_list);
     for (size_t i = 0; i < count; i++) {
         MPduItem* pi = vector_at(&pdu->container.pdu_list, i, NULL);
@@ -496,6 +505,7 @@ void pdunet_visit_container_mapto(
         assert(pi->pdu);
         assert(pi->pdu->pdu);
         if (pi->pdu->needs_tx != true) continue;
+
         size_t len = pi->pdu->pdu->length;
         if ((len + header_length[pdu->container.header]) >
             (payload_len - payload_offset)) {
@@ -505,24 +515,27 @@ void pdunet_visit_container_mapto(
             continue;
         }
 
-        /* Apply Tx payload modifications. */
-        if (pi->pdu->lua.tx_ref) {
-            pdunet_call_tx_func(net, pi->pdu);
-            if (pi->pdu->needs_tx == false) {
-                /* This PDU was rejected. */
-                continue;
-            }
+        /* Update the checksum. The call to tx_func() may modify payload, the
+        checksum must be on the basis of pdunet_encode_pack() as that
+        value is used to determine if needs_tx will be set. */
+        uint8_t* pi_payload = NULL;
+        vector_at(&(net->matrix.payload), pi->pdu->matrix.pdu_idx, &pi_payload);
+        assert(pi_payload);
+        pi->pdu->checksum = pdunet_checksum(pi_payload, len);
+
+        /* Apply Tx payload modifications to this I-PDU. */
+        pdunet_call_tx_func(net, pi->pdu);
+        if (pi->pdu->needs_tx == false) {
+            /* This PDU was rejected. */
+            continue;
         }
 
-        // Map in this I-PDU.
+        /* Map in this I-PDU. */
         log_trace("Map to Container: [%u] L-PDU[%u] <-map- [%u] I-PDU[%u], "
                   "offset=%u, len=%u/%u",
             pdu->matrix.pdu_idx, pdu->pdu->id, pi->pdu->pdu->id,
             pi->pdu->matrix.pdu_idx, payload_offset, len,
             len + header_length[pdu->container.header]);
-        uint8_t* pi_payload = NULL;
-        vector_at(&(net->matrix.payload), pi->pdu->matrix.pdu_idx, &pi_payload);
-        assert(pi_payload);
         switch (pdu->container.header) {
         case HeaderFormatStatic:
             break;
@@ -550,15 +563,13 @@ void pdunet_visit_container_mapto(
         payload_offset += header_length[pdu->container.header];
         memcpy(payload + payload_offset, pi_payload, len);
         payload_offset += len;
+
+        /* Send the Container (which now contains this I-PDU). */
         pdu->needs_tx = true;
-        /* Update the checksum (as pdunet_visit_needs_tx() will not). */
         pi->pdu->needs_tx = false;
-        pi->pdu->checksum = pdunet_checksum(pi_payload, len);
     }
-    pdu->checksum = pdunet_checksum(payload, payload_len);
-    if (pdu->needs_tx && pdu->lua.tx_ref) {
-        pdunet_call_tx_func(net, pdu);
-    }
+    /* Apply Tx payload modifications to this Container PDU. */
+    pdunet_call_tx_func(net, pdu);
 }
 
 void pdunet_visit_container_mapfrom(

@@ -48,6 +48,9 @@ void pdunet_decode_linear(PduNetworkDesc* net, PduRange* range)
 
 void pdunet_encode_pack(PduNetworkDesc* net, PduRange* range)
 {
+    // NOTE: pack only PDUs that need updating. When this
+    // occurs the basis for checksum calculation may be moved to
+    // after calls to pdunet_call_tx_func(), if desirable.
     _apply_range(net, range, PduDirectionTx, pdunet_pdu_pack_range);
 }
 

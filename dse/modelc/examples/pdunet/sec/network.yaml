@@ -35,9 +35,6 @@ spec:
       dir: Tx
       container:
         header: Short
-      schedule:
-        phase: -0.001
-        interval: 0.005
       metadata:
         flexray:
           slot_id: 11
@@ -46,7 +43,7 @@ spec:
           base_cycle: 0
           direction: Tx
           channel: A
-          transmit_mode: Continuous
+          transmit_mode: SingleShot
           inhibit_null: true
     - pdu: IPDU-TX-1
       id: 401
@@ -55,6 +52,9 @@ spec:
       container:
         id: 400
         priority: 50
+      schedule:
+        phase: -0.001
+        interval: 0.005
       functions:
         tx:
           lua: |
@@ -79,6 +79,9 @@ spec:
       container:
         id: 400
         priority: 5
+      schedule:
+        phase: -0.001
+        interval: 0.005
       functions:
         tx:
           lua: |
@@ -101,6 +104,9 @@ spec:
       container:
         id: 400
         priority: 25
+      schedule:
+        phase: -0.001
+        interval: 0.005
       signals:
         - signal: SIG_3
           encoding:
@@ -122,7 +128,7 @@ spec:
           base_cycle: 0
           direction: Rx
           channel: A
-          transmit_mode: Continuous
+          transmit_mode: SingleShot
           inhibit_null: true
     - pdu: IPDU-RX-1
       id: 401

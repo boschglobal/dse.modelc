@@ -734,6 +734,7 @@ void test_model__pdunet_sec(void** state)
     sig_4 = 16;
     sig_5 = 0;
     sig_6 = 3;
+    // __log_level__ = LOG_TRACE;
     for (uint32_t i = 0; i < 12; i++) {
         /* Step the model. */
         assert_int_equal(simmock_step(mock, true), 0);

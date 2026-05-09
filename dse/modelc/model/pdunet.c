@@ -437,18 +437,17 @@ void pdunet_call_tx_func(PduNetworkDesc* net, PduObject* pdu)
     if (rc == 0) {
         /* The PDU may have its payload modified. */
         if (pdu->pdu->container.id == 0) {
-            pdu->checksum = pdunet_checksum(
-                pdu->ncodec.pdu.payload, pdu->ncodec.pdu.payload_len);
+            /* Basis for checksum comparison (i.e. setting needs_tx) is not
+            currently based on this modified payload. Therefore do not update
+            the checksum here. */
         } else {
             /* Container I-PDU (id != 0) checksums are updated in
-             * pdunet_visit_container_mapto(), and only after being
-             * mapped into the Container (eff. Tx). */
+            pdunet_visit_container_mapto(), and only after being
+            mapped into the Container (eff. Tx). */
         }
     } else {
         /* The PDU was rejected. */
         pdu->needs_tx = false;
-        pdu->checksum = pdunet_checksum(
-            pdu->ncodec.pdu.payload, pdu->ncodec.pdu.payload_len);
         log_trace("Pdu: [%u] rejected, reason=%d", pdu->matrix.pdu_idx, rc);
     }
 }

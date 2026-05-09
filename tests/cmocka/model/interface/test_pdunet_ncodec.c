@@ -713,7 +713,7 @@ void test_pdunet_schedule_container_fr(void** state)
     assert_int_equal(len, -ENOMSG);
 
     // Push the simulation one step. Tx.
-    //__log_level__ = LOG_TRACE;
+    // __log_level__ = LOG_TRACE;
     pdunet_tx(net, NULL, NULL, NULL, 0.004);
     ncodec_seek(nc, 0, NCODEC_SEEK_SET);
     pdu = (NCodecPdu){ 0 };
@@ -747,7 +747,12 @@ void test_pdunet_schedule_container_fr(void** state)
         [1] = 0x01,
         [2] = 0x92,
         [3] = 0x08,
-        [4] = 0x16,  // 22
+        [4] = 0x16,   // 22
+        [12] = 0x00,  // header - 24bit : 403
+        [13] = 0x01,
+        [14] = 0x93,
+        [15] = 0x08,
+        [16] = 0x21,  // 33
     };
     assert_memory_equal(pdu.payload, expect2, 24);
     assert_int_equal(pdu.ecu_id, 5);
