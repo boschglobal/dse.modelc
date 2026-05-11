@@ -107,7 +107,7 @@ DSE_CLANG_FORMAT_CMD := docker run -it --rm \
 	${DSE_CLANG_FORMAT_IMAGE}
 
 
-default: build
+default: help
 
 help:
 	@echo "Available targets:"

@@ -10,12 +10,14 @@ import (
 	"os"
 
 	"github.com/boschglobal/dse.clib/extra/go/command"
+	"github.com/boschglobal/dse.modelc/extra/tools/trace/internal/app/convert"
 	"github.com/boschglobal/dse.modelc/extra/tools/trace/internal/app/summary"
 )
 
 var cmds = []command.CommandRunner{
 	command.NewHelpCommand("help"),
 	summary.NewSummaryCommand("summary"),
+	convert.NewConvertCommand("convert"),
 }
 
 var usage = `
@@ -23,9 +25,10 @@ Trace tools for working with SimBus trace files.
 
 Usage:
 
-	trace <command> [option] <trace file>
+	trace [--verbose] <command> [option] <trace file>
 
 	trace summary [--short, --long] <trace file>
+	trace convert [--csv] <trace file>
 
 `
 
@@ -38,12 +41,25 @@ func main() {
 }
 
 func main_() int {
+	var verbose bool
+	flag.BoolVar(&verbose, "verbose", false, "enable verbose output")
 	flag.Usage = printUsage
-	if len(os.Args) == 1 {
+	flag.Parse()
+	if verbose {
+		slog.SetLogLoggerLevel(slog.LevelDebug)
+	}
+
+	if flag.NArg() == 0 {
 		printUsage()
 		return 1
 	}
-	if err := command.DispatchCommand(os.Args[1], cmds); err != nil {
+
+	cmdName := flag.Arg(0)
+	cmdArgs := flag.Args()[1:]
+	for i, v := range cmdArgs {
+		os.Args[2+i] = v
+	}
+	if err := command.DispatchCommand(cmdName, cmds); err != nil {
 		slog.Error(err.Error())
 		return 2
 	}

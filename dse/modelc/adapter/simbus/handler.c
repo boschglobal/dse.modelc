@@ -170,6 +170,12 @@ static void resolve_and_notify(
     send_notify_message(adapter, 0, message);
 }
 
+static int _ch_iterator(void* value, void* key)
+{
+    UNUSED(value);
+    log_error("  channel: %s", (const char*)key);
+    return 0;
+}
 
 void simbus_handle_notify_message(
     Adapter* adapter, notify(NotifyMessage_table_t) notify_message)
@@ -206,6 +212,11 @@ void simbus_handle_notify_message(
         const char* ch_name =
             notify(NotifyMessage_channel_name(notify_message));
         Channel* channel = hashmap_get(&am->channels, ch_name);
+        if (channel == NULL) {
+            log_error("Register: channel not found!?! name=%s", ch_name);
+            log_error("Available channels are:");
+            hashmap_kv_iterator(&am->channels, _ch_iterator, true);
+        }
         assert(channel);
         flatbuffers_uint32_vec_t vector =
             notify(NotifyMessage_model_uid(notify_message));
@@ -287,6 +298,11 @@ void simbus_handle_notify_message(
         const char* ch_name =
             notify(NotifyMessage_channel_name(notify_message));
         Channel* channel = hashmap_get(&am->channels, ch_name);
+        if (channel == NULL) {
+            log_error("Register: channel not found!?! name=%s", ch_name);
+            log_error("Available channels are:");
+            hashmap_kv_iterator(&am->channels, _ch_iterator, true);
+        }
         assert(channel);
         flatbuffers_uint32_vec_t vector =
             notify(NotifyMessage_model_uid(notify_message));
@@ -377,6 +393,11 @@ void simbus_handle_notify_message(
         const char* ch_name =
             notify(NotifyMessage_channel_name(notify_message));
         Channel* channel = hashmap_get(&am->channels, ch_name);
+        if (channel == NULL) {
+            log_error("Register: channel not found!?! name=%s", ch_name);
+            log_error("Available channels are:");
+            hashmap_kv_iterator(&am->channels, _ch_iterator, true);
+        }
         assert(channel);
 
         flatbuffers_uint32_vec_t vector =

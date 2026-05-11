@@ -5,6 +5,7 @@
 package trace
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"iter"
@@ -41,7 +42,9 @@ func (s Stream) Messages() iter.Seq[Flatbuffer] {
 		}
 		f, err := os.Open(s.File)
 		check(err)
-		defer f.Close()
+		defer func() {
+			err = errors.Join(err, f.Close())
+		}()
 		for {
 			// Get the size of the next flatbuffer.
 			b := make([]byte, flatbuffers.SizeUint32)
