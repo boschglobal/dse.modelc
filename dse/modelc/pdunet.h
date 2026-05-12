@@ -66,6 +66,13 @@ typedef enum {
 } PduDirection;
 
 typedef enum {
+    PduScheduleTriggerNone = 0,
+    PduScheduleTriggerChange = 1,   /* "change" */
+    PduScheduleTriggerPeriodic = 2, /* "periodic" */
+    PduScheduleTriggerCount = 3,
+} PduScheduleTrigger;
+
+typedef enum {
     HeaderFormatNone = 0,
     HeaderFormatStatic = 1, /* No header, static layout */
     HeaderFormatShort = 2,  /* ID 24 bit, DLC 8 bit */
@@ -90,8 +97,9 @@ typedef struct PduItem {
     } container;
     /* Schedule. */
     struct {
-        double phase;
-        double interval;
+        double             phase;
+        double             interval;
+        PduScheduleTrigger trigger;
     } schedule;
     /* Functions. */
     struct {
@@ -134,6 +142,7 @@ typedef struct PduObject {  // FIXME: internal type ??
     struct {
         uint32_t interval; /* Normalised value, factor of step_size. */
         uint32_t phase;    /* Normalised value, factor of step_size. */
+        PduScheduleTrigger trigger;
     } schedule;
     struct {
         /* Called on Signal pack/unpack. */

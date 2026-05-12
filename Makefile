@@ -23,7 +23,7 @@ DSE_CLIB_VERSION ?= 1.0.51
 export DSE_CLIB_URL ?= $(DSE_CLIB_REPO)/archive/refs/tags/v$(DSE_CLIB_VERSION).zip
 
 DSE_SCHEMA_REPO ?= https://github.com/boschglobal/dse.schemas
-DSE_SCHEMA_VERSION ?= 1.3.0
+DSE_SCHEMA_VERSION ?= 1.3.1
 export DSE_SCHEMA_URL ?= $(DSE_SCHEMA_REPO)/releases/download/v$(DSE_SCHEMA_VERSION)/dse-schemas.tar.gz
 
 DSE_NCODEC_REPO ?= https://github.com/boschglobal/dse.ncodec
@@ -81,7 +81,9 @@ TESTSCRIPT_E2E_FILES = \
 ifneq ($(CI), true)
 #	TESTSCRIPT_E2E_FILES += $(TESTSCRIPT_E2E_DIR)/gateway.txtar
 endif
-
+ifdef TEST
+TESTSCRIPT_E2E_FILES := $(TEST)
+endif
 
 ifneq ($(CI), true)
 DOCKER_BUILDER_CMD := \
@@ -122,7 +124,10 @@ help:
 	@echo "  cleanall      Run clean, then also clean all subdirectories and remove build/."
 	@echo "  super-linter  Run super-linter against the repository."
 	@echo "Local development commands:"
-	@echo "  $ export SIMER_IMAGE=simer:test"
+	@echo "  export SIMER_IMAGE=simer:test"
+	@echo "  make build simer tools"
+	@echo "  make test_cmocka"
+	@echo "  make test_e2e TEST=tests/testscript/e2e/pdunet.txtar"
 
 .PHONY: build
 build:

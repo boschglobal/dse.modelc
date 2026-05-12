@@ -75,28 +75,33 @@ void pdunet_schedule(PduNetworkDesc* net)
 
         /* Schedule: did not fire.*/
         if (base < 0 || net->schedule.simulation_time < (uint32_t)base) {
-            log_trace("Schedule TX: PDU %u: wait", o->pdu->id);
             if (o->checksum == 0) {
-                /* Ensure that needs_tx is not set by updating checksum. */
-                pdunet_visit_set_checksum(net, o, NULL);
+                log_trace("Schedule TX: PDU %u: pending", o->pdu->id);
+            } else {
+                log_trace("Schedule TX: PDU %u: wait", o->pdu->id);
             }
             continue;
         }
         uint32_t delta = net->schedule.simulation_time - base;
         if (delta % o->schedule.interval != 0) {
-            log_trace("Schedule TX: PDU %u: wait", o->pdu->id);
             if (o->checksum == 0) {
-                /* Ensure that needs_tx is not set by updating checksum. */
-                pdunet_visit_set_checksum(net, o, NULL);
+                log_trace("Schedule TX: PDU %u: pending", o->pdu->id);
+            } else {
+                log_trace("Schedule TX: PDU %u: wait", o->pdu->id);
             }
             continue;
         }
 
-        /* Schedule: did fire. Force recalculation of payload and ensure
-        PDU is sent _even_ if signals are unchanged. */
-        log_trace("Schedule TX: PDU %u: trigger", o->pdu->id);
+        /* Schedule: fired. */
         _set_skip(net, o->matrix.range.offset, o->matrix.range.count, false);
-        o->checksum = 0;
+        if (o->schedule.trigger == PduScheduleTriggerPeriodic) {
+            /* Periodic Schedule: PDU Tx occurs according to the schedule. */
+            log_trace("Schedule TX: PDU %u: trigger - periodic", o->pdu->id);
+            o->checksum = 0; /* Force Tx according to schedule. */
+        } else {
+            /* On Change Schedule: PDU Tx only if signals have changed. */
+            log_trace("Schedule TX: PDU %u: trigger - change ", o->pdu->id);
+        }
     }
 }
 
@@ -155,6 +160,11 @@ PduItem pdunet_pdu_generator(PduNetworkDesc* net, YamlNode* n)
         { "Full", HeaderFormatFull },
         { NULL },
     };
+    static const SchemaFieldMapSpec trigger_map[] = {
+        { "Change", PduScheduleTriggerChange },
+        { "Periodic", PduScheduleTriggerPeriodic },
+        { NULL },
+    };
     static const SchemaFieldSpec spec[] = {
         // clang-format off
         { S, "pdu", offsetof(PduItem, name) },
@@ -166,6 +176,7 @@ PduItem pdunet_pdu_generator(PduNetworkDesc* net, YamlNode* n)
         { U32, "container/priority", offsetof(PduItem, container.priority) },
         { D, "schedule/phase", offsetof(PduItem, schedule.phase) },
         { D, "schedule/interval", offsetof(PduItem, schedule.interval) },
+        { U8, "schedule/trigger", offsetof(PduItem, schedule.trigger),  trigger_map },
         // clang-format on
     };
     schema_load_object(n, &pdu, spec, ARRAY_SIZE(spec));
@@ -510,6 +521,10 @@ void pdunet_visit_container_mapto(
         if ((len + header_length[pdu->container.header]) >
             (payload_len - payload_offset)) {
             // No room for this PDU, but others might still fit, so continue.
+            log_trace(
+                "Map to Container: [%u] L-PDU[%u] <-DELAY- [%u] I-PDU[%u]",
+                pdu->matrix.pdu_idx, pdu->pdu->id, pi->pdu->pdu->id,
+                pi->pdu->matrix.pdu_idx);
             pi->pdu->needs_tx = false;
             pi->pdu->checksum = 0;  // Triggers update of needs_tx on next.
             continue;

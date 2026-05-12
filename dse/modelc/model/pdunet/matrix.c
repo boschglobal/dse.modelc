@@ -254,6 +254,7 @@ int pdunet_matrix_transform(PduNetworkDesc* net, PduNetworkSortFunc sort)
         } else {
             o->schedule.phase = 0;
         }
+        o->schedule.trigger = p->schedule.trigger;
 
         // Signal -> matrix.signal.
         for (size_t sig_idx = 0; sig_idx < vector_len(&o->pdu->signals);

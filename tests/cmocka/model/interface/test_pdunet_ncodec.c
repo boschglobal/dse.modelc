@@ -748,11 +748,11 @@ void test_pdunet_schedule_container_fr(void** state)
         [2] = 0x92,
         [3] = 0x08,
         [4] = 0x16,   // 22
-        [12] = 0x00,  // header - 24bit : 403
-        [13] = 0x01,
-        [14] = 0x93,
-        [15] = 0x08,
-        [16] = 0x21,  // 33
+        [12] = 0x00,  // No PDU, 401/403 have no_change
+        [13] = 0x00,
+        [14] = 0x00,
+        [15] = 0x00,
+        [16] = 0x00,
     };
     assert_memory_equal(pdu.payload, expect2, 24);
     assert_int_equal(pdu.ecu_id, 5);
