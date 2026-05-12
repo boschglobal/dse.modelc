@@ -43,23 +43,23 @@ void pdunet_schedule(PduNetworkDesc* net)
         PduObject* o = vector_at(&(net->matrix.pdu), pdu_idx, NULL);
         if (o->pdu->dir != PduDirectionTx) continue;
 
-        /* Container PDU, force the Tx. */
-        if (o->container.header != HeaderFormatNone) {
-            /* The later call to pdunet_visit_container_mapto() will evaluate
-            the Container PDU and adjust needs_tx/checksum accordingly.
-            No need to call _set_skip() (Container will have no signals). */
-            o->needs_tx = true;
-            continue;
-        }
-
         /* No schedule, Tx on-change only. */
         if (o->schedule.interval == 0) {
-            /* Always calculate signals (and send PDU's if the
-             resultant payload has changed). */
-            log_trace("Schedule TX: PDU %u: on_change", o->pdu->id);
-            _set_skip(
-                net, o->matrix.range.offset, o->matrix.range.count, false);
-            continue;
+            if (o->container.header != HeaderFormatNone) {
+                /* Container PDU. */
+                /* Call to pdunet_visit_container_mapto() will evaluate the
+                Container PDU and adjust needs_tx/checksum accordingly. */
+                o->needs_tx = true;
+                continue;
+            } else {
+                /* PDU / I-PDU. */
+                /* Always calculate signals (and send PDU's if the
+                 resultant payload has changed). */
+                log_trace("Schedule TX: PDU %u: on_change", o->pdu->id);
+                _set_skip(
+                    net, o->matrix.range.offset, o->matrix.range.count, false);
+                continue;
+            }
         }
 
         /* Schedule: determine if schedule will fire. */
@@ -93,6 +93,17 @@ void pdunet_schedule(PduNetworkDesc* net)
         }
 
         /* Schedule: fired. */
+
+        /* Container PDU. */
+        if (o->container.header != HeaderFormatNone) {
+            /* Call to pdunet_visit_container_mapto() will evaluate
+            the Container PDU and adjust needs_tx/checksum accordingly. */
+            log_trace("Schedule TX: Container PDU %u: trigger", o->pdu->id);
+            o->needs_tx = true;
+            continue;
+        }
+
+        /* PDU / I-PDU. */
         _set_skip(net, o->matrix.range.offset, o->matrix.range.count, false);
         if (o->schedule.trigger == PduScheduleTriggerPeriodic) {
             /* Periodic Schedule: PDU Tx occurs according to the schedule. */

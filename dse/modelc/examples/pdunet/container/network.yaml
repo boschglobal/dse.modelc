@@ -35,6 +35,9 @@ spec:
       dir: Tx
       container:
         header: Short
+      schedule:
+        phase: -0.001
+        interval: 0.005
       metadata:
         flexray:
           slot_id: 11
