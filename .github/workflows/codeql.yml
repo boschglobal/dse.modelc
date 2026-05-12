@@ -1,10 +1,11 @@
+---
 name: "CodeQL Advanced"
 
-on:
+on:  # yamllint disable-line rule:truthy
   push:
-    branches: [ "main" ]
+    branches: ["main"]
   pull_request:
-    branches: [ "main" ]
+    branches: ["main"]
   schedule:
     - cron: '22 19 * * 1'
 
@@ -18,14 +19,14 @@ jobs:
       actions: read
       contents: read
     steps:
-    - uses: actions/checkout@v4
-    - uses: github/codeql-action/init@v4
-      with:
-        languages: actions
-        build-mode: none
-    - uses: github/codeql-action/analyze@v4
-      with:
-        category: "/language:actions"
+      - uses: actions/checkout@v4
+      - uses: github/codeql-action/init@v4
+        with:
+          languages: actions
+          build-mode: none
+      - uses: github/codeql-action/analyze@v4
+        with:
+          category: "/language:actions"
 
   analyze-go:
     name: Analyze (go)
@@ -36,14 +37,14 @@ jobs:
       actions: read
       contents: read
     steps:
-    - uses: actions/checkout@v4
-    - uses: github/codeql-action/init@v4
-      with:
-        languages: go
-        build-mode: autobuild
-    - uses: github/codeql-action/analyze@v4
-      with:
-        category: "/language:go"
+      - uses: actions/checkout@v4
+      - uses: github/codeql-action/init@v4
+        with:
+          languages: go
+          build-mode: autobuild
+      - uses: github/codeql-action/analyze@v4
+        with:
+          category: "/language:go"
 
   analyze-c-cpp:
     name: Analyze (c-cpp)
@@ -56,14 +57,14 @@ jobs:
       actions: read
       contents: read
     steps:
-    - uses: actions/checkout@v4
-    - uses: github/codeql-action/init@v4
-      with:
-        languages: c-cpp
-        build-mode: manual
-    - name: Run manual build steps
-      run: |
-        make build
-    - uses: github/codeql-action/analyze@v4
-      with:
-        category: "/language:c-cpp"
+      - uses: actions/checkout@v4
+      - uses: github/codeql-action/init@v4
+        with:
+          languages: c-cpp
+          build-mode: manual
+      - name: Run manual build steps
+        run: |
+          make build
+      - uses: github/codeql-action/analyze@v4
+        with:
+          category: "/language:c-cpp"
