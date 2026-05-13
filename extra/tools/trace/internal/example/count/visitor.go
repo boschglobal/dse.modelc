@@ -15,3 +15,7 @@ func (c *CountVisitor) VisitNotifyMsg(nm trace.NotifyMsg) {
 	c.msgCount += 1
 	c.notifyCount += 1
 }
+
+func (s *CountVisitor) VisitStream(data []byte) {
+
+}

@@ -21,14 +21,19 @@ var cmds = []command.CommandRunner{
 }
 
 var usage = `
-Trace tools for working with SimBus trace files.
+Trace tools for working with SimBus and NCodec trace files.
 
 Usage:
 
 	trace [--verbose] <command> [option] <trace file>
 
+	trace convert [--csv, --asc] [--name <net name>] [--tx <ecu id>] <trace file>
 	trace summary [--short, --long] <trace file>
-	trace convert [--csv] <trace file>
+
+
+	trace convert --csv simbus.bin
+	trace convert --asc simbus.bin
+	trace convert --asc --name FR_1 --tx 5 ncodec.bin
 
 `
 

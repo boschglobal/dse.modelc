@@ -14,6 +14,10 @@ import (
 type Short struct {
 }
 
+func (s *Short) VisitStream(data []byte) {
+
+}
+
 func (s *Short) VisitNotifyMsg(nm trace.NotifyMsg) {
 	direction := func() string {
 		if nm.Msg.ModelUidLength() > 0 {

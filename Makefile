@@ -27,7 +27,7 @@ DSE_SCHEMA_VERSION ?= 1.3.1
 export DSE_SCHEMA_URL ?= $(DSE_SCHEMA_REPO)/releases/download/v$(DSE_SCHEMA_VERSION)/dse-schemas.tar.gz
 
 DSE_NCODEC_REPO ?= https://github.com/boschglobal/dse.ncodec
-DSE_NCODEC_VERSION ?= 1.2.2
+DSE_NCODEC_VERSION ?= 1.2.4
 export DSE_NCODEC_URL ?= $(DSE_NCODEC_REPO)/archive/refs/tags/v$(DSE_NCODEC_VERSION).zip
 
 
@@ -241,6 +241,7 @@ do-test_cmocka-run:
 
 do-test_testscript-e2e:
 # Test debug; add '-v' to Testscript command (e.g. $(TESTSCRIPT_IMAGE) -v \).
+# Test debut; echo "Running E2E Test: $${ENTRYWORKDIR}"
 ifeq ($(PACKAGE_ARCH), linux-amd64)
 	@-docker kill simer 2>/dev/null ; true
 	@-docker kill gateway 2>/dev/null ; true

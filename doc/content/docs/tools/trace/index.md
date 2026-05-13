@@ -1,10 +1,11 @@
 ---
 title: "Trace - Simulation Trace Tool"
 linkTitle: "Trace"
-weight: 100
+weight: 10
 tags:
 - trace
 - CLI
+- NCodec
 github_repo: "https://github.com/boschglobal/dse.modelc"
 github_subdir: "doc"
 ---
@@ -15,45 +16,54 @@ github_subdir: "doc"
 Simulation trace tool.
 
 ```bash
-# Create the trace folder.
-$ mkdir examples/binary/data/trace
+# Convert a SimBus trace to CSV format:
+$ trace convert --csv testdata/simbus.bin
+...
+Create measurement file: simbus.scalar.csv
+$ cat simbus.scalar.csv
+time,SIG_4,SIG_6,SIG_1,SIG_3,SIG_5,SIG_2
+0.000500,0.0,0.0,1,3,0.0,2
+0.006500,1,3,1,3,0.0,2
+0.016500,1,3,1,3,2,2
+0.020500,1,3,2,6,2,4
+0.026500,1,6,2,6,4,4
+0.031500,2,6,2,6,4,4
 
-# Trace to a binary file. Run the simulation, and then print the trace.
-$ docker run --name simer -i --rm \
-    --volume ./examples/binary:/sim \
-    --env SIMBUS_TRACE_FILE=data/trace/simbus.bin \
-    ghcr.io/boschglobal/dse-simer:latest
-$ docker run --name simer -i --rm \
-    --volume ./examples/binary:/sim \
-    --entrypoint /usr/local/bin/trace \
-    ghcr.io/boschglobal/dse-simer:latest
-        summary -long data/trace/simbus.bin
-
-# Trace with a TCP port. Start the TCP trace monitor, and then run the simulation.
-$ docker run --name simer -i --rm \
-    --volume ./examples/binary:/sim \
-    --entrypoint /usr/local/bin/trace \
-    ghcr.io/boschglobal/dse-simer:latest
-        monitor -port 2159
-$ docker run --name simer -i --rm \
-    --volume ./examples/binary:/sim \
-    --env SIMBUS_TRACE_PORT=2159 \
-    ghcr.io/boschglobal/dse-simer:latest
+# Convert a NCodec trace to Vector ASC format:
+$ trace convert --asc --name FR_1 --tx 5 ncodec.bin
+...
+Create measurement file: ncodec_pdu.FR_1.asc
+$ cat  ncodec_pdu.FR_1.asc
+date Tue May 19 02:50:18.743 pm 2026
+base hex  timestamps absolute
+internal events logged
+Begin Triggerblock Tue May 19 02:50:18.743 pm 2026
+        0.0000 Start of measurement
+        0.0065  Fr  1 Tx  1   11  0  1  18 0x00 0x0000 0 0x00 00 01 93 08 03 00 00 00 00 00 00 00
+        0.0165  Fr  1 Tx  3   11  0  1  18 0x00 0x0000 0 0x00 00 01 92 08 02 00 00 00 00 00 00 00
+        0.0265  Fr  1 Tx  5   11  0  1  18 0x00 0x0000 0 0x00 00 01 92 08 04 00 00 00 00 00 00 00
+        0.0315  Fr  1 Tx  6   11  0  1  18 0x00 0x0000 0 0x00 00 01 91 08 02 00 00 00 00 00 00 00
+End Triggerblock
 ```
 
 
 ## Commands
 
-The Trace tool includes the following commands and options:
-
 ```bash
-Trace tools for working with SimBus trace files.
+$ trace --help
+Trace tools for working with SimBus and NCodec trace files.
 
 Usage:
 
-        trace <command> [option] <trace file>
+        trace [--verbose] <command> [option] <trace file>
 
+        trace convert [--csv, --asc] [--name <net name>] [--tx <ecu id>] <trace file>
         trace summary [--short, --long] <trace file>
+
+
+        trace convert --csv simbus.bin
+        trace convert --asc simbus.bin
+        trace convert --asc --name FR_1 --tx 5 ncodec.bin
 
   summary
     Options:
@@ -61,10 +71,67 @@ Usage:
           generate a long summary  (default: false)
       -short *flag.boolValue
           generate a short summary  (default: true)
+  convert
+    Options:
+      -asc *flag.boolValue
+          convert to ASC measurement format (network channels)  (default: false)
+      -csv *flag.boolValue
+          convert to CSV measurement format (scalar channels)  (default: false)
+      -name *flag.stringValue
+          measurement name (NCodec trace only)
+      -tx *flag.uintValue
+          Tx ECU identifier  (default: 0)
 ```
 
-> __Note__: The `trace` command is included with the Simer container image
-(installed to location `/usr/local/bin/trace`).
+> __Note__: The `trace` tool is included in the Simer container image, where it is installed at `/usr/local/bin/trace`.
+A Linux version can also be downloaded from the [ModelC releases](https://github.com/boschglobal/dse.modelc/releases) page.
+
+
+### Convert → CSV
+
+Convert scalar signals from a SimBus trace to a CSV file.
+The output file is written as `<trace>.<channel>.csv`, where `channel` is defined in the simulation (and extracted from the trace).
+
+**Example:**
+
+```bash
+$ simer path/to/simulation --env simbus:SIMBUS_TRACE_FILE=simbus.bin --endtime 0.100
+$ trace convert --csv simbus.bin
+$ cat simbus.scalar.csv
+time,SIG_4,SIG_6,SIG_1,SIG_3,SIG_5,SIG_2
+0.000500,0.0,0.0,1,3,0.0,2
+0.006500,1,3,1,3,0.0,2
+0.016500,1,3,1,3,2,2
+0.020500,1,3,2,6,2,4
+0.026500,1,6,2,6,4,4
+0.031500,2,6,2,6,4,4
+```
+
+
+### Convert → ASC
+
+Convert network messages from a NCodec or SimBus trace to a Vector ASC file.
+The output file is written as `<trace>.<name>.asc`. For NCodec trace files, `<name>` must be specified with `--name`, otherwise the name of the binary signal contained in the SimBus trace is used.
+
+**Example:**
+
+```bash
+$ simer path/to/simulation --env model_name:NCODEC_TRACE_FILE=ncodec.bin --endtime 0.100
+$ trace convert --asc --name FR_1 --tx 5 ncodec.bin
+$ cat ncodec.FR_1.asc
+date Tue May 19 02:50:18.743 pm 2026
+base hex  timestamps absolute
+internal events logged
+Begin Triggerblock Tue May 19 02:50:18.743 pm 2026
+        0.0000 Start of measurement
+        0.0065  Fr  1 Tx  1   11  0  1  18 0x00 0x0000 0 0x00 00 01 93 08 03 00 00 00 00 00 00 00
+        0.0165  Fr  1 Tx  3   11  0  1  18 0x00 0x0000 0 0x00 00 01 92 08 02 00 00 00 00 00 00 00
+        0.0265  Fr  1 Tx  5   11  0  1  18 0x00 0x0000 0 0x00 00 01 92 08 04 00 00 00 00 00 00 00
+        0.0315  Fr  1 Tx  6   11  0  1  18 0x00 0x0000 0 0x00 00 01 91 08 02 00 00 00 00 00 00 00
+End Triggerblock
+```
+
+
 
 
 ### Summary
@@ -144,29 +211,3 @@ scalar_channel:42:0:0::ModelExit
 scalar_channel:42:0:0::ModelExit
 ```
 </details>
-
-
-## Go Package
-
-The Trace tool implements a Visitor API which can be used to implement custom
-trace commands. An example of a custom Visitor is as follows:
-
-```go
-package count
-
-import "github.com/boschglobal/dse.modelc/extra/tools/trace/pkg/trace"
-
-type CountVisitor struct {
-    msgCount    uint32
-    notifyCount uint32
-}
-
-func (c *CountVisitor) VisitChannelMsg(cm trace.ChannelMsg) {
-    c.msgCount += 1
-}
-
-func (c *CountVisitor) VisitNotifyMsg(nm trace.NotifyMsg) {
-    c.msgCount += 1
-    c.notifyCount += 1
-}
-```

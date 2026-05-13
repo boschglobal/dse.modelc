@@ -50,7 +50,7 @@ func (c *CountCommand) Parse(args []string) error {
 func (c *CountCommand) Run() error {
 	var v trace.Visitor = &CountVisitor{}
 	trace := trace.Stream{File: c.traceFile}
-	err := trace.Process(&v)
+	err := trace.Process(v)
 	if err != nil {
 		return err
 	}

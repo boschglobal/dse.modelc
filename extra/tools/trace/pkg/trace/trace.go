@@ -10,19 +10,30 @@ import (
 
 type Visitor interface {
 	VisitNotifyMsg(NotifyMsg)
+	VisitStream(data []byte)
 }
 
 type Flatbuffer interface {
-	Accept(*Visitor)
+	Accept(v Visitor)
 }
 
 type NotifyMsg struct {
 	Msg *notify.NotifyMessage
 }
 
-func (nm NotifyMsg) Accept(v *Visitor) {
+func (nm NotifyMsg) Accept(v Visitor) {
 	if v != nil {
-		(*v).VisitNotifyMsg(nm)
+		v.VisitNotifyMsg(nm)
+	}
+}
+
+type NCodecStream struct {
+	Data []byte
+}
+
+func (s NCodecStream) Accept(v Visitor) {
+	if v != nil {
+		v.VisitStream(s.Data)
 	}
 }
 

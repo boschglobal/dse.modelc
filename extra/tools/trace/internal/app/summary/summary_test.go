@@ -47,7 +47,7 @@ func TestShortSummary(t *testing.T) {
 
 	var v trace.Visitor = &Short{}
 	trace := trace.Stream{File: "../../../testdata/simbus.bin"}
-	err := trace.Process(&v)
+	err := trace.Process(v)
 	assert.Nil(t, err)
 
 	output, _ := capture.StopCapture()
@@ -69,7 +69,7 @@ func TestLongSummary(t *testing.T) {
 
 	var v trace.Visitor = &Long{SignalLookup: map[uint32]string{}}
 	trace := trace.Stream{File: "../../../testdata/simbus.bin"}
-	err := trace.Process(&v)
+	err := trace.Process(v)
 	assert.Nil(t, err)
 
 	output, _ := capture.StopCapture()

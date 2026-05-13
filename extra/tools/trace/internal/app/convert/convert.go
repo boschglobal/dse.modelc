@@ -15,8 +15,11 @@ import (
 type ConvertCommand struct {
 	command.Command
 
-	traceFile string
-	csv       bool
+	traceFile       string
+	csv             bool
+	asc             bool
+	measurementName string // Only used for NCodec traces.
+	txEcuId         uint
 }
 
 func NewConvertCommand(name string) *ConvertCommand {
@@ -26,7 +29,10 @@ func NewConvertCommand(name string) *ConvertCommand {
 			FlagSet: flag.NewFlagSet(name, flag.ExitOnError),
 		},
 	}
-	c.FlagSet().BoolVar(&c.csv, "csv", true, "convert to CSV measurement format")
+	c.FlagSet().BoolVar(&c.csv, "csv", false, "convert to CSV measurement format (scalar channels)")
+	c.FlagSet().BoolVar(&c.asc, "asc", false, "convert to ASC measurement format (network channels)")
+	c.FlagSet().StringVar(&c.measurementName, "name", "", "measurement name (NCodec trace only)")
+	c.FlagSet().UintVar(&c.txEcuId, "tx", 0, "Tx ECU identifier")
 	return c
 }
 
@@ -51,19 +57,39 @@ func (c *ConvertCommand) Parse(args []string) error {
 }
 
 func (c *ConvertCommand) Run() error {
+	if c.csv {
+		if err := c.runCsv(); err != nil {
+			return err
+		}
+	}
+	if c.asc {
+		if err := c.runAsc(); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (c *ConvertCommand) runCsv() error {
 	var v trace.Visitor
 	trace := trace.Stream{File: c.traceFile}
 
-	// Select and configure the specified visitor.
-	if c.csv {
-		csv := NewCsv(c.traceFile)
-		defer csv.Close()
-		v = csv
-	} else {
-		return fmt.Errorf("trace convert visitor not specified")
-	}
+	// Configure and run the CSV visitor.
+	csv := NewCsv(c.traceFile)
+	defer csv.Close()
+	v = csv
+	err := trace.Process(v)
+	return err
+}
 
-	// Process the trace.
-	err := trace.Process(&v)
+func (c *ConvertCommand) runAsc() error {
+	var v trace.Visitor
+	trace := trace.Stream{File: c.traceFile}
+
+	// Configure and run the CSV visitor.
+	asc := NewAsc(c.traceFile, c.measurementName, uint32(c.txEcuId))
+	defer asc.Close()
+	v = asc
+	err := trace.Process(v)
 	return err
 }

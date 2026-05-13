@@ -23,6 +23,10 @@ cmd: $(CLI_TOOLS)
 $(CLI_TOOLS): $(SRC)
 	go build $(GOFLAGS) -o $@ ./cmd/$(subst $(BIN_DIR)/,,$@)
 
+run:
+#	bin/trace --verbose convert --csv testdata/simbus.bin
+#	bin/trace --verbose convert --asc testdata/simbus_pdu.bin
+	bin/trace --verbose convert --asc --name foo --tx 5 testdata/ncodec_pdu.bin
 
 .PHONY: test
 test:
@@ -32,14 +36,8 @@ test:
 
 .PHONY: lint
 lint:
-	go fmt -x ./...
-	PATH=~/go/bin:$$PATH; goimports -w -v .
-	docker run -t --rm \
-		-v $$(pwd):/app \
-		-v ~/.cache/golangci-lint/v1.54.2:/root/.cache \
-		-w /app \
-		golangci/golangci-lint:latest \
-		golangci-lint run -v ./...
+	golangci-lint fmt ./...
+	golangci-lint run ./... --fix
 
 
 .PHONY: clean

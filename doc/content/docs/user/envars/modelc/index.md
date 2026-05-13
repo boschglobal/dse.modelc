@@ -8,19 +8,27 @@ github_repo: "https://github.com/boschglobal/dse.modelc"
 github_subdir: "doc"
 ---
 
-## Tool Specific Environment Variables
+## Tool Specific
 
 ### ModelC
 
 | Variable                      | CLI Option        | Default |
 | ----------------------------- | ----------------- | ------- |
-| `NCODEC_TRACE_LOG`            | _N/A_ | _None_    |
-| `NCODEC_TRACE_{bus}_{bus_id}` | _N/A_ | _None_    |
-| `NCODEC_TRACE_PDU_{swc_id}`   | _N/A_   | _None_  |
+| `NCODEC_TRACE_FILE`           | _N/A_             | _None_ (trace disabled, path to trace file) |
+| `NCODEC_TRACE_LOG`            | _N/A_             | _None_    |
+| `NCODEC_TRACE_{bus}_{bus_id}` | _N/A_             | _None_    |
+| `NCODEC_TRACE_PDU_{swc_id}`   | _N/A_             | _None_  |
 | `SIMBUS_LOGLEVEL`             | `--logger`        | `4` (LOG_NOTICE) |
 | `SIMBUS_TRANSPORT`            | `--transport`     | `redispubsub` |
 | `SIMBUS_URI`                  | `--uri`           | `redis://localhost:6379` |
 | `SIMBUS_TIMEOUT`              | `--timeout`       | `60` (seconds) |
+
+
+### NCodec
+
+| Variable                      | CLI Option        | Default |
+| ----------------------------- | ----------------- | ------- |
+| `NCODEC_TRACE_FILE`           | _N/A_             | _None_ (trace disabled, path to trace file) |
 
 
 ### SimBus
@@ -36,9 +44,9 @@ github_subdir: "doc"
 | `SIMBUS_TIMEOUT`    | `--timeout`   | `60` (seconds) |
 
 
-### Examples
+## Examples
 
-#### Benchmark
+### Benchmark
 
 | Variable           | CLI Option    | Default |
 | ------------------ | ------------- | ------- |
@@ -49,7 +57,7 @@ github_subdir: "doc"
 | `TAG`              | _N/A_         | _None_ (a log prefix, configure as a string) |
 
 
-#### Block
+### Block
 
 | Variable           | CLI Option    | Default |
 | ------------------ | ------------- | ------- |
@@ -57,7 +65,7 @@ github_subdir: "doc"
 | `MODEL_ID`         | _N/A_         | `1`     |
 
 
-#### CSV
+### CSV
 
 | Variable           | CLI Option    | Default |
 | ------------------ | ------------- | ------- |

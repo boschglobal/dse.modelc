@@ -56,8 +56,9 @@ func (s Stream) Messages() iter.Seq[Flatbuffer] {
 			length := flatbuffers.GetSizePrefix(b, 0)
 
 			// Load the rest of the flatbuffer.
-			flatbuffer := make([]byte, length)
-			readLen, err = f.Read(flatbuffer)
+			buf := make([]byte, flatbuffers.SizeUint32+length)
+			copy(buf[:flatbuffers.SizeUint32], b)
+			readLen, err = f.Read(buf[flatbuffers.SizeUint32:])
 			check(err)
 			if uint32(readLen) != length {
 				fmt.Printf("Incomplete flatbuffer, read len %d (expected %d)", readLen, length)
@@ -65,13 +66,22 @@ func (s Stream) Messages() iter.Seq[Flatbuffer] {
 			}
 
 			// Create and yield the message.
-			switch id := flatbuffers.GetBufferIdentifier(flatbuffer); id {
+			// Create and yield the message.
+			switch id := flatbuffers.GetBufferIdentifier(buf[flatbuffers.SizeUint32:]); id {
 			case "SBNO":
-				m := NotifyMsg{}
-				m.Msg = notify.GetRootAsNotifyMessage(flatbuffer, 0)
+				m := NotifyMsg{
+					Msg: notify.GetRootAsNotifyMessage(buf[flatbuffers.SizeUint32:], 0),
+				}
 				if !yield(m) {
 					return
 				}
+
+			case "SPDU":
+				m := NCodecStream{Data: buf}
+				if !yield(m) {
+					return
+				}
+
 			default:
 				fmt.Printf("unsupported flatbuffer, file_identifier: %s", id)
 			}
@@ -79,7 +89,7 @@ func (s Stream) Messages() iter.Seq[Flatbuffer] {
 	}
 }
 
-func (s Stream) Process(v *Visitor) error {
+func (s Stream) Process(v Visitor) error {
 	for m := range s.Messages() {
 		m.Accept(v)
 	}

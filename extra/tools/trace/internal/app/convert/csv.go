@@ -36,6 +36,10 @@ func (c *Csv) Close() {
 	}
 }
 
+func (c *Csv) VisitStream(data []byte) {
+
+}
+
 func (c *Csv) VisitNotifyMsg(nm trace.NotifyMsg) {
 	// Embedded ModelRegister message.
 	if mReg := nm.Msg.ModelRegister(nil); mReg != nil {
@@ -171,7 +175,7 @@ func (c *channel) writeHeader() {
 	}
 	c.sample = make([]string, len(c.header))
 	for i := range c.sample {
-		c.sample[i] = "0.0"
+		c.sample[i] = "0"
 	}
 }
 

@@ -66,6 +66,6 @@ func (c *SummaryCommand) Run() error {
 	}
 
 	// Process the trace.
-	err := trace.Process(&v)
+	err := trace.Process(v)
 	return err
 }

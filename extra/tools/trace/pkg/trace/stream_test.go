@@ -20,11 +20,15 @@ func (s *TestVisitor) VisitNotifyMsg(nm NotifyMsg) {
 	fmt.Println("Visit Notify Message")
 }
 
+func (s *TestVisitor) VisitStream(data []byte) {
+
+}
+
 func TestStreamIteratorVisitor(t *testing.T) {
 	var v Visitor = &TestVisitor{}
 	trace := Stream{stack: []Flatbuffer{NotifyMsg{}}}
 	for m := range trace.Messages() {
-		m.Accept(&v)
+		m.Accept(v)
 	}
 
 	assert.Len(t, v.(*TestVisitor).monitor, 1)
@@ -34,7 +38,7 @@ func TestStreamIteratorVisitor(t *testing.T) {
 func TestStreamProcess(t *testing.T) {
 	var v Visitor = &TestVisitor{}
 	trace := Stream{stack: []Flatbuffer{NotifyMsg{}}}
-	err := trace.Process(&v)
+	err := trace.Process(v)
 
 	assert.Nil(t, err)
 	assert.Len(t, v.(*TestVisitor).monitor, 1)
@@ -44,7 +48,7 @@ func TestStreamProcess(t *testing.T) {
 func TestSimBusStream(t *testing.T) {
 	var v Visitor = &TestVisitor{}
 	trace := Stream{File: "../../testdata/simbus.bin"}
-	err := trace.Process(&v)
+	err := trace.Process(v)
 
 	assert.Nil(t, err)
 	assert.Len(t, v.(*TestVisitor).monitor, 20)

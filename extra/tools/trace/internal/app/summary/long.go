@@ -17,6 +17,10 @@ type Long struct {
 	SignalLookup map[uint32]string
 }
 
+func (l *Long) VisitStream(data []byte) {
+
+}
+
 func (l *Long) VisitNotifyMsg(nm trace.NotifyMsg) {
 	direction := func() string {
 		if nm.Msg.ModelUidLength() > 0 {
