@@ -23,12 +23,27 @@ type NetworkMeasurement struct {
 	filename string
 	file     *os.File
 	locked   bool // Indicates the measurement has started and file is created.
+
+	config map[uint16]frameTable
+}
+
+type frameTable struct {
+	table map[uint16]frameConfig
+}
+
+type frameConfig struct {
+	slotId          uint16
+	baseCycle       uint8
+	cycleRep        uint8
+	frameTableIndex uint16
+	channel         uint8
 }
 
 func NewNetworkMeasurement(name string, traceFile string, txEcuId uint32) *NetworkMeasurement {
 	n := &NetworkMeasurement{
 		name:    name,
 		txEcuId: txEcuId,
+		config:  map[uint16]frameTable{},
 	}
 
 	dir := filepath.Dir(traceFile)
@@ -38,6 +53,39 @@ func NewNetworkMeasurement(name string, traceFile string, txEcuId uint32) *Netwo
 	n.filename = filepath.Join(dir, stem+"."+name+".asc")
 
 	return n
+}
+
+func (n *NetworkMeasurement) indexFlexRayFrameTable(metadata *pdu.FlexrayMetadata) error {
+	var nodeIdent pdu.FlexrayNodeIdentifier
+	metadata.NodeIdent(&nodeIdent)
+	tbl := new(flatbuffers.Table)
+	if !metadata.Metadata(tbl) {
+		return fmt.Errorf("missing FlexRay config metadata")
+	}
+	config := new(pdu.FlexrayConfig)
+	config.Init(tbl.Bytes, tbl.Pos)
+
+	if _, ok := n.config[nodeIdent.EcuId()]; !ok {
+		n.config[nodeIdent.EcuId()] = frameTable{
+			table: make(map[uint16]frameConfig),
+		}
+	}
+	table := n.config[nodeIdent.EcuId()].table
+
+	for i := 0; i < config.FrameTableLength(); i++ {
+		var lpduConfig pdu.FlexrayLpduConfig
+		if !config.FrameTable(&lpduConfig, i) {
+			continue
+		}
+		table[lpduConfig.FrameTableIndex()] = frameConfig{
+			slotId:          lpduConfig.SlotId(),
+			baseCycle:       lpduConfig.BaseCycle(),
+			cycleRep:        lpduConfig.CycleRepetition(),
+			frameTableIndex: lpduConfig.FrameTableIndex(),
+			channel:         uint8(lpduConfig.Channel()),
+		}
+	}
+	return nil
 }
 
 const ascHeader = `date %s
@@ -166,10 +214,19 @@ func (n *NetworkMeasurement) writeFlexRayEvent(time float64, msg *pdu.Pdu) error
 	metadata := new(pdu.FlexrayMetadata)
 	metadata.Init(tbl.Bytes, tbl.Pos)
 
-	// LPDU
-	if metadata.MetadataType() != pdu.FlexrayMetadataTypeLpdu {
+	switch metadata.MetadataType() {
+	case pdu.FlexrayMetadataTypeConfig:
+		if err := n.indexFlexRayFrameTable(metadata); err != nil {
+			return fmt.Errorf("index FlexRay config: %w", err)
+		}
+		return nil
+	case pdu.FlexrayMetadataTypeLpdu:
+		break
+	default:
 		return nil
 	}
+
+	// LPDU
 	lpduTbl := new(flatbuffers.Table)
 	if !metadata.Metadata(lpduTbl) {
 		return fmt.Errorf("missing FlexRay LPDU metadata")
@@ -177,6 +234,23 @@ func (n *NetworkMeasurement) writeFlexRayEvent(time float64, msg *pdu.Pdu) error
 	lpdu := new(pdu.FlexrayLpdu)
 	lpdu.Init(lpduTbl.Bytes, lpduTbl.Pos)
 	debugPrintFr(msg, lpdu)
+
+	var nodeIdent pdu.FlexrayNodeIdentifier
+	metadata.NodeIdent(&nodeIdent)
+	frameTable, ok := n.config[nodeIdent.EcuId()]
+	if !ok {
+		slog.Debug(fmt.Sprintf("missing FlexRay frame table for ecuId=%d", nodeIdent.EcuId()))
+		return nil
+	}
+	config, ok := frameTable.table[lpdu.FrameConfigIndex()]
+	if !ok {
+		slog.Debug(fmt.Sprintf(
+			"missing FlexRay frame config for ecuId=%d frameConfigIndex=%d",
+			nodeIdent.EcuId(),
+			lpdu.FrameConfigIndex(),
+		))
+		return nil
+	}
 
 	// ASC Event
 	dir := ""
@@ -199,10 +273,9 @@ func (n *NetworkMeasurement) writeFlexRayEvent(time float64, msg *pdu.Pdu) error
 	default:
 		return nil
 	}
-	ch := 1              // FIXME: find the channel, base, and rep from the config table.
-	line := fmt.Sprintf( // TODO: determine the flags?
+	line := fmt.Sprintf(
 		"%14.4f  Fr  %d %s %2d %4d %2d %2d %3x 0x00 0x0000 0 0x00 %s\n",
-		time, ch, dir, lpdu.Cycle(), msg.Id(), 0, 1, msg.PayloadLength(),
+		time, config.channel, dir, lpdu.Cycle(), msg.Id(), config.baseCycle, config.cycleRep, msg.PayloadLength(),
 		formatPayload(msg.PayloadBytes()))
 	_, err := n.file.WriteString(line)
 	return err

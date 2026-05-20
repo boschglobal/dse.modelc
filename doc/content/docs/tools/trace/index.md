@@ -46,6 +46,46 @@ Begin Triggerblock Tue May 19 02:50:18.743 pm 2026
 End Triggerblock
 ```
 
+## Installation
+
+### Linux
+
+```bash
+# Direct download.
+VERSION="2.3.18"
+TRACE_URL="https://github.com/boschglobal/dse.modelc/releases/download/v${VERSION}/trace-${VERSION}-linux-amd64.tar.gz"
+curl -L ${TRACE_URL} | tar -xz && chmod +x trace
+
+# Long form, suitable for automation.
+VERSION="2.3.18"
+TRACE_URL="https://github.com/boschglobal/dse.modelc/releases/download/v${VERSION}/trace-${VERSION}-linux-amd64.tar.gz"
+curl -L ${TRACE_URL} -o trace.tar.gz
+tar -xzf trace.tar.gz
+sudo install -m 755 trace /usr/local/bin/trace
+```
+
+### Windows
+
+```powershell
+$VERSION = "2.3.18"
+$TRACE_URL = "https://github.com/boschglobal/dse.modelc/releases/download/v$VERSION/trace-$VERSION-windows-amd64.zip"
+curl.exe -L $TRACE_URL -o trace.zip
+Expand-Archive -Path trace.zip -DestinationPath . -Force
+```
+
+### Container
+
+```bash
+# Run the container directly.
+SIMER="ghcr.io/boschglobal/dse-simer:latest"
+docker run --rm -v $PWD:$PWD -w $PWD --entrypoint "" ${SIMER} /usr/local/bin/trace
+
+# Install from the container.
+docker create --name trace-extract ghcr.io/boschglobal/dse-simer:latest
+docker cp trace-extract:/usr/local/bin/trace ./trace
+docker rm trace-extract
+chmod +x ./trace
+```
 
 ## Commands
 

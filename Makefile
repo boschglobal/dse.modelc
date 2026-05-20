@@ -23,11 +23,11 @@ DSE_CLIB_VERSION ?= 1.0.51
 export DSE_CLIB_URL ?= $(DSE_CLIB_REPO)/archive/refs/tags/v$(DSE_CLIB_VERSION).zip
 
 DSE_SCHEMA_REPO ?= https://github.com/boschglobal/dse.schemas
-DSE_SCHEMA_VERSION ?= 1.3.1
+DSE_SCHEMA_VERSION ?= 1.3.2
 export DSE_SCHEMA_URL ?= $(DSE_SCHEMA_REPO)/releases/download/v$(DSE_SCHEMA_VERSION)/dse-schemas.tar.gz
 
 DSE_NCODEC_REPO ?= https://github.com/boschglobal/dse.ncodec
-DSE_NCODEC_VERSION ?= 1.2.4
+DSE_NCODEC_VERSION ?= 1.2.5
 export DSE_NCODEC_URL ?= $(DSE_NCODEC_REPO)/archive/refs/tags/v$(DSE_NCODEC_VERSION).zip
 
 
@@ -117,7 +117,6 @@ help:
 	@echo "  simer         Build the Simer image."
 	@echo "  tools         Build all tools."
 	@echo "  test          Run tests in all project subdirectories."
-	@echo "  test_e2e      Run end-to-end tests via testscript."
 	@echo "  arch          Build each supported architecture."
 	@echo "  generate      Build documentation and other generated content."
 	@echo "  clean         Clean build artifacts in all subdirectories and remove out/."
@@ -247,8 +246,8 @@ ifeq ($(PACKAGE_ARCH), linux-amd64)
 	@-docker kill gateway 2>/dev/null ; true
 	@set -eu; for t in $(TESTSCRIPT_E2E_FILES) ;\
 	do \
-		echo "Running E2E Test: $$t" ;\
 		export ENTRYWORKDIR=$$(mktemp -d) ;\
+		echo "Running E2E Test: $$t  ($${ENTRYWORKDIR})" ;\
 		docker run -i --rm \
 			-e ENTRYHOSTDIR=$(HOST_DOCKER_WORKSPACE) \
 			-e ENTRYWORKDIR=$${ENTRYWORKDIR} \

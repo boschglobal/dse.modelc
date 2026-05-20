@@ -139,21 +139,31 @@ jobs:
 
   tools:
     runs-on: [ubuntu-latest]
-    needs: [build]
+    strategy:
+      matrix:
+        include:
+          - package_arch: linux-amd64
+            build_cmd: make && make test
+            artifact_name: trace-tool-linux
+            artifact_path: extra/tools/trace/bin/trace
+          - package_arch: windows-x64
+            build_cmd: make win
+            artifact_name: trace-tool-windows
+            artifact_path: extra/tools/trace/bin/trace.exe
     steps:
       - name: Checkout
         uses: actions/checkout@v5
 
       - name: Build tools
+        shell: bash
         run: |
           cd extra/tools/trace
-          make
-          make test
+          ${{ matrix.build_cmd }}
 
       - uses: actions/upload-artifact@v4
         with:
-          name: trace-tool
-          path: extra/tools/trace/bin/trace
+          name: ${{ matrix.artifact_name }}
+          path: ${{ matrix.artifact_path }}
           retention-days: 1
 
   release:
@@ -471,22 +481,34 @@ jobs:
     permissions:
       contents: write
     runs-on: [ubuntu-latest]
-    needs: [release]
+    needs: [release, tools]
     steps:
       - uses: actions/download-artifact@v5
         with:
-          name: trace-tool
-          path: /tmp/trace
+          name: trace-tool-linux
+          path: /tmp/trace/linux
+
+      - uses: actions/download-artifact@v5
+        with:
+          name: trace-tool-windows
+          path: /tmp/trace/windows
 
       - name: Prepare
         run: |
-          cd /tmp/trace
-          tar -czf trace-${{ github.ref_name }}-linux-amd64.tar.gz trace
+          version="${GITHUB_REF_NAME#v}"
+
+          cd /tmp/trace/linux
+          tar -czf "/tmp/trace/trace-${version}-linux-amd64.tar.gz" trace
+
+          cd /tmp/trace/windows
+          zip -j "/tmp/trace/trace-${version}-windows-x64.zip" trace.exe
 
       - name: Upload Release Asset
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           tag: ${{ github.ref_name }}
         run: |
+          version="${tag#v}"
           gh release upload "$tag" \
-            /tmp/trace/trace-${{ github.ref_name }}-linux-amd64.tar.gz
+            /tmp/trace/trace-${version}-linux-amd64.tar.gz \
+            /tmp/trace/trace-${version}-windows-x64.zip
