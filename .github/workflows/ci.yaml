@@ -483,6 +483,12 @@ jobs:
     runs-on: [ubuntu-latest]
     needs: [release, tools]
     steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+
       - uses: actions/download-artifact@v5
         with:
           name: trace-tool-linux
@@ -494,21 +500,22 @@ jobs:
           path: /tmp/trace/windows
 
       - name: Prepare
+        env:
+          tag: ${{ github.ref_name }}
         run: |
-          version="${GITHUB_REF_NAME#v}"
-
+          VERSION="${tag#v}"
+          echo "VERSION=${VERSION}"
           cd /tmp/trace/linux
-          tar -czf "/tmp/trace/trace-${version}-linux-amd64.tar.gz" trace
-
+          tar -czf "/tmp/trace/trace-${VERSION}-linux-amd64.tar.gz" trace
           cd /tmp/trace/windows
-          zip -j "/tmp/trace/trace-${version}-windows-x64.zip" trace.exe
+          zip -j "/tmp/trace/trace-${VERSION}-windows-x64.zip" trace.exe
 
       - name: Upload Release Asset
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           tag: ${{ github.ref_name }}
         run: |
-          version="${tag#v}"
+          VERSION="${tag#v}"
           gh release upload "$tag" \
-            /tmp/trace/trace-${version}-linux-amd64.tar.gz \
-            /tmp/trace/trace-${version}-windows-x64.zip
+            /tmp/trace/trace-${VERSION}-linux-amd64.tar.gz \
+            /tmp/trace/trace-${VERSION}-windows-x64.zip
