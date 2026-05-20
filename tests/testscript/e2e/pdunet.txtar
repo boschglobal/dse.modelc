@@ -3,8 +3,6 @@
 
 env NAME_FRNET=pdunet_inst
 env SIM=dse/modelc/build/_out/examples/pdunet/frnet
-env SIMBUS_TRACEFILE=data/simbus.bin
-env NCODEC_TRACEFILE=data/ncodec.bin
 exec sh -e $WORK/test.sh
 
 stderr 'Using Valgrind'
@@ -97,10 +95,6 @@ stdout 'step\[0.016000\]: 1=1, 2=2, 3=3, 4=1, 5=2, 6=3'
 stdout 'step\[0.020000\]: 1=2, 2=4, 3=6, 4=1, 5=2, 6=3'
 stdout 'step\[0.031000\]: 1=2, 2=4, 3=6, 4=2, 5=4, 6=6'
 
-exists /repo/$SIM/$SIMBUS_TRACEFILE
-exists /repo/$SIM/$NCODEC_TRACEFILE
-cp /repo/$SIM/$SIMBUS_TRACEFILE /workdir
-cp /repo/$SIM/$NCODEC_TRACEFILE /workdir
 
 
 # TEST: sec example
@@ -144,7 +138,5 @@ SIMER="${SIMER:-ghcr.io/boschglobal/dse-simer:latest}"
 docker run --name simer -i --rm -v $ENTRYHOSTDIR/$SIM:/sim \
     $SIMER -valgrind $NAME_FRNET \
         -env $NAME_FRNET:SIMBUS_LOGLEVEL=3 \
-        -env $NAME_FRNET:NCODEC_TRACE_FILE=$NCODEC_TRACEFILE \
         -env NCODEC_TRACE_LOG=1 \
-        -env simbus:SIMBUS_TRACE_FILE=$SIMBUS_TRACEFILE \
         -endtime $END_TIME
