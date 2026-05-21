@@ -27,7 +27,7 @@ DSE_SCHEMA_VERSION ?= 1.3.2
 export DSE_SCHEMA_URL ?= $(DSE_SCHEMA_REPO)/releases/download/v$(DSE_SCHEMA_VERSION)/dse-schemas.tar.gz
 
 DSE_NCODEC_REPO ?= https://github.com/boschglobal/dse.ncodec
-DSE_NCODEC_VERSION ?= 1.2.5
+DSE_NCODEC_VERSION ?= 1.2.6
 export DSE_NCODEC_URL ?= $(DSE_NCODEC_REPO)/archive/refs/tags/v$(DSE_NCODEC_VERSION).zip
 
 
@@ -109,7 +109,7 @@ DSE_CLANG_FORMAT_CMD := docker run -it --rm \
 	${DSE_CLANG_FORMAT_IMAGE}
 
 
-default: help
+default: build
 
 help:
 	@echo "Available targets:"

@@ -123,9 +123,6 @@ Usage:
           Tx ECU identifier  (default: 0)
 ```
 
-> __Note__: The `trace` tool is included in the Simer container image, where it is installed at `/usr/local/bin/trace`.
-A Linux version can also be downloaded from the [ModelC releases](https://github.com/boschglobal/dse.modelc/releases) page.
-
 
 ### Convert → CSV
 
@@ -151,13 +148,14 @@ time,SIG_4,SIG_6,SIG_1,SIG_3,SIG_5,SIG_2
 ### Convert → ASC
 
 Convert network messages from a NCodec or SimBus trace to a Vector ASC file.
-The output file is written as `<trace>.<name>.asc`. For NCodec trace files, `<name>` must be specified with `--name`, otherwise the name of the binary signal contained in the SimBus trace is used.
+The output file is written as `<trace>.<name>.asc`.
+For NCodec trace files, `<name>` must be specified with `--name`.
 
 **Example:**
 
 ```bash
-$ simer path/to/simulation --env model_name:NCODEC_TRACE_FILE=ncodec.bin --endtime 0.100
-$ trace convert --asc --name FR_1 --tx 5 ncodec.bin
+$ simer path/to/simulation --env model_name:NCODEC_TRACE_PATH=. --endtime 0.100
+$ trace convert --asc --name FR_1 --tx 5 ncodec.5-0-1.bin
 $ cat ncodec.FR_1.asc
 date Tue May 19 02:50:18.743 pm 2026
 base hex  timestamps absolute

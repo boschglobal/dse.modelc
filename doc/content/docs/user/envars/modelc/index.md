@@ -14,7 +14,7 @@ github_subdir: "doc"
 
 | Variable                      | CLI Option        | Default |
 | ----------------------------- | ----------------- | ------- |
-| `NCODEC_TRACE_FILE`           | _N/A_             | _None_ (trace disabled, path to trace file) |
+| `NCODEC_TRACE_PATH`           | _N/A_             | _None_ (trace disabled, path to write trace files) |
 | `NCODEC_TRACE_LOG`            | _N/A_             | _None_    |
 | `NCODEC_TRACE_{bus}_{bus_id}` | _N/A_             | _None_    |
 | `NCODEC_TRACE_PDU_{swc_id}`   | _N/A_             | _None_  |
@@ -28,7 +28,7 @@ github_subdir: "doc"
 
 | Variable                      | CLI Option        | Default |
 | ----------------------------- | ----------------- | ------- |
-| `NCODEC_TRACE_FILE`           | _N/A_             | _None_ (trace disabled, path to trace file) |
+| `NCODEC_TRACE_PATH`           | _N/A_             | _None_ (trace disabled, path to write trace files) |
 
 
 ### SimBus
