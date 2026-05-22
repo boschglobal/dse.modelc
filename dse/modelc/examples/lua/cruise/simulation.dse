@@ -1,4 +1,4 @@
-simulation arch=linux-x64 endtime=0.1
+simulation arch=linux-x64
 channel physical
 
 uses
@@ -12,3 +12,4 @@ channel physical scalar_vector
 file cruise.yaml cruise.yaml
 file lua/controller.lua controller.lua
 file lua/plant.lua plant.lua
+file lua/driver.lua driver.lua

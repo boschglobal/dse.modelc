@@ -1,5 +1,5 @@
 <!--
-Copyright 2025 Robert Bosch GmbH
+Copyright 2026 Robert Bosch GmbH
 
 SPDX-License-Identifier: Apache-2.0
 -->
@@ -69,45 +69,37 @@ dse/modelc/build/_out/
 ### Example: Cruise Control
 
 ```bash
-DSE_BUILDER_IMAGE=ghcr.io/boschglobal/dse-builder:latest
-DSE_SIMER_IMAGE=ghcr.io/boschglobal/dse-simer:latest
-export TASK_X_REMOTE_TASKFILES=1
+git clone https://github.com/boschglobal/dse.modelc.git
+cd dse.modelc; make
+cd dse/modelc/build/_out/examples/lua/cruise
+
+# Setup the DSE environment:
+source <(curl -fsSL https://raw.githubusercontent.com/boschglobal/dse.sdp/main/setup.sh)
 
 # Build the simulation:
-docker run -it --rm --user $(id -u):$(id -g) -v $(pwd):/workdir ${DSE_BUILDER_IMAGE} simulation.dse
+dse-builder simulation.dse
 task -y -t out/Taskfile.yml
 
 # Run the simulation:
-docker run -it --rm -v $(pwd)/out/sim:/sim ${DSE_SIMER_IMAGE}
+dse-simer -endtime 10.0
 
-# Convert the measurement:
-
-
+# Extract measurement files from the trace:
+dse-trace convert --csv data/simbus.bin
 ```
 
 
-
-
-```bash
-# Get the repo.
-$ git clone https://github.com/boschglobal/dse.modelc.git
-$ cd dse.modelc
-
-# Setup Simer.
-$ export DSE_SIMER_IMAGE=ghcr.io/boschglobal/dse-simer:latest
-$ simer() { ( cd "$1" && shift && docker run -it --rm -v $(pwd):/sim $DSE_SIMER_IMAGE "$@"; ) }
-
-# Build.
-$ make
-```
-
-
-### Model and Library API examples
+### Example: Model Library API
 
 ```bash
-# Run the Lua Model example.
-$ simer dse/modelc/build/_out/examples/lua/model
+git clone https://github.com/boschglobal/dse.modelc.git
+cd dse.modelc; make
 
-# Run the Lua Model API example.
-$ simer dse/modelc/build/_out/examples/lua/modellib_api
+# Setup the DSE environment:
+source <(curl -fsSL https://raw.githubusercontent.com/boschglobal/dse.sdp/main/setup.sh)
+
+# Run the Lua Model example:
+dse-simer dse/modelc/build/_out/examples/lua/model
+
+# Run the Lua Model API example:
+dse-simer dse/modelc/build/_out/examples/lua/modellib_api
 ```

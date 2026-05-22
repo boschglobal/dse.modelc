@@ -18,6 +18,7 @@ spec:
     - signal: speed_error_d
 
     # Parameter signals.
+    - signal: driver_target_speed
     - signal: controller_kp
     - signal: controller_ki
     - signal: controller_kd

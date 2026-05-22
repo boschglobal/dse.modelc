@@ -6,9 +6,11 @@ package.path = package.path .. ";./model/cruise/lua/?.lua;./model/cruise/lua/?/i
 
 local Controller = require("controller")
 local Plant = require("plant")
+local Driver = require("driver")
 
 local controller
 local plant
+local driver
 
 function model_create()
     -- PID controller.
@@ -67,6 +69,25 @@ function model_create()
     plant:write_p()
     plant:write_y()
 
+    -- Driver target speed command.
+    driver = Driver.new(model, {
+        name = "Driver",
+        p = {
+            TARGET_SPEED = 30.0,
+        },
+    })
+    driver:bind_signals({
+        y = {
+            TARGET_SPEED = "target_speed",
+        },
+        p = {
+            TARGET_SPEED = "driver_target_speed",
+        },
+    }, "scalar_vector")
+    driver:init()
+    driver:write_p()
+    driver:write_y()
+
     controller:print_parameters()
     plant:print_parameters()
 
@@ -80,9 +101,10 @@ function model_step()
     local dt = model:step_size()
     model:log_notice("model_step() @ %f", model:model_time())
 
-    controller:read_u()
-    plant:read_u()
+    driver:update(dt)
+    driver:write_y()
 
+    controller:read_u()
     controller:update(dt)
     controller:write_y()
 
@@ -90,6 +112,7 @@ function model_step()
     plant:update(dt)
     plant:write_y()
 
+    driver:print_values()
     controller:print_values()
     plant:print_values()
 
