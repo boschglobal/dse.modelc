@@ -142,7 +142,10 @@ COPY build/stage/licenses /licenses
 # ==========================
 # Run docker with --volume parameter to map the simulation folder into /sim.
 WORKDIR /sim
-RUN printf 'precedence ::ffff:0:0/96  100\n' >> /etc/gai.conf
 COPY build/package/entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 ENTRYPOINT ["/entrypoint.sh"]
+
+# FIXME this change does not work in E2E tests.
+#
+#RUN printf 'precedence ::ffff:0:0/96  100\n' >> /etc/gai.conf

@@ -20,13 +20,27 @@ if [ "$(id -u simer)" != "$USER_ID" ]; then
     chown -R "$USER_ID:$GROUP_ID" /home/simer || true
 fi
 
+# Remove the IP6 localhost entry from /etc/hosts.
+sed 's/^::1.*localhost/::1\tip6-localhost/g' /etc/hosts > /etc/hosts.tmp
+cat /etc/hosts.tmp > /etc/hosts
+
 # Change to the SIM_PATH if specified.
 if [ -n "$SIM_PATH" ]; then cd $SIM_PATH; fi
 
 # Run the SIMER command.
 SIMER_CMD="$SIMER_EXE"
-if [ "$(id -u)" -eq 0 ]; then
-    exec gosu simer $SIMER_CMD "$@"
-else
-    exec $SIMER_CMD "$@"
-fi
+exec gosu simer $SIMER_CMD "$@"
+
+
+# FIXME this change does not work in E2E tests.
+#
+# # Change to the SIM_PATH if specified.
+# if [ -n "$SIM_PATH" ]; then cd $SIM_PATH; fi
+
+# # Run the SIMER command.
+# SIMER_CMD="$SIMER_EXE"
+# if [ "$(id -u)" -eq 0 ]; then
+#     exec gosu simer $SIMER_CMD "$@"
+# else
+#     exec $SIMER_CMD "$@"
+# fi
