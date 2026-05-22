@@ -196,6 +196,10 @@ set(DSE_MODELC_PUBLIC_HEADERS
     runtime.h
     schema.h
 )
+set(DSE_LUA_MODEL_DIR "model/lua")
+file(GLOB_RECURSE DSE_LUA_MODEL_FILES
+    "${DSE_LUA_MODEL_DIR}/*.lua"
+)
 add_subdirectory(adapter)
 add_subdirectory(controller)
 add_subdirectory(model)
@@ -355,6 +359,14 @@ install(
         ${DSE_MODELC_PUBLIC_HEADERS}
     DESTINATION
         ${CMAKE_INSTALL_INCLUDEDIR}/dse/modelc
+    COMPONENT
+        modelc
+)
+install(
+    DIRECTORY
+        ${DSE_LUA_MODEL_DIR}/
+    DESTINATION
+        ${CMAKE_INSTALL_DATADIR}/lua/5.4
     COMPONENT
         modelc
 )

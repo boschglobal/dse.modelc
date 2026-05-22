@@ -1,0 +1,26 @@
+---
+kind: SignalGroup
+metadata:
+  name: cruise
+  labels:
+    channel: scalar_vector
+    model: cruise
+spec:
+  signals:
+    # Control signals.
+    - signal: target_speed
+    - signal: vehicle_speed
+    - signal: throttle_cmd
+
+    # Internal signals.
+    - signal: speed_error
+    - signal: speed_error_i
+    - signal: speed_error_d
+
+    # Parameter signals.
+    - signal: controller_kp
+    - signal: controller_ki
+    - signal: controller_kd
+    - signal: plant_tau
+    - signal: plant_gain
+    - signal: plant_init_speed

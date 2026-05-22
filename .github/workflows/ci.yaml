@@ -438,12 +438,15 @@ jobs:
           (cd sandbox/${{ env.package_name }}-linux-i386-sandbox; tar xzf sandbox_out.tar.gz)
           mkdir -p extra/tools/simer/build/stage/bin
           mkdir -p extra/tools/simer/build/stage/lib
+          mkdir -p extra/tools/simer/build/stage/share
           mkdir -p extra/tools/simer/build/stage/lib32
           mkdir -p extra/tools/simer/build/stage/libx32
 
           cp sandbox/${{ env.package_name }}-linux-amd64-sandbox/${{ env.build_dir }}/_out/bin/simbus extra/tools/simer/build/stage/bin/simbus
           cp sandbox/${{ env.package_name }}-linux-amd64-sandbox/${{ env.build_dir }}/_out/bin/modelc extra/tools/simer/build/stage/bin/modelc
           cp sandbox/${{ env.package_name }}-linux-amd64-sandbox/${{ env.build_dir }}/_out/lib/libmodelc.so extra/tools/simer/build/stage/lib/libmodelc.so
+          cp -r sandbox/${{ env.package_name }}-linux-amd64-sandbox/${{ env.build_dir }}/_out/share/lua -t extra/tools/simer/build/stage/share
+          cp -r sandbox/${{ env.package_name }}-linux-amd64-sandbox/${{ env.build_dir }}/_out/licenses -t extra/tools/simer/build/stage
 
           cp sandbox/${{ env.package_name }}-linux-i386-sandbox/${{ env.build_dir }}/_out/bin/modelc extra/tools/simer/build/stage/bin/modelc32_i386
           cp sandbox/${{ env.package_name }}-linux-i386-sandbox/${{ env.build_dir }}/_out/lib/libmodelc.so extra/tools/simer/build/stage/lib32/libmodelc.so
@@ -452,10 +455,10 @@ jobs:
           cp sandbox/${{ env.package_name }}-linux-x86-sandbox/${{ env.build_dir }}/_out/bin/modelc extra/tools/simer/build/stage/bin/modelc32_x86
           cp sandbox/${{ env.package_name }}-linux-x86-sandbox/${{ env.build_dir }}/_out/lib/libmodelc.so extra/tools/simer/build/stage/libx32/libmodelc.so
 
-          cp -r sandbox/${{ env.package_name }}-linux-amd64-sandbox/${{ env.build_dir }}/_out/licenses -t extra/tools/simer/build/stage
+          cp -r extra/tools/trace extra/tools/simer/build/stage
+
           ls -R extra/tools/simer/build/stage
 
-          cp -r extra/tools/trace extra/tools/simer/build/stage
 
       - name: Build and push
         uses: docker/build-push-action@v6

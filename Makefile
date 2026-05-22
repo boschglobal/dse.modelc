@@ -140,12 +140,14 @@ package: build
 simer: build package
 	mkdir -p extra/tools/simer/build/stage/bin
 	mkdir -p extra/tools/simer/build/stage/lib
+	mkdir -p extra/tools/simer/build/stage/share
 	mkdir -p extra/tools/simer/build/stage/lib32
 	mkdir -p extra/tools/simer/build/stage/libx32
 	@if [ ${PACKAGE_ARCH} = "linux-amd64" ]; then \
 		cp dse/modelc/build/_out/bin/simbus extra/tools/simer/build/stage/bin/simbus ;\
 		cp dse/modelc/build/_out/bin/modelc extra/tools/simer/build/stage/bin/modelc ;\
 		cp dse/modelc/build/_out/lib/libmodelc.so extra/tools/simer/build/stage/lib/libmodelc.so ;\
+		cp -r dse/modelc/build/_out/share/lua -t extra/tools/simer/build/stage/share ;\
 		cp -r licenses -t extra/tools/simer/build/stage ;\
 	fi
 	@if [ ${PACKAGE_ARCH} = "linux-x86" ]; then \

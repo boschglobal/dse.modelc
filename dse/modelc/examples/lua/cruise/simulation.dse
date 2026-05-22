@@ -1,0 +1,14 @@
+simulation arch=linux-x64 endtime=0.1
+channel physical
+
+uses
+dse.modelc      https://github.com/boschglobal/dse.modelc v2.3.20
+cruise.lua      file:///{{.PWD}}/cruise.lua
+
+envar SIMBUS_TRACE_FILE data/simbus.bin
+
+model cruise cruise.lua
+channel physical scalar_vector
+file cruise.yaml cruise.yaml
+file lua/controller.lua controller.lua
+file lua/plant.lua plant.lua

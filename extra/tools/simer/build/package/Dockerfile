@@ -116,10 +116,11 @@ EXPOSE 2159
 # Install ModelC Tools and  MCL Model
 # ===================================
 ENV LD_LIBRARY_PATH=/usr/local/lib:/usr/local/lib32:/usr/local/libx32
-COPY build/stage/bin/* /usr/local/bin/
-COPY build/stage/lib/* /usr/local/lib/
-COPY build/stage/lib32/* /usr/local/lib32/
-COPY build/stage/libx32/* /usr/local/libx32/
+COPY build/stage/bin/ /usr/local/bin/
+COPY build/stage/lib/ /usr/local/lib/
+COPY build/stage/share/ /usr/local/share/
+COPY build/stage/lib32/ /usr/local/lib32/
+COPY build/stage/libx32/ /usr/local/libx32/
 
 
 # Install Simer
@@ -141,6 +142,7 @@ COPY build/stage/licenses /licenses
 # ==========================
 # Run docker with --volume parameter to map the simulation folder into /sim.
 WORKDIR /sim
+RUN printf 'precedence ::ffff:0:0/96  100\n' >> /etc/gai.conf
 COPY build/package/entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 ENTRYPOINT ["/entrypoint.sh"]

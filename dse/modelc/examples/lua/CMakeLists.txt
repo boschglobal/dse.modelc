@@ -65,3 +65,20 @@ install(
     COMPONENT
         ${MODEL_NAME}
 )
+
+
+
+set(MODEL_NAME "cruise")
+set(MODEL_PATH "examples/lua/${MODEL_NAME}")
+install(
+    FILES
+        cruise/controller.lua
+        cruise/cruise.lua
+        cruise/cruise.yaml
+        cruise/plant.lua
+        cruise/simulation.dse
+    DESTINATION
+        ${MODEL_PATH}
+    COMPONENT
+        ${MODEL_NAME}
+)
