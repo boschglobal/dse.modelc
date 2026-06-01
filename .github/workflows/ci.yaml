@@ -339,6 +339,7 @@ jobs:
           (cd sandbox/${{ env.package_name }}-windows-x86-sandbox; tar xzf sandbox_out.tar.gz)
           mkdir -p win/simer/bin/x64
           mkdir -p win/simer/bin/x86
+          mkdir -p win/simer/share
 
           cp sandbox/${{ env.package_name }}-windows-x64-sandbox/${{ env.build_dir }}/_out/bin/simbus.exe win/simer/bin/x64/simbus.exe
           cp sandbox/${{ env.package_name }}-windows-x64-sandbox/${{ env.build_dir }}/_out/bin/modelc.exe win/simer/bin/x64/modelc.exe
@@ -348,6 +349,7 @@ jobs:
           cp sandbox/${{ env.package_name }}-windows-x86-sandbox/${{ env.build_dir }}/_out/bin/modelc.exe win/simer/bin/x86/modelc.exe
           cp sandbox/${{ env.package_name }}-windows-x86-sandbox/${{ env.build_dir }}/_out/bin/libmodelc.dll win/simer/bin/x86/libmodelc.dll
 
+          cp -r sandbox/${{ env.package_name }}-windows-x64-sandbox/${{ env.build_dir }}/_out/share/lua -t win/simer/share
           cp -r sandbox/${{ env.package_name }}-windows-x64-sandbox/${{ env.build_dir }}/_out/licenses -t win/simer
           ls -R win/simer
 

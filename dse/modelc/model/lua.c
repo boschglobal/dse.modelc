@@ -50,8 +50,27 @@ lua_State* lua_model_create(lua_State* L, ModelDesc* m)
 {
     if (L == NULL) {
         L = luaL_newstate();
+        luaL_openlibs(L);
+
+#ifdef _WIN32
+        lua_getglobal(L, "package");
+        if (lua_istable(L, -1)) {
+            const char* path = NULL;
+            lua_getfield(L, -1, "path");
+            path = lua_tostring(L, -1);
+            lua_pop(L, 1);
+
+            lua_pushfstring(L,
+                "./share/lua/5.4/?.lua;./share/lua/5.4/?/init.lua;%s",
+                path ? path : "");
+            lua_setfield(L, -2, "path");
+        }
+        lua_pop(L, 1);
+#endif
+    } else {
+        luaL_openlibs(L);
     }
-    luaL_openlibs(L);
+
     if (m != NULL) {
         lua_modellib_open(L, m);
     }
