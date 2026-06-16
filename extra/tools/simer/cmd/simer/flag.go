@@ -39,10 +39,10 @@ var (
 )
 
 func printUsage() {
-	fmt.Fprintf(flag.CommandLine.Output(), usage)
+	fmt.Fprint(flag.CommandLine.Output(), usage)
 	ignore := []string{"redis", "simbus", "modelc", "modelc32"}
 	flag.VisitAll(func(f *flag.Flag) {
-		if slices.Contains(ignore, f.Name) == false {
+		if !slices.Contains(ignore, f.Name) {
 			fmt.Fprintf(flag.CommandLine.Output(), "  -%s %s\n", f.Name, reflect.TypeOf(f.Value))
 			if f.DefValue != "" {
 				fmt.Fprintf(flag.CommandLine.Output(), "        %s (%s)\n", f.Usage, f.DefValue)
@@ -71,20 +71,20 @@ func parseFlags() {
 	flag.StringVar(&flags.Valgrind, "valgrind", "", "run this model instance via Valgrind, use CSL in format '-valgrind simbus,model'")
 
 	flag.Parse()
-	if flagSpecified("transport") == false {
+	if !flagSpecified("transport") {
 		flags.Transport = ""
 	}
-	if flagSpecified("uri") == false {
+	if !flagSpecified("uri") {
 		flags.Uri = ""
 	}
-	if flagSpecified("timeout") == false {
+	if !flagSpecified("timeout") {
 		flags.Timeout = 0.0
 	}
 
 	flags.StackList = []string{}
 	for _, v := range strings.Split(flags.Stack, ";") {
 		stackName := strings.TrimSpace(v)
-		if slices.Contains(flags.StackList, stackName) == false {
+		if !slices.Contains(flags.StackList, stackName) {
 			flags.StackList = append(flags.StackList, stackName)
 		}
 	}

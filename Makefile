@@ -114,8 +114,7 @@ default: build
 help:
 	@echo "Available targets:"
 	@echo "  build         Build all project subdirectories and copy example outputs to out/examples."
-	@echo "  simer         Build the Simer image."
-	@echo "  tools         Build all tools."
+	@echo "  tools         Build all tools (inc. Simer)."
 	@echo "  test          Run tests in all project subdirectories."
 	@echo "  arch          Build each supported architecture."
 	@echo "  generate      Build documentation and other generated content."
@@ -124,7 +123,7 @@ help:
 	@echo "  super-linter  Run super-linter against the repository."
 	@echo "Local development commands:"
 	@echo "  export SIMER_IMAGE=simer:test"
-	@echo "  make build simer tools"
+	@echo "  make build tools"
 	@echo "  make test_cmocka"
 	@echo "  make test_e2e TEST=tests/testscript/e2e/pdunet.txtar"
 

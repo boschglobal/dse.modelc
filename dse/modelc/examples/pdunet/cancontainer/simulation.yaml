@@ -1,0 +1,76 @@
+# Copyright 2026 Robert Bosch GmbH
+#
+# SPDX-License-Identifier: Apache-2.0
+
+---
+kind: Stack
+metadata:
+  name: stack
+spec:
+  connection:
+    transport:
+      redis:
+        uri: redis://localhost:6379
+        timeout: 60
+  models:
+    - name: simbus
+      model:
+        name: simbus
+      channels:
+        - name: scalar
+          expectedModelCount: 1
+        - name: network
+          expectedModelCount: 1
+    - name: pdunet_inst
+      model:
+        name: CanContainer
+      uid: 42
+      runtime:
+        env:
+          SIMBUS_LOGLEVEL: 1
+        files:
+          - data/network.yaml
+      channels:
+        - name: scalar
+          alias: scalar_vector
+        - name: network
+          alias: network_vector
+---
+kind: SignalGroup
+metadata:
+  name: scalar_vector
+  labels:
+    channel: scalar_vector
+    model: pdunet_inst
+spec:
+  signals:
+    - signal: C300_10ms_1
+    - signal: C300_10ms_2
+    - signal: C300_10ms_3
+    - signal: C300_10ms_1_Rx
+    - signal: C300_10ms_2_Rx
+    - signal: C300_10ms_3_Rx
+    - signal: L310_20ms
+    - signal: L310_20ms_Rx
+    - signal: L320_OnChange
+    - signal: L320_OnChange_Rx
+    - signal: C330_OnChange_1
+    - signal: C330_OnChange_2
+    - signal: C330_OnChange_1_Rx
+    - signal: C330_OnChange_2_Rx
+---
+kind: SignalGroup
+metadata:
+  name: network_vector
+  labels:
+    channel: network_vector
+    model: pdunet_inst
+  annotations:
+    vector_type: binary
+spec:
+  signals:
+    - signal: CAN_A
+      annotations:
+        mime_type: application/x-automotive-bus; interface=stream; type=pdu; schema=fbs; swc_id=0; ecu_id=1
+        pdunet: can  # selector = signal + pdunet
+        channel: scalar_vector  # selector = model + channel

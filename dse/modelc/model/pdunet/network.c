@@ -131,6 +131,19 @@ PduNetworkNCodecVTable pdunet_network_factory(PduNetworkDesc* net)
         };
     }
 
+    const char* pdunet_label = NULL;
+    dse_yaml_get_string(net->doc, "metadata/labels/pdunet", &pdunet_label);
+    if (pdunet_label && strcmp(pdunet_label, "can") == 0) {
+        net->network.transport_type = NCodecPduTransportTypeCan;
+        return (PduNetworkNCodecVTable){
+            .parse_network = pdunet_can_parse_network,
+            .parse_pdu = pdunet_can_parse_pdu,
+            .config = pdunet_can_config,
+            .lpdu_tx = pdunet_can_lpdu_tx,
+            .lpdu_rx = pdunet_can_lpdu_rx,
+        };
+    }
+
     return (PduNetworkNCodecVTable){ 0 };
 }
 

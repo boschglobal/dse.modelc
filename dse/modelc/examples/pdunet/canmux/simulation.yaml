@@ -1,0 +1,74 @@
+# Copyright 2026 Robert Bosch GmbH
+#
+# SPDX-License-Identifier: Apache-2.0
+
+---
+kind: Stack
+metadata:
+  name: stack
+spec:
+  connection:
+    transport:
+      redis:
+        uri: redis://localhost:6379
+        timeout: 60
+  models:
+    - name: simbus
+      model:
+        name: simbus
+      channels:
+        - name: scalar
+          expectedModelCount: 1
+        - name: network
+          expectedModelCount: 1
+    - name: pdunet_inst
+      model:
+        name: CanMux
+      uid: 42
+      runtime:
+        env:
+          SIMBUS_LOGLEVEL: 1
+        files:
+          - data/network.yaml
+      channels:
+        - name: scalar
+          alias: scalar_vector
+        - name: network
+          alias: network_vector
+---
+kind: SignalGroup
+metadata:
+  name: scalar_vector
+  labels:
+    channel: scalar_vector
+    model: pdunet_inst
+spec:
+  signals:
+    # Tx (sent into the bus)
+    - signal: Mode
+    - signal: TempA
+    - signal: TempB
+    - signal: Voltage
+    - signal: Current
+    # Rx (received back via loopback)
+    - signal: ModeRx
+    - signal: TempARx
+    - signal: TempBRx
+    - signal: VoltageRx
+    - signal: CurrentRx
+---
+kind: SignalGroup
+metadata:
+  name: network_vector
+  labels:
+    channel: network_vector
+    model: pdunet_inst
+  annotations:
+    vector_type: binary
+spec:
+  signals:
+    - signal: CAN_A
+      annotations:
+        mime_type: application/x-automotive-bus; interface=stream; type=pdu; schema=fbs; swc_id=0; ecu_id=1
+        pdunet: can
+        channel: scalar_vector

@@ -62,10 +62,10 @@ stdout 'step\[0.009000\]: Alive=2.000000, AliveRx=1.000000, FOO=24.000000, BAR=4
 
 
 
-# TEST: container example
+# TEST: frcontainer example
 
 env NAME_FRNET=pdunet_inst
-env SIM=dse/modelc/build/_out/examples/pdunet/container
+env SIM=dse/modelc/build/_out/examples/pdunet/frcontainer
 env END_TIME=0.032
 exec sh -e $WORK/test.sh
 
@@ -130,6 +130,115 @@ stdout 'step\[0.011000\]: 1=1, 2=2, 3=3, 4=16, 5=0, 6=3'
 stdout 'step\[0.020000\]: 1=2, 2=4, 3=6, 4=16, 5=0, 6=3'
 stdout 'step\[0.031000\]: 1=2, 2=4, 3=6, 4=32, 5=0, 6=6'
 
+
+
+# TEST: cannet example (CAN transport, single PDU loopback)
+
+env NAME_FRNET=pdunet_inst
+env SIM=dse/modelc/build/_out/examples/pdunet/cannet
+env END_TIME=0.030
+exec sh -e $WORK/test.sh
+
+stderr 'Using Valgrind'
+stdout 'Load YAML File: data/network.yaml'
+stdout 'Loading symbol: model_create ... ok'
+stdout 'Loading symbol: model_step ... ok'
+stdout 'Loading symbol: model_destroy ... not found'
+stdout 'Run the Simulation ...'
+stdout 'Controller exit ...'
+
+stdout 'PDU Net: CAN Network Config: CAN_A'
+stdout 'PDU Net:   CAN: PDU\[0\] id=0x100, len=8, dir=Tx, name=MSG_TX'
+stdout 'PDU Net:   CAN: PDU\[1\] id=0x100, len=8, dir=Rx, name=MSG_RX'
+
+
+
+# TEST: luacannet example (CAN transport, Lua MCL model)
+
+env NAME_FRNET=pdunet_inst
+env SIM=dse/modelc/build/_out/examples/pdunet/luacannet
+env END_TIME=0.030
+exec sh -e $WORK/test.sh
+
+stderr 'Using Valgrind'
+stdout 'Load YAML File: data/simulation.yaml'
+stdout 'Load YAML File: model/pdunet_inst/data/network.yaml'
+stdout 'Lua MCL: loading model: model/pdunet_inst/model.lua'
+stdout 'Run the Simulation ...'
+stdout 'Controller exit ...'
+
+stdout 'model_create\(\)'
+
+stdout 'PDU Net: CAN Network Config: CAN_A'
+stdout 'PDU Net:   CAN: PDU\[0\] id=0x100, len=8, dir=Tx, name=MSG_TX'
+stdout 'PDU Net:   CAN: PDU\[1\] id=0x100, len=8, dir=Rx, name=MSG_RX'
+
+
+
+# TEST: cancontainer example (CAN transport, Container PDUs)
+
+env NAME_FRNET=pdunet_inst
+env SIM=dse/modelc/build/_out/examples/pdunet/cancontainer
+env END_TIME=0.060
+exec sh -e $WORK/test.sh
+
+stderr 'Using Valgrind'
+stdout 'Load YAML File: data/network.yaml'
+stdout 'Loading symbol: model_create ... ok'
+stdout 'Loading symbol: model_step ... ok'
+stdout 'Loading symbol: model_destroy ... not found'
+stdout 'Run the Simulation ...'
+stdout 'Controller exit ...'
+
+stdout 'Signal: C300_10ms_1_Rx \(3\) <-> C300_10ms_1_Rx \(0\)'
+stdout 'Signal: C300_10ms_2_Rx \(4\) <-> C300_10ms_2_Rx \(1\)'
+stdout 'Signal: C300_10ms_3_Rx \(5\) <-> C300_10ms_3_Rx \(2\)'
+stdout 'Signal: L310_20ms_Rx \(7\) <-> L310_20ms_Rx \(3\)'
+stdout 'Signal: L320_OnChange_Rx \(9\) <-> L320_OnChange_Rx \(4\)'
+stdout 'Signal: C330_OnChange_1_Rx \(12\) <-> C330_OnChange_1_Rx \(5\)'
+stdout 'Signal: C330_OnChange_2_Rx \(13\) <-> C330_OnChange_2_Rx \(6\)'
+stdout 'Signal: C300_10ms_1 \(0\) <-> C300_10ms_1 \(7\)'
+stdout 'Signal: C300_10ms_2 \(1\) <-> C300_10ms_2 \(8\)'
+stdout 'Signal: C300_10ms_3 \(2\) <-> C300_10ms_3 \(9\)'
+stdout 'Signal: L310_20ms \(6\) <-> L310_20ms \(10\)'
+stdout 'Signal: L320_OnChange \(8\) <-> L320_OnChange \(11\)'
+stdout 'Signal: C330_OnChange_1 \(10\) <-> C330_OnChange_1 \(12\)'
+stdout 'Signal: C330_OnChange_2 \(11\) <-> C330_OnChange_2 \(13\)'
+stdout 'PDU Net: CAN Network Config: CAN_A'
+stdout 'PDU Net:   CAN: PDU\[0\] id=0x300, len=36, dir=Tx, name=LPDU-TX \[Container\]'
+stdout 'PDU Net:   CAN: PDU\[4\] id=0x300, len=36, dir=Rx, name=LPDU-RX \[Container\]'
+stdout 'step\[0.000000\]: C300 1=1, 2=2, 3=3, 1Rx=0, 2Rx=0, 3Rx=0'
+stdout 'PDU Net:   CAN: PDU\[8\] id=0x310, len=8, dir=Tx, name=LPDU-PERIODIC-TX'
+stdout 'PDU Net:   CAN: PDU\[9\] id=0x310, len=8, dir=Rx, name=LPDU-PERIODIC-RX'
+stdout 'L310 periodic tx=7, rx=7'
+stdout 'PDU Net:   CAN: PDU\[10\] id=0x320, len=8, dir=Tx, name=LPDU-ONCHANGE-TX'
+stdout 'PDU Net:   CAN: PDU\[11\] id=0x320, len=8, dir=Rx, name=LPDU-ONCHANGE-RX'
+stdout 'L320 onchange tx=9, rx=9'
+stdout 'PDU Net:   CAN: PDU\[12\] id=0x330, len=24, dir=Tx, name=LPDU-NPC-TX \[Container\]'
+stdout 'PDU Net:   CAN: PDU\[15\] id=0x330, len=24, dir=Rx, name=LPDU-NPC-RX \[Container\]'
+stdout 'C330 1=11, 2=12, 1Rx=11, 2Rx=12'
+
+
+
+# TEST: canmux example (CAN transport, multiplexed PDU)
+
+env NAME_FRNET=pdunet_inst
+env SIM=dse/modelc/build/_out/examples/pdunet/canmux
+env END_TIME=0.060
+exec sh -e $WORK/test.sh
+
+stderr 'Using Valgrind'
+stdout 'Load YAML File: data/network.yaml'
+stdout 'Loading symbol: model_create ... ok'
+stdout 'Loading symbol: model_step ... ok'
+stdout 'Loading symbol: model_destroy ... not found'
+stdout 'Run the Simulation ...'
+stdout 'Controller exit ...'
+
+stdout 'PDU Net: CAN Network Config: CAN_A'
+stdout 'PDU Net:   CAN: PDU\[0\] id=0x100, len=8, dir=Tx, name=DIAG_TX'
+stdout 'PDU Net:   CAN: PDU\[1\] id=0x100, len=8, dir=Rx, name=DIAG_RX'
+stdout 'step\[0.000000\]: Tx Mode=0 \(TempA=21.5 TempB=22.0 V=12.40 I=1.25\)'
 
 
 -- test.sh --

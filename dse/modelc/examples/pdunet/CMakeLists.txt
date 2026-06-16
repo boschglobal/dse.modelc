@@ -136,7 +136,7 @@ dse_add_pdunet_lua_model(
 )
 
 # Container PDU example.
-set(MODEL_NAME "container")
+set(MODEL_NAME "frcontainer")
 set(MODEL_PATH "examples/pdunet/${MODEL_NAME}")
 dse_add_pdunet_c_model(
     NAME ${MODEL_NAME}
@@ -151,6 +151,61 @@ dse_add_pdunet_c_model(
 
 # Secure PDU example.
 set(MODEL_NAME "sec")
+set(MODEL_PATH "examples/pdunet/${MODEL_NAME}")
+dse_add_pdunet_c_model(
+    NAME ${MODEL_NAME}
+    PATH ${MODEL_PATH}
+    SOURCES
+        ${MODEL_NAME}/model.c
+    DATA_FILES
+        ${MODEL_NAME}/model.yaml
+        ${MODEL_NAME}/network.yaml
+        ${MODEL_NAME}/simulation.yaml
+)
+
+# CAN example
+set(MODEL_NAME "cannet")
+set(MODEL_PATH "examples/pdunet/${MODEL_NAME}")
+dse_add_pdunet_c_model(
+    NAME ${MODEL_NAME}
+    PATH ${MODEL_PATH}
+    SOURCES
+        ${MODEL_NAME}/model.c
+    DATA_FILES
+        ${MODEL_NAME}/model.yaml
+        ${MODEL_NAME}/network.yaml
+        ${MODEL_NAME}/simulation.yaml
+)
+
+# CAN Lua example.
+set(MODEL_NAME "luacannet")
+set(MODEL_INST "pdunet_inst")
+set(MODEL_PATH "examples/pdunet/${MODEL_NAME}")
+dse_add_pdunet_lua_model(
+    NAME ${MODEL_NAME}
+    PATH ${MODEL_PATH}
+    INST ${MODEL_INST}
+    SIMULATION_YAML ${MODEL_NAME}/simulation.yaml
+    NETWORK_YAML    ${MODEL_NAME}/network.yaml
+    MODEL_LUA       ${MODEL_NAME}/model.lua
+)
+
+# CAN Container PDU example
+set(MODEL_NAME "cancontainer")
+set(MODEL_PATH "examples/pdunet/${MODEL_NAME}")
+dse_add_pdunet_c_model(
+    NAME ${MODEL_NAME}
+    PATH ${MODEL_PATH}
+    SOURCES
+        ${MODEL_NAME}/model.c
+    DATA_FILES
+        ${MODEL_NAME}/model.yaml
+        ${MODEL_NAME}/network.yaml
+        ${MODEL_NAME}/simulation.yaml
+)
+
+# CAN Multiplexed PDU example (Option A: single PDU, Lua-gated signals)
+set(MODEL_NAME "canmux")
 set(MODEL_PATH "examples/pdunet/${MODEL_NAME}")
 dse_add_pdunet_c_model(
     NAME ${MODEL_NAME}

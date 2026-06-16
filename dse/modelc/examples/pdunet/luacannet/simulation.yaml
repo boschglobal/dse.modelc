@@ -23,16 +23,24 @@ spec:
           expectedModelCount: 1
     - name: pdunet_inst
       model:
-        name: Container
+        name: CanNet
       uid: 42
       runtime:
+        mcl: lua
         files:
-          - data/network.yaml
+          - model/pdunet_inst/data/network.yaml
+          - model/pdunet_inst/model.lua
       channels:
         - name: scalar
           alias: scalar_vector
+          selectors:
+            channel: scalar_vector
+            model: pdunet_inst
         - name: network
           alias: network_vector
+          selectors:
+            channel: network_vector
+            model: pdunet_inst
 ---
 kind: SignalGroup
 metadata:
@@ -42,12 +50,10 @@ metadata:
     model: pdunet_inst
 spec:
   signals:
-    - signal: SIG_1
-    - signal: SIG_2
-    - signal: SIG_3
-    - signal: SIG_4
-    - signal: SIG_5
-    - signal: SIG_6
+    - signal: Alive
+    - signal: AliveRx
+    - signal: FOO
+    - signal: BAR
 ---
 kind: SignalGroup
 metadata:
@@ -59,8 +65,8 @@ metadata:
     vector_type: binary
 spec:
   signals:
-    - signal: FlexRay_A
+    - signal: CAN_A
       annotations:
-        mime_type: application/x-automotive-bus; interface=stream; type=pdu; model=flexray; schema=fbs; vcn=2, poca=5, ecu_id=5; swc_id=0
-        pdunet: flexray  # selector = signal + pdunet
+        mime_type: application/x-automotive-bus; interface=stream; type=pdu; schema=fbs; swc_id=0; ecu_id=1
+        pdunet: can  # selector = signal + pdunet
         channel: scalar_vector  # selector = model + channel

@@ -1,0 +1,141 @@
+# Copyright 2026 Robert Bosch GmbH
+#
+# SPDX-License-Identifier: Apache-2.0
+---
+kind: Network
+metadata:
+  name: CAN_A
+  labels:
+    signal: CAN_A
+    pdunet: can
+spec:
+  schedule:
+    epoch_offset: 0.000
+  functions:
+    global:
+      lua: |
+        -- Multiplex selector values.
+        MODE_TEMP = 0
+        MODE_ELEC = 1
+
+        -- Mask the payload to keep only the bytes that belong to `mode`.
+        -- Lua payload is 1-indexed: payload[1] == byte 0, payload[8] == byte 7.
+        function mask_for_mode(payload, mode)
+            if mode == MODE_TEMP then
+                -- Zero electrical bytes (5..7 in C / 6..8 in Lua).
+                payload[6] = 0
+                payload[7] = 0
+                payload[8] = 0
+            elseif mode == MODE_ELEC then
+                -- Zero temperature bytes (1..4 in C / 2..5 in Lua).
+                payload[2] = 0
+                payload[3] = 0
+                payload[4] = 0
+                payload[5] = 0
+            end
+        end
+  pdus:
+    - pdu: DIAG_TX
+      id: 0x100
+      length: 8
+      dir: Tx
+      schedule:
+        phase: 0.000
+        interval: 0.010
+      metadata:
+        can:
+          frame_format: Base
+          frame_type: Data
+      functions:
+        # Called AFTER the signal-pack loop -> payload contains every signal's
+        # bits including the freshly packed Mode in byte 0. We mask out bytes
+        # for the inactive group so only the active "view" goes on the wire.
+        encode:
+          lua: |
+            return function(ctx)
+                local mode = ctx.payload[1]
+                mask_for_mode(ctx.payload, mode)
+                return ctx
+            end
+      signals:
+        - signal: Mode
+          encoding:
+            start: 0
+            length: 8
+            factor: 1
+            offset: 0
+        - signal: TempA
+          encoding:
+            start: 8
+            length: 16
+            factor: 0.1
+            offset: 0
+        - signal: TempB
+          encoding:
+            start: 24
+            length: 16
+            factor: 0.1
+            offset: 0
+        - signal: Voltage
+          encoding:
+            start: 40
+            length: 16
+            factor: 0.01
+            offset: 0
+        - signal: Current
+          encoding:
+            start: 56
+            length: 8
+            factor: 0.05
+            offset: 0
+
+    - pdu: DIAG_RX
+      id: 0x100  # Loopback: receive what we sent.
+      length: 8
+      dir: Rx
+      metadata:
+        can:
+          frame_format: Base
+          frame_type: Data
+      functions:
+        # Called BEFORE the signal-unpack loop -> mask is redundant for a
+        # clean Tx (already masked), but kept here so the example is symmetric
+        # and works correctly even if the wire frame is not pre-masked.
+        decode:
+          lua: |
+            return function(ctx)
+                local mode = ctx.payload[1]
+                mask_for_mode(ctx.payload, mode)
+                return ctx
+            end
+      signals:
+        - signal: ModeRx
+          encoding:
+            start: 0
+            length: 8
+            factor: 1
+            offset: 0
+        - signal: TempARx
+          encoding:
+            start: 8
+            length: 16
+            factor: 0.1
+            offset: 0
+        - signal: TempBRx
+          encoding:
+            start: 24
+            length: 16
+            factor: 0.1
+            offset: 0
+        - signal: VoltageRx
+          encoding:
+            start: 40
+            length: 16
+            factor: 0.01
+            offset: 0
+        - signal: CurrentRx
+          encoding:
+            start: 56
+            length: 8
+            factor: 0.05
+            offset: 0

@@ -52,7 +52,7 @@ func (c *Command) Execute() error {
 	}
 	cmd.Env = append(cmd.Environ(), c.Environ()...)
 
-	slog.Info(fmt.Sprintf("%s", cmd.String()))
+	slog.Info(cmd.String())
 	for _, ar := range c.Args {
 		fmt.Println(ar)
 	}
@@ -82,7 +82,7 @@ func (c *Command) Start(ctx context.Context, redirect func(c *Command)) error {
 	}
 
 	slog.Debug("Starting command...")
-	slog.Debug(fmt.Sprintf("%s", c.cmd.String()))
+	slog.Debug(c.cmd.String())
 	for _, a := range c.cmd.Args {
 		slog.Debug(fmt.Sprintf("  arg:%s:", a))
 	}
@@ -109,7 +109,7 @@ func (c *Command) Run() error {
 	c.cmd.Stderr = os.Stderr
 
 	slog.Debug("Running command...")
-	slog.Debug(fmt.Sprintf("%s", c.cmd.String()))
+	slog.Debug(c.cmd.String())
 	for _, a := range c.cmd.Args {
 		slog.Debug(fmt.Sprintf("  arg:%s:", a))
 	}

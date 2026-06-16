@@ -522,17 +522,34 @@ void test_model__pdunet_frnet(void** state)
 }
 
 
-#define PDUNET_CONTAINER_INST_NAME    "pdunet_inst"
-#define PDUNET_CONTAINER_SIGNAL_SIG_1 0
-#define PDUNET_CONTAINER_SIGNAL_SIG_2 1
-#define PDUNET_CONTAINER_SIGNAL_SIG_3 2
-#define PDUNET_CONTAINER_SIGNAL_SIG_4 3
-#define PDUNET_CONTAINER_SIGNAL_SIG_5 4
-#define PDUNET_CONTAINER_SIGNAL_SIG_6 5
+#define PDUNET_CONTAINER_INST_NAME             "pdunet_inst"
+#define PDUNET_CONTAINER_SIGNAL_SIG_1          0
+#define PDUNET_CONTAINER_SIGNAL_SIG_2          1
+#define PDUNET_CONTAINER_SIGNAL_SIG_3          2
+#define PDUNET_CONTAINER_SIGNAL_SIG_4          3
+#define PDUNET_CONTAINER_SIGNAL_SIG_5          4
+#define PDUNET_CONTAINER_SIGNAL_SIG_6          5
+
+/* cancontainer signal indices (scalar_vector positional). */
+#define CANCONTAINER_INST_NAME                 "pdunet_inst"
+#define CANCONTAINER_SIGNAL_C300_10MS_1        0
+#define CANCONTAINER_SIGNAL_C300_10MS_2        1
+#define CANCONTAINER_SIGNAL_C300_10MS_3        2
+#define CANCONTAINER_SIGNAL_C300_10MS_1_RX     3
+#define CANCONTAINER_SIGNAL_C300_10MS_2_RX     4
+#define CANCONTAINER_SIGNAL_C300_10MS_3_RX     5
+#define CANCONTAINER_SIGNAL_L310_20MS          6
+#define CANCONTAINER_SIGNAL_L310_20MS_RX       7
+#define CANCONTAINER_SIGNAL_L320_ONCHANGE      8
+#define CANCONTAINER_SIGNAL_L320_ONCHANGE_RX   9
+#define CANCONTAINER_SIGNAL_C330_ONCHANGE_1    10
+#define CANCONTAINER_SIGNAL_C330_ONCHANGE_2    11
+#define CANCONTAINER_SIGNAL_C330_ONCHANGE_1_RX 12
+#define CANCONTAINER_SIGNAL_C330_ONCHANGE_2_RX 13
 
 void test_model__pdunet_container(void** state)
 {
-    chdir("../../../../dse/modelc/build/_out/examples/pdunet/container");
+    chdir("../../../../dse/modelc/build/_out/examples/pdunet/frcontainer");
     char hint[100];
 
     const char* inst_names[] = {
@@ -782,6 +799,499 @@ void test_model__pdunet_sec(void** state)
 }
 
 
+/* ============================================================ */
+/* CAN PDUNet examples    */
+/* ============================================================ */
+
+#define PDUNET_CANNET_INST_NAME         "pdunet_inst"
+#define PDUNET_CANNET_SIGNAL_COUNTER    0
+#define PDUNET_CANNET_SIGNAL_COUNTER_RX 1
+#define PDUNET_CANNET_SIGNAL_SPEED      2
+#define PDUNET_CANNET_SIGNAL_SPEED_RX   3
+
+void test_model__pdunet_cannet(void** state)
+{
+    chdir("../../../../dse/modelc/build/_out/examples/pdunet/cannet");
+    char hint[100];
+
+    const char* inst_names[] = {
+        PDUNET_CANNET_INST_NAME,
+    };
+    char* argv[] = {
+        (char*)"test_model_interface",
+        (char*)"--name=" PDUNET_CANNET_INST_NAME,
+        (char*)"--logger=5",  // 1=debug, 5=QUIET (commit with 5!)
+        (char*)"data/simulation.yaml",
+        (char*)"data/network.yaml",
+        (char*)"data/model.yaml",
+    };
+    SimMock* mock = *state = simmock_alloc(inst_names, ARRAY_SIZE(inst_names));
+    simmock_configure(mock, argv, ARRAY_SIZE(argv), ARRAY_SIZE(inst_names));
+    ModelMock* model = simmock_find_model(mock, PDUNET_CANNET_INST_NAME);
+    simmock_load(mock);
+    simmock_load_model_check(model, true, true, false);
+    simmock_setup(mock, "scalar", "network");
+    assert_non_null(model->sv_network);
+    assert_non_null(model->sv_signal);
+
+    /* Install the trace. */
+    ncodec_trace_destroy(model->sv_network->ncodec[0]);
+    ncodec_trace_configure(model->sv_network->ncodec[0], model->mi, true);
+
+    /* Initial values. */
+    double counter = 0;
+    double counter_rx = 0;
+    double speed = 0;
+    double speed_rx = 0;
+    simmock_print_scalar_signals(mock, LOG_DEBUG);
+    simmock_print_binary_signals(mock, LOG_TRACE);
+
+    /* T0: nothing transmitted yet, all signals at their defaults. */
+    {
+        SignalCheck checks[] = {
+            { .index = PDUNET_CANNET_SIGNAL_COUNTER, .value = counter },
+            { .index = PDUNET_CANNET_SIGNAL_COUNTER_RX, .value = counter_rx },
+            { .index = PDUNET_CANNET_SIGNAL_SPEED, .value = speed },
+            { .index = PDUNET_CANNET_SIGNAL_SPEED_RX, .value = speed_rx },
+        };
+        simmock_signal_check(mock, PDUNET_CANNET_INST_NAME, checks,
+            ARRAY_SIZE(checks), NULL, "T0");
+        assert_int_equal(simmock_step(mock, true), 0);
+        simmock_print_scalar_signals(mock, LOG_DEBUG);
+        simmock_print_binary_signals(mock, LOG_TRACE);
+    }
+
+    /* After the first step (t=0.0005): TX fired at t=0, Lua encode bumped
+       Counter 0->1 and sent Speed=sample[0]=10 (raw=100). Simbus loopback
+       takes one bus tick so RX is not yet visible: CounterRx=0, SpeedRx=0,
+       and Speed is still sample[0]=10. (step_size = 0.5ms) */
+    counter = 1;
+    counter_rx = 0;
+    speed = 10;
+    speed_rx = 0;
+    {
+        SignalCheck checks[] = {
+            { .index = PDUNET_CANNET_SIGNAL_COUNTER, .value = counter },
+            { .index = PDUNET_CANNET_SIGNAL_COUNTER_RX, .value = counter_rx },
+            { .index = PDUNET_CANNET_SIGNAL_SPEED, .value = speed },
+            { .index = PDUNET_CANNET_SIGNAL_SPEED_RX, .value = speed_rx },
+        };
+        simmock_signal_check(mock, PDUNET_CANNET_INST_NAME, checks,
+            ARRAY_SIZE(checks), NULL, "pre-Rx t=0.0005");
+        assert_int_equal(simmock_step(mock, true), 0);
+        simmock_print_scalar_signals(mock, LOG_DEBUG);
+        simmock_print_binary_signals(mock, LOG_TRACE);
+    }
+
+    counter = 1;
+    counter_rx = 1;
+    speed = 20;
+    speed_rx = 10;
+    for (uint32_t i = 0; i < 19; i++) {
+        SignalCheck checks[] = {
+            { .index = PDUNET_CANNET_SIGNAL_COUNTER, .value = counter },
+            { .index = PDUNET_CANNET_SIGNAL_COUNTER_RX, .value = counter_rx },
+            { .index = PDUNET_CANNET_SIGNAL_SPEED, .value = speed },
+            { .index = PDUNET_CANNET_SIGNAL_SPEED_RX, .value = speed_rx },
+        };
+        snprintf(hint, sizeof(hint), "cycle1-steady i=%d", i);
+        simmock_signal_check(mock, PDUNET_CANNET_INST_NAME, checks,
+            ARRAY_SIZE(checks), NULL, hint);
+        assert_int_equal(simmock_step(mock, true), 0);
+        simmock_print_scalar_signals(mock, LOG_DEBUG);
+        simmock_print_binary_signals(mock, LOG_TRACE);
+    }
+
+    counter = 2;
+    counter_rx = 1;
+    speed = 20;
+    speed_rx = 10;
+    {
+        SignalCheck checks[] = {
+            { .index = PDUNET_CANNET_SIGNAL_COUNTER, .value = counter },
+            { .index = PDUNET_CANNET_SIGNAL_COUNTER_RX, .value = counter_rx },
+            { .index = PDUNET_CANNET_SIGNAL_SPEED, .value = speed },
+            { .index = PDUNET_CANNET_SIGNAL_SPEED_RX, .value = speed_rx },
+        };
+        simmock_signal_check(mock, PDUNET_CANNET_INST_NAME, checks,
+            ARRAY_SIZE(checks), NULL, "pre-Rx2 t=0.0105");
+        assert_int_equal(simmock_step(mock, true), 0);
+        simmock_print_scalar_signals(mock, LOG_DEBUG);
+        simmock_print_binary_signals(mock, LOG_TRACE);
+    }
+
+    counter = 2;
+    counter_rx = 2;
+    speed = 30;
+    speed_rx = 20;
+    for (uint32_t i = 0; i < 19; i++) {
+        SignalCheck checks[] = {
+            { .index = PDUNET_CANNET_SIGNAL_COUNTER, .value = counter },
+            { .index = PDUNET_CANNET_SIGNAL_COUNTER_RX, .value = counter_rx },
+            { .index = PDUNET_CANNET_SIGNAL_SPEED, .value = speed },
+            { .index = PDUNET_CANNET_SIGNAL_SPEED_RX, .value = speed_rx },
+        };
+        snprintf(hint, sizeof(hint), "cycle2-steady i=%d", i);
+        simmock_signal_check(mock, PDUNET_CANNET_INST_NAME, checks,
+            ARRAY_SIZE(checks), NULL, hint);
+        assert_int_equal(simmock_step(mock, true), 0);
+        simmock_print_scalar_signals(mock, LOG_DEBUG);
+        simmock_print_binary_signals(mock, LOG_TRACE);
+    }
+
+    counter = 3;
+    counter_rx = 2;
+    speed = 30;
+    speed_rx = 20;
+    {
+        SignalCheck checks[] = {
+            { .index = PDUNET_CANNET_SIGNAL_COUNTER, .value = counter },
+            { .index = PDUNET_CANNET_SIGNAL_COUNTER_RX, .value = counter_rx },
+            { .index = PDUNET_CANNET_SIGNAL_SPEED, .value = speed },
+            { .index = PDUNET_CANNET_SIGNAL_SPEED_RX, .value = speed_rx },
+        };
+        simmock_signal_check(mock, PDUNET_CANNET_INST_NAME, checks,
+            ARRAY_SIZE(checks), NULL, "pre-Rx3 t=0.0205");
+        assert_int_equal(simmock_step(mock, true), 0);
+        simmock_print_scalar_signals(mock, LOG_DEBUG);
+        simmock_print_binary_signals(mock, LOG_TRACE);
+    }
+
+    counter = 3;
+    counter_rx = 3;
+    speed = 40;
+    speed_rx = 30;
+    for (uint32_t i = 0; i < 19; i++) {
+        SignalCheck checks[] = {
+            { .index = PDUNET_CANNET_SIGNAL_COUNTER, .value = counter },
+            { .index = PDUNET_CANNET_SIGNAL_COUNTER_RX, .value = counter_rx },
+            { .index = PDUNET_CANNET_SIGNAL_SPEED, .value = speed },
+            { .index = PDUNET_CANNET_SIGNAL_SPEED_RX, .value = speed_rx },
+        };
+        snprintf(hint, sizeof(hint), "cycle3-steady i=%d", i);
+        simmock_signal_check(mock, PDUNET_CANNET_INST_NAME, checks,
+            ARRAY_SIZE(checks), NULL, hint);
+        assert_int_equal(simmock_step(mock, true), 0);
+        simmock_print_scalar_signals(mock, LOG_DEBUG);
+        simmock_print_binary_signals(mock, LOG_TRACE);
+    }
+}
+
+
+#define PDUNET_LUACANNET_INST_NAME       "pdunet_inst"
+#define PDUNET_LUACANNET_SIGNAL_ALIVE    0
+#define PDUNET_LUACANNET_SIGNAL_ALIVE_RX 1
+#define PDUNET_LUACANNET_SIGNAL_FOO      2
+#define PDUNET_LUACANNET_SIGNAL_BAR      3
+
+void test_model__pdunet_luacannet(void** state)
+{
+    chdir("../../../../dse/modelc/build/_out/examples/pdunet/luacannet");
+    char hint[100];
+
+    const char* inst_names[] = {
+        PDUNET_LUACANNET_INST_NAME,
+    };
+
+    char* argv[] = {
+        (char*)"test_model_interface",
+        (char*)"--name=" PDUNET_LUACANNET_INST_NAME,
+        (char*)"--logger=5",  // 1=debug, 5=QUIET (commit with 5!)
+        (char*)"data/simulation.yaml",
+        (char*)"model/" PDUNET_LUACANNET_INST_NAME "/data/network.yaml",
+    };
+    SimMock* mock = *state = simmock_alloc(inst_names, ARRAY_SIZE(inst_names));
+    simmock_configure(mock, argv, ARRAY_SIZE(argv), ARRAY_SIZE(inst_names));
+    ModelMock* model = simmock_find_model(mock, PDUNET_LUACANNET_INST_NAME);
+    simmock_load(mock);
+    simmock_load_model_check(model, true, true, false);
+    simmock_setup(mock, "scalar", "network");
+    assert_non_null(model->sv_network);
+    assert_non_null(model->sv_signal);
+
+    /* Install the trace. */
+    ncodec_trace_destroy(model->sv_network->ncodec[0]);
+    ncodec_trace_configure(model->sv_network->ncodec[0], model->mi, true);
+
+    /* Initial values. */
+    double alive = 0;
+    double alive_rx = 0;
+    double foo = 0;
+    double bar = 0;
+    simmock_print_scalar_signals(mock, LOG_DEBUG);
+    simmock_print_binary_signals(mock, LOG_TRACE);
+
+    /* T0. */
+    {
+        SignalCheck checks[] = {
+            { .index = PDUNET_LUACANNET_SIGNAL_ALIVE, .value = alive },
+            { .index = PDUNET_LUACANNET_SIGNAL_ALIVE_RX, .value = alive_rx },
+            { .index = PDUNET_LUACANNET_SIGNAL_FOO, .value = foo },
+            { .index = PDUNET_LUACANNET_SIGNAL_BAR, .value = bar },
+        };
+        simmock_signal_check(mock, PDUNET_LUACANNET_INST_NAME, checks,
+            ARRAY_SIZE(checks), NULL, "T0");
+        assert_int_equal(simmock_step(mock, true), 0);
+        simmock_print_scalar_signals(mock, LOG_DEBUG);
+        simmock_print_binary_signals(mock, LOG_TRACE);
+    }
+
+    alive = 1;
+    alive_rx = 0;
+    foo = 42;
+    bar = 0;
+    {
+        SignalCheck checks[] = {
+            { .index = PDUNET_LUACANNET_SIGNAL_ALIVE, .value = alive },
+            { .index = PDUNET_LUACANNET_SIGNAL_ALIVE_RX, .value = alive_rx },
+            { .index = PDUNET_LUACANNET_SIGNAL_FOO, .value = foo },
+            { .index = PDUNET_LUACANNET_SIGNAL_BAR, .value = bar },
+        };
+        simmock_signal_check(mock, PDUNET_LUACANNET_INST_NAME, checks,
+            ARRAY_SIZE(checks), NULL, "pre-Rx t=0.0005");
+        assert_int_equal(simmock_step(mock, true), 0);
+        simmock_print_scalar_signals(mock, LOG_DEBUG);
+        simmock_print_binary_signals(mock, LOG_TRACE);
+    }
+
+    alive = 1;
+    alive_rx = 1;
+    foo = 24;
+    bar = 42;
+    for (uint32_t i = 0; i < 19; i++) {
+        SignalCheck checks[] = {
+            { .index = PDUNET_LUACANNET_SIGNAL_ALIVE, .value = alive },
+            { .index = PDUNET_LUACANNET_SIGNAL_ALIVE_RX, .value = alive_rx },
+            { .index = PDUNET_LUACANNET_SIGNAL_FOO, .value = foo },
+            { .index = PDUNET_LUACANNET_SIGNAL_BAR, .value = bar },
+        };
+        snprintf(hint, sizeof(hint), "cycle1-steady i=%d", i);
+        simmock_signal_check(mock, PDUNET_LUACANNET_INST_NAME, checks,
+            ARRAY_SIZE(checks), NULL, hint);
+        assert_int_equal(simmock_step(mock, true), 0);
+        simmock_print_scalar_signals(mock, LOG_DEBUG);
+        simmock_print_binary_signals(mock, LOG_TRACE);
+    }
+
+    alive = 2;
+    alive_rx = 1;
+    foo = 24;
+    bar = 42;
+    {
+        SignalCheck checks[] = {
+            { .index = PDUNET_LUACANNET_SIGNAL_ALIVE, .value = alive },
+            { .index = PDUNET_LUACANNET_SIGNAL_ALIVE_RX, .value = alive_rx },
+            { .index = PDUNET_LUACANNET_SIGNAL_FOO, .value = foo },
+            { .index = PDUNET_LUACANNET_SIGNAL_BAR, .value = bar },
+        };
+        simmock_signal_check(mock, PDUNET_LUACANNET_INST_NAME, checks,
+            ARRAY_SIZE(checks), NULL, "pre-Rx2 t=0.0105");
+        assert_int_equal(simmock_step(mock, true), 0);
+        simmock_print_scalar_signals(mock, LOG_DEBUG);
+        simmock_print_binary_signals(mock, LOG_TRACE);
+    }
+
+    alive = 2;
+    alive_rx = 2;
+    foo = 22;
+    bar = 24;
+    for (uint32_t i = 0; i < 19; i++) {
+        SignalCheck checks[] = {
+            { .index = PDUNET_LUACANNET_SIGNAL_ALIVE, .value = alive },
+            { .index = PDUNET_LUACANNET_SIGNAL_ALIVE_RX, .value = alive_rx },
+            { .index = PDUNET_LUACANNET_SIGNAL_FOO, .value = foo },
+            { .index = PDUNET_LUACANNET_SIGNAL_BAR, .value = bar },
+        };
+        snprintf(hint, sizeof(hint), "cycle2-steady i=%d", i);
+        simmock_signal_check(mock, PDUNET_LUACANNET_INST_NAME, checks,
+            ARRAY_SIZE(checks), NULL, hint);
+        assert_int_equal(simmock_step(mock, true), 0);
+        simmock_print_scalar_signals(mock, LOG_DEBUG);
+        simmock_print_binary_signals(mock, LOG_TRACE);
+    }
+
+    alive = 3;
+    alive_rx = 2;
+    foo = 22;
+    bar = 24;
+    {
+        SignalCheck checks[] = {
+            { .index = PDUNET_LUACANNET_SIGNAL_ALIVE, .value = alive },
+            { .index = PDUNET_LUACANNET_SIGNAL_ALIVE_RX, .value = alive_rx },
+            { .index = PDUNET_LUACANNET_SIGNAL_FOO, .value = foo },
+            { .index = PDUNET_LUACANNET_SIGNAL_BAR, .value = bar },
+        };
+        simmock_signal_check(mock, PDUNET_LUACANNET_INST_NAME, checks,
+            ARRAY_SIZE(checks), NULL, "pre-Rx3 t=0.0205");
+        assert_int_equal(simmock_step(mock, true), 0);
+        simmock_print_scalar_signals(mock, LOG_DEBUG);
+        simmock_print_binary_signals(mock, LOG_TRACE);
+    }
+
+    alive = 3;
+    alive_rx = 3;
+    foo = 44;
+    bar = 22;
+    for (uint32_t i = 0; i < 19; i++) {
+        SignalCheck checks[] = {
+            { .index = PDUNET_LUACANNET_SIGNAL_ALIVE, .value = alive },
+            { .index = PDUNET_LUACANNET_SIGNAL_ALIVE_RX, .value = alive_rx },
+            { .index = PDUNET_LUACANNET_SIGNAL_FOO, .value = foo },
+            { .index = PDUNET_LUACANNET_SIGNAL_BAR, .value = bar },
+        };
+        snprintf(hint, sizeof(hint), "cycle3-steady i=%d", i);
+        simmock_signal_check(mock, PDUNET_LUACANNET_INST_NAME, checks,
+            ARRAY_SIZE(checks), NULL, hint);
+        assert_int_equal(simmock_step(mock, true), 0);
+        simmock_print_scalar_signals(mock, LOG_DEBUG);
+        simmock_print_binary_signals(mock, LOG_TRACE);
+    }
+}
+
+
+void test_model__pdunet_cancontainer(void** state)
+{
+    chdir("../../../../dse/modelc/build/_out/examples/pdunet/cancontainer");
+    char hint[100];
+
+    const char* inst_names[] = {
+        CANCONTAINER_INST_NAME,
+    };
+    char* argv[] = {
+        (char*)"test_model_interface",
+        (char*)"--name=" CANCONTAINER_INST_NAME,
+        (char*)"--logger=5",  // 1=debug, 5=QUIET (commit with 5!)
+        (char*)"data/simulation.yaml",
+        (char*)"data/network.yaml",
+        (char*)"data/model.yaml",
+    };
+    SimMock* mock = *state = simmock_alloc(inst_names, ARRAY_SIZE(inst_names));
+    simmock_configure(mock, argv, ARRAY_SIZE(argv), ARRAY_SIZE(inst_names));
+    ModelMock* model = simmock_find_model(mock, CANCONTAINER_INST_NAME);
+    simmock_load(mock);
+    simmock_load_model_check(model, true, true, false);
+    simmock_setup(mock, "scalar", "network");
+    assert_non_null(model->sv_network);
+    assert_non_null(model->sv_signal);
+
+    /* Install the trace. */
+    ncodec_trace_destroy(model->sv_network->ncodec[0]);
+    ncodec_trace_configure(model->sv_network->ncodec[0], model->mi, true);
+
+    /* Initial values for the C300_10ms container Tx/Rx slots. */
+    double c300_1 = 0;
+    double c300_2 = 0;
+    double c300_3 = 0;
+    double c300_1_rx = 0;
+    double c300_2_rx = 0;
+    double c300_3_rx = 0;
+    simmock_print_scalar_signals(mock, LOG_DEBUG);
+    simmock_print_binary_signals(mock, LOG_TRACE);
+
+    /* T0. */
+    {
+        SignalCheck checks[] = {
+            { .index = CANCONTAINER_SIGNAL_C300_10MS_1, .value = c300_1 },
+            { .index = CANCONTAINER_SIGNAL_C300_10MS_2, .value = c300_2 },
+            { .index = CANCONTAINER_SIGNAL_C300_10MS_3, .value = c300_3 },
+            { .index = CANCONTAINER_SIGNAL_C300_10MS_1_RX, .value = c300_1_rx },
+            { .index = CANCONTAINER_SIGNAL_C300_10MS_2_RX, .value = c300_2_rx },
+            { .index = CANCONTAINER_SIGNAL_C300_10MS_3_RX, .value = c300_3_rx },
+        };
+        simmock_signal_check(mock, CANCONTAINER_INST_NAME, checks,
+            ARRAY_SIZE(checks), NULL, "T0");
+        assert_int_equal(simmock_step(mock, true), 0);
+        simmock_print_scalar_signals(mock, LOG_DEBUG);
+        simmock_print_binary_signals(mock, LOG_TRACE);
+    }
+
+    /* Cycle 1 (ticks=0) */
+    c300_1 = 1;
+    c300_2 = 2;
+    c300_3 = 3;
+    c300_1_rx = 1;
+    c300_2_rx = 2;
+    c300_3_rx = 3;
+    for (uint32_t i = 0; i < 12; i++) {
+        assert_int_equal(simmock_step(mock, true), 0);
+        simmock_print_scalar_signals(mock, LOG_DEBUG);
+        simmock_print_binary_signals(mock, LOG_TRACE);
+    }
+    SignalCheck checks1[] = {
+        { .index = CANCONTAINER_SIGNAL_C300_10MS_1, .value = c300_1 },
+        { .index = CANCONTAINER_SIGNAL_C300_10MS_2, .value = c300_2 },
+        { .index = CANCONTAINER_SIGNAL_C300_10MS_3, .value = c300_3 },
+        { .index = CANCONTAINER_SIGNAL_C300_10MS_1_RX, .value = c300_1_rx },
+        { .index = CANCONTAINER_SIGNAL_C300_10MS_2_RX, .value = c300_2_rx },
+        { .index = CANCONTAINER_SIGNAL_C300_10MS_3_RX, .value = c300_3_rx },
+    };
+    snprintf(hint, sizeof(hint), "cycle1 t=0.0065");
+    simmock_signal_check(
+        mock, CANCONTAINER_INST_NAME, checks1, ARRAY_SIZE(checks1), NULL, hint);
+
+    /* Cycle 2*/
+    c300_1 = 2;
+    c300_2 = 4;
+    c300_3 = 6;
+    c300_1_rx = 2;
+    c300_2_rx = 4;
+    c300_3_rx = 6;
+    for (uint32_t i = 0; i < 80; i++) {
+        assert_int_equal(simmock_step(mock, true), 0);
+        simmock_print_scalar_signals(mock, LOG_DEBUG);
+        simmock_print_binary_signals(mock, LOG_TRACE);
+    }
+    SignalCheck checks2[] = {
+        { .index = CANCONTAINER_SIGNAL_C300_10MS_1, .value = c300_1 },
+        { .index = CANCONTAINER_SIGNAL_C300_10MS_2, .value = c300_2 },
+        { .index = CANCONTAINER_SIGNAL_C300_10MS_3, .value = c300_3 },
+        { .index = CANCONTAINER_SIGNAL_C300_10MS_1_RX, .value = c300_1_rx },
+        { .index = CANCONTAINER_SIGNAL_C300_10MS_2_RX, .value = c300_2_rx },
+        { .index = CANCONTAINER_SIGNAL_C300_10MS_3_RX, .value = c300_3_rx },
+    };
+    snprintf(hint, sizeof(hint), "cycle2 t~0.0465");
+    simmock_signal_check(
+        mock, CANCONTAINER_INST_NAME, checks2, ARRAY_SIZE(checks2), NULL, hint);
+
+    /* Cycle 3 */
+    c300_1 = 3;
+    c300_2 = 6;
+    c300_3 = 9;
+    c300_1_rx = 3;
+    c300_2_rx = 6;
+    c300_3_rx = 9;
+    for (uint32_t i = 0; i < 80; i++) {
+        assert_int_equal(simmock_step(mock, true), 0);
+        simmock_print_scalar_signals(mock, LOG_DEBUG);
+        simmock_print_binary_signals(mock, LOG_TRACE);
+    }
+    SignalCheck checks3[] = {
+        { .index = CANCONTAINER_SIGNAL_C300_10MS_1, .value = c300_1 },
+        { .index = CANCONTAINER_SIGNAL_C300_10MS_2, .value = c300_2 },
+        { .index = CANCONTAINER_SIGNAL_C300_10MS_3, .value = c300_3 },
+        { .index = CANCONTAINER_SIGNAL_C300_10MS_1_RX, .value = c300_1_rx },
+        { .index = CANCONTAINER_SIGNAL_C300_10MS_2_RX, .value = c300_2_rx },
+        { .index = CANCONTAINER_SIGNAL_C300_10MS_3_RX, .value = c300_3_rx },
+    };
+    snprintf(hint, sizeof(hint), "cycle3 t~0.0865");
+    simmock_signal_check(
+        mock, CANCONTAINER_INST_NAME, checks3, ARRAY_SIZE(checks3), NULL, hint);
+
+    SignalCheck checks_ext[] = {
+        { .index = CANCONTAINER_SIGNAL_L310_20MS, .value = 7 },
+        { .index = CANCONTAINER_SIGNAL_L310_20MS_RX, .value = 7 },
+        { .index = CANCONTAINER_SIGNAL_L320_ONCHANGE, .value = 9 },
+        { .index = CANCONTAINER_SIGNAL_L320_ONCHANGE_RX, .value = 9 },
+        { .index = CANCONTAINER_SIGNAL_C330_ONCHANGE_1, .value = 11 },
+        { .index = CANCONTAINER_SIGNAL_C330_ONCHANGE_2, .value = 12 },
+        { .index = CANCONTAINER_SIGNAL_C330_ONCHANGE_1_RX, .value = 11 },
+        { .index = CANCONTAINER_SIGNAL_C330_ONCHANGE_2_RX, .value = 12 },
+    };
+    simmock_signal_check(mock, CANCONTAINER_INST_NAME, checks_ext,
+        ARRAY_SIZE(checks_ext), NULL, "cancontainer extended patterns");
+}
+
+
 int run_model_examples_tests(void)
 {
     void* s = test_setup;
@@ -799,6 +1309,9 @@ int run_model_examples_tests(void)
         cmocka_unit_test_setup_teardown(test_model__pdunet_frnet, s, t),
         cmocka_unit_test_setup_teardown(test_model__pdunet_container, s, t),
         cmocka_unit_test_setup_teardown(test_model__pdunet_sec, s, t),
+        cmocka_unit_test_setup_teardown(test_model__pdunet_cannet, s, t),
+        cmocka_unit_test_setup_teardown(test_model__pdunet_luacannet, s, t),
+        cmocka_unit_test_setup_teardown(test_model__pdunet_cancontainer, s, t),
 #ifndef _WIN32
         cmocka_unit_test_setup_teardown(test_model__benchmark, s, t),
 #endif

@@ -31,7 +31,7 @@ func (s *ConsoleSession) redirectConsole(c *Command) {
 	stdout := NewPassThroughWriter(os.Stdout, []byte(c.prefix))
 	stderr := NewPassThroughWriter(os.Stderr, []byte(c.prefix))
 
-	if c.KillNoWait == false {
+	if !c.KillNoWait {
 		c.wg.Add(2)
 	}
 	go func() {
@@ -39,7 +39,7 @@ func (s *ConsoleSession) redirectConsole(c *Command) {
 		if err != nil {
 			slog.Debug(err.Error())
 		}
-		if c.KillNoWait == false {
+		if !c.KillNoWait {
 			c.wg.Done()
 		}
 	}()
@@ -48,7 +48,7 @@ func (s *ConsoleSession) redirectConsole(c *Command) {
 		if err != nil {
 			slog.Debug(err.Error())
 		}
-		if c.KillNoWait == false {
+		if !c.KillNoWait {
 			c.wg.Done()
 		}
 	}()
@@ -79,7 +79,7 @@ func (s *ConsoleSession) Wait() error {
 	results := make(chan result, len(s.commands))
 
 	for _, c := range s.commands {
-		if c.KillNoWait == true {
+		if c.KillNoWait {
 			continue
 		}
 		running++

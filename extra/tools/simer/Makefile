@@ -45,18 +45,14 @@ test:
 	go test ./...
 	go test ./... -tags e2e
 
-
 .PHONY: lint
 lint:
-	go fmt -x ./...
-	PATH=~/go/bin:$$PATH; goimports -w -v .
-	docker run -t --rm \
+	@docker run -t --rm \
 		-v $$(pwd):/app \
-		-v ~/.cache/golangci-lint/v1.54.2:/root/.cache \
 		-w /app \
-		golangci/golangci-lint:latest \
-		golangci-lint run -v ./...
-
+		golangci/golangci-lint:v2.12.2 \
+			golangci-lint fmt ./...; \
+			golangci-lint run --fix --disable errcheck ./...
 
 .PHONY: clean
 clean:

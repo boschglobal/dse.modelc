@@ -94,5 +94,12 @@ DLL_PRIVATE void pdunet_flexray_parse_network_metadata(
     PduNetworkDesc* net, YamlNode* md);
 DLL_PRIVATE void pdunet_flexray_parse_pdu_metadata(PduItem* pdu, YamlNode* md);
 
+/* can.c */
+DLL_PRIVATE void pdunet_can_parse_network(PduNetworkDesc* net);
+DLL_PRIVATE void pdunet_can_parse_pdu(PduItem* pdu, void* n);
+DLL_PRIVATE void pdunet_can_config(PduNetworkDesc* net);
+DLL_PRIVATE void pdunet_can_lpdu_tx(PduNetworkDesc* net);
+DLL_PRIVATE void pdunet_can_lpdu_rx(PduNetworkDesc* net);
+DLL_PRIVATE void pdunet_can_parse_pdu_metadata(PduItem* pdu, YamlNode* md);
 
 #endif  // DSE_MODELC_MODEL_PDUNET_NETWORK_H_

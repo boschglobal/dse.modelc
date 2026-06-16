@@ -209,7 +209,7 @@ Adapter* simbus_adapter_create(Endpoint* endpoint, double bus_step_size)
         char* _trace_file = getenv(ENV_SIMBUS_TRACE_FILE);
         log_notice("Create trace file : %s", _trace_file);
         errno = 0;
-        adapter->trace.file = fopen(_trace_file, "w");
+        adapter->trace.file = fopen(_trace_file, "wb");
         if (errno) {
             log_error("Unable to open SimBus trace file (%s)", _trace_file);
         }

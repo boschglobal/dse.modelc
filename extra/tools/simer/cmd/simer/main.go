@@ -72,10 +72,8 @@ func main() {
 	}
 
 	// Setup Redis command.
-	quietRedis := true
-	if *logger < 3 {
-		quietRedis = false
-	}
+	quietRedis := !(*logger < 3)
+
 	if c := simer.RedisCommand(*redisPath, quietRedis); c != nil {
 		cmds = append(cmds, c)
 	}
@@ -87,7 +85,7 @@ func main() {
 
 	// Start and run the session.
 	var s session.Session
-	if *tmux == true {
+	if *tmux {
 		s = session.NewTmuxSession()
 	} else {
 		s = &session.ConsoleSession{}

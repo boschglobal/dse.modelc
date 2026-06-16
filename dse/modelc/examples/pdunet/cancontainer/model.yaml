@@ -1,0 +1,30 @@
+# Copyright 2026 Robert Bosch GmbH
+#
+# SPDX-License-Identifier: Apache-2.0
+
+---
+kind: Model
+metadata:
+  name: CanContainer
+spec:
+  runtime:
+    dynlib:
+      - os: linux
+        arch: amd64
+        path: lib/libcancontainer.so
+      - os: linux
+        arch: x86
+        path: lib/libcancontainer.so
+      - os: windows
+        arch: x64
+        path: lib/libcancontainer.dll
+      - os: windows
+        arch: x86
+        path: lib/libcancontainer.dll
+  channels:
+    - alias: scalar_vector
+      selectors:
+        channel: scalar_vector
+    - alias: network_vector
+      selectors:
+        channel: network_vector

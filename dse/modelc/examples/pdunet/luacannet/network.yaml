@@ -1,0 +1,79 @@
+# Copyright 2026 Robert Bosch GmbH
+#
+# SPDX-License-Identifier: Apache-2.0
+
+---
+kind: Network
+metadata:
+  name: CAN_A
+  labels:
+    signal: CAN_A
+    pdunet: can
+spec:
+  schedule:
+    epoch_offset: 0.000
+  functions:
+    global:
+      lua: |
+        function inc_counter(v, floor, limit)
+            v = v + 1
+            if v >= limit or v < floor then
+                v = floor
+            end
+            return v
+        end
+  pdus:
+    # MSG_TX and MSG_RX operate as a pair (same CAN ID) with different
+    # signal names (so signals can be mapped to a SignalGroup).
+    - pdu: MSG_TX
+      id: 256
+      length: 8
+      dir: Tx
+      schedule:
+        phase: 0.000
+        interval: 0.010
+      metadata:
+        can:
+          frame_format: Base
+          frame_type: Data
+      signals:
+        - signal: Alive
+          encoding:
+            start: 0
+            length: 8
+            factor: 1
+            offset: 0
+          functions:
+            encode:
+              lua: |
+                return function(ctx)
+                    ctx.phys = inc_counter(ctx.phys, 1, 240)
+                    return ctx
+                end
+        - signal: FOO
+          encoding:
+            start: 8
+            length: 16
+            factor: 1
+            offset: 0
+    - pdu: MSG_RX
+      id: 256  # Shadows MSG_TX (effective loopback of the Tx).
+      length: 8
+      dir: Rx
+      metadata:
+        can:
+          frame_format: Base
+          frame_type: Data
+      signals:
+        - signal: AliveRx
+          encoding:
+            start: 0
+            length: 8
+            factor: 1
+            offset: 0
+        - signal: BAR
+          encoding:
+            start: 8
+            length: 16
+            factor: 1
+            offset: 0

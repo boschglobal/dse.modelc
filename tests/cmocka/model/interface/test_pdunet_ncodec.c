@@ -57,7 +57,7 @@ static int test_teardown(void** state)
 
 #define PDUNET_INST_NAME            "pdunet_inst"
 #define PDUNET_MODEL_PATH           EXAMPLES_PATH "/pdunet/frnet"
-#define PDUNET_MODEL_CONTAINER_PATH EXAMPLES_PATH "/pdunet/container"
+#define PDUNET_MODEL_CONTAINER_PATH EXAMPLES_PATH "/pdunet/frcontainer"
 
 static const char* inst_names[] = {
     PDUNET_INST_NAME,

@@ -51,16 +51,16 @@ func NewLogger(level int) *slog.Logger {
 			Level: logLevel,
 		},
 	}))
-	switch {
-	case level == 0:
+	switch level {
+	case 0:
 		logLevel.Set(slog.LevelDebug)
-	case level == 1:
+	case 1:
 		logLevel.Set(slog.LevelDebug)
-	case level == 2:
+	case 2:
 		logLevel.Set(slog.LevelInfo)
-	case level == 3:
+	case 3:
 		logLevel.Set(slog.LevelWarn)
-	case level == 4:
+	case 4:
 		logLevel.Set(slog.LevelError)
 	default:
 		logLevel.Set(slog.LevelWarn)
