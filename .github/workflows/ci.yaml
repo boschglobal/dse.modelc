@@ -419,10 +419,13 @@ jobs:
             name=${{ env.REGISTRY }}/${{ env.IMAGE_BASE_NAME }}-simer,enable=${{ startsWith(github.ref, 'refs/tags/') }}
             name=simer,enable=${{ !startsWith(github.ref, 'refs/tags/') }}
             name=simer,enable=true
+          flavor: |
+            latest=false
           tags: |
             type=semver,pattern={{version}}-slim
             type=semver,pattern={{major}}.{{minor}}-slim
             type=raw,value=test-slim
+            type=raw,value=latest-slim,enable=${{ startsWith(github.ref, 'refs/tags/') }}
 
       - name: Version
         if: startsWith(github.ref, 'refs/tags/')
