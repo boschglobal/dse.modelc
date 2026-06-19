@@ -55,6 +55,7 @@ func RedisCommand(redisPath string, quiet bool) *session.Command {
 			Args:       []string{"/usr/local/etc/valkey/valkey.conf"},
 			Quiet:      quiet,
 			KillNoWait: true,
+			NoCancel:   true,
 		}
 	} else {
 		return &session.Command{
@@ -62,6 +63,7 @@ func RedisCommand(redisPath string, quiet bool) *session.Command {
 			Prog:       redisPath,
 			Quiet:      quiet,
 			KillNoWait: true,
+			NoCancel:   true,
 		}
 	}
 }
@@ -111,10 +113,11 @@ func SimbusCommand(index *index.YamlFileIndex, simbusPath string, flags Flags) *
 					args = append(args, "--timeout", strconv.FormatFloat(flags.Timeout, 'f', -1, 64))
 				}
 				cmd := session.Command{
-					Name: "SimBus",
-					Prog: path,
-					Args: append(args, yamlFiles...),
-					Env:  calculateEnv(stackSpec, &model, flags),
+					Name:     "SimBus",
+					Prog:     path,
+					Args:     append(args, yamlFiles...),
+					Env:      calculateEnv(stackSpec, &model, flags),
+					NoCancel: true,
 				}
 				slog.Info(fmt.Sprintf("SimBus: stack=%s (%s)", stackDoc.Metadata.Name, stackDoc.File))
 				slog.Info(fmt.Sprintf("  Prog : %s", cmd.Prog))

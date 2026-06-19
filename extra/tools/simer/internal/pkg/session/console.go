@@ -11,7 +11,9 @@ import (
 	"io"
 	"log/slog"
 	"os"
+	"os/signal"
 	"sync"
+	"syscall"
 )
 
 type ConsoleSession struct {
@@ -21,7 +23,7 @@ type ConsoleSession struct {
 }
 
 func (s *ConsoleSession) Create() error {
-	s.ctx, s.cancel = context.WithCancel(context.Background())
+	s.ctx, s.cancel = signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	return nil
 }
 
@@ -110,15 +112,16 @@ func (s *ConsoleSession) Wait() error {
 				firstErr = r.err
 			}
 		}
+	}
 
-		if r.cmd.Name == "SimBus" {
-			// Search for and kill any Redis commands.
-			for _, c := range s.commands {
-				if c.Name == "Redis" {
-					slog.Debug("Cancelling the Redis cmd")
-					c.cmd.Cancel()
-				}
+	// Kill any remaining commands (typically Redis/Valkey).
+	for _, c := range s.commands {
+		if c.KillNoWait && c.cmd != nil && c.cmd.Process != nil {
+			pgid, err := syscall.Getpgid(c.cmd.Process.Pid)
+			if err != nil {
+				pgid = c.cmd.Process.Pid
 			}
+			_ = syscall.Kill(-pgid, syscall.SIGKILL)
 		}
 	}
 

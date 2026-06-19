@@ -72,7 +72,7 @@ func main() {
 	}
 
 	// Setup Redis command.
-	quietRedis := !(*logger < 3)
+	quietRedis := *logger >= 3
 
 	if c := simer.RedisCommand(*redisPath, quietRedis); c != nil {
 		cmds = append(cmds, c)
