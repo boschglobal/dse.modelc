@@ -61,7 +61,7 @@ RUN cd /src && make clean && make build
 
 # Simer Container Image
 # =====================
-FROM debian:bookworm-slim
+FROM debian:bookworm-slim AS simer-slim
 LABEL maintainer="timothy.rule@de.bosch.com"
 
 ENV DEBIAN_FRONTEND=noninteractive
@@ -78,21 +78,16 @@ RUN set -eux; \
         bash \
         ca-certificates \
         curl \
-		gdb \
-        gdbserver \
 		gosu \
         jq \
-        less \
 		libc6-i386 \
         libc6-x32 \
         libx32stdc++6 \
-		tmux \
-		valgrind \
-        vim \
         unzip \
     && \
     apt-get clean; \
-    rm -rf /var/lib/apt/lists/*;
+	rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/* /usr/share/doc /usr/share/man;
+
 
 
 # Install Valkey
@@ -106,11 +101,6 @@ RUN mkdir -p /data/valkey \
 	&& chown simer:simer /var/run/valkey
 VOLUME /data/valkey
 EXPOSE 6379
-
-
-# Setup GDB Server
-# ================
-EXPOSE 2159
 
 
 # Install ModelC Tools and  MCL Model
@@ -149,3 +139,22 @@ ENTRYPOINT ["/entrypoint.sh"]
 # FIXME this change does not work in E2E tests.
 #
 #RUN printf 'precedence ::ffff:0:0/96  100\n' >> /etc/gai.conf
+
+FROM simer-slim
+
+RUN set -eux; \
+	apt-get -y update; \
+    apt-get -y install --no-install-recommends \
+		gdb \
+        gdbserver \
+        less \
+		tmux \
+		valgrind \
+        vim \
+    && \
+    apt-get clean; \
+    rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/* /usr/share/doc /usr/share/man;
+
+# Setup GDB Server
+# ================
+EXPOSE 2159

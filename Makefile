@@ -12,7 +12,6 @@ SIMER_IMAGE ?= ghcr.io/boschglobal/dse-simer:latest
 
 ###############
 ## Docker Containers.
-DOCKER_DIRS = simbus-sa modelc modelc-x86
 TOOL_DIRS = simer benchmark
 
 
@@ -162,21 +161,21 @@ simer: build package
 	fi
 	cp -r extra/tools/trace extra/tools/simer/build/stage
 
-.PHONY: docker
-docker:
-	for d in $(DOCKER_DIRS) ;\
-	do \
-		docker build -f extra/docker/$$d/Dockerfile \
-				--tag $$d:test . ;\
-	done;
-
 .PHONY: tools
 tools: simer
 	for d in $(TOOL_DIRS) ;\
 	do \
 		if [ -f extra/tools/$$d/build/package/Dockerfile ]; then \
-			docker build -f extra/tools/$$d/build/package/Dockerfile \
-					--tag $$d:test extra/tools/$$d ;\
+			if [ "$$d" = "simer" ]; then \
+				docker build -f extra/tools/$$d/build/package/Dockerfile \
+						--target simer-slim \
+						--tag $$d:test-slim extra/tools/$$d ;\
+				docker build -f extra/tools/$$d/build/package/Dockerfile \
+						--tag $$d:test extra/tools/$$d ;\
+			else \
+				docker build -f extra/tools/$$d/build/package/Dockerfile \
+						--tag $$d:test extra/tools/$$d ;\
+			fi \
 		else \
 			$(MAKE) -C extra/tools/$$d; \
 		fi \
