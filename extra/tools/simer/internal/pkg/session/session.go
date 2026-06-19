@@ -11,7 +11,10 @@ import (
 	"os"
 	"os/exec"
 	"sync"
+	"time"
 )
+
+const ProcessTerminateGracePeriod = 60 * time.Second
 
 type Session interface {
 	Create() error
@@ -32,7 +35,8 @@ type Command struct {
 	Env  map[string]string
 
 	Quiet      bool
-	KillNoWait bool
+	KillNoWait bool // Process is long running, do not wait for exit, kill explicitly.
+	NoCancel   bool // Install a NOP cancel handler, the process must stop itself.
 }
 
 func (c *Command) Environ() []string {
@@ -72,6 +76,8 @@ func (c *Command) Execute() error {
 
 func (c *Command) Start(ctx context.Context, redirect func(c *Command)) error {
 	c.cmd = exec.CommandContext(ctx, c.Prog, c.Args...)
+	c.installCancelHandler()
+
 	if c.Dir != "" {
 		c.cmd.Dir = c.Dir
 	}
