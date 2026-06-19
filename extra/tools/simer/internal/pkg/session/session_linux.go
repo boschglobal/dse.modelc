@@ -36,3 +36,15 @@ func (c *Command) installCancelHandler() {
 	}
 	c.cmd.WaitDelay = ProcessTerminateGracePeriod
 }
+
+func (c *Command) forceKillCommand() {
+	if c.cmd == nil || c.cmd.Process == nil || c.cmd.Process.Pid <= 0 {
+		return
+	}
+
+	pgid, err := syscall.Getpgid(c.cmd.Process.Pid)
+	if err != nil {
+		pgid = c.cmd.Process.Pid
+	}
+	_ = syscall.Kill(-pgid, syscall.SIGKILL)
+}

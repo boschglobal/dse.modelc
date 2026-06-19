@@ -7,6 +7,8 @@
 package session
 
 import (
+	"os/exec"
+	"strconv"
 	"syscall"
 )
 
@@ -36,4 +38,13 @@ func (c *Command) installCancelHandler() {
 		return nil
 	}
 	c.cmd.WaitDelay = ProcessTerminateGracePeriod
+}
+
+func (c *Command) forceKillCommand() {
+	if c.cmd == nil || c.cmd.Process == nil || c.cmd.Process.Pid <= 0 {
+		return
+	}
+
+	killCmd := exec.Command("taskkill", "/F", "/T", "/PID", strconv.Itoa(c.cmd.Process.Pid))
+	_ = killCmd.Run()
 }

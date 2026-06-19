@@ -116,12 +116,8 @@ func (s *ConsoleSession) Wait() error {
 
 	// Kill any remaining commands (typically Redis/Valkey).
 	for _, c := range s.commands {
-		if c.KillNoWait && c.cmd != nil && c.cmd.Process != nil {
-			pgid, err := syscall.Getpgid(c.cmd.Process.Pid)
-			if err != nil {
-				pgid = c.cmd.Process.Pid
-			}
-			_ = syscall.Kill(-pgid, syscall.SIGKILL)
+		if c.KillNoWait {
+			c.forceKillCommand()
 		}
 	}
 
