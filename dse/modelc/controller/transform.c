@@ -18,7 +18,10 @@ static inline double _call_lua_transform(
 
     lua_push_ctx(L);
     if (lua_ctx_set_double(L, "value", ret_val) != 0) goto cleanup;
-    if (lua_call_ctx(L, func_ref) != 0) goto cleanup;
+
+    int rc = lua_call_ctx(L, func_ref);
+    if (rc < 0) goto cleanup;
+    if (rc == 0) goto cleanup;
     if (lua_ctx_get_double(L, "value", &ret_val) != 0) goto cleanup;
 
 cleanup:

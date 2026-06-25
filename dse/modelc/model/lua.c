@@ -92,7 +92,7 @@ int lua_install_script(lua_State* L, const char* lua_script)
     if (lua_script != NULL && luaL_dostring(L, lua_script) != 0) {
         log_error(
             "Lua Error: luaL_dostring() failed (%s)", lua_tostring(L, -1));
-        lua_pop(L, 1);
+        lua_settop(L, top);
         return 0;
     }
 
@@ -106,6 +106,7 @@ int lua_install_script(lua_State* L, const char* lua_script)
         }
         log_notice(
             "Lua: anonymous function installed: (ref=%d)\n%s", ref, lua_script);
+        lua_settop(L, top);
         return ref;
     }
 
@@ -167,6 +168,7 @@ int lua_call_ctx(lua_State* L, int32_t func_ref)
         lua_pop(L, 2);                                      // []
         return -EINVAL;
     }
+    lua_insert(L, -2);                                      // [func][ctx]
     if (lua_pcall(L, 1, 1, 0) != LUA_OK) {                  // [ret|err]
         lua_model_error(L, "lua_pcall() failed");
         lua_pop(L, 1);                                      // []
@@ -219,21 +221,25 @@ int lua_pop_ctx(lua_State* L)
 int lua_model_pcall(lua_State* L, const char* func, int* result)
 {
     assert(L);
+    int top = lua_gettop(L);
 
     lua_getglobal(L, func);
     if (!lua_isfunction(L, -1)) {
         log_trace("Function not available: %s", func);
+        lua_settop(L, top);
         return EINVAL;
     }
     if (lua_pcall(L, 0, 1, 0)) {
         lua_model_error(L, "lua_pcall() failed");
+        lua_settop(L, top);
         return EBADF;
     }
     if (result) {
-        *result = lua_tonumber(L, -1);
+        *result = (int)lua_tointeger(L, -1);
         log_trace("Function %s() returned %d", func, *result);
     }
 
+    lua_settop(L, top);
     return 0;
 }
 
