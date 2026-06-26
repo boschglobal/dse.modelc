@@ -23,6 +23,8 @@ import (
 	schema_kind "github.com/boschglobal/dse.schemas/code/go/dse/kind"
 )
 
+const valgrindPath = "/usr/local/bin/valgrind"
+
 func listFiles(paths []string, exts []string) []string {
 	files := []string{}
 	for _, path := range paths {
@@ -299,7 +301,7 @@ func processCmdModifiers(name string, path string, flags Flags) (string, []strin
 			}
 			args = append(args, valgrindArgs...)
 			args = append(args, path)
-			path = "/usr/bin/valgrind"
+			path = valgrindPath
 		}
 	}
 	return path, args

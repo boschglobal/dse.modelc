@@ -45,6 +45,30 @@ RUN set -eux; \
 	rm -r /usr/src/valkey;
 
 
+# Valgrind Builder
+# ================
+FROM debian:bookworm-slim AS valgrind
+
+ENV VALGRIND_VERSION=3.27.1
+ENV VALGRIND_DOWNLOAD_URL=https://sourceware.org/pub/valgrind/valgrind-3.27.1.tar.bz2
+ENV VALGRIND_DOWNLOAD_SHA=0b113f5c80d34743195b78651c2520901ba630cf
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    curl \
+    bzip2 \
+    ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN set -eux; \
+    curl -O $VALGRIND_DOWNLOAD_URL; \
+    echo "$VALGRIND_DOWNLOAD_SHA valgrind-$VALGRIND_VERSION.tar.bz2" | sha1sum -c -; \
+    tar -xjf valgrind-$VALGRIND_VERSION.tar.bz2; \
+    cd valgrind-$VALGRIND_VERSION; \
+    CFLAGS="-O2 -g0" ./configure --prefix=/usr/local --enable-only64bit; \
+    make -j$(nproc); \
+    make install-strip
+
 # Simer Builder
 # =============
 FROM golang:bookworm AS simer
@@ -142,14 +166,18 @@ ENTRYPOINT ["/entrypoint.sh"]
 
 FROM simer-slim
 
+COPY --from=valgrind /usr/local/bin/valgrind /usr/local/bin/valgrind
+COPY --from=valgrind /usr/local/lib/valgrind /usr/local/lib/valgrind
+COPY --from=valgrind /usr/local/libexec/valgrind /usr/local/libexec/valgrind
+
 RUN set -eux; \
 	apt-get -y update; \
     apt-get -y install --no-install-recommends \
 		gdb \
         gdbserver \
         less \
+		libc6-dbg \
 		tmux \
-		valgrind \
         vim \
     && \
     apt-get clean; \
