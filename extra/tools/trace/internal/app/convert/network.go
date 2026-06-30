@@ -84,6 +84,7 @@ func (n *NetworkMeasurement) indexFlexRayFrameTable(metadata *pdu.FlexrayMetadat
 			frameTableIndex: lpduConfig.FrameTableIndex(),
 			channel:         uint8(lpduConfig.Channel()),
 		}
+		slog.Debug("Frame Config", "EcuId", nodeIdent.EcuId(), "SlotId", lpduConfig.SlotId(), "BaseCycle", lpduConfig.BaseCycle(), "CycleRepetition", lpduConfig.CycleRepetition())
 	}
 	return nil
 }
@@ -239,12 +240,12 @@ func (n *NetworkMeasurement) writeFlexRayEvent(time float64, msg *pdu.Pdu) error
 	metadata.NodeIdent(&nodeIdent)
 	frameTable, ok := n.config[nodeIdent.EcuId()]
 	if !ok {
-		slog.Debug(fmt.Sprintf("missing FlexRay frame table for ecuId=%d", nodeIdent.EcuId()))
+		slog.Info(fmt.Sprintf("missing FlexRay frame table for ecuId=%d", nodeIdent.EcuId()))
 		return nil
 	}
 	config, ok := frameTable.table[lpdu.FrameConfigIndex()]
 	if !ok {
-		slog.Debug(fmt.Sprintf(
+		slog.Info(fmt.Sprintf(
 			"missing FlexRay frame config for ecuId=%d frameConfigIndex=%d",
 			nodeIdent.EcuId(),
 			lpdu.FrameConfigIndex(),
@@ -256,16 +257,17 @@ func (n *NetworkMeasurement) writeFlexRayEvent(time float64, msg *pdu.Pdu) error
 	dir := ""
 	switch lpdu.Status() {
 	case 1:
-		// Tx are status updates (i.e. pending Tx occurred).
-		return nil
-	case 3:
-		// All bus traffic is Rx, unless we know the sending node.
+		// Tx - all bus traffic is Tx, however from the perspective of the
+		// monitoring node, only its Tx is Tx.
 		dir = "Rx"
 		if n.txEcuId == msg.EcuId() {
 			dir = "Tx"
 		}
 	case 2:
 		// NTx indicates request to transmit (i.e. pending).
+		return nil
+	case 3:
+		// Rx indicates receive, however trace only includes Tx events.
 		return nil
 	case 4:
 		// NRx indicate request to receive.
