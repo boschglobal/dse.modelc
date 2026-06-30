@@ -301,7 +301,7 @@ void test_ncodec_pdu__config(void** state)
                          .swc_id = 88  // Should be filtered.
                      });
     size_t len = ncodec_flush(nc);
-    assert_int_equal(len, 0x6a);
+    assert_int_equal(len, 0x5a);
     assert_int_equal(len, sv->length[PDU_SIG_IDX]);
 
     /* Copy message, keeping the content. */
@@ -362,7 +362,7 @@ void test_ncodec_pdu__call_sequence(void** state)
     assert_int_equal(strlen(greeting), len);
     ncodec_flush(nc);
     _adjust_swc_id(nc, "4");
-#define EXPECT_POS 0x6a
+#define EXPECT_POS 0x5a
     assert_int_equal(EXPECT_POS, ncodec_tell(nc));
 
     /* Read then Write. */
