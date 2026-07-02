@@ -49,7 +49,7 @@ static bool process_sbno_message(
 
             /* Locate the Adapter Model. */
             char hash_key[UID_KEY_LEN];
-            snprintf(hash_key, UID_KEY_LEN - 1, "%d", model_uid);
+            snprintf(hash_key, UID_KEY_LEN, "%d", model_uid);
             AdapterModel* am = hashmap_get(&adapter->models, hash_key);
             if (am == NULL) return false; /* Discard, not for this model. */
 
@@ -84,7 +84,7 @@ static bool process_sbno_message(
 
             /* Locate the channel objects. */
             char hash_key[UID_KEY_LEN];
-            snprintf(hash_key, UID_KEY_LEN - 1, "%d", model_uid);
+            snprintf(hash_key, UID_KEY_LEN, "%d", model_uid);
             AdapterModel* am = hashmap_get(&adapter->models, hash_key);
             if (am == NULL) {
                 log_trace("Discard index, no model.");
@@ -144,17 +144,31 @@ static bool process_message_stream(Adapter* adapter, const char* channel_name,
     UNUSED(channel_name);
 
     bool     found = false;
-    size_t   msg_len = 0;
     uint8_t* msg_ptr = buffer;
 
     /* Messages are in a stream, each with a size prefix. */
-    while (((msg_ptr - buffer) + msg_len) < (uint32_t)length) {
+    while ((size_t)(msg_ptr - buffer) < length) {
+        /* Note: msg_ptr changes during the parsing so don't use as basis for
+        other calculated variables (such as an offset). */
+        size_t remaining = length - (size_t)(msg_ptr - buffer);
+
+        if (remaining < sizeof(flatbuffers_uoffset_t)) {
+            log_debug("process_message_stream: incomplete size prefix");
+            break;
+        }
+
         uint8_t* raw_msg_ptr = msg_ptr;
+        size_t msg_len = 0;
         msg_ptr = flatbuffers_read_size_prefix(msg_ptr, &msg_len);
         if (msg_len == 0) {
             log_debug("process_message_stream: size_prefix is 0!?!");
             break;
-        };
+        }
+        if (msg_len > length - (size_t)(msg_ptr - buffer)) {
+            log_debug("process_message_stream: truncated message");
+            break;
+        }
+
         /* Trace the incoming message, before processing. */
         if (adapter->trace.file) {
             fwrite(raw_msg_ptr, sizeof(raw_msg_ptr[0]),
