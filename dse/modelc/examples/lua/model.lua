@@ -3,8 +3,10 @@
 -- SPDX-License-Identifier: Apache-2.0
 
 SIG_COUNTER = 1
+SIG_ENABLE = 2
 signal_map = {
     [SIG_COUNTER] = "counter",
+    [SIG_ENABLE] = "enable",
 }
 signals = {}
 

@@ -15,3 +15,6 @@ spec:
     - signal: counter
       annotations:
         initial_value: 23
+    - signal: enable
+      annotations:
+        initial_value: 1

@@ -351,7 +351,7 @@ static int luasv_instance_signal_annotation(lua_State* L)
         lua_pushnil(L);
         return 1;
     }
-    sig_idx = idx.vector;
+    sig_idx = idx.signal;
 
     const char* value;
     value = signal_annotation(sv, sig_idx, annotation, NULL);

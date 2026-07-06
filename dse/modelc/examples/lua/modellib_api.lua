@@ -34,6 +34,14 @@ function model_create()
     local annotation = model.sv["signal"]:annotation("counter", "initial_value")
     model.sv["signal"].scalar[sv_idx] = tonumber(annotation)
 
+    -- Enable signal.
+    local enable_idx = model.sv["signal"]:find("enable")
+    print("model.sv[]:find(enable) = " .. enable_idx)
+    print("model.sv[]:annotation(enable) = " .. model.sv["signal"]:annotation("enable", "initial_value"))
+    local enable_annotation = model.sv["signal"]:annotation("enable", "initial_value")
+    model.sv["signal"].scalar[enable_idx] = tonumber(enable_annotation)
+    print("model.sv[].scalar[enable] = " .. model.sv["signal"].scalar[enable_idx])
+
     -- Indicate success.
     return 0
 end
