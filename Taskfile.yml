@@ -4,6 +4,7 @@ version: '3'
 metadata:
   package:
     download: '{{.REPO}}/releases/download/v{{.TAG}}/ModelC-{{.TAG}}-{{.PLATFORM_ARCH}}.zip'
+    file: 'dse/modelc/build/_dist/ModelC-{{coalesce .TAG .PACKAGE_VERSION "not-specified"}}-{{.PLATFORM_ARCH}}.zip'
 
   container:
     repository: ghcr.io/boschglobal/dse-modelc
@@ -35,15 +36,14 @@ metadata:
         - windows-x86
 
 vars:
-  # When running from E2E tests (i.e. Docker in Docker), the ENTRYDIR (for
+  # When running from E2E tests (i.e. Docker in Docker), the MODELC_SIMDIR (for
   # Docker commands) must be set to the host relative path.
-  ENTRYDIR: '{{if .SIM}}{{.ENTRYWORKDIR}}/{{.SIM}}{{else}}{{.PWD}}{{end}}'
+  MODELC_SIMDIR: '{{if .SIM}}{{.ENTRYWORKDIR}}/{{.SIM}}{{else}}{{.PWD}}{{end}}'
+  MODELC_OUTDIR: '{{if .OUTDIR}}{{.ENTRYWORKDIR}}/{{.OUT}}{{else}}{{.PWD}}/out{{end}}'
   # Container image specification.
-  REPO: 'https://github.com/boschglobal/dse.modelc'
-  REGISTRY: ghcr.io/boschglobal
-  TAG: '{{.TAG | default "latest"}}'
-  MODELC_IMAGE: '{{if .MODELC_IMAGE}}{{.MODELC_IMAGE}}/{{.MODELC_IMAGE}}{{else}}{{.REGISTRY}}/dse-modelc:{{.TAG}}{{end}}'
-  SIMER_IMAGE: '{{if .SIMER_IMAGE}}{{.SIMER_IMAGE}}/{{.SIMER_IMAGE}}{{else}}{{.REGISTRY}}/dse-simer:{{.TAG}}{{end}}'
+  MODELC_REPO: 'https://github.com/boschglobal/dse.modelc'
+  MODELC_REGISTRY: ghcr.io/boschglobal
+  MODELC_TAG: '{{.TAG | default "latest"}}'
   USER:
     sh: id -u
   GROUP:
@@ -60,17 +60,26 @@ tasks:
     silent: true
     dir: '{{.USER_WORKING_DIR}}'
     label: dse:modelc:info
+    vars:
+      MODELC_IMAGE: '{{if .MODELC_IMAGE}}{{.MODELC_IMAGE}}{{else}}{{.MODELC_REGISTRY}}/dse-modelc:{{.MODELC_TAG}}{{end}}'
+      SIMER_IMAGE: '{{if .SIMER_IMAGE}}{{.SIMER_IMAGE}}{{else}}{{.MODELC_REGISTRY}}/dse-simer:{{.MODELC_TAG}}{{end}}'
     cmds:
-      - echo "ENTRYDIR={{.ENTRYDIR}}"
-      - echo "REPO={{.REPO}}"
-      - echo "REGISTRY={{.REGISTRY}}"
-      - echo "TAG={{.TAG}}"
-      - echo "MODELC_IMAGE={{.MODELC_IMAGE}}"
-      - echo "SIMER_IMAGE={{.SIMER_IMAGE}}"
-      - echo "USER={{.USER}}"
-      - echo "GROUP={{.GROUP}}"
-      - echo "OUTDIR={{.OUTDIR}}"
-      - echo "SIMDIR={{.SIMDIR}}"
+      - echo "** Taskfile global vars (MODELC Namespace) **"
+      - echo MODELC_SIMDIR={{.MODELC_SIMDIR}}
+      - echo MODELC_OUTDIR={{.MODELC_OUTDIR}}
+      - echo MODELC_REPO={{.MODELC_REPO}}
+      - echo MODELC_REGISTRY={{.MODELC_REGISTRY}}
+      - echo MODELC_TAG={{.MODELC_TAG}}
+      - echo "** Taskfile Include vars **"
+      - echo ENTRYWORKDIR={{.ENTRYWORKDIR}}
+      - echo SIM={{.SIM}}
+      - echo TAG={{.TAG}}
+      - echo "** Runtime/Other vars **"
+      - echo MODELC_IMAGE={{.MODELC_IMAGE}}
+      - echo SIMER_IMAGE={{.SIMER_IMAGE}}
+      - echo PACKAGE_VERSION={{.PACKAGE_VERSION}}
+      - echo PLATFORM_ARCH={{.PLATFORM_ARCH}}
+      - echo USER_WORKING_DIR={{.USER_WORKING_DIR}}
 
   download-file:
     internal: true
@@ -128,10 +137,10 @@ tasks:
     dir: '{{.OUTDIR}}'
     label: dse:modelc:download-simer-windows
     vars:
-      REPO: '{{.REPO}}'
-      TAG: '{{.TAG}}'
+      REPO: '{{.MODELC_REPO}}'
+      TAG: '{{.MODELC_TAG}}'
       PATH: '{{.SIMDIR}}'
-      PACKAGE_URL: '{{.REPO}}/releases/download/v{{.TAG}}/Simer-{{.TAG}}-windows.zip'
+      PACKAGE_URL: '{{.MODELC_REPO}}/releases/download/v{{.MODELC_TAG}}/Simer-{{.MODELC_TAG}}-windows.zip'
     deps:
       - task: download-file
         vars:
@@ -155,8 +164,8 @@ tasks:
     dir: '{{.OUTDIR}}'
     label: dse:modelc:download-simer-docker
     vars:
-      REPO: '{{.REPO}}'
-      TAG: '{{.TAG}}'
+      REPO: '{{.MODELC_REPO}}'
+      TAG: '{{.MODELC_TAG}}'
       PATH: '{{.SIMDIR}}/bin'
       TAR: 'simer-{{.TAG}}.tar'
     sources: []
@@ -176,8 +185,8 @@ tasks:
     dir: '{{.OUTDIR}}'
     label: dse:modelc:package-sim
     vars:
-      REPO: '{{.REPO}}'
-      TAG: '{{.TAG}}'
+      REPO: '{{.MODELC_REPO}}'
+      TAG: '{{.MODELC_TAG}}'
       PATH: '{{.SIMDIR}}'
       PACKAGE_PATH: '{{.PROJECT}}-{{.VERSION}}-sim-windows.zip'
     sources: []
