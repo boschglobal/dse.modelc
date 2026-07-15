@@ -214,6 +214,24 @@ static void _args_extract_yaml_connection(ModelCArguments* args)
 }
 
 
+static void _args_extract_yaml_environment(ModelCArguments* args)
+{
+    YamlNode* stack = modelc_find_stack(args);
+    if (stack == NULL) {
+        log_fatal("No stack found!");
+    }
+    YamlNode* s_node = dse_yaml_find_node(stack, "spec/runtime/env");
+
+    /* Look for Log Level at spec/runtime/env/SIMBUS_LOGLEVEL. */
+    if (s_node) {
+        if (args->log_level_set_by_cli == 0) {
+            YamlNode* node = dse_yaml_find_node(s_node, ENV_SIMBUS_LOGLEVEL);
+            args->log_level = (node) ? atol(node->scalar) : args->log_level;
+        }
+    }
+}
+
+
 void modelc_set_default_args(ModelCArguments* args,
     const char* model_instance_name, double step_size, double end_time)
 {
@@ -329,7 +347,8 @@ void modelc_parse_arguments(
      *  that the TRANSPORT will depreciated (transport will be encoded/detected
      *  via the URI.)
      */
-    /* Environment (only if not set). */
+    /* Environment (only if not set, priority: envar > stack > default). */
+    _args_extract_yaml_environment(args);
     _args_extract_environment(args);
     /* Stack YAML (only if not set). */
     _args_extract_yaml_connection(args);

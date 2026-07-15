@@ -158,7 +158,7 @@ static bool process_message_stream(Adapter* adapter, const char* channel_name,
         }
 
         uint8_t* raw_msg_ptr = msg_ptr;
-        size_t msg_len = 0;
+        size_t   msg_len = 0;
         msg_ptr = flatbuffers_read_size_prefix(msg_ptr, &msg_len);
         if (msg_len == 0) {
             log_debug("process_message_stream: size_prefix is 0!?!");
