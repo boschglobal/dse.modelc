@@ -203,20 +203,24 @@ typedef struct RuntimeModelDesc {
 
         /* Runtime Function Table - Importer provided functions. */
         RuntimeModelVTable vtable;
+
+        /* Tracks the internal runtime model time. */
+        /* Located here to maintain struct version compatibility. */
+        double model_time;
     } runtime;
 
 
     /* Reserved. */
 #if defined(__x86_64__)
 #if __SIZEOF_POINTER__ == 8
-    uint64_t __reserved__[5];
+    uint64_t __reserved__[4];
 #else
     uint32_t __reserved_4__[3];
-    uint64_t __reserved__[5];
+    uint64_t __reserved__[4];
 #endif
 #elif defined(__i386__)
     uint32_t __reserved_4__[3];
-    uint64_t __reserved__[5];
+    uint64_t __reserved__[4];
 #endif
 } RuntimeModelDesc;
 

@@ -22,9 +22,10 @@ ModelC (i.e. model.h) interface. This importer has additional linked
 libraries, the Runtime is expected to provide all necessary objects/symbols.
 */
 
-#define STEP_SIZE MODEL_DEFAULT_STEP_SIZE
-#define END_TIME  600
-#define STEPS     10
+#define RUNTIME_STEP_SIZE  MODEL_DEFAULT_STEP_SIZE
+#define IMPORTER_STEP_SIZE MODEL_DEFAULT_STEP_SIZE
+#define END_TIME           600
+#define STEPS              20
 
 
 static void __log(const char* format, ...)
@@ -80,8 +81,11 @@ static void __print_sv(SignalVector* sv)
 }
 
 
-static void __dump_sim(SimulationSpec* sim)
+static void __dump_sim(RuntimeModelDesc* rm)
 {
+    SimulationSpec* sim = rm->model.sim;
+    __log("Step Size: %f", rm->runtime.step_size);
+    __log("End Time: %f", rm->runtime.end_time);
     for (ModelInstanceSpec* mi = sim->instance_list; mi && mi->name; mi++) {
         __log("Model Instance: %s", mi->name);
         __print_sv(mi->model_desc->sv);
@@ -104,6 +108,9 @@ int main(int argc, char** argv)
             .sim_path = argv[2],
             .simulation_yaml = argv[3],
             .model_name = argc == 5 ? argv[4] : NULL,
+            /* The following may be overriden by items contained in
+            the Stack:metadata/annotations/simulation. */
+            .step_size = RUNTIME_STEP_SIZE,
             .end_time = END_TIME,
         },
     };
@@ -141,19 +148,20 @@ int main(int argc, char** argv)
         __log("Calling vtable.create() ...");
         m = vtable.create(m);
     }
-    __dump_sim(rm.model.sim);
+    __dump_sim(&rm);
 
-    /* Step the model with calls to model_step(). */
+    /* Step the model with calls to model_step(). The importer step size may
+    be different than the runtime step size (rm.runtime.step_size). */
     double model_time = 0.0;
     for (int i = 0; i < STEPS; i++) {
         __log("Calling vtable.step(): model_time=%f, stop_time=%f", model_time,
-            (model_time + STEP_SIZE));
-        int rc = vtable.step(m, &model_time, (model_time + STEP_SIZE));
+            (model_time + IMPORTER_STEP_SIZE));
+        int rc = vtable.step(m, &model_time, (model_time + IMPORTER_STEP_SIZE));
         if (rc != 0) {
             __log("step() returned error code: %d", rc);
         }
     }
-    __dump_sim(rm.model.sim);
+    __dump_sim(&rm);
 
     /* Call model_destroy(). */
     if (vtable.destroy) {

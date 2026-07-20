@@ -59,6 +59,22 @@ static void __log_operating_conditions(void)
 }
 
 
+static int __locate_runtime_conditions(
+    const char* sim_yaml, RuntimeModelDesc* rm)
+{
+    /* Locate runtime annotations. */
+    YamlDocList* doc_list = dse_yaml_load_file(sim_yaml, NULL);
+    YamlNode*    sim_node = dse_yaml_find_node_in_doclist(
+        doc_list, "Stack", "metadata/annotations/simulation");
+    if (sim_node != NULL) {
+        dse_yaml_get_double(sim_node, "stepsize", &rm->runtime.step_size);
+        dse_yaml_get_double(sim_node, "endtime", &rm->runtime.end_time);
+    }
+    dse_yaml_destroy_doc_list(doc_list);
+    return 0;
+}
+
+
 static int __build_args(const char* sim_yaml, int* argc, char*** argv)
 {
     /* Extract parameters from the simulation YAML file. */
@@ -111,6 +127,9 @@ RuntimeModelDesc* model_runtime_create(RuntimeModelDesc* rm)
     __log("Simulation YAML: %s", simulation_yaml);
     __log("Model: %s", rm->runtime.model_name);
 
+    /* Locate runtime conditions (stack:metadata/annotations/simulation). */
+    __locate_runtime_conditions(simulation_yaml, rm);
+
     /* Argument parsing. */
     __build_args(simulation_yaml, &rm->runtime.argc, &rm->runtime.argv);
     ModelCArguments args;
@@ -151,12 +170,14 @@ int model_runtime_step(
 {
     int    rc = 0;
     double _step_epsilon = rm->model.sim->step_size * 0.01;
-    double _model_time = *model_time;
+    double runtime_model_time = rm->runtime.model_time;
+
+    /* Step the runtime model as many times as possible. */
     double model_current_time;
     double model_stop_time;
     do {
         /* Determine times. */
-        model_current_time = _model_time;
+        model_current_time = runtime_model_time;
         model_stop_time = stop_time;
 
         if (model_current_time >= model_stop_time) {
@@ -170,11 +191,14 @@ int model_runtime_step(
          */
         double y = rm->model.sim->step_size - rm->runtime.step_time_correction;
         double t = model_current_time + y;
-        rm->runtime.step_time_correction = (t - model_current_time) - y;
+        double step_time_correction = (t - model_current_time) - y;
         model_stop_time = t;
 
         /* Model stop time past Simulation stop time. */
         if (model_stop_time > stop_time + _step_epsilon) break;
+
+        /* Step accepted, now commit the correction. */
+        rm->runtime.step_time_correction = step_time_correction;
 
         /*  Step the model(s). This will call:
          *      controller_step()   // Sets AdapterModel `stop_time` according
@@ -185,9 +209,14 @@ int model_runtime_step(
         log_trace("model_runtime_step: model_time=%f, stop_time=%f",
             model_current_time, model_stop_time);
         rc |= modelc_sync(rm->model.sim);
-        _model_time = _model_time + rm->model.sim->step_size;
+        runtime_model_time = model_stop_time;
     } while (model_stop_time + _step_epsilon < stop_time);
 
+    /* Store the internal runtime model time (which may be less than the
+    model_time returned to the importer, esp. when a step does not occur). */
+    rm->runtime.model_time = runtime_model_time;
+
+    /* Indicate to the importer that the stop time was reached. */
     *model_time = stop_time;
     return rc;
 }

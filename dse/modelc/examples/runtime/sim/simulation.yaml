@@ -7,6 +7,9 @@ kind: Stack
 metadata:
   name: target_stack
   annotations:
+    simulation:
+      stepsize: 0.0010
+      endtime: 3600
     model_runtime__model_inst: target_inst
     model_runtime__yaml_files:
       - data/simulation.yaml
