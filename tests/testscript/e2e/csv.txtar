@@ -18,9 +18,27 @@ stdout 'SignalValue: 3322673650 = -3.300000 \[name=C\]'
 
 -- test.sh --
 SIMER="${SIMER:-ghcr.io/boschglobal/dse-simer:latest}"
+
+# Run baseline LF CSV.
 docker run --name simer -i --rm \
     -v $ENTRYHOSTDIR/$SIM:/sim \
     $SIMER \
         -valgrind $NAME \
         -env $NAME:SIMBUS_LOGLEVEL=2 \
+        -logger 2
+
+# Convert the example valueset to CRLF and run again.
+CSV_DATA_DIR="${REPODIR:-$ENTRYHOSTDIR}/$SIM/data"
+mkdir -p "$CSV_DATA_DIR"
+
+awk '{ sub(/\r$/, ""); printf "%s\r\n", $0 }' \
+    "$CSV_DATA_DIR/valueset.csv" > \
+    "$CSV_DATA_DIR/valueset_crlf.csv"
+
+docker run --name simer -i --rm \
+    -v $ENTRYHOSTDIR/$SIM:/sim \
+    $SIMER \
+        -valgrind $NAME \
+        -env $NAME:SIMBUS_LOGLEVEL=2 \
+        -env $NAME:CSV_FILE=data/valueset_crlf.csv \
         -logger 2

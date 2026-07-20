@@ -18,6 +18,7 @@ FetchContent_MakeAvailable(dse_clib)
 set(DSE_CLIB_INCLUDE_DIR ${dse_clib_SOURCE_DIR})
 
 add_library(csv SHARED
+    ${dse_clib_SOURCE_DIR}/dse/clib/csv/csv.c
     model.c
 )
 target_include_directories(csv
