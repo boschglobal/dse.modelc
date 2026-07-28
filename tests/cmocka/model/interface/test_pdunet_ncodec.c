@@ -71,6 +71,15 @@ static char* inst_argv[] = {
     (char*)"data/simulation.yaml",
 };
 
+static void _visit_count_tx(PduNetworkDesc* net, PduObject* pdu, void* data)
+{
+    assert_non_null(net);
+    assert_non_null(data);
+    if (pdu->pdu->dir == PduDirectionTx && pdu->needs_tx) {
+        (*(int*)data)++;
+    }
+}
+
 /*
 When a model is created, for each NCodec object, an associated PDU Network
 will be created (if a matching network configuration is found). The PDU Network
@@ -82,6 +91,7 @@ void test_pdunet_setup(void** state)
     TestData* d = *state;
 
     SimMock* mock = d->mock = simmock_alloc(inst_names, ARRAY_SIZE(inst_names));
+    mock->step_size = 0.005; /* Modify default step_size. */
     simmock_configure(
         mock, inst_argv, ARRAY_SIZE(inst_argv), ARRAY_SIZE(inst_names));
     ModelMock* model = simmock_find_model(mock, PDUNET_INST_NAME);
@@ -90,6 +100,21 @@ void test_pdunet_setup(void** state)
     simmock_setup(mock, "scalar", "network");
     assert_non_null(model->sv_network);
     assert_non_null(model->sv_signal);
+    PduNetworkDesc* net = pdunet_find(model->mi, model->sv_network->ncodec[0]);
+    assert_non_null(net);
+    assert_double_equal(net->schedule.step_size, mock->step_size, 0.0);
+
+    int tx_count = 0;
+    pdunet_tx(net, NULL, _visit_count_tx, &tx_count, 0.0);
+    assert_int_equal(tx_count, 0);
+
+    tx_count = 0;
+    pdunet_tx(net, NULL, _visit_count_tx, &tx_count, mock->step_size);
+    assert_int_equal(tx_count, 1);
+
+    tx_count = 0;
+    pdunet_tx(net, NULL, _visit_count_tx, &tx_count, 2 * mock->step_size);
+    assert_int_equal(tx_count, 1);
 }
 
 

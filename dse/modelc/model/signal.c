@@ -311,6 +311,13 @@ static int _add_sv(void* _mfc, void* _sv_data)
             void*   stream = model_sv_stream_create(current_sv, i);
             NCODEC* nc = ncodec_open(current_sv->mime_type[i], stream);
             if (nc) {
+                if (data->mi && data->mi->model_desc &&
+                    data->mi->model_desc->sim) {
+                    SimulationSpec* sim = data->mi->model_desc->sim;
+                    ncodec_utime(nc, (NCodecUtimeOperation){
+                                         .step_size = sim->step_size,
+                                     });
+                }
                 ncodec_trace_configure(nc, data->mi, false);
                 current_sv->ncodec[i] = nc;
             } else {

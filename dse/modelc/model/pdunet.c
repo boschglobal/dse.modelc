@@ -59,10 +59,14 @@ PduNetworkDesc* pdunet_create(ModelInstanceSpec* mi, void* ncodec,
     *net = (PduNetworkDesc){
         .ncodec = ncodec,
         .mi = mi,
+        .schedule.step_size = MODEL_DEFAULT_STEP_SIZE,
         .pdus = vector_make(sizeof(PduItem), 10, NULL),
     };
-    if (net->schedule.step_size <= 0) {
-        net->schedule.step_size = MODEL_DEFAULT_STEP_SIZE;
+    if (mi && mi->model_desc && mi->model_desc->sim) {
+        SimulationSpec* sim = mi->model_desc->sim;
+        if (sim->step_size > 0) {
+            net->schedule.step_size = sim->step_size;
+        }
     }
     net->schedule.step_size_epsilon = net->schedule.step_size * 0.01;
     log_notice("PDU Net: Step size: %f", net->schedule.step_size);
