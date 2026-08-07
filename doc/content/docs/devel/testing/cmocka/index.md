@@ -228,7 +228,7 @@ void test_mstep(void** state)
     /* Call the Model Setup. */
     rc = model_setup_func(mi);
     assert_int_equal(rc, 0);
-    SignalVector* sv = model_sv_create(mi);
+    SignalVector* sv = model_sv_create(mi, NULL);
 
     /* Locate the restbus and network vectors. */
     SignalVector* sv_restbus = NULL;

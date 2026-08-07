@@ -258,6 +258,7 @@ static void* __binary_codec(SignalVector* sv, uint32_t index)
 /* Enumerator Functions, for model_sv_create(). */
 
 typedef struct sv_data {
+    SimulationSpec*    sim;
     ModelInstanceSpec* mi;
     SignalVector*      collection;
     uint32_t           collection_max_index;
@@ -311,11 +312,9 @@ static int _add_sv(void* _mfc, void* _sv_data)
             void*   stream = model_sv_stream_create(current_sv, i);
             NCODEC* nc = ncodec_open(current_sv->mime_type[i], stream);
             if (nc) {
-                if (data->mi && data->mi->model_desc &&
-                    data->mi->model_desc->sim) {
-                    SimulationSpec* sim = data->mi->model_desc->sim;
+                if (data->sim) {
                     ncodec_utime(nc, (NCodecUtimeOperation){
-                                         .step_size = sim->step_size,
+                                         .step_size = data->sim->step_size,
                                      });
                 }
                 ncodec_trace_configure(nc, data->mi, false);
@@ -369,6 +368,8 @@ Parameters
 ----------
 mi (ModelInstanceSpec*)
 : The model instance, which holds references to the registered channels.
+sim (SimulationSpec*)
+: The Simulation spec/instance.
 
 Returns
 -------
@@ -377,7 +378,7 @@ SignalVector (pointer to NULL terminated list)
   The list is NULL terminated (sv->name == NULL). Caller to free.
 
 */
-SignalVector* model_sv_create(ModelInstanceSpec* mi)
+SignalVector* model_sv_create(ModelInstanceSpec* mi, SimulationSpec* sim)
 {
     int      rc;
     uint32_t count = 0;
@@ -394,7 +395,7 @@ SignalVector* model_sv_create(ModelInstanceSpec* mi)
 
     /* Allocate and collect the signal vectors. */
     SignalVector* sv = calloc(count + 1, sizeof(SignalVector));
-    sv_data       _sv_data = { mi, sv, count, 0, NULL };
+    sv_data       _sv_data = { sim, mi, sv, count, 0, NULL };
     rc = hashmap_iterator(model_function_map, _collect_sv, false, &_sv_data);
     if (rc) {
         log_error("Iterating data structure failed");

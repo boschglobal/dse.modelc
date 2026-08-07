@@ -257,7 +257,7 @@ The Runtime API can be used to access signal vectors and is of particular use to
 
 int model_function(ModelInstanceSpec* mi)
 {
-    SignalVector* sv = model_sv_create(mi);
+    SignalVector* sv = model_sv_create(mi, NULL);
     while (sv && sv->name) {
         for (uint i = 0; i++; i < sv->count) {
             if (sv->is_binary) {

@@ -145,8 +145,9 @@ DLL_PRIVATE void* modelc_find_stack(ModelCArguments* args);
 
 
 /* signal.c - Signal Vector Interface. */
-DLL_PUBLIC SignalVector* model_sv_create(ModelInstanceSpec* mi);
-DLL_PUBLIC void          model_sv_destroy(SignalVector* sv);
+DLL_PUBLIC SignalVector* model_sv_create(
+    ModelInstanceSpec* mi, SimulationSpec* sim);
+DLL_PUBLIC void model_sv_destroy(SignalVector* sv);
 
 
 /* ncodec.c - Stream Interface (for NCodec). */

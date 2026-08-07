@@ -125,7 +125,7 @@ int model_gw_setup(ModelGatewayDesc* gw, const char* name,
 
     /* Complete the Gateway descriptor. */
     gw->mi = modelc_get_model_instance(gw->sim, name);
-    gw->sv = model_sv_create(gw->mi);
+    gw->sv = model_sv_create(gw->mi, gw->sim);
 
     return 0;
 }

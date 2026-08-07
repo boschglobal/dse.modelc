@@ -453,7 +453,7 @@ int modelc_model_create(
             }
         }
     }
-    SignalVector* sv = model_sv_create(mi);
+    SignalVector* sv = model_sv_create(mi, sim);
 
     /* Setup the initial ModelDesc object. */
     ModelDesc* model_desc = calloc(1, sizeof(ModelDesc));
