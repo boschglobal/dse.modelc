@@ -8,7 +8,6 @@ project(ModelC_Model_API)
 
 # Target - model_api (API Called from Models)
 # ------------------
-file(GLOB PDUNET_SOURCES CONFIGURE_DEPENDS "pdunet/*.c")
 add_library(model_api OBJECT
     $<$<BOOL:${UNIX}>:checks.c>
     gateway.c
@@ -18,7 +17,6 @@ add_library(model_api OBJECT
     model.c
     ncodec.c
     pdunet.c
-    ${PDUNET_SOURCES}
     schema.c
     signal.c
     trace.c
@@ -39,6 +37,7 @@ target_compile_definitions(model_api
 )
 target_link_libraries(model_api
     PUBLIC
+        pdunet
         ab-codec
     PRIVATE
         yaml

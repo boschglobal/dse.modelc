@@ -7,8 +7,7 @@
 #include <dse/clib/collections/vector.h>
 #include <dse/logger.h>
 #include <dse/modelc/model.h>
-#include <dse/modelc/pdunet.h>
-#include <dse/ncodec/codec.h>
+#include <dse/modelc/runtime.h>
 
 
 typedef struct {

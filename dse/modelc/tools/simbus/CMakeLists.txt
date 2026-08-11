@@ -37,6 +37,7 @@ target_link_libraries(simbus
         clib_api
         controller
         ab-codec
+        pdunet
         model_api
         $<$<BOOL:${UNIX}>:lua>
         m

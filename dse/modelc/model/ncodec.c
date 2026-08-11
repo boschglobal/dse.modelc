@@ -177,7 +177,7 @@ void model_sv_stream_destroy(void* stream)
 
 /* NCodec Interface. */
 
-NCODEC* ncodec_open(const char* mime_type, NCodecStreamVTable* stream)
+NCODEC* ncodec_open(const char* mime_type, NSTREAM* stream)
 {
     NCODEC* nc = ncodec_create(mime_type);
     if (nc == NULL || stream == NULL) {
@@ -185,6 +185,6 @@ NCODEC* ncodec_open(const char* mime_type, NCodecStreamVTable* stream)
         return NULL;
     }
     NCodecInstance* _nc = (NCodecInstance*)nc;
-    _nc->stream = stream;
+    _nc->stream = (NCodecStreamVTable*)stream;
     return nc;
 }

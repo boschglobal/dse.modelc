@@ -7,19 +7,53 @@
 #include <stdbool.h>
 #include <linux/limits.h>
 #include <dse/testing.h>
-#include <dse/logger.h>
 #include <dse/mocks/simmock.h>
 #include <dse/modelc/model.h>
-#include <dse/modelc/pdunet.h>
+#include <dse/modelc/schema.h>
 #include <dse/ncodec/codec.h>
 #include <dse/ncodec/interface/pdu.h>
 #include <dse/ncodec/codec/ab/codec.h>
+#include <dse/pdunet/pdunet.h>
+#undef log_trace
+#undef log_debug
+#undef log_info
+#undef log_simbus
+#undef log_notice
+#undef log_error
+#undef log_fatal
+#undef DSE_LOGGER_H_
+#define LOG_TRACE   DSE_LOG_TRACE
+#define LOG_DEBUG   DSE_LOG_DEBUG
+#define LOG_SIMBUS  DSE_LOG_SIMBUS
+#define LOG_INFO    DSE_LOG_INFO
+#define LOG_NOTICE  DSE_LOG_NOTICE
+#define LOG_WARNING DSE_LOG_WARNING
+#define LOG_ERROR   DSE_LOG_ERROR
+#define LOG_FATAL   DSE_LOG_FATAL
+#define LOG_QUIET   DSE_LOG_QUIET
+#include <dse/pdunet/network/network.h>
+#undef LOG_TRACE
+#undef LOG_DEBUG
+#undef LOG_SIMBUS
+#undef LOG_INFO
+#undef LOG_NOTICE
+#undef LOG_WARNING
+#undef LOG_ERROR
+#undef LOG_FATAL
+#undef LOG_QUIET
 
 
 #define REPO_PATH     "../../../../"
 #define EXAMPLES_PATH REPO_PATH "dse/modelc/build/_out/examples/"
 #define RESOURCES_REL_PATH                                                     \
     "../../../../../../tests/cmocka/build/_out/resources/model/"
+
+
+/* pdunet.c */
+extern PduNetwork* model_pdunet_setup(SimulationSpec* sim,
+    ModelInstanceSpec* mi, void* ncodec, SchemaLabel* net_labels,
+    SchemaLabel* sg_labels);
+extern PduNetwork* pdunet_find(ModelInstanceSpec* mi, void* ncodec);
 
 
 static char __entry_path__[PATH_MAX];
@@ -71,7 +105,7 @@ static char* inst_argv[] = {
     (char*)"data/simulation.yaml",
 };
 
-static void _visit_count_tx(PduNetworkDesc* net, PduObject* pdu, void* data)
+static void _visit_count_tx(PduNetwork* net, PduObject* pdu, void* data)
 {
     assert_non_null(net);
     assert_non_null(data);
@@ -100,7 +134,7 @@ void test_pdunet_setup(void** state)
     simmock_setup(mock, "scalar", "network");
     assert_non_null(model->sv_network);
     assert_non_null(model->sv_signal);
-    PduNetworkDesc* net = pdunet_find(model->mi, model->sv_network->ncodec[0]);
+    PduNetwork* net = pdunet_find(model->mi, model->sv_network->ncodec[0]);
     assert_non_null(net);
     assert_double_equal(net->schedule.step_size, mock->step_size, 0.0);
 
@@ -131,7 +165,7 @@ void test_pdunet_find(void** state)
     simmock_load_model_check(model, true, true, false);
     simmock_setup(mock, "scalar", "network");
 
-    PduNetworkDesc* net = NULL;
+    PduNetwork* net = NULL;
     assert_non_null(model->mi);
     assert_non_null(model->sv_network->ncodec[0]);
     net = pdunet_find(model->mi, model->sv_network->ncodec[0]);
@@ -141,7 +175,7 @@ void test_pdunet_find(void** state)
 }
 
 
-void _visit_func(PduNetworkDesc* net, PduObject* pdu, void* data)
+void _visit_func(PduNetwork* net, PduObject* pdu, void* data)
 {
     assert_non_null(net);
     vector_push((Vector*)data, (void*)pdu->pdu->name);
@@ -159,7 +193,7 @@ void test_pdunet_visit(void** state)
     simmock_load(mock);
     simmock_load_model_check(model, true, true, false);
     simmock_setup(mock, "scalar", "network");
-    PduNetworkDesc* net = pdunet_find(model->mi, model->sv_network->ncodec[0]);
+    PduNetwork* net = pdunet_find(model->mi, model->sv_network->ncodec[0]);
     assert_non_null(net);
 
     Vector visit_list = vector_make(sizeof(char*), 10, NULL);
@@ -203,7 +237,7 @@ void test_pdunet_tx_fr(void** state)
     ((NCodecInstance*)nc)->trace.log = __ncodec_trace_log__;
 
     // Configure the PDU Net.
-    PduNetworkDesc* net = pdunet_find(model->mi, nc);
+    PduNetwork* net = pdunet_find(model->mi, nc);
     assert_non_null(net);
 
     // Set some signals
@@ -262,7 +296,7 @@ void test_pdunet_tx_fr(void** state)
 }
 
 
-void _visit_count_update_flag(PduNetworkDesc* net, PduObject* pdu, void* data)
+void _visit_count_update_flag(PduNetwork* net, PduObject* pdu, void* data)
 {
     assert_non_null(net);
     assert_non_null(data);
@@ -272,7 +306,7 @@ void _visit_count_update_flag(PduNetworkDesc* net, PduObject* pdu, void* data)
     }
 }
 
-void _visit_count_csum_set(PduNetworkDesc* net, PduObject* pdu, void* data)
+void _visit_count_csum_set(PduNetwork* net, PduObject* pdu, void* data)
 {
     assert_non_null(net);
     assert_non_null(data);
@@ -308,7 +342,7 @@ void test_pdunet_rx_fr(void** state)
     ((NCodecInstance*)nc)->trace.log = __ncodec_trace_log__;
 
     // Configure the PDU Net.
-    PduNetworkDesc* net = pdunet_find(model->mi, nc);
+    PduNetwork* net = pdunet_find(model->mi, nc);
     assert_non_null(net);
 
     // Recv, non-FlexRay is discarded.
@@ -391,7 +425,7 @@ void test_pdunet_schedule_pdu_fr(void** state)
     ((NCodecInstance*)nc)->trace.log = __ncodec_trace_log__;
 
     // Configure the PDU Net.
-    PduNetworkDesc* net = pdunet_find(model->mi, nc);
+    PduNetwork* net = pdunet_find(model->mi, nc);
     assert_non_null(net);
 
     // Set some signals
@@ -518,7 +552,7 @@ void test_pdunet_schedule_net_fr(void** state)
     ((NCodecInstance*)nc)->trace.log = __ncodec_trace_log__;
 
     // Configure the PDU Net.
-    PduNetworkDesc* net = pdunet_find(model->mi, nc);
+    PduNetwork* net = pdunet_find(model->mi, nc);
     assert_non_null(net);
 
     // Set some signals
@@ -625,7 +659,7 @@ void test_pdunet_schedule_status_fr(void** state)
     ((NCodecInstance*)nc)->trace.log = __ncodec_trace_log__;
 
     // Configure the PDU Net.
-    PduNetworkDesc* net = pdunet_find(model->mi, nc);
+    PduNetwork* net = pdunet_find(model->mi, nc);
     assert_non_null(net);
     net->schedule.simulation_time = 4; /* 2mS */
     net->network.vtable.flexray.cycle = 1;
@@ -685,7 +719,7 @@ void test_pdunet_schedule_container_fr(void** state)
     ((NCodecInstance*)nc)->trace.log = __ncodec_trace_log__;
 
     // Configure the PDU Net.
-    PduNetworkDesc* net = pdunet_find(model->mi, nc);
+    PduNetwork* net = pdunet_find(model->mi, nc);
     assert_non_null(net);
 
     // Set some signals

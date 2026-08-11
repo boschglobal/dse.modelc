@@ -42,6 +42,7 @@ target_include_directories(controller
 )
 target_link_libraries(controller
     PRIVATE
+        pdunet
         yaml
         dl
         m

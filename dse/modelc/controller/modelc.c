@@ -22,7 +22,8 @@
 #include <dse/modelc/controller/controller.h>
 #include <dse/modelc/controller/model_private.h>
 #include <dse/modelc/model/lua.h>
-#include <dse/modelc/pdunet.h>
+#include <dse/modelc/schema.h>
+#include <dse/pdunet/pdunet.h>
 #include <dse/modelc/model.h>
 
 
@@ -36,6 +37,13 @@ static double __stop_request = 0; /* Very private, indicate stop request. */
 
 extern ModelSignalIndex __model_index__(
     ModelDesc* m, const char* vname, const char* sname);
+
+
+/* pdunet.c */
+extern PduNetwork* model_pdunet_setup(SimulationSpec* sim,
+    ModelInstanceSpec* mi, void* ncodec, SchemaLabel* net_labels,
+    SchemaLabel* sg_labels);
+extern PduNetwork* pdunet_find(ModelInstanceSpec* mi, void* ncodec);
 
 
 static int _destroy_model_function(void* mf, void* additional_data)
@@ -62,7 +70,7 @@ static void _destroy_model_instances(SimulationSpec* sim)
 
         /* PDU Net. */
         for (size_t i = 0; i < vector_len(&mip->pdunet); i++) {
-            PduNetworkDesc* net = NULL;
+            PduNetwork* net = NULL;
             vector_at(&mip->pdunet, i, &net);
             if (net) pdunet_destroy(net);
         }
@@ -199,7 +207,8 @@ int modelc_configure_model(
         char* md_file =
             _dse_path_cat(model_instance->model_definition.path, "model.yaml");
         log_notice("Load YAML File: %s", md_file);
-        args->yaml_doc_list = dse_yaml_load_file(md_file, args->yaml_doc_list);
+        args->yaml_doc_list =
+            dse_yaml_load_file(NULL, md_file, args->yaml_doc_list);
         free(md_file);
     }
     /* Model Definition. */
@@ -341,7 +350,7 @@ int modelc_configure(ModelCArguments* args, SimulationSpec* sim)
                 log_fatal("Hashmap init failed for channels!");
             }
             /* Allocate PDU Net vector. */
-            mip->pdunet = vector_make(sizeof(PduNetworkDesc*), 4, NULL);
+            mip->pdunet = vector_make(sizeof(PduNetwork*), 4, NULL);
 
             /* Next instance? */
             _nameptr = strtok_r(NULL, MODEL_NAME_SEP, &_saveptr);
@@ -502,8 +511,8 @@ int modelc_model_create(
                     memcpy(sg_labels, labels, sizeof(labels));
                 }
                 /* Create the PDU Network. */
-                PduNetworkDesc* net = pdunet_create(
-                    mi, ncodec, net_labels, sg_labels, NULL, NULL);
+                PduNetwork* net =
+                    model_pdunet_setup(sim, mi, ncodec, net_labels, sg_labels);
                 if (net) {
                     vector_push(&mip->pdunet, &net);
                 }
@@ -534,7 +543,7 @@ int modelc_model_create(
     /* PDU Net - Set initial condition to prevent Tx of entire network state
     on first step. */
     for (size_t i = 0; i < vector_len(&mip->pdunet); i++) {
-        PduNetworkDesc* net = NULL;
+        PduNetwork* net = NULL;
         vector_at(&mip->pdunet, i, &net);
         if (net) {
             pdunet_visit(net, NULL, pdunet_visit_set_checksum, NULL);

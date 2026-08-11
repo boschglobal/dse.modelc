@@ -329,7 +329,8 @@ void modelc_parse_arguments(
 
         char* y_file = dse_path_cat(args->sim_path, _file);
         log_notice("Load YAML File: %s", y_file);
-        args->yaml_doc_list = dse_yaml_load_file(y_file, args->yaml_doc_list);
+        args->yaml_doc_list =
+            dse_yaml_load_file(NULL, y_file, args->yaml_doc_list);
         free(y_file);
     }
 

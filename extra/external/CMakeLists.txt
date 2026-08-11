@@ -60,7 +60,7 @@ FetchContent_Declare(dse_ncodec
     URL                 $ENV{DSE_NCODEC_URL}
     HTTP_USERNAME       $ENV{DSE_NCODEC_URL_USER}
     HTTP_PASSWORD       $ENV{DSE_NCODEC_URL_TOKEN}
-    SOURCE_DIR          "$ENV{EXTERNAL_BUILD_DIR}/dse.ncodec/dse/ncodec"
+    SOURCE_DIR          "$ENV{EXTERNAL_BUILD_DIR}/dse.ncodec"
 )
 FetchContent_MakeAvailable(dse_ncodec)
 

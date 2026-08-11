@@ -6,12 +6,12 @@
 #define DSE_MODELC_CONTROLLER_MODEL_PRIVATE_H_
 
 
+#include <lua.h>
 #include <dse/clib/collections/vector.h>
 #include <dse/modelc/adapter/adapter.h>
 #include <dse/modelc/controller/controller.h>
 #include <dse/modelc/runtime.h>
 #include <dse/modelc/mcl.h>
-#include <lua.h>
 
 #define MI_RUNTIME_MCL_PATH     "runtime/mcl"
 #define MI_RUNTIME_LUA_MCL_NAME "lua"
@@ -29,7 +29,7 @@ typedef struct ModelInstancePrivate {
     MclDestroy  mcl_destroy_func;
 
     /* PDU Network objects (locate by NCodec pointer/address). */
-    Vector pdunet; /* PduNetworkDesc* */
+    Vector pdunet; /* PduNetwork* */
 } ModelInstancePrivate;
 
 

@@ -329,7 +329,7 @@ Returns
 int32_t mcl_marshal_out(MclDesc* model)
 {
     if (model && model->vtable.marshal_out) {
-        marshal_signalmap_out(model->msm);
+        marshal_signalmap_out(NULL, model->msm);
         return model->vtable.marshal_out(model);
     } else {
         return -EINVAL;
@@ -362,7 +362,7 @@ int32_t mcl_marshal_in(MclDesc* model)
     if (model && model->vtable.marshal_in) {
         int32_t rc = model->vtable.marshal_in(model);
         if (rc != 0) return rc;
-        marshal_signalmap_in(model->msm);
+        marshal_signalmap_in(NULL, model->msm);
         return rc;
     } else {
         return -EINVAL;

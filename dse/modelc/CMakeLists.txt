@@ -72,11 +72,13 @@ FetchContent_Declare(dse_ncodec
     URL                 $ENV{DSE_NCODEC_URL}
     HTTP_USERNAME       $ENV{DSE_NCODEC_URL_USER}
     HTTP_PASSWORD       $ENV{DSE_NCODEC_URL_TOKEN}
-    SOURCE_SUBDIR       dse/ncodec
+    SOURCE_SUBDIR       dse
 )
 FetchContent_MakeAvailable(dse_ncodec)
 set(DSE_NCODEC_SOURCE_DIR ${dse_ncodec_SOURCE_DIR}/dse/ncodec)
 set(DSE_NCODEC_INCLUDE_DIR ${dse_ncodec_SOURCE_DIR})
+set(DSE_PDUNET_SOURCE_DIR ${dse_ncodec_SOURCE_DIR}/dse/pdunet)
+set(DSE_PDUNET_INCLUDE_DIR ${dse_ncodec_SOURCE_DIR})
 
 
 # External Projects (targets common to sub projects)
@@ -192,7 +194,6 @@ set(DSE_MODELC_PUBLIC_HEADERS
     gateway.h
     mcl.h
     model.h
-    pdunet.h
     runtime.h
     schema.h
 )
@@ -250,6 +251,7 @@ target_link_libraries(modelc_static_lib
         clib_api
         controller
         ab-codec
+        pdunet
         model_api
     PRIVATE
         mcheck
@@ -279,6 +281,7 @@ target_link_libraries(modelc_shared_lib
         clib_api
         controller
         ab-codec
+        pdunet
         model_api
 )
 if(NOT DEFINED modelc_link_lib)

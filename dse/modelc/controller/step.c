@@ -12,7 +12,7 @@
 #include <dse/modelc/controller/controller.h>
 #include <dse/modelc/controller/model_private.h>
 #include <dse/ncodec/codec.h>
-#include <dse/modelc/pdunet.h>
+#include <dse/pdunet/pdunet.h>
 
 
 #define UNUSED(x) ((void)x)
@@ -57,7 +57,7 @@ int step_model(ModelInstanceSpec* mi, double* model_time)
 
     /* PDU Net - receive from network. */
     for (size_t i = 0; i < vector_len(&mip->pdunet); i++) {
-        PduNetworkDesc* net = NULL;
+        PduNetwork* net = NULL;
         vector_at(&mip->pdunet, i, &net);
         if (net) {
             pdunet_rx(net, NULL, NULL, NULL);
@@ -73,7 +73,7 @@ int step_model(ModelInstanceSpec* mi, double* model_time)
 
     /* PDU Net - send to network. */
     for (size_t i = 0; i < vector_len(&mip->pdunet); i++) {
-        PduNetworkDesc* net = NULL;
+        PduNetwork* net = NULL;
         vector_at(&mip->pdunet, i, &net);
         if (net) {
             pdunet_tx(net, NULL, NULL, NULL, am->model_time);

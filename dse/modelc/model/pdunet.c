@@ -8,164 +8,123 @@
 #include <stdint.h>
 #include <string.h>
 #include <math.h>
-#include <dse/logger.h>
 #include <dse/clib/collections/vector.h>
-#include <dse/modelc/model/pdunet/network.h>
 #include <dse/modelc/controller/model_private.h>
-#include <dse/modelc/pdunet.h>
+#include <dse/modelc/schema.h>
 #include <dse/ncodec/codec.h>
+#include <dse/pdunet/pdunet.h>
+#include <dse/pdunet/network/network.h>
 
 
-#define UNUSED(x)     ((void)x)
-#define ARRAY_SIZE(a) (sizeof(a) / sizeof((a)[0]))
+#define UNUSED(x) ((void)x)
 
-/**
-pdunet_create
-=============
+// TODO: remove when transitioning from logger-h -> log.h
+extern uint8_t __log_level__;
 
-Create and configure an `PduNetworkDesc` object to represent an PDU Network.
 
-Parameters
-----------
-mi (ModelInstanceSpec*)
-: ModelInstance object.
-
-NCODEC (void*)
-: NCodec object.
-
-sort (PduNetworkSortFunc)
-: Sort callback function for producing ordered PduRange objects. Optional.
-
-data (void*)
-: Data object (pointer) passed to sort callback function. Optional.
-
-Returns
--------
-PduNetworkDesc (*)
-: PduNetworkDesc object.
-*/
-PduNetworkDesc* pdunet_create(ModelInstanceSpec* mi, void* ncodec,
-    SchemaLabel* net_labels, SchemaLabel* sg_labels, PduNetworkSortFunc sort,
-    void* data)
+static int _network_match_handler(ModelInstanceSpec* mi, SchemaObject* object)
 {
-    UNUSED(sort);
-    UNUSED(data);
+    UNUSED(mi);
 
-    PduNetworkDesc* net = calloc(1, sizeof(PduNetworkDesc));
-    if (net == NULL) {
-        errno = ENOMEM;
+    YamlNode** doc_ref = (YamlNode**)object->data;
+    *doc_ref = object->doc;
+
+    return 1;
+}
+
+PduNetwork* model_pdunet_setup(SimulationSpec* sim, ModelInstanceSpec* mi,
+    void* ncodec, SchemaLabel* net_labels, SchemaLabel* sg_labels)
+{
+    assert(sim);
+    assert(mi);
+    assert(mi->private);
+    DseLog log = dse_log_init((DseLog){ .level = __log_level__ });
+    ModelInstancePrivate* mip = mi->private;
+    lua_State*            L = mip->lua_state;
+    int                   rc = 0;
+
+    if (ncodec == NULL || net_labels == NULL || sg_labels == NULL) {
+        log_debug(&log, "Call without required parameters, unexpected");
         return NULL;
     }
-    *net = (PduNetworkDesc){
-        .ncodec = ncodec,
-        .mi = mi,
-        .schedule.step_size = MODEL_DEFAULT_STEP_SIZE,
-        .pdus = vector_make(sizeof(PduItem), 10, NULL),
-    };
-    if (mi && mi->model_desc && mi->model_desc->sim) {
-        SimulationSpec* sim = mi->model_desc->sim;
-        if (sim->step_size > 0) {
-            net->schedule.step_size = sim->step_size;
-        }
-    }
-    net->schedule.step_size_epsilon = net->schedule.step_size * 0.01;
-    log_notice("PDU Net: Step size: %f", net->schedule.step_size);
-    if (ncodec == NULL || net_labels == NULL) return net;
 
-    /* Parse the network. */
-    int rc;
-    log_notice("PDU Net: Search for Network");
+    /* Locate the Network. */
+    YamlNode* network_doc = NULL;
+    size_t    net_label_count = 0;
+
+    log_notice(&log, "PDU Net: Search for Network");
     for (SchemaLabel* l = net_labels; l->name; l++) {
-        log_notice("  Label %s=%s", l->name, l->value);
+        log_notice(&log, "  Label %s=%s", l->name, l->value);
+        net_label_count++;
     }
-    rc = pdunet_parse(net, net_labels);
+    SchemaObjectSelector net_selector = {
+        .kind = "Network",
+        .labels = net_labels,
+        .labels_len = net_label_count,
+        .data = &network_doc,
+    };
+    rc = schema_object_search(mi, &net_selector, _network_match_handler);
     if (rc == 0) {
-        rc = pdunet_configure(net);
-        if (rc != 0) {
-            log_error("Configure fail: rc=%d", rc);
-            return net;
-        }
-        rc = pdunet_transform(net, NULL);
-        if (rc != 0) {
-            log_error("Transform fail: rc=%d", rc);
-            return net;
+        if (network_doc == NULL) {
+            log_error(&log, "Search failed: no document identified");
+            return NULL;
         }
     } else if (rc == -ENODATA) {
-        log_fatal("Parse fail: Network not found in YAML files (rc=%d)", rc);
+        log_fatal(
+            &log, "Search failed: Network not found in YAML files (rc=%d)", rc);
     } else {
-        log_fatal("Parse fail: rc=%d", rc);
-        return net;
+        log_fatal(&log, "Search failed: rc=%d", rc);
+        return NULL;
     }
 
-    /* Setup marshalling to signals. */
-    if (sg_labels) {
-        SchemaLabel* channel = NULL;
-        log_notice("PDU Net: Search for SignalGroup (Network=%s)", net->name);
-        for (SchemaLabel* l = sg_labels; l->name; l++) {
-            log_notice("  Label %s=%s", l->name, l->value);
-            if (strcmp(l->name, "channel") == 0) channel = l;
-        }
-        if (channel == NULL) {
-            log_error("Annotation 'channel' not found!");
-            return net;
-        }
-        pdunet_build_msm(net, channel->value);
-        if ((net->msm.in == NULL) && (net->msm.out == NULL)) {
-            log_error("Marshal table not created");
-            return net;
-        }
-        for (SignalVector* sv = net->mi->model_desc->sv; sv && sv->name; sv++) {
-            if (strcmp(sv->alias, channel->value) != 0) continue;
-            log_notice(
-                "  SignalVector <-> Network Rx Mapping for: %s", sv->name);
-            for (uint32_t i = 0; net->msm.in && i < net->msm.in->count; i++) {
-                log_notice("    Signal: %s (%d) <-> %s (%d)",
-                    sv->signal[net->msm.in->signal.index[i]],
-                    net->msm.in->signal.index[i],
-                    *(const char**)vector_at(&net->matrix.signal.name,
-                        net->msm.in->source.index[i] + net->msm.in->offset,
-                        NULL),
-                    net->msm.in->source.index[i] + net->msm.in->offset);
+    /* Create the Network. */
+    PduNetwork* net =
+        pdunet_create(ncodec, network_doc, sim->step_size, L, NULL);
+    if (net == NULL) {
+        return NULL;
+    }
+    net->default_log.level = __log_level__;  // Adjust the log level manually.
+
+    /* Locate the Signal Vector (for mapping). */
+    SignalVector* net_sv = NULL;
+    SchemaLabel*  channel = NULL;
+    log_notice(&log, "PDU Net: Search for SignalGroup (Network=%s)", net->name);
+    for (SchemaLabel* l = sg_labels; l->name; l++) {
+        log_debug(&log, "  Label %s=%s", l->name, l->value);
+        if (strcmp(l->name, "channel") == 0) {
+            log_notice(&log, "  Label %s=%s", l->name, l->value);
+            channel = l;
+            for (SignalVector* sv = mi->model_desc->sv; sv && sv->name; sv++) {
+                if (strcmp(sv->alias, channel->value) == 0) {
+                    net_sv = sv;
+                }
             }
-            log_notice(
-                "  SignalVector <-> Network Tx Mapping for: %s", sv->name);
-            for (uint32_t i = 0; net->msm.out && i < net->msm.out->count; i++) {
-                log_notice("    Signal: %s (%d) <-> %s (%d)",
-                    sv->signal[net->msm.out->signal.index[i]],
-                    net->msm.out->signal.index[i],
-                    *(const char**)vector_at(&net->matrix.signal.name,
-                        net->msm.out->source.index[i] + net->msm.out->offset,
-                        NULL),
-                    net->msm.out->source.index[i] + net->msm.out->offset);
-            }
-            break;
         }
     }
+    if (channel == NULL) {
+        log_error(&log, "SignalGroup with annotation 'channel' not found!");
+        pdunet_destroy(net);
+        return NULL;
+    } else if (net_sv == NULL) {
+        log_error(&log, "SignalVector with alias/name not found!");
+        pdunet_destroy(net);
+        return NULL;
+    }
 
+    /* Map the SignalVector and Network. */
+    rc = pdunet_map_signals(
+        net, net_sv->alias, net_sv->count, net_sv->signal, net_sv->scalar);
+    if (rc != 0) {
+        pdunet_destroy(net);
+        return NULL;
+    }
+
+    /* Return the configured PDUNet. */
     return net;
 }
 
 
-/**
-pdunet_find
-===========
-
-Create and configure an `PduNetworkDesc` object to represent an PDU Network.
-
-Parameters
-----------
-mi (ModelInstanceSpec*)
-: ModelInstance object.
-
-NCODEC (void*)
-: NCodec object.
-
-Returns
--------
-PduNetworkDesc (struct)
-: PduNetworkDesc object.
-*/
-PduNetworkDesc* pdunet_find(ModelInstanceSpec* mi, void* ncodec)
+PduNetwork* pdunet_find(ModelInstanceSpec* mi, void* ncodec)
 {
     if (mi == NULL) return NULL;
     if (ncodec == NULL) return NULL;
@@ -173,339 +132,10 @@ PduNetworkDesc* pdunet_find(ModelInstanceSpec* mi, void* ncodec)
     ModelInstancePrivate* mip = mi->private;
     if (mip) {
         for (size_t i = 0; i < vector_len(&mip->pdunet); i++) {
-            PduNetworkDesc* net = NULL;
+            PduNetwork* net = NULL;
             vector_at(&mip->pdunet, i, &net);
             if (net) return net;
         }
     }
     return NULL;
-}
-
-
-/**
-pdunet_visit
-============
-
-Call a visitor function for each PDU in the PDU Network.
-
-Parameters
-----------
-net (PduNetworkDesc*)
-: PDU Network object.
-
-range (PduRange*)
-: Range object, optional. When NULL the visitor function is called for all PDUs
-  in the PDU Network.
-
-visit (PduNetworkVisitFunc)
-: Visit callback function, called for each PDU Object in the provided range.
-
-data (void*)
-: Data object (pointer) passed to visit callback function. Optional.
-*/
-void pdunet_visit(
-    PduNetworkDesc* net, PduRange* range, PduNetworkVisitFunc visit, void* data)
-{
-    UNUSED(range);
-    if (net == NULL || visit == NULL) return;
-
-    for (size_t i = 0; i < vector_len(&net->matrix.pdu); i++) {
-        PduObject* pdu = vector_at(&net->matrix.pdu, i, NULL);
-        if (pdu) visit(net, pdu, data);
-    }
-}
-
-
-/**
-pdunet_tx
-=========
-
-Transmit PDUs to the configured NCodec object. If a visitor is provided, then
-call the visitor before transmitting a PDU, and only transmit the PDU
-if the `needs_tx` is set on the `PduObject` after the visitor returns.
-
-Parameters
-----------
-net (PduNetworkDesc*)
-: PDU Network object.
-
-range (PduRange*)
-: Range object, optional. When NULL the visitor function is called for all PDUs
-  in the PDU Network.
-
-visit (PduNetworkVisitFunc)
-: Visit callback function, called for each PDU Object in the provided range.
-
-data (void*)
-: Data object (pointer) passed to visit callback function. Optional.
-*/
-void pdunet_tx(PduNetworkDesc* net, PduRange* range, PduNetworkVisitFunc visit,
-    void* data, double simulation_time)
-{
-    UNUSED(range);
-    UNUSED(visit);
-    UNUSED(data);
-
-    if (net == NULL) return;
-    if (simulation_time < 0) simulation_time = 0.0;
-
-    /* Marshal from SignalVector to PDU Network. */
-    marshal_signalmap_out(net->msm.out);
-
-    log_debug("PDU Net: TX");
-    ncodec_truncate(net->ncodec);
-
-    /* Configuration (if network requires). */
-    if (net->network.vtable.config_done == false) {
-        if (net->network.vtable.config) {
-            net->network.vtable.config(net);
-        }
-        net->network.vtable.config_done = true;
-    }
-
-    /* Schedule, based on normalised simulation time. */
-    net->schedule.simulation_time =
-        (simulation_time + net->schedule.step_size_epsilon) /
-        net->schedule.step_size;
-    pdunet_schedule(net);
-
-    /* Encode PDUs, call visitor, then Tx. */
-    pdunet_encode_linear(net, NULL);
-    pdunet_encode_pack(net, NULL);
-    pdunet_visit(net, range, pdunet_visit_needs_tx, NULL);
-    pdunet_visit(net, range, pdunet_visit_container_mapto, NULL);
-    if (visit) pdunet_visit(net, range, visit, data);
-    if (net->network.vtable.lpdu_tx) {
-        net->network.vtable.lpdu_tx(net);
-    }
-
-    /* Status (if network requires). */
-    if (net->network.vtable.status) {
-        net->network.vtable.status(net);
-    }
-
-    ncodec_flush(net->ncodec);
-
-    /* Marshal from PDU Network to SignalVector (update changed signals). */
-    // TODO: trigger on actual Tx to reduce CPU consumption in idle steps.
-    marshal_signalmap_in(net->msm.out);
-}
-
-
-/**
-pdunet_rx
-=========
-
-Receive PDUs from the configured NCodec object. If a visitor is provided, then
-call the visitor after a PDU is received.
-
-Parameters
-----------
-net (PduNetworkDesc*)
-: PDU Network object.
-
-range (PduRange*)
-: Range object, optional. When NULL the visitor function is called for all PDUs
-  in the PDU Network.
-
-visit (PduNetworkVisitFunc)
-: Visit callback function, called for each PDU Object in the provided range.
-
-data (void*)
-: Data object (pointer) passed to visit callback function. Optional.
-*/
-void pdunet_rx(
-    PduNetworkDesc* net, PduRange* range, PduNetworkVisitFunc visit, void* data)
-{
-    UNUSED(range);
-    UNUSED(visit);
-    UNUSED(data);
-
-    if (net == NULL) return;
-
-    log_debug("PDU Net: RX");
-    ncodec_seek(net->ncodec, 0, NCODEC_SEEK_SET);
-
-    /* Receive PDUs, call visitor. */
-    if (net->network.vtable.lpdu_rx) {
-        net->network.vtable.lpdu_rx(net);
-    }
-    pdunet_visit(net, NULL, pdunet_visit_container_mapfrom, NULL);
-    if (visit) pdunet_visit(net, range, visit, data);
-
-    /* Decode PDUs. */
-    pdunet_decode_unpack(net, NULL);
-    pdunet_decode_linear(net, NULL);
-    pdunet_visit(net, NULL, pdunet_visit_clear_update_flag, NULL);
-
-    /* Marshal from PDU Network to SignalVector. */
-    marshal_signalmap_in(net->msm.in);
-}
-
-
-void pdunet_visit_clear_update_flag(
-    PduNetworkDesc* net, PduObject* pdu, void* data)
-{
-    UNUSED(net);
-    UNUSED(data);
-    if (pdu) pdu->update_signals = false;
-}
-
-
-void pdunet_visit_clear_tx_flag(PduNetworkDesc* net, PduObject* pdu, void* data)
-{
-    UNUSED(net);
-    UNUSED(data);
-    if (pdu) pdu->needs_tx = false;
-}
-
-
-void pdunet_visit_clear_checksum(
-    PduNetworkDesc* net, PduObject* pdu, void* data)
-{
-    UNUSED(net);
-    UNUSED(data);
-    if (pdu) pdu->checksum = 0;
-}
-
-
-void pdunet_visit_set_checksum(PduNetworkDesc* net, PduObject* pdu, void* data)
-{
-    UNUSED(net);
-    UNUSED(data);
-    if (pdu == NULL || pdu->pdu == NULL) return;
-    if (pdu->pdu->dir == PduDirectionTx) {
-        uint8_t* payload = NULL;
-        vector_at(&(net->matrix.payload), pdu->matrix.pdu_idx, &payload);
-        assert(payload);
-        size_t payload_len = pdu->pdu->length;
-        pdu->checksum = pdunet_checksum(payload, payload_len);
-    }
-}
-
-
-void pdunet_visit_needs_tx(PduNetworkDesc* net, PduObject* pdu, void* data)
-{
-    UNUSED(data);
-    if (pdu == NULL || pdu->pdu == NULL) return;
-
-    if (pdu->pdu->dir == PduDirectionTx) {
-        if (pdu->container.header != HeaderFormatNone) {
-            /* Container PDU, preserve the needs_tx set by schedule. Later
-            call to pdunet_visit_container_mapto will call tx function. */
-        } else {
-            uint32_t checksum = pdunet_checksum(
-                pdu->ncodec.pdu.payload, pdu->ncodec.pdu.payload_len);
-            log_trace("Pdu: [%u] checksum=%u, new checksum=%u",
-                pdu->matrix.pdu_idx, pdu->checksum, checksum);
-            if (checksum != pdu->checksum) {
-                pdu->needs_tx = true;
-                if (pdu->pdu->container.id == 0) {
-                    pdu->checksum = checksum;
-                    /* Apply Tx payload modifications. */
-                    pdunet_call_tx_func(net, pdu);
-                } else {
-                    /* Container I-PDU (id != 0) checksums are updated in
-                     * pdunet_visit_container_mapto(), and only after being
-                     * mapped into the Container (eff. Tx). */
-                }
-            } else {
-                pdu->needs_tx = false;
-            }
-        }
-        log_trace("Pdu: [%u] needs_tx=%u", pdu->matrix.pdu_idx, pdu->needs_tx);
-    } else {
-        pdu->needs_tx = false;
-    }
-}
-
-
-void pdunet_call_tx_func(PduNetworkDesc* net, PduObject* pdu)
-{
-    if (pdu == NULL || pdu->pdu == NULL) return;
-    if ((pdu->needs_tx != true) || (pdu->lua.tx_ref == 0)) return;
-
-    /* Evaluate the Lua Tx function which may apply post-checksum payload
-    modifications or _reject_ the PDU. */
-    assert(net);
-    assert(net->mi);
-    assert(net->mi->private);
-    ModelInstancePrivate* mip = net->mi->private;
-    lua_State*            L = mip->lua_state;
-
-    log_trace("Lua Call: PDU Tx Tx[%u]: func=%d", pdu->matrix.pdu_idx,
-        pdu->lua.tx_ref);
-
-    int rc = pdunet_lua_pdu_call(L, pdu->lua.tx_ref, pdu->ncodec.pdu.payload,
-        pdu->ncodec.pdu.payload_len, true);
-    if (rc == 0) {
-        /* The PDU may have its payload modified. */
-        if (pdu->pdu->container.id == 0) {
-            /* Basis for checksum comparison (i.e. setting needs_tx) is not
-            currently based on this modified payload. Therefore do not update
-            the checksum here. */
-        } else {
-            /* Container I-PDU (id != 0) checksums are updated in
-            pdunet_visit_container_mapto(), and only after being
-            mapped into the Container (eff. Tx). */
-        }
-    } else {
-        /* The PDU was rejected. */
-        pdu->needs_tx = false;
-        log_trace("Pdu: [%u] rejected, reason=%d", pdu->matrix.pdu_idx, rc);
-    }
-}
-
-
-int pdunet_call_rx_func(
-    PduNetworkDesc* net, PduObject* pdu, uint8_t* payload, size_t payload_len)
-{
-    if (pdu == NULL || pdu->pdu == NULL) return 0;
-    if (pdu->lua.rx_ref == 0) return 0;
-
-    /* Evaluate the Lua Rx function which may apply payload
-    modifications or _reject_ the PDU. */
-    assert(net);
-    assert(net->mi);
-    assert(net->mi->private);
-    ModelInstancePrivate* mip = net->mi->private;
-    lua_State*            L = mip->lua_state;
-
-    log_trace("Lua Call: PDU Rx Rx[%u]: func=%d", pdu->matrix.pdu_idx,
-        pdu->lua.rx_ref);
-
-    int rc =
-        pdunet_lua_pdu_call(L, pdu->lua.rx_ref, payload, payload_len, true);
-    if (rc != 0) {
-        log_trace("Pdu: [%u] rejected, reason=%d", pdu->matrix.pdu_idx, rc);
-    }
-    return rc;
-}
-
-
-/**
-pdunet_destroy
-==============
-
-Parameters
-----------
-net (PduNetworkDesc*)
-: PduNetworkDesc object.
-*/
-void pdunet_destroy(PduNetworkDesc* net)
-{
-    if (net) {
-        for (size_t i = 0; i < vector_len(&net->pdus); i++) {
-            PduItem* pdu = vector_at(&net->pdus, i, NULL);
-            vector_reset(&pdu->signals);
-            if (pdu->metadata.config) free(pdu->metadata.config);
-        }
-        vector_reset(&net->pdus);
-        marshal_signalmap_destroy(net->msm.in);
-        marshal_signalmap_destroy(net->msm.out);
-        pdunet_matrix_clear(net);
-        pdunet_lua_teardown(net);
-        if (net->network.metadata.config) free(net->network.metadata.config);
-        free(net);
-    }
 }

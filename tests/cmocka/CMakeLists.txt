@@ -95,18 +95,20 @@ FetchContent_Declare(dse_ncodec
     URL                 $ENV{DSE_NCODEC_URL}
     HTTP_USERNAME       $ENV{DSE_NCODEC_URL_USER}
     HTTP_PASSWORD       $ENV{DSE_NCODEC_URL_TOKEN}
-    SOURCE_SUBDIR       dse/ncodec
+    SOURCE_DIR          "$ENV{EXTERNAL_BUILD_DIR}/dse.ncodec"
+    SOURCE_SUBDIR       dse
 )
 FetchContent_MakeAvailable(dse_ncodec)
 set(DSE_NCODEC_SOURCE_DIR ${dse_ncodec_SOURCE_DIR}/dse/ncodec)
 set(DSE_NCODEC_INCLUDE_DIR ${dse_ncodec_SOURCE_DIR})
+set(DSE_PDUNET_SOURCE_DIR ${dse_ncodec_SOURCE_DIR}/dse/pdunet)
+set(DSE_PDUNET_INCLUDE_DIR ${dse_ncodec_SOURCE_DIR})
 
 
 # Set the project paths
 # =====================
 set(DSE_MODELC_SOURCE_DIR ../../dse/modelc)
 set(DSE_MOCKS_SOURCE_DIR ../../dse/mocks)
-file(GLOB PDUNET_SOURCES CONFIGURE_DEPENDS "${DSE_MODELC_SOURCE_DIR}/model/pdunet/*.c")
 set(DSE_MODELC_SOURCE_FILES
     ${DSE_MODELC_SOURCE_DIR}/model/gateway.c
     ${DSE_MODELC_SOURCE_DIR}/model/lua.c
@@ -115,7 +117,6 @@ set(DSE_MODELC_SOURCE_FILES
     ${DSE_MODELC_SOURCE_DIR}/model/model.c
     ${DSE_MODELC_SOURCE_DIR}/model/ncodec.c
     ${DSE_MODELC_SOURCE_DIR}/model/pdunet.c
-    ${PDUNET_SOURCES}
     ${DSE_MODELC_SOURCE_DIR}/model/schema.c
     ${DSE_MODELC_SOURCE_DIR}/model/signal.c
     ${DSE_MODELC_SOURCE_DIR}/model/trace.c
@@ -144,7 +145,6 @@ set(DSE_MODELC_SIMBUS_LOOPBACK_SOURCE_FILES
     ${DSE_MODELC_SOURCE_DIR}/model/model.c
     ${DSE_MODELC_SOURCE_DIR}/model/ncodec.c
     ${DSE_MODELC_SOURCE_DIR}/model/pdunet.c
-    ${PDUNET_SOURCES}
     ${DSE_MODELC_SOURCE_DIR}/model/schema.c
     ${DSE_MODELC_SOURCE_DIR}/model/signal.c
     ${DSE_MODELC_SOURCE_DIR}/model/trace.c
@@ -192,7 +192,6 @@ add_executable(test_model
     model/test_gateway.c
     model/test_ncodec_can.c
     model/test_ncodec_pdu.c
-    model/test_pdunet.c
     model/test_schema.c
     model/test_stack.c
     model/test_signal.c
@@ -218,6 +217,7 @@ target_compile_definitions(test_model
 )
 target_link_libraries(test_model
     PUBLIC
+        pdunet
         ab-codec
     PRIVATE
         cmocka
@@ -233,10 +233,6 @@ install(
         model/gateway.yaml
         model/internal.yaml
         model/ncodec.yaml
-        model/pdunet.yaml
-        model/pdunet_container.yaml
-        model/pdunet_lua.yaml
-        model/pdunet_secured.yaml
         model/sequential.yaml
         model/signal.yaml
         model/transform.yaml
@@ -275,6 +271,7 @@ target_compile_definitions(test_model_interface
 )
 target_link_libraries(test_model_interface
     PUBLIC
+        pdunet
         ab-codec
     PRIVATE
         cmocka
@@ -322,6 +319,7 @@ target_compile_definitions(test_simbus_loopback
 )
 target_link_libraries(test_simbus_loopback
     PUBLIC
+        pdunet
         ab-codec
     PRIVATE
         cmocka
