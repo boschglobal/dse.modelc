@@ -38,13 +38,18 @@ PduNetwork* model_pdunet_setup(SimulationSpec* sim, ModelInstanceSpec* mi,
     assert(sim);
     assert(mi);
     assert(mi->private);
-    DseLog log = dse_log_init((DseLog){ .level = __log_level__ });
+
+    // TODO: log migration remove this log setup.
+    mi->log.level = __log_level__;
+    mi->log.function = dse_log2console;
+    DseLog* log = (DseLog*)&mi->log;
+
     ModelInstancePrivate* mip = mi->private;
     lua_State*            L = mip->lua_state;
     int                   rc = 0;
 
     if (ncodec == NULL || net_labels == NULL || sg_labels == NULL) {
-        log_debug(&log, "Call without required parameters, unexpected");
+        log_debug(log, "Call without required parameters, unexpected");
         return NULL;
     }
 
@@ -52,9 +57,9 @@ PduNetwork* model_pdunet_setup(SimulationSpec* sim, ModelInstanceSpec* mi,
     YamlNode* network_doc = NULL;
     size_t    net_label_count = 0;
 
-    log_notice(&log, "PDU Net: Search for Network");
+    log_notice(log, "PDU Net: Search for Network");
     for (SchemaLabel* l = net_labels; l->name; l++) {
-        log_notice(&log, "  Label %s=%s", l->name, l->value);
+        log_notice(log, "  Label %s=%s", l->name, l->value);
         net_label_count++;
     }
     SchemaObjectSelector net_selector = {
@@ -66,20 +71,20 @@ PduNetwork* model_pdunet_setup(SimulationSpec* sim, ModelInstanceSpec* mi,
     rc = schema_object_search(mi, &net_selector, _network_match_handler);
     if (rc == 0) {
         if (network_doc == NULL) {
-            log_error(&log, "Search failed: no document identified");
+            log_error(log, "Search failed: no document identified");
             return NULL;
         }
     } else if (rc == -ENODATA) {
         log_fatal(
-            &log, "Search failed: Network not found in YAML files (rc=%d)", rc);
+            log, "Search failed: Network not found in YAML files (rc=%d)", rc);
     } else {
-        log_fatal(&log, "Search failed: rc=%d", rc);
+        log_fatal(log, "Search failed: rc=%d", rc);
         return NULL;
     }
 
     /* Create the Network. */
     PduNetwork* net =
-        pdunet_create(ncodec, network_doc, sim->step_size, L, NULL);
+        pdunet_create(ncodec, network_doc, sim->step_size, L, log);
     if (net == NULL) {
         return NULL;
     }
@@ -88,11 +93,11 @@ PduNetwork* model_pdunet_setup(SimulationSpec* sim, ModelInstanceSpec* mi,
     /* Locate the Signal Vector (for mapping). */
     SignalVector* net_sv = NULL;
     SchemaLabel*  channel = NULL;
-    log_notice(&log, "PDU Net: Search for SignalGroup (Network=%s)", net->name);
+    log_notice(log, "PDU Net: Search for SignalGroup (Network=%s)", net->name);
     for (SchemaLabel* l = sg_labels; l->name; l++) {
-        log_debug(&log, "  Label %s=%s", l->name, l->value);
+        log_debug(log, "  Label %s=%s", l->name, l->value);
         if (strcmp(l->name, "channel") == 0) {
-            log_notice(&log, "  Label %s=%s", l->name, l->value);
+            log_notice(log, "  Label %s=%s", l->name, l->value);
             channel = l;
             for (SignalVector* sv = mi->model_desc->sv; sv && sv->name; sv++) {
                 if (strcmp(sv->alias, channel->value) == 0) {
@@ -102,11 +107,11 @@ PduNetwork* model_pdunet_setup(SimulationSpec* sim, ModelInstanceSpec* mi,
         }
     }
     if (channel == NULL) {
-        log_error(&log, "SignalGroup with annotation 'channel' not found!");
+        log_error(log, "SignalGroup with annotation 'channel' not found!");
         pdunet_destroy(net);
         return NULL;
     } else if (net_sv == NULL) {
-        log_error(&log, "SignalVector with alias/name not found!");
+        log_error(log, "SignalVector with alias/name not found!");
         pdunet_destroy(net);
         return NULL;
     }

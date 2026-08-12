@@ -50,8 +50,25 @@ typedef struct ModelInstanceSpec {
     /* Private data of the specific Model Instance. */
     void* private;
 
+    /* Log (per model). */
+    // TODO: log migration replaced following struct -> DseLog log;
+    struct {
+        uint8_t level;
+        void*   function;
+    } log;
+
     /* Reserved. */
-    uint64_t __reserved__[8];
+#if defined(__x86_64__)
+#if __SIZEOF_POINTER__ == 8
+    uint64_t __reserved__[6];
+#else
+    // uint32_t __reserved_4__;
+    uint64_t __reserved__[7];
+#endif
+#elif defined(__i386__)
+    // uint32_t __reserved_4__;
+    uint64_t __reserved__[7];
+#endif
 } ModelInstanceSpec;
 
 
