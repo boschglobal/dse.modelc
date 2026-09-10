@@ -6,7 +6,7 @@
 ## Docker Images.
 GCC_BUILDER_IMAGE ?= ghcr.io/boschglobal/dse-gcc-builder:latest
 DSE_CLANG_FORMAT_IMAGE ?= ghcr.io/boschglobal/dse-clang-format:latest
-TESTSCRIPT_IMAGE ?= ghcr.io/boschglobal/dse-testscript:latest
+TESTSCRIPT_IMAGE ?= testscript:latest
 SIMER_IMAGE ?= ghcr.io/boschglobal/dse-simer:latest
 
 
@@ -78,7 +78,7 @@ TESTSCRIPT_E2E_FILES = \
 	$(TESTSCRIPT_E2E_DIR)/benchmark.txtar
 
 ifneq ($(CI), true)
-#	TESTSCRIPT_E2E_FILES += $(TESTSCRIPT_E2E_DIR)/gateway.txtar
+	TESTSCRIPT_E2E_FILES += $(TESTSCRIPT_E2E_DIR)/gateway.txtar
 endif
 ifdef TEST
 TESTSCRIPT_E2E_FILES := $(TEST)
@@ -125,6 +125,7 @@ help:
 	@echo "  make build tools"
 	@echo "  make test_cmocka"
 	@echo "  make test_e2e TEST=tests/testscript/e2e/pdunet.txtar"
+	@echo "  make cleanall build stage-win PACKAGE_ARCH=windows-x64"
 
 .PHONY: build
 build:
@@ -240,7 +241,7 @@ do-test_cmocka-run:
 
 do-test_testscript-e2e:
 # Test debug; add '-v' to Testscript command (e.g. $(TESTSCRIPT_IMAGE) -v \).
-# Test debut; echo "Running E2E Test: $${ENTRYWORKDIR}"
+# Test debug; echo "Running E2E Test: $${ENTRYWORKDIR}"
 ifeq ($(PACKAGE_ARCH), linux-amd64)
 	@-docker kill simer 2>/dev/null ; true
 	@-docker kill gateway 2>/dev/null ; true
@@ -310,3 +311,41 @@ super-linter:
 		--env VALIDATE_YAML=true \
 		ghcr.io/super-linter/super-linter:slim-v8
 
+
+.PHONY: stage-win
+# Source Paths relative to the Makefile location
+OUT_BIN_DIR     = dse/modelc/build/_out/bin
+OUT_SHARE_DIR   = dse/modelc/build/_out/share
+SIMER_OUT_DIR   = dse/modelc/build/_out/simer
+EXAMPLES_DIR    = dse/modelc/build/_out/examples
+# Windows Staging Paths
+WIN_STAGE_DIR   = /mnt/c/Temp/simer_run
+WIN_EX_DIR      = /mnt/c/Temp/examples
+# Windows (native) view of the staging paths
+WIN_STAGE_PATH  = C:\Temp\simer_run
+WIN_EX_PATH     = C:\Temp\examples
+WIN_SIM         = $(WIN_EX_PATH)\minimal
+# Simer chdir's to -dir, so the binary paths must be absolute (defaults are relative to CWD).
+WIN_SIMER_ARGS  = '-dir','$(WIN_SIM)','-simbus','$(WIN_STAGE_PATH)\bin\x64\simbus.exe','-modelc','$(WIN_STAGE_PATH)\bin\x64\modelc.exe','-redis=','-transport','stream','-uri','tcp://127.0.0.1'
+WIN_LAUNCH_CMD  = Start-Process -FilePath '$(WIN_STAGE_PATH)\bin\simer.exe' -ArgumentList $(WIN_SIMER_ARGS) -WorkingDirectory '$(WIN_STAGE_PATH)' -NoNewWindow -Wait
+stage-win:
+	@echo "=== Create Windows Simer layout ==="
+	@mkdir -p $(SIMER_OUT_DIR)/bin/x64
+	@mkdir -p $(SIMER_OUT_DIR)/share
+	@cp $(OUT_BIN_DIR)/simbus.exe $(SIMER_OUT_DIR)/bin/x64/simbus.exe
+	@cp $(OUT_BIN_DIR)/modelc.exe $(SIMER_OUT_DIR)/bin/x64/modelc.exe
+	@cp $(OUT_BIN_DIR)/libmodelc.dll $(SIMER_OUT_DIR)/bin/x64/libmodelc.dll
+	@cp -r $(OUT_SHARE_DIR)/lua $(SIMER_OUT_DIR)/share/
+	@$(MAKE) -C extra/tools/simer win
+	@cp extra/tools/simer/bin/simer.exe $(SIMER_OUT_DIR)/bin/simer.exe
+	@echo "=== Staging Windows binaries and ALL examples to C:\Temp ==="
+	@mkdir -p $(WIN_STAGE_DIR) $(WIN_EX_DIR)
+	@rsync -a --delete $(SIMER_OUT_DIR)/ $(WIN_STAGE_DIR)/
+	@rsync -a --delete $(EXAMPLES_DIR)/ $(WIN_EX_DIR)/
+	@echo "=== Launch Command ==="
+	@echo "From WSL:"
+	@printf '  %s\n' "powershell.exe -NoProfile -Command \"$(WIN_LAUNCH_CMD)\""
+	@echo "From a Windows console, with working directory $(WIN_STAGE_PATH):"
+	@printf '  %s\n' 'bin\simer.exe -dir $(WIN_SIM) -simbus bin\x64\simbus.exe -modelc bin\x64\modelc.exe -redis= -transport stream -uri tcp://127.0.0.1'
+	@echo "=== Launching Windows Simulation ==="
+	@powershell.exe -NoProfile -Command "$(WIN_LAUNCH_CMD)"

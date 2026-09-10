@@ -16,7 +16,7 @@ $ git clone https://github.com/boschglobal/dse.modelc.git
 $ cd dse.modelc
 $ make
 $ export SIMER_IMAGE=simer:test
-$ make build simer tools
+$ make build tools
 
 # Stop any local Redis servers.
 $ sudo /etc/init.d/redis-server stop

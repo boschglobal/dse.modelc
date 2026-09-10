@@ -22,10 +22,11 @@ AdapterVTable* adapter_create_msg_vtable(void)
 
 
 Endpoint* endpoint_create(const char* transport, const char* uri, uint32_t uid,
-    bool bus_mode, double timeout)
+    bool bus_mode, double timeout, uint32_t alt_uid)
 {
     UNUSED(uri);
     UNUSED(timeout);
+    UNUSED(alt_uid);
     Endpoint* endpoint = NULL;
 
     if (strcmp(transport, TRANSPORT_LOOPBACK) == 0) {

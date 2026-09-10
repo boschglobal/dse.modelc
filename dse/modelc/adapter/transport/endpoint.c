@@ -10,6 +10,7 @@
 #include <dse/modelc/adapter/transport/endpoint.h>
 #include <dse/modelc/adapter/transport/redis.h>
 #include <dse/modelc/adapter/transport/redispubsub.h>
+#include <dse/modelc/adapter/transport/stream.h>
 
 
 #define REDIS_PORT            6379
@@ -56,7 +57,7 @@
  *  }
  */
 Endpoint* endpoint_create(const char* transport, const char* uri, uint32_t uid,
-    bool bus_mode, double timeout)
+    bool bus_mode, double timeout, uint32_t alt_uid)
 {
     Endpoint*   endpoint = NULL;
     static char _uri[MAX_URI_LEN]; /* Other API's may refer to this data. */
@@ -67,7 +68,7 @@ Endpoint* endpoint_create(const char* transport, const char* uri, uint32_t uid,
         /* Decode the URI. */
         strncpy(_uri, uri, MAX_URI_LEN - 1);
         if (strncmp(_uri, REDIS_URI_SCHEME, strlen(REDIS_URI_SCHEME)) == 0) {
-            /* Parse according to: redis://host:[port] */
+            /* Parse according to: redis://host[:port] */
             char*   saveptr;
             char*   p = _uri + strlen(REDIS_URI_SCHEME);
             char*   hostname = strtok_r(p, ":", &saveptr);
@@ -84,7 +85,7 @@ Endpoint* endpoint_create(const char* transport, const char* uri, uint32_t uid,
             }
         } else if (strncmp(_uri, REDISASYNC_URI_SCHEME,
                        strlen(REDISASYNC_URI_SCHEME)) == 0) {
-            /* Parse according to: redisasync://host:[port] */
+            /* Parse according to: redisasync://host[:port] */
             char*   saveptr;
             char*   p = _uri + strlen(REDISASYNC_URI_SCHEME);
             char*   hostname = strtok_r(p, ":", &saveptr);
@@ -118,6 +119,10 @@ Endpoint* endpoint_create(const char* transport, const char* uri, uint32_t uid,
         endpoint->uid = uid;
         endpoint->bus_mode = bus_mode;
         endpoint->disconnect = (EndpointDisconnectFunc)free;
+    } else if (strcmp(transport, TRANSPORT_STREAM) == 0) {
+        /* Stream - unix:///tmp/simbus.sock or tcp://host[:port] */
+        if (uid == 0) uid = alt_uid;
+        endpoint = stream_connect(uri, uid, bus_mode, timeout);
     } else {
         /* Unknown transport. */
         if (errno == 0) errno = EINVAL;

@@ -1,12 +1,12 @@
 env NAME=benchmark_inst_1
 env SIM=dse/modelc/build/_out/examples/benchmark
-env DEFAULT_INSTANCE_COUNT=4
-env DEFAULT_SIGNAL_COUNT=5
-env DEFAULT_SIGNAL_CHANGE=2
+env DEFAULT_INSTANCE_COUNT=5
+env DEFAULT_SIGNAL_COUNT=4000
+env DEFAULT_SIGNAL_CHANGE=70
 env DEFAULT_END_TIME=0.040
-env DEFAULT_TRANSPORT=redispubsub
-env DEFAULT_TRANSPORT_URI=redis://localhost:6379
-env DEFAULT_STACKED=true
+env DEFAULT_TRANSPORT=stream
+env DEFAULT_TRANSPORT_URI=unix:///tmp/simbus.sock
+env DEFAULT_STACKED=false
 
 
 # SETUP: generate yaml files
@@ -22,13 +22,15 @@ exec cat /repo/$SIM/data/signal_group.yaml
 exec sh -e $WORK/run_benchmark.sh
 
 stdout 'Name: benchmark_inst_1'
-stdout 'name         : data_channel'
+stdout 'Channel Name: data_channel'
+stdout 'Unique signals identified: 4000'
 stdout 'Run the Simulation ...'
 stdout 'Controller exit ...'
-stdout '::benchmark:::redispubsub;redis://localhost:6379;0.000500;0.040000;1;5;2;'
-stdout '::benchmark:::redispubsub;redis://localhost:6379;0.000500;0.040000;2;5;2;'
-stdout '::benchmark:::redispubsub;redis://localhost:6379;0.000500;0.040000;3;5;2;'
-stdout '::benchmark:::redispubsub;redis://localhost:6379;0.000500;0.040000;4;5;2;'
+stdout '::stream;unix:///tmp/simbus.sock;0.000500;0.040000;1;'
+stdout '::stream;unix:///tmp/simbus.sock;0.000500;0.040000;2;'
+stdout '::stream;unix:///tmp/simbus.sock;0.000500;0.040000;3;'
+stdout '::stream;unix:///tmp/simbus.sock;0.000500;0.040000;4;'
+stdout '::stream;unix:///tmp/simbus.sock;0.000500;0.040000;5;'
 
 
 
@@ -72,32 +74,18 @@ spec:
 EOL
 
 echo "Generate model instances ..."
-for i in $(seq 1 "$INSTANCE_COUNT"); do
-    uid=$((40 + i)) # Generate unique UID starting from 41
-    # Append each model instance
-    yq eval -i "
-        .spec.models += [
-        {
-            \"name\": \"benchmark_inst_$i\",
-            \"uid\": $uid,
-            \"model\": { \"name\": \"Benchmark\" },
-            \"runtime\": {
-                \"env\": {
-                    \"MODEL_ID\" : $i,
-                    \"SIGNAL_CHANGE\" : \"$SIGNAL_CHANGE\"
-                },
-                \"files\": [\"data/signal_group.yaml\"]
-            },
-            \"channels\": [
-            {
-                \"name\": \"data_channel\",
-                \"alias\": \"data\"
-            }
-            ]
-        }
-    ]
-    " "$output_sim_file"
-done
+awk -v count="$INSTANCE_COUNT" -v change="$SIGNAL_CHANGE" 'BEGIN {
+    for (i = 1; i <= count; i++) {
+        printf "    - name: benchmark_inst_%d\n", i
+        printf "      uid: %d\n", 40 + i
+        printf "      model:\n        name: Benchmark\n"
+        printf "      runtime:\n        env:\n"
+        printf "          MODEL_ID: %d\n", i
+        printf "          SIGNAL_CHANGE: \"%s\"\n", change
+        printf "        files:\n          - data/signal_group.yaml\n"
+        printf "      channels:\n        - name: data_channel\n          alias: data\n"
+    }
+}' >> "$output_sim_file"
 
 
 ###################
@@ -118,10 +106,6 @@ output_file="/repo/$SIM/data/signal_group.yaml"
 PREFIX_COUNT="${PREFIX_COUNT:-10}"
 POSTFIX_COUNT="${POSTFIX_COUNT:-10}"
 
-generate_random_string() {
-    tr -dc 'A-Za-z' </dev/urandom | head -c "$1"
-}
-
 echo "Generating initial signal group file ..."
 cat <<EOL > "$output_file"
 ---
@@ -135,10 +119,17 @@ spec:
 EOL
 
 echo "Generating signals ..."
-for i in $(seq 1 "$SIGNAL_COUNT"); do
-    signal_name="$(generate_random_string "$PREFIX_COUNT")_${i}_$(generate_random_string "$POSTFIX_COUNT")"
-    yq eval -i ".spec.signals += [{\"signal\": \"$signal_name\"}]" "$output_file"
-done
+awk -v count="$SIGNAL_COUNT" -v pre="$PREFIX_COUNT" -v post="$POSTFIX_COUNT" 'BEGIN {
+    srand()
+    alpha = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
+    for (i = 1; i <= count; i++) {
+        p = ""
+        for (j = 0; j < pre; j++) p = p substr(alpha, int(rand() * 52) + 1, 1)
+        s = ""
+        for (j = 0; j < post; j++) s = s substr(alpha, int(rand() * 52) + 1, 1)
+        printf "    - signal: %s_%d_%s\n", p, i, s
+    }
+}' >> "$output_file"
 
 
 
@@ -147,7 +138,7 @@ SIMER="${SIMER:-ghcr.io/boschglobal/dse-simer:latest}"
 END_TIME="${END_TIME:-${DEFAULT_END_TIME}}"
 docker run --name simer -i --rm -v $ENTRYHOSTDIR/$SIM:/sim \
     $SIMER -valgrind $NAME \
-        -env SIMBUS_LOGLEVEL=2 \
+        -env SIMBUS_LOGLEVEL=4 \
         -endtime $END_TIME \
         | tee benchmark_output.txt
 

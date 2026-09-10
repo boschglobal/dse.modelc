@@ -28,9 +28,11 @@
 : "${SIGNAL_CHANGE:=$3}"
 : "${STACKED:=$4}"
 : "${LOOPBACK:=$5}"
-: "${STARTUP_IDX:=$6}"
-: "${STARTUP_ANNO:=$7}"
-: "${IMPORTER:=$8}"
+: "${STREAM:=$6}"
+: "${TCP:=$7}"
+: "${STARTUP_IDX:=$8}"
+: "${STARTUP_ANNO:=$9}"
+: "${IMPORTER:=$10}"
 
 : ${SIMBUS_TRANSPORT:=redis}
 : ${SIMBUS_URI:=redis://localhost}
@@ -40,6 +42,13 @@ fi
 if [ ! -z $LOOPBACK ] && [ $LOOPBACK = "1" ]; then
     SIMBUS_TRANSPORT=loopback
     SIMBUS_URI=loopback
+fi
+if [ ! -z $STREAM ] && [ $STREAM = "1" ]; then
+    SIMBUS_TRANSPORT=stream
+    SIMBUS_URI=unix:///tmp/simbus.sock
+    if [ ! -z $TCP ] && [ $TCP = "1" ]; then
+        SIMBUS_URI=tcp://127.0.0.1
+    fi
 fi
 if [ -z $STARTUP_IDX ]; then
     STARTUP_IDX=0
@@ -71,6 +80,10 @@ simer()
 {
      ( if test -d "$1"; then cd "$1" && shift; fi \
      && docker run -it --rm \
+        --cap-add=sys_nice \
+        --ulimit rtprio=99 \
+        -e SIMER_SCHED_FIFO=1 \
+        -e SIMER_RT_PRIO=10 \
          -v $(pwd):/sim \
          -e SIMBUS_LOGLEVEL=${SIMBUS_LOGLEVEL:-$MODEL_LOGGER} \
          -e SIMBUS_TRANSPORT=${SIMBUS_TRANSPORT} \

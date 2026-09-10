@@ -594,9 +594,19 @@ static Endpoint* _create_endpoint(SimulationSpec* sim)
     int       retry_count = 60;
     Endpoint* endpoint = NULL;
 
+    /* Determine an alternate UID, if required. */
+    uint32_t alt_uid = 0;
+    for (ModelInstanceSpec* _instptr = sim->instance_list;
+        _instptr && _instptr->name; _instptr++) {
+        if (_instptr->uid) {
+            alt_uid = _instptr->uid;
+            break;
+        }
+    }
+
     while (--retry_count) {
         endpoint = endpoint_create(
-            sim->transport, sim->uri, sim->uid, false, sim->timeout);
+            sim->transport, sim->uri, sim->uid, false, sim->timeout, alt_uid);
         if (endpoint) break;
         if (__stop_request) {
             /* Early stop request, only would occur if endpoint creation

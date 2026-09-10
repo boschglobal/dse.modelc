@@ -61,7 +61,7 @@ int main(int argc, char** argv)
     log_notice("Create the Endpoint object ...");
     while (--retry_count) {
         endpoint = endpoint_create(
-            args.transport, args.uri, args.uid, true, args.timeout);
+            args.transport, args.uri, args.uid, true, args.timeout, 0);
         if (endpoint) break;
         sleep(1);
         log_info("Retry endpoint creation ...");

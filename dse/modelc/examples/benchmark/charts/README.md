@@ -8,7 +8,7 @@ SPDX-License-Identifier: Apache-2.0
 
 ```bash
 # Build local artifacts.
-$ make build simer tools
+$ make build tools
 # Associated FMI repo.
 $ make build fmi tools
 

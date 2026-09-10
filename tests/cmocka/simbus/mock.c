@@ -25,7 +25,7 @@ int mock_setup(ModelCMock* m)
 
     // Setup the controller (replaces call to modelc_run()).
     m->endpoint = endpoint_create(
-        m->sim.transport, m->sim.uri, m->sim.uid, false, m->sim.timeout);
+        m->sim.transport, m->sim.uri, m->sim.uid, false, m->sim.timeout, 0);
     controller_init(m->endpoint, &m->sim);
     m->controller = controller_object_ref(&m->sim);
     m->controller->simulation = &m->sim;

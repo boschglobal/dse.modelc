@@ -130,13 +130,14 @@ int controller_init_channel(ModelInstanceSpec* model_instance,
 }
 
 Endpoint* endpoint_create(const char* transport, const char* uri, uint32_t uid,
-    bool bus_mode, double timeout)
+    bool bus_mode, double timeout, uint32_t alt_uid)
 {
     UNUSED(transport);
     UNUSED(uri);
     UNUSED(uid);
     UNUSED(bus_mode);
     UNUSED(timeout);
+    UNUSED(alt_uid);
 
     return __endpoint_handle;
 }

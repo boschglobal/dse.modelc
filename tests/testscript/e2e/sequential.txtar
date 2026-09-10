@@ -69,6 +69,28 @@ stdout 'Message \(message\) : inst:2 count is 3'
 stdout 'Message \(message\) : inst:3 count is 3'
 
 
+# TEST: sequential co-sim w. unix stream
+exec yq -i e '.spec.runtime.sequential |= true' $REPODIR/$SIM/data/simulation.yaml
+exec sh -e $WORK/test-stream.sh
+
+stderr 'Using Valgrind'
+stdout 'Transport: stream'
+stdout 'URI: unix:///tmp/simbus.sock'
+stdout 'Stacked: yes'
+stdout 'Sequential: yes'
+stdout 'Run the Simulation ...'
+stdout 'Controller exit ...'
+stdout 'Message \(message\) : inst:1 count is 1'
+stdout 'Message \(message\) : inst:2 count is 2'
+stdout 'Message \(message\) : inst:3 count is 3'
+stdout 'Message \(message\) : inst:1 count is 4'
+stdout 'Message \(message\) : inst:2 count is 5'
+stdout 'Message \(message\) : inst:3 count is 6'
+stdout 'Message \(message\) : inst:1 count is 7'
+stdout 'Message \(message\) : inst:2 count is 8'
+stdout 'Message \(message\) : inst:3 count is 9'
+
+
 -- test.sh --
 SIMER="${SIMER:-ghcr.io/boschglobal/dse-simer:latest}"
 docker run --name simer -i --rm -v $ENTRYHOSTDIR/$SIM:/sim \
@@ -83,3 +105,13 @@ docker run --name simer -i --rm -v $ENTRYHOSTDIR/$SIM:/sim \
         -env SIMBUS_TRANSPORT=loopback \
         -env SIMBUS_URI=loopback \
         -env SIMBUS_LOGLEVEL=3
+
+
+-- test-stream.sh --
+SIMER="${SIMER:-ghcr.io/boschglobal/dse-simer:latest}"
+docker run --name simer -i --rm -v $ENTRYHOSTDIR/$SIM:/sim \
+    $SIMER -valgrind $NAME -redis="" \
+        -env SIMBUS_TRANSPORT=stream \
+        -env SIMBUS_URI=unix:///tmp/simbus.sock \
+        -env SIMBUS_LOGLEVEL=3
+

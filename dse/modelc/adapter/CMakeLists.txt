@@ -39,6 +39,8 @@ add_library(adapter OBJECT
     transport/endpoint.c
     transport/redis.c
     transport/redispubsub.c
+    transport/stream.c
+    transport/stream_posix.c
 )
 target_include_directories(adapter
     PRIVATE

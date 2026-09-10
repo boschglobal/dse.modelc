@@ -50,7 +50,8 @@ static int simbus_open_trace_tcp(Adapter* adapter, const char* port)
         return -1;
     }
     int optval = 1;
-    setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, &optval, sizeof(optval));
+    setsockopt(
+        sockfd, SOL_SOCKET, SO_REUSEADDR, (const char*)&optval, sizeof(optval));
 
     /* Bind to server addr/port. */
     if (bind(sockfd, (struct sockaddr*)addr, sizeof(*addr)) < 0) {

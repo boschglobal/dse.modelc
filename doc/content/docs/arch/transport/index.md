@@ -18,15 +18,15 @@ environment. Each transport has its own specific properties and the selection of
 a transport will be determined by the planned operational deployment of a simulation.
 
 
-| Transport    | Latency | Status |
-| ------------ | ------- | ------ |
-| Loopback     | Fastest | Available, stacked simulations (single process). |
-| TCP          | Fastest | Planned. |
-| **Redis**    | Faster  | **Recommended.** |
-| Redis PubSub | Fast    | Available, stable. |
-| RESP         | Fast    | Under consideration, for cloud connectivity (tunnelling).  |
-| gPPC         | Fast    | Under consideration, for cloud connectivity (HTTP). |
-| Redis Async  | Slower  | Available, experimental. |
+| Transport        | Latency | Status |
+| ---------------- | ------- | ------ |
+| Loopback         | Fastest | Available, stacked simulations (single process). |
+| Stream (TCP/UDS) | Fastest | Available, new development. |
+| **Redis**        | Faster  | **Recommended.** |
+| Redis PubSub     | Fast    | Available, stable. |
+| RESP             | Fast    | Under consideration, for cloud connectivity (tunnelling).  |
+| gPPC             | Fast    | Under consideration, for cloud connectivity (HTTP). |
+| Redis Async      | Slower  | Available, experimental. |
 
 
 ### Usage
@@ -114,6 +114,45 @@ suitable for particular deployment scenarios and when developing models.
 | `transport` (name)  | `loopback` |
 | `uri`               | `loopback` |
 | `timeout` (seconds) | `60` |
+
+
+### Stream (TCP/UDS)
+
+<div hidden>
+
+```text
+@startuml transport-stream
+skinparam nodesep 55
+skinparam ranksep 40
+skinparam componentStyle rectangle
+
+component "Model" as m1
+component "Model" as m2
+component "SimBus" as sb
+m1 <-left-> sb
+m2 <-right-> sb
+
+@enduml
+```
+
+</div>
+
+![redis](transport-stream.png)
+
+
+The `stream` transport is a new development for connecting models in a simulation.
+Models connect directly to the SimBus via TCP or UDS (Unix Domain Sockets). This
+transport offers very low latency performance.
+
+#### Configuration Parameters
+
+| Parameter           | Example |
+| ------------------- | ------- |
+| `transport` (name)  | `stream` |
+| `uri`               | `tcp://127.0.0.1`, `tcp://127.0.0.1:5001`, `unix:///tmp/simbus.sock` |
+| `timeout` (seconds) | `60` |
+
+
 
 
 ### Redis

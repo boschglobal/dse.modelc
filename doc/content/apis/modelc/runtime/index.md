@@ -72,7 +72,11 @@ typedef struct ModelInstanceSpec {
     void* spec;
     void* yaml_doc_list;
     void* private;
-    int[8] __reserved__;
+    struct {
+        int level;
+        void* function;
+    } log;
+    int[6] __reserved__;
 }
 ```
 
@@ -95,8 +99,9 @@ typedef struct RuntimeModelDesc {
         double step_time_correction;
         int binary_signals_reset;
         RuntimeModelVTable vtable;
+        double model_time;
     } runtime;
-    int[5] __reserved__;
+    int[4] __reserved__;
 }
 ```
 

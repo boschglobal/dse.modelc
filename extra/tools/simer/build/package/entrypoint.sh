@@ -29,8 +29,12 @@ if [ -n "$SIM_PATH" ]; then cd $SIM_PATH; fi
 
 # Run the SIMER command.
 SIMER_CMD="$SIMER_EXE"
-exec gosu simer $SIMER_CMD "$@"
-
+if [ "${SIMER_SCHED_FIFO:-0}" = "1" ]; then
+    SIMER_RT_PRIO="${SIMER_RT_PRIO:-10}"
+    exec chrt -f "$SIMER_RT_PRIO" gosu simer $SIMER_CMD "$@"
+else
+    exec gosu simer $SIMER_CMD "$@"
+fi
 
 # FIXME this change does not work in E2E tests.
 #

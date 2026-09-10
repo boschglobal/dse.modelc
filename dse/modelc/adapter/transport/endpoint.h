@@ -17,6 +17,7 @@
 #define TRANSPORT_REDISPUBSUB "redispubsub"
 #define TRANSPORT_REDIS       "redis"
 #define TRANSPORT_LOOPBACK    "loopback"
+#define TRANSPORT_STREAM      "stream"
 
 
 typedef struct Endpoint Endpoint;
@@ -70,7 +71,7 @@ typedef struct Endpoint {
 
 /* endpoint.c */
 DLL_PRIVATE Endpoint* endpoint_create(const char* transport, const char* uri,
-    uint32_t uid, bool bus_mode, double timeout);
+    uint32_t uid, bool bus_mode, double timeout, uint32_t alt_uid);
 
 
 #endif  // DSE_MODELC_ADAPTER_TRANSPORT_ENDPOINT_H_

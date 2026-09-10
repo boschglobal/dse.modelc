@@ -56,6 +56,45 @@ stdout 'SignalValue: 2628574755 = 46.000000 \[name=counter\]'
 stdout 'Message \(message\) : count is 46'
 
 
+# TEST: stream unix
+env SIMBUS_TRANSPORT=stream
+env SIMBUS_URI=unix:///tmp/simbus.sock
+
+exec sh -e $WORK/test-stream.sh
+
+stderr 'Using Valgrind'
+stdout 'Transport: stream'
+stdout 'URI: unix:///tmp/simbus.sock'
+stdout 'SignalValue: 2628574755 = 46.000000 \[name=counter\]'
+stdout 'Message \(message\) : count is 46'
+
+
+# TEST: stream tcp with default port
+env SIMBUS_TRANSPORT=stream
+env SIMBUS_URI=tcp://127.0.0.1
+
+exec sh -e $WORK/test-stream.sh
+
+stderr 'Using Valgrind'
+stdout 'Transport: stream'
+stdout 'URI: tcp://127.0.0.1'
+stdout 'SignalValue: 2628574755 = 46.000000 \[name=counter\]'
+stdout 'Message \(message\) : count is 46'
+
+
+# TEST: stream tcp
+env SIMBUS_TRANSPORT=stream
+env SIMBUS_URI=tcp://127.0.0.1:5001
+
+exec sh -e $WORK/test-stream.sh
+
+stderr 'Using Valgrind'
+stdout 'Transport: stream'
+stdout 'URI: tcp://127.0.0.1:5001'
+stdout 'SignalValue: 2628574755 = 46.000000 \[name=counter\]'
+stdout 'Message \(message\) : count is 46'
+
+
 -- test.sh --
 SIMER="${SIMER:-ghcr.io/boschglobal/dse-simer:latest}"
 docker run --name simer -i --rm -v $ENTRYHOSTDIR/$SIM:/sim \
@@ -71,6 +110,17 @@ docker run --name simer -i --rm -v $ENTRYHOSTDIR/$SIM:/sim \
 SIMER="${SIMER:-ghcr.io/boschglobal/dse-simer:latest}"
 docker run --name simer -i --rm -v $ENTRYHOSTDIR/$SIM:/sim \
     $SIMER -valgrind $NAME -simbus="" \
+        -env $NAME:SIMBUS_TRANSPORT=$SIMBUS_TRANSPORT \
+        -env $NAME:SIMBUS_URI=$SIMBUS_URI \
+        -env $NAME:SIMBUS_LOGLEVEL=2
+
+
+-- test-stream.sh --
+SIMER="${SIMER:-ghcr.io/boschglobal/dse-simer:latest}"
+docker run --name simer -i --rm -v $ENTRYHOSTDIR/$SIM:/sim \
+    $SIMER -valgrind $NAME -redis="" \
+        -env simbus:SIMBUS_TRANSPORT=$SIMBUS_TRANSPORT \
+        -env simbus:SIMBUS_URI=$SIMBUS_URI \
         -env $NAME:SIMBUS_TRANSPORT=$SIMBUS_TRANSPORT \
         -env $NAME:SIMBUS_URI=$SIMBUS_URI \
         -env $NAME:SIMBUS_LOGLEVEL=2

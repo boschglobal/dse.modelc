@@ -82,6 +82,38 @@ stdout '3:checksum-3 = 3814679844'
 stdout '4:checksum-4 = 3814679844'
 
 
+# TEST: stream unix
+env SIMBUS_TRANSPORT=stream
+env SIMBUS_URI=unix:///tmp/simbus.sock
+exec yq -i e '.spec.runtime.stacked |= false' $REPODIR/$SIM/data/simulation.yaml
+exec sh -e $WORK/test-stream.sh
+
+stderr 'Using Valgrind'
+stdout 'Transport: stream'
+stdout 'URI: unix:///tmp/simbus.sock'
+stdout 'Stacked: no'
+stdout '1:checksum-1 = 3814679844'
+stdout '2:checksum-2 = 3814679844'
+stdout '3:checksum-3 = 3814679844'
+stdout '4:checksum-4 = 3814679844'
+
+
+# TEST: stream tcp
+env SIMBUS_TRANSPORT=stream
+env SIMBUS_URI=tcp://127.0.0.1
+
+exec sh -e $WORK/test-stream.sh
+
+stderr 'Using Valgrind'
+stdout 'Transport: stream'
+stdout 'URI: tcp://127.0.0.1'
+stdout 'Stacked: no'
+stdout '1:checksum-1 = 3814679844'
+stdout '2:checksum-2 = 3814679844'
+stdout '3:checksum-3 = 3814679844'
+stdout '4:checksum-4 = 3814679844'
+
+
 -- test.sh --
 SIMER="${SIMER:-ghcr.io/boschglobal/dse-simer:latest}"
 docker run --name simer -i --rm -v $ENTRYHOSTDIR/$SIM:/sim \
@@ -94,5 +126,12 @@ docker run --name simer -i --rm -v $ENTRYHOSTDIR/$SIM:/sim \
 SIMER="${SIMER:-ghcr.io/boschglobal/dse-simer:latest}"
 docker run --name simer -i --rm -v $ENTRYHOSTDIR/$SIM:/sim \
     $SIMER -valgrind $NAME -simbus="" \
+        -env SIMBUS_TRANSPORT=$SIMBUS_TRANSPORT \
+        -env SIMBUS_URI=$SIMBUS_URI
+
+-- test-stream.sh --
+SIMER="${SIMER:-ghcr.io/boschglobal/dse-simer:latest}"
+docker run --name simer -i --rm -v $ENTRYHOSTDIR/$SIM:/sim \
+    $SIMER -valgrind $NAME -redis="" \
         -env SIMBUS_TRANSPORT=$SIMBUS_TRANSPORT \
         -env SIMBUS_URI=$SIMBUS_URI
