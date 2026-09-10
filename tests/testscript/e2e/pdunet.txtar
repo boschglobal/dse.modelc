@@ -151,6 +151,11 @@ stdout 'PDU Net: CAN Network Config: CAN_A'
 stdout 'PDU Net:   CAN: PDU\[0\] id=0x100, len=8, dir=Tx, name=MSG_TX'
 stdout 'PDU Net:   CAN: PDU\[1\] id=0x100, len=8, dir=Rx, name=MSG_RX'
 
+stdout 'step\[0.000000\]: RxCalls=0'
+stdout 'step\[[0-9.]+\]: RxCalls=1'
+stdout 'step\[[0-9.]+\]: RxCalls=2'
+! stdout 'RxCalls=10'
+
 
 
 # TEST: luacannet example (CAN transport, Lua MCL model)
@@ -213,7 +218,9 @@ stdout 'PDU Net:   CAN: PDU\[9\] id=0x310, len=8, dir=Rx, name=LPDU-PERIODIC-RX'
 stdout 'L310 periodic tx=7, rx=7'
 stdout 'PDU Net:   CAN: PDU\[10\] id=0x320, len=8, dir=Tx, name=LPDU-ONCHANGE-TX'
 stdout 'PDU Net:   CAN: PDU\[11\] id=0x320, len=8, dir=Rx, name=LPDU-ONCHANGE-RX'
-stdout 'L320 onchange tx=9, rx=9'
+stdout 'L320 onchange tx=9, rx=0'
+! stdout 'L320 onchange tx=9, rx=9'
+stdout 'C300 1=1, 2=2, 3=3, 1Rx=101, 2Rx=2, 3Rx=3'
 stdout 'PDU Net:   CAN: PDU\[12\] id=0x330, len=24, dir=Tx, name=LPDU-NPC-TX \[Container\]'
 stdout 'PDU Net:   CAN: PDU\[15\] id=0x330, len=24, dir=Rx, name=LPDU-NPC-RX \[Container\]'
 stdout 'C330 1=11, 2=12, 1Rx=11, 2Rx=12'

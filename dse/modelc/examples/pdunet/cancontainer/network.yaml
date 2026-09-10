@@ -93,6 +93,14 @@ spec:
       dir: Rx
       container:
         id: 0x300
+      functions:
+        # Rx function on a container member: C300_10ms_1_Rx reads Tx+100.
+        rx:
+          lua: |
+            return function(ctx)
+                ctx.payload[1] = (ctx.payload[1] + 100) % 256
+                return ctx
+            end
       signals:
         - signal: C300_10ms_1_Rx
           encoding:
@@ -185,6 +193,15 @@ spec:
         can:
           frame_format: Base
           frame_type: Data
+      functions:
+        # Rx function rejecting the frame: L320_OnChange_Rx stays 0.
+        rx:
+          lua: |
+            return function(ctx)
+                ctx.err = 1
+                ctx.errmsg = "LPDU-ONCHANGE-RX discarded by Rx function"
+                return ctx
+            end
       signals:
         - signal: L320_OnChange_Rx
           encoding:

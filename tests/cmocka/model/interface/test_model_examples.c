@@ -808,6 +808,7 @@ void test_model__pdunet_sec(void** state)
 #define PDUNET_CANNET_SIGNAL_COUNTER_RX 1
 #define PDUNET_CANNET_SIGNAL_SPEED      2
 #define PDUNET_CANNET_SIGNAL_SPEED_RX   3
+#define PDUNET_CANNET_SIGNAL_RX_CALLS   4
 
 void test_model__pdunet_cannet(void** state)
 {
@@ -841,6 +842,8 @@ void test_model__pdunet_cannet(void** state)
     /* Initial values. */
     double counter = 0;
     double counter_rx = 0;
+    /* MSG_RX Rx function call count. Tracks counter_rx: both count arrivals. */
+    double rx_calls = 0;
     double speed = 0;
     double speed_rx = 0;
     simmock_print_scalar_signals(mock, LOG_DEBUG);
@@ -853,6 +856,7 @@ void test_model__pdunet_cannet(void** state)
             { .index = PDUNET_CANNET_SIGNAL_COUNTER_RX, .value = counter_rx },
             { .index = PDUNET_CANNET_SIGNAL_SPEED, .value = speed },
             { .index = PDUNET_CANNET_SIGNAL_SPEED_RX, .value = speed_rx },
+            { .index = PDUNET_CANNET_SIGNAL_RX_CALLS, .value = rx_calls },
         };
         simmock_signal_check(mock, PDUNET_CANNET_INST_NAME, checks,
             ARRAY_SIZE(checks), NULL, "T0");
@@ -861,12 +865,9 @@ void test_model__pdunet_cannet(void** state)
         simmock_print_binary_signals(mock, LOG_TRACE);
     }
 
-    /* After the first step (t=0.0005): TX fired at t=0, Lua encode bumped
-       Counter 0->1 and sent Speed=sample[0]=10 (raw=100). Simbus loopback
-       takes one bus tick so RX is not yet visible: CounterRx=0, SpeedRx=0,
-       and Speed is still sample[0]=10. (step_size = 0.5ms) */
     counter = 1;
     counter_rx = 0;
+    rx_calls = 0;
     speed = 10;
     speed_rx = 0;
     {
@@ -875,6 +876,7 @@ void test_model__pdunet_cannet(void** state)
             { .index = PDUNET_CANNET_SIGNAL_COUNTER_RX, .value = counter_rx },
             { .index = PDUNET_CANNET_SIGNAL_SPEED, .value = speed },
             { .index = PDUNET_CANNET_SIGNAL_SPEED_RX, .value = speed_rx },
+            { .index = PDUNET_CANNET_SIGNAL_RX_CALLS, .value = rx_calls },
         };
         simmock_signal_check(mock, PDUNET_CANNET_INST_NAME, checks,
             ARRAY_SIZE(checks), NULL, "pre-Rx t=0.0005");
@@ -885,6 +887,7 @@ void test_model__pdunet_cannet(void** state)
 
     counter = 1;
     counter_rx = 1;
+    rx_calls = 1;
     speed = 20;
     speed_rx = 10;
     for (uint32_t i = 0; i < 19; i++) {
@@ -893,6 +896,7 @@ void test_model__pdunet_cannet(void** state)
             { .index = PDUNET_CANNET_SIGNAL_COUNTER_RX, .value = counter_rx },
             { .index = PDUNET_CANNET_SIGNAL_SPEED, .value = speed },
             { .index = PDUNET_CANNET_SIGNAL_SPEED_RX, .value = speed_rx },
+            { .index = PDUNET_CANNET_SIGNAL_RX_CALLS, .value = rx_calls },
         };
         snprintf(hint, sizeof(hint), "cycle1-steady i=%d", i);
         simmock_signal_check(mock, PDUNET_CANNET_INST_NAME, checks,
@@ -904,6 +908,7 @@ void test_model__pdunet_cannet(void** state)
 
     counter = 2;
     counter_rx = 1;
+    rx_calls = 1;
     speed = 20;
     speed_rx = 10;
     {
@@ -912,6 +917,7 @@ void test_model__pdunet_cannet(void** state)
             { .index = PDUNET_CANNET_SIGNAL_COUNTER_RX, .value = counter_rx },
             { .index = PDUNET_CANNET_SIGNAL_SPEED, .value = speed },
             { .index = PDUNET_CANNET_SIGNAL_SPEED_RX, .value = speed_rx },
+            { .index = PDUNET_CANNET_SIGNAL_RX_CALLS, .value = rx_calls },
         };
         simmock_signal_check(mock, PDUNET_CANNET_INST_NAME, checks,
             ARRAY_SIZE(checks), NULL, "pre-Rx2 t=0.0105");
@@ -922,6 +928,7 @@ void test_model__pdunet_cannet(void** state)
 
     counter = 2;
     counter_rx = 2;
+    rx_calls = 2;
     speed = 30;
     speed_rx = 20;
     for (uint32_t i = 0; i < 19; i++) {
@@ -930,6 +937,7 @@ void test_model__pdunet_cannet(void** state)
             { .index = PDUNET_CANNET_SIGNAL_COUNTER_RX, .value = counter_rx },
             { .index = PDUNET_CANNET_SIGNAL_SPEED, .value = speed },
             { .index = PDUNET_CANNET_SIGNAL_SPEED_RX, .value = speed_rx },
+            { .index = PDUNET_CANNET_SIGNAL_RX_CALLS, .value = rx_calls },
         };
         snprintf(hint, sizeof(hint), "cycle2-steady i=%d", i);
         simmock_signal_check(mock, PDUNET_CANNET_INST_NAME, checks,
@@ -941,6 +949,7 @@ void test_model__pdunet_cannet(void** state)
 
     counter = 3;
     counter_rx = 2;
+    rx_calls = 2;
     speed = 30;
     speed_rx = 20;
     {
@@ -949,6 +958,7 @@ void test_model__pdunet_cannet(void** state)
             { .index = PDUNET_CANNET_SIGNAL_COUNTER_RX, .value = counter_rx },
             { .index = PDUNET_CANNET_SIGNAL_SPEED, .value = speed },
             { .index = PDUNET_CANNET_SIGNAL_SPEED_RX, .value = speed_rx },
+            { .index = PDUNET_CANNET_SIGNAL_RX_CALLS, .value = rx_calls },
         };
         simmock_signal_check(mock, PDUNET_CANNET_INST_NAME, checks,
             ARRAY_SIZE(checks), NULL, "pre-Rx3 t=0.0205");
@@ -959,6 +969,7 @@ void test_model__pdunet_cannet(void** state)
 
     counter = 3;
     counter_rx = 3;
+    rx_calls = 3;
     speed = 40;
     speed_rx = 30;
     for (uint32_t i = 0; i < 19; i++) {
@@ -967,6 +978,7 @@ void test_model__pdunet_cannet(void** state)
             { .index = PDUNET_CANNET_SIGNAL_COUNTER_RX, .value = counter_rx },
             { .index = PDUNET_CANNET_SIGNAL_SPEED, .value = speed },
             { .index = PDUNET_CANNET_SIGNAL_SPEED_RX, .value = speed_rx },
+            { .index = PDUNET_CANNET_SIGNAL_RX_CALLS, .value = rx_calls },
         };
         snprintf(hint, sizeof(hint), "cycle3-steady i=%d", i);
         simmock_signal_check(mock, PDUNET_CANNET_INST_NAME, checks,
@@ -1209,7 +1221,7 @@ void test_model__pdunet_cancontainer(void** state)
     c300_1 = 1;
     c300_2 = 2;
     c300_3 = 3;
-    c300_1_rx = 1;
+    c300_1_rx = 101; /* IPDU-RX-1 Rx function adds 100. */
     c300_2_rx = 2;
     c300_3_rx = 3;
     for (uint32_t i = 0; i < 12; i++) {
@@ -1233,7 +1245,7 @@ void test_model__pdunet_cancontainer(void** state)
     c300_1 = 2;
     c300_2 = 4;
     c300_3 = 6;
-    c300_1_rx = 2;
+    c300_1_rx = 102;
     c300_2_rx = 4;
     c300_3_rx = 6;
     for (uint32_t i = 0; i < 80; i++) {
@@ -1257,7 +1269,7 @@ void test_model__pdunet_cancontainer(void** state)
     c300_1 = 3;
     c300_2 = 6;
     c300_3 = 9;
-    c300_1_rx = 3;
+    c300_1_rx = 103;
     c300_2_rx = 6;
     c300_3_rx = 9;
     for (uint32_t i = 0; i < 80; i++) {
@@ -1281,7 +1293,8 @@ void test_model__pdunet_cancontainer(void** state)
         { .index = CANCONTAINER_SIGNAL_L310_20MS, .value = 7 },
         { .index = CANCONTAINER_SIGNAL_L310_20MS_RX, .value = 7 },
         { .index = CANCONTAINER_SIGNAL_L320_ONCHANGE, .value = 9 },
-        { .index = CANCONTAINER_SIGNAL_L320_ONCHANGE_RX, .value = 9 },
+        /* LPDU-ONCHANGE-RX Rx function rejects the frame. */
+        { .index = CANCONTAINER_SIGNAL_L320_ONCHANGE_RX, .value = 0 },
         { .index = CANCONTAINER_SIGNAL_C330_ONCHANGE_1, .value = 11 },
         { .index = CANCONTAINER_SIGNAL_C330_ONCHANGE_2, .value = 12 },
         { .index = CANCONTAINER_SIGNAL_C330_ONCHANGE_1_RX, .value = 11 },

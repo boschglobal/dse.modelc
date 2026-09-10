@@ -48,6 +48,7 @@ spec:
     - signal: CounterRx
     - signal: Speed
     - signal: SpeedRx
+    - signal: RxCalls
 ---
 kind: SignalGroup
 metadata:

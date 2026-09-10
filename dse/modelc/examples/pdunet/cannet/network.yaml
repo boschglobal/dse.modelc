@@ -64,6 +64,15 @@ spec:
         can:
           frame_format: Base
           frame_type: Data
+      functions:
+        # Count the Rx calls
+        rx:
+          lua: |
+            return function(ctx)
+                rx_calls = (rx_calls or 0) + 1
+                ctx.payload[4] = rx_calls % 256
+                return ctx
+            end
       signals:
         - signal: CounterRx
           encoding:
@@ -76,4 +85,10 @@ spec:
             start: 8
             length: 16
             factor: 0.1
+            offset: 0
+        - signal: RxCalls
+          encoding:
+            start: 24
+            length: 8
+            factor: 1
             offset: 0

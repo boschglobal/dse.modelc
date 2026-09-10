@@ -18,6 +18,7 @@ typedef struct {
         double* counter_rx;
         double* speed;
         double* speed_rx;
+        double* rx_calls;
     } signals;
 } PduNetModelDesc;
 
@@ -42,6 +43,7 @@ ModelDesc* model_create(ModelDesc* model)
     m->signals.counter_rx = _index_signal(m, "scalar_vector", "CounterRx");
     m->signals.speed = _index_signal(m, "scalar_vector", "Speed");
     m->signals.speed_rx = _index_signal(m, "scalar_vector", "SpeedRx");
+    m->signals.rx_calls = _index_signal(m, "scalar_vector", "RxCalls");
 
     /* Return the extended object. */
     return (ModelDesc*)m;
@@ -59,6 +61,8 @@ int model_step(ModelDesc* model, double* model_time, double stop_time)
     log_info("step[%06f]: Counter=%f, CounterRx=%f, Speed=%f, SpeedRx=%f",
         *model_time, *m->signals.counter, *m->signals.counter_rx,
         *m->signals.speed, *m->signals.speed_rx);
+    log_info(
+        "step[%06f]: RxCalls=%u", *model_time, (uint16_t)*m->signals.rx_calls);
 
     /* Advance the model time. */
     *model_time = stop_time;
