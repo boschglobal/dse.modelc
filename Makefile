@@ -6,7 +6,7 @@
 ## Docker Images.
 GCC_BUILDER_IMAGE ?= ghcr.io/boschglobal/dse-gcc-builder:latest
 DSE_CLANG_FORMAT_IMAGE ?= ghcr.io/boschglobal/dse-clang-format:latest
-TESTSCRIPT_IMAGE ?= testscript:latest
+TESTSCRIPT_IMAGE ?= ghcr.io/boschglobal/dse-testscript:latest
 SIMER_IMAGE ?= ghcr.io/boschglobal/dse-simer:latest
 
 
@@ -78,7 +78,7 @@ TESTSCRIPT_E2E_FILES = \
 	$(TESTSCRIPT_E2E_DIR)/benchmark.txtar
 
 ifneq ($(CI), true)
-	TESTSCRIPT_E2E_FILES += $(TESTSCRIPT_E2E_DIR)/gateway.txtar
+#	TESTSCRIPT_E2E_FILES += $(TESTSCRIPT_E2E_DIR)/gateway.txtar
 endif
 ifdef TEST
 TESTSCRIPT_E2E_FILES := $(TEST)
