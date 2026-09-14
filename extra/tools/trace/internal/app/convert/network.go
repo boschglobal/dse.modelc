@@ -158,50 +158,62 @@ func (n *NetworkMeasurement) writeCanEvent(time float64, msg *pdu.Pdu) error {
 	meta.Init(tbl.Bytes, tbl.Pos)
 
 	// ASC Event
-	ch := meta.NetworkId()
+	ch := meta.NetworkId() + 1
+
 	dir := "Rx"
 	if n.txEcuId == msg.EcuId() {
 		dir = "Tx"
 	}
 	canFd := false
-	frameType := 0x00 // TODO: support BRS.
+	isExtended := false
+
 	switch meta.MessageFormat() {
 	case pdu.CanMessageFormatBaseFrameFormat:
 		canFd = false
+		isExtended = false
 	case pdu.CanMessageFormatExtendedFrameFormat:
 		canFd = false
+		isExtended = true
 	case pdu.CanMessageFormatFdBaseFrameFormat:
 		canFd = true
-		frameType = 0x8
+		isExtended = false
 	case pdu.CanMessageFormatFdExtendedFrameFormat:
 		canFd = true
-		frameType = 0x8
+		isExtended = true
 	}
+
+	idStr := fmt.Sprintf("%X", msg.Id())
+	if isExtended {
+		idStr += "x"
+	}
+
 	line := ""
 	if canFd {
 		line = fmt.Sprintf(
-			"%14.4f  CANFD %1d %-4s %4X      %1d %1d   %1x %2d %s\n",
+			"%.6f %-8s %2d %-4s %-12s %d %d %x %d %s\n",
 			time,
+			"CANFD",
 			ch,
 			dir,
-			msg.Id(),
-			1, // TODO: what is this?
-			0, // TODO: what is this?
-			frameType,
+			idStr,
+			1,
+			0,
+			canFdDlcCode(int(msg.PayloadLength())),
 			msg.PayloadLength(),
 			formatPayload(msg.PayloadBytes()),
 		)
 	} else {
 		line = fmt.Sprintf(
-			"%14.4f %2d      %3X               %-2s d %d %s\n", // d == data frame
+			"%.6f %2d %-12s %-4s d %d %s\n",
 			time,
 			ch,
-			msg.Id(),
+			idStr,
 			dir,
 			msg.PayloadLength(),
 			formatPayload(msg.PayloadBytes()),
 		)
 	}
+
 	_, err := n.file.WriteString(line)
 	return err
 }
@@ -293,6 +305,16 @@ func (n *NetworkMeasurement) writeBackMatter() {
 	}
 }
 
+var canFdLengths = [16]int{0, 1, 2, 3, 4, 5, 6, 7, 8, 12, 16, 20, 24, 32, 48, 64}
+
+func canFdDlcCode(length int) int {
+	for i, l := range canFdLengths {
+		if length <= l {
+			return i
+		}
+	}
+	return 15
+}
 func formatPayload(data []byte) string {
 	if len(data) == 0 {
 		return ""
