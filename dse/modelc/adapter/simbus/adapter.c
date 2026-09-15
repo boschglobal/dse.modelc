@@ -281,7 +281,13 @@ void simbus_adapter_run(Adapter* adapter)
     assert(adapter->endpoint);
     Endpoint* endpoint = adapter->endpoint;
 
-    if (endpoint->start) endpoint->start(endpoint);
+    if (endpoint->start) {
+        int32_t rc = endpoint->start(endpoint);
+        if (rc != 0) {
+            log_fatal("Endpoint start failed: %s", strerror(-rc));
+            return;
+        }
+    }
 
     __simbus_exit_run_loop__ = false;
 

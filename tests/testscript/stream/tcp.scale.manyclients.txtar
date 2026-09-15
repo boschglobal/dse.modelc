@@ -1,0 +1,268 @@
+cd $WORKDIR
+env SIM=sim
+mkdir -p $SIM/lib $SIM/data
+cp $REPODIR/dse/modelc/build/_out/examples/binary/lib/libbinary.so $SIM/lib/libbinary.so
+cp $WORK/simulation.yaml $SIM/data/simulation.yaml
+
+
+# TEST: stream tcp, 16 Models connect/register concurrently - stresses the
+# SimBus accept/drain loop and its poll_fds/models vector bookkeeping.
+exec sh -e $WORK/test.sh
+
+stdout 'Server \(bus\) listening'
+stdout 'Client \(model\) connected'
+stdout 'Completed models: 16'
+! stdout 'Failed to send'
+! stdout 'FATAL'
+
+
+-- test.sh --
+SIMER="${SIMER:-ghcr.io/boschglobal/dse-simer:latest}"
+
+docker run --name simbus -i --rm \
+    -v $ENTRYWORKDIR/$SIM:/sim \
+    --network=host \
+    --entrypoint="" $SIMER \
+    /usr/local/bin/simbus --name simbus --logger 3 \
+        --transport stream --uri tcp://127.0.0.1:5015 \
+        --timeout 30 \
+        data/simulation.yaml \
+    > simbus.log 2>&1 &
+
+# All 16 Models start together, no stagger - genuine concurrent connect load.
+for i in $(seq 1 16); do
+    docker run --name model$i -i --rm \
+        -v $ENTRYWORKDIR/$SIM:/sim \
+        --network=host \
+        --entrypoint="" $SIMER \
+        /usr/local/bin/modelc --name inst$i --logger 3 \
+            --transport stream --uri tcp://127.0.0.1:5015 \
+            data/simulation.yaml \
+        > model$i.log 2>&1 &
+done
+
+wait
+
+cat simbus.log
+for i in $(seq 1 16); do cat model$i.log; done
+
+COMPLETED=$(grep -l "Controller exit" model*.log | wc -l)
+echo "Completed models: $COMPLETED"
+
+
+-- simulation.yaml --
+---
+kind: Stack
+metadata:
+  name: socket_manyclients_stack
+spec:
+  connection:
+    transport:
+      stream:
+        uri: tcp://127.0.0.1:5015
+        timeout: 30
+  models:
+    - name: simbus
+      model:
+        name: simbus
+      channels:
+        - name: scalar_channel
+          expectedModelCount: 16
+        - name: binary_channel
+          expectedModelCount: 16
+    - name: inst1
+      uid: 41
+      model:
+        name: Binary
+      channels:
+        - name: scalar_channel
+          alias: scalar
+        - name: binary_channel
+          alias: binary
+    - name: inst2
+      uid: 42
+      model:
+        name: Binary
+      channels:
+        - name: scalar_channel
+          alias: scalar
+        - name: binary_channel
+          alias: binary
+    - name: inst3
+      uid: 43
+      model:
+        name: Binary
+      channels:
+        - name: scalar_channel
+          alias: scalar
+        - name: binary_channel
+          alias: binary
+    - name: inst4
+      uid: 44
+      model:
+        name: Binary
+      channels:
+        - name: scalar_channel
+          alias: scalar
+        - name: binary_channel
+          alias: binary
+    - name: inst5
+      uid: 45
+      model:
+        name: Binary
+      channels:
+        - name: scalar_channel
+          alias: scalar
+        - name: binary_channel
+          alias: binary
+    - name: inst6
+      uid: 46
+      model:
+        name: Binary
+      channels:
+        - name: scalar_channel
+          alias: scalar
+        - name: binary_channel
+          alias: binary
+    - name: inst7
+      uid: 47
+      model:
+        name: Binary
+      channels:
+        - name: scalar_channel
+          alias: scalar
+        - name: binary_channel
+          alias: binary
+    - name: inst8
+      uid: 48
+      model:
+        name: Binary
+      channels:
+        - name: scalar_channel
+          alias: scalar
+        - name: binary_channel
+          alias: binary
+    - name: inst9
+      uid: 49
+      model:
+        name: Binary
+      channels:
+        - name: scalar_channel
+          alias: scalar
+        - name: binary_channel
+          alias: binary
+    - name: inst10
+      uid: 50
+      model:
+        name: Binary
+      channels:
+        - name: scalar_channel
+          alias: scalar
+        - name: binary_channel
+          alias: binary
+    - name: inst11
+      uid: 51
+      model:
+        name: Binary
+      channels:
+        - name: scalar_channel
+          alias: scalar
+        - name: binary_channel
+          alias: binary
+    - name: inst12
+      uid: 52
+      model:
+        name: Binary
+      channels:
+        - name: scalar_channel
+          alias: scalar
+        - name: binary_channel
+          alias: binary
+    - name: inst13
+      uid: 53
+      model:
+        name: Binary
+      channels:
+        - name: scalar_channel
+          alias: scalar
+        - name: binary_channel
+          alias: binary
+    - name: inst14
+      uid: 54
+      model:
+        name: Binary
+      channels:
+        - name: scalar_channel
+          alias: scalar
+        - name: binary_channel
+          alias: binary
+    - name: inst15
+      uid: 55
+      model:
+        name: Binary
+      channels:
+        - name: scalar_channel
+          alias: scalar
+        - name: binary_channel
+          alias: binary
+    - name: inst16
+      uid: 56
+      model:
+        name: Binary
+      channels:
+        - name: scalar_channel
+          alias: scalar
+        - name: binary_channel
+          alias: binary
+---
+kind: Model
+metadata:
+  name: simbus
+---
+kind: Model
+metadata:
+  name: Binary
+spec:
+  runtime:
+    dynlib:
+      - os: linux
+        arch: amd64
+        path: lib/libbinary.so
+      - os: linux
+        arch: x86
+        path: lib/libbinary.so
+      - os: windows
+        arch: x64
+        path: lib/libbinary.dll
+      - os: windows
+        arch: x86
+        path: lib/libbinary.dll
+  channels:
+    - alias: scalar
+      selectors:
+        channel: scalar_channel
+    - alias: binary
+      selectors:
+        channel: binary_channel
+---
+kind: SignalGroup
+metadata:
+  name: scalar_channel
+  labels:
+    channel: scalar_channel
+spec:
+  signals:
+    - signal: counter
+---
+kind: SignalGroup
+metadata:
+  name: binary_channel
+  labels:
+    channel: binary_channel
+  annotations:
+    vector_type: binary
+spec:
+  signals:
+    - signal: message
+      annotations:
+        mime_type: 'application/octet-stream'

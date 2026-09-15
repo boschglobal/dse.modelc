@@ -84,6 +84,12 @@ ifdef TEST
 TESTSCRIPT_E2E_FILES := $(TEST)
 endif
 
+export TESTSCRIPT_STREAM_DIR ?= tests/testscript/stream
+TESTSCRIPT_STREAM_FILES = $(wildcard $(TESTSCRIPT_STREAM_DIR)/*.txtar)
+ifdef TEST
+TESTSCRIPT_STREAM_FILES := $(TEST)
+endif
+
 ifneq ($(CI), true)
 DOCKER_BUILDER_CMD := \
 	mkdir -p $(EXTERNAL_BUILD_DIR); \
@@ -125,6 +131,7 @@ help:
 	@echo "  make build tools"
 	@echo "  make test_cmocka"
 	@echo "  make test_e2e TEST=tests/testscript/e2e/pdunet.txtar"
+	@echo "  make test_stream TEST=tests/testscript/stream/<test_name>.txtar"
 	@echo "  make cleanall build stage-win PACKAGE_ARCH=windows-x64"
 
 .PHONY: build
@@ -189,6 +196,20 @@ test_cmocka:
 
 .PHONY: test_e2e
 test_e2e: do-test_testscript-e2e
+
+.PHONY: test_stream
+test_stream:
+	@set -eu; for t in $(TESTSCRIPT_STREAM_FILES) ;\
+	do \
+		export WORKDIR=$$(mktemp -d) ;\
+		echo "Running Stream Test: $$t  ($${WORKDIR})" ;\
+		testscript \
+			-e REPODIR=$(HOST_DOCKER_WORKSPACE) \
+			-e WORKDIR=$${WORKDIR} \
+			-e ENTRYWORKDIR=$${WORKDIR} \
+			-e SIMER=$(SIMER_IMAGE) \
+			$$t ;\
+	done;
 
 .PHONY: test
 test: test_cmocka test_e2e

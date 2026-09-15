@@ -224,7 +224,14 @@ void controller_bus_ready(SimulationSpec* sim)
     Adapter* adapter = controller->adapter;
     assert(adapter->endpoint);
     Endpoint* endpoint = adapter->endpoint;
-    if (endpoint->start) endpoint->start(endpoint);
+    if (endpoint->start) {
+        int32_t rc = endpoint->start(endpoint);
+        if (rc != 0) {
+            log_error("Endpoint start failed: %s", strerror(-rc));
+            controller->stop_request = true;
+            return;
+        }
+    }
 
     /* Connect with the bus. */
     adapter_connect(adapter, sim, 5);

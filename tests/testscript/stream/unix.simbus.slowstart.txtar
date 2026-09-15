@@ -1,0 +1,163 @@
+cd $WORKDIR
+env SIM=sim
+mkdir -p $SIM/lib $SIM/data
+cp $REPODIR/dse/modelc/build/_out/examples/binary/lib/libbinary.so $SIM/lib/libbinary.so
+cp $WORK/simulation.yaml $SIM/data/simulation.yaml
+
+
+# TEST: stream unix, SimBus (server) late to start, Models (clients) wait
+exec sh -e $WORK/test.sh
+
+stdout 'Server \(bus\) listening'
+stdout 'Client \(model\) connected'
+stdout 'SignalValue: 2628574755 = 46.000000 \[name=counter\]'
+stdout 'Message \(message\) : count is 46'
+stdout 'Controller exit ...'
+
+
+-- test.sh --
+SIMER="${SIMER:-ghcr.io/boschglobal/dse-simer:latest}"
+
+# Start 4 Models immediately; the SimBus is not listening yet so each Model
+# must wait (via its transport connect-retry) until the SimBus starts. The
+# Unix socket file is created in the shared bind-mounted volume, so no
+# --network=host is needed (unlike the tcp transport).
+for i in 1 2 3 4; do
+    docker run --name model$i -i --rm \
+        -v $ENTRYWORKDIR/$SIM:/sim \
+        --entrypoint="" $SIMER \
+        /usr/local/bin/modelc --name inst$i --logger 2 \
+            --transport stream --uri unix:///sim/data/stream.sock \
+            data/simulation.yaml \
+        > model$i.log 2>&1 &
+done
+
+# Simulate a SimBus (server) that is slow to start. This delay must stay
+# below the Model's hardcoded connect-retry budget (~5s).
+sleep 3
+
+docker run --name simbus -i --rm \
+    -v $ENTRYWORKDIR/$SIM:/sim \
+    --entrypoint="" $SIMER \
+    /usr/local/bin/simbus --name simbus --logger 2 \
+        --transport stream --uri unix:///sim/data/stream.sock \
+        data/simulation.yaml \
+    > simbus.log 2>&1
+
+wait
+
+cat simbus.log
+cat model1.log
+cat model2.log
+cat model3.log
+cat model4.log
+
+
+-- simulation.yaml --
+---
+kind: Stack
+metadata:
+  name: unix_stack
+spec:
+  connection:
+    transport:
+      stream:
+        uri: unix:///sim/data/stream.sock
+        timeout: 60
+  models:
+    - name: simbus
+      model:
+        name: simbus
+      channels:
+        - name: scalar_channel
+          expectedModelCount: 4
+        - name: binary_channel
+          expectedModelCount: 4
+    - name: inst1
+      uid: 41
+      model:
+        name: Binary
+      channels:
+        - name: scalar_channel
+          alias: scalar
+        - name: binary_channel
+          alias: binary
+    - name: inst2
+      uid: 42
+      model:
+        name: Binary
+      channels:
+        - name: scalar_channel
+          alias: scalar
+        - name: binary_channel
+          alias: binary
+    - name: inst3
+      uid: 43
+      model:
+        name: Binary
+      channels:
+        - name: scalar_channel
+          alias: scalar
+        - name: binary_channel
+          alias: binary
+    - name: inst4
+      uid: 44
+      model:
+        name: Binary
+      channels:
+        - name: scalar_channel
+          alias: scalar
+        - name: binary_channel
+          alias: binary
+---
+kind: Model
+metadata:
+  name: simbus
+---
+kind: Model
+metadata:
+  name: Binary
+spec:
+  runtime:
+    dynlib:
+      - os: linux
+        arch: amd64
+        path: lib/libbinary.so
+      - os: linux
+        arch: x86
+        path: lib/libbinary.so
+      - os: windows
+        arch: x64
+        path: lib/libbinary.dll
+      - os: windows
+        arch: x86
+        path: lib/libbinary.dll
+  channels:
+    - alias: scalar
+      selectors:
+        channel: scalar_channel
+    - alias: binary
+      selectors:
+        channel: binary_channel
+---
+kind: SignalGroup
+metadata:
+  name: scalar_channel
+  labels:
+    channel: scalar_channel
+spec:
+  signals:
+    - signal: counter
+---
+kind: SignalGroup
+metadata:
+  name: binary_channel
+  labels:
+    channel: binary_channel
+  annotations:
+    vector_type: binary
+spec:
+  signals:
+    - signal: message
+      annotations:
+        mime_type: 'application/octet-stream'

@@ -28,7 +28,7 @@ typedef struct StreamInstance {
     stream_socket_t fd;
     uint32_t        uid;
 
-    /* Bus-mode recv buffer. */
+    /* Incremental receive buffer. */
     struct {
         uint8_t* data;
         uint32_t length;

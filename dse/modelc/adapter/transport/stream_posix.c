@@ -16,6 +16,9 @@
 #define UNUSED(x) ((void)x)
 
 
+static int32_t _client_connect(StreamEndpoint* stream_ep);
+
+
 static int32_t _configure_socket(stream_socket_t fd, sa_family_t family)
 {
     if (family == AF_INET || family == AF_INET6) {
@@ -325,100 +328,107 @@ static void _accept_new_clients(StreamEndpoint* ep)
 }
 
 
-static ssize_t _recv_exact(stream_socket_t fd, uint8_t* buffer, uint32_t length)
-{
-    uint32_t received = 0;
-
-    while (received < length) {
-        ssize_t rc =
-            recv(fd, (char*)buffer + received, (int)(length - received), 0);
-        if (rc > 0) {
-            received += (uint32_t)rc;
-        } else if (rc == 0) {
-            if (received > 0) {
-                errno = EPIPE;
-                return -1;
-            }
-            return 0;
-        } else {
-            int error = stream_socket_errno();
-            if (received > 0) {
-                errno = EPIPE;
-            } else if (error == EINTR || error == EAGAIN ||
-                       error == EWOULDBLOCK) {
-                errno = EAGAIN;
-            } else {
-                errno = error;
-            }
-            return -1;
-        }
-    }
-
-    return (ssize_t)received;
-}
-
-
-static ssize_t _recv_message(
+static int32_t _extract_recv_message(
     StreamInstance* si, uint8_t** buffer, uint32_t* buffer_length)
 {
-    uint32_t size_prefix = 0;
-
-    ssize_t p = _recv_exact(
-        si->fd, (uint8_t*)&size_prefix, (uint32_t)sizeof(size_prefix));
-    if (p == 0) {
+    if (si->recv_buffer.length < sizeof(uint32_t)) {
         return 0;
-    } else if (p < 0) {
-        return -1;
     }
 
+    uint32_t size_prefix = 0;
+    memcpy(&size_prefix, si->recv_buffer.data, sizeof(size_prefix));
     uint32_t payload_length = stream_le32toh(size_prefix);
     if (payload_length >
         (64U * 1024U * 1024U) - (uint32_t)sizeof(size_prefix)) {
-        errno = EMSGSIZE;
-        return -1;
+        return -EMSGSIZE;
     }
 
     uint32_t message_len = payload_length + (uint32_t)sizeof(size_prefix);
-    if (message_len > *buffer_length) {
-        uint8_t* b = realloc(*buffer, message_len);
-        if (b == NULL) {
-            errno = ENOMEM;
-            return -1;
-        }
+    if (si->recv_buffer.length < message_len) {
+        return 0;
+    }
 
-        *buffer = b;
+    if (message_len > *buffer_length) {
+        uint8_t* resized = realloc(*buffer, message_len);
+        if (resized == NULL) {
+            return -ENOMEM;
+        }
+        *buffer = resized;
         *buffer_length = message_len;
     }
 
-    memcpy(*buffer, &size_prefix, sizeof(size_prefix));
+    memcpy(*buffer, si->recv_buffer.data, message_len);
+    uint32_t remaining = si->recv_buffer.length - message_len;
+    if (remaining > 0) {
+        memmove(si->recv_buffer.data, si->recv_buffer.data + message_len,
+            remaining);
+    }
+    si->recv_buffer.length = remaining;
 
-    ssize_t r =
-        _recv_exact(si->fd, *buffer + sizeof(size_prefix), payload_length);
-    if (r == (ssize_t)payload_length) {
-        return (ssize_t)message_len;
-    } else if (r == 0) {
-        return 0;
-    } else if (r < 0) {
-        return -1;
-    } else {
-        errno = EPIPE;
-        return -1;
+    return (int32_t)message_len;
+}
+
+
+static int32_t _recv_message(
+    StreamInstance* si, uint8_t** buffer, uint32_t* buffer_length)
+{
+    for (;;) {
+        int32_t rc = _extract_recv_message(si, buffer, buffer_length);
+        if (rc != 0) {
+            return rc;
+        }
+
+        if (si->recv_buffer.length == si->recv_buffer.capacity) {
+            rc = stream_instance_reserve_recv_buffer(
+                si, si->recv_buffer.length + 65536U);
+            if (rc < 0) {
+                return rc;
+            }
+        }
+
+        ssize_t received =
+            recv(si->fd, (char*)si->recv_buffer.data + si->recv_buffer.length,
+                si->recv_buffer.capacity - si->recv_buffer.length, 0);
+        if (received == 0) {
+            return -ECONNRESET;
+        } else if (received < 0) {
+            int error = stream_socket_errno();
+            if (error == EINTR || error == EAGAIN || error == EWOULDBLOCK) {
+                return -EAGAIN;
+            }
+            return -error;
+        }
+        si->recv_buffer.length += (uint32_t)received;
     }
 }
 
 
-static int32_t _send_msg(
-    stream_socket_t fd, const void* buffer, uint32_t length)
+static int32_t _send_msg(stream_socket_t fd, const void* buffer,
+    uint32_t length, uint64_t timeout_ns)
 {
     const uint8_t* data = buffer;
     size_t         remaining = length;
+    uint64_t       start_ns = stream_time_ns();
+    uint32_t       backoff_ms = 1;
 
     while (remaining > 0) {
         ssize_t sent =
             send(fd, (const char*)data, (int)remaining, MSG_NOSIGNAL);
         if (sent < 0) {
             int error = stream_socket_errno();
-            if (error == EINTR) {
+            if (error == EINTR || error == EAGAIN || error == EWOULDBLOCK) {
+                if (backoff_ms == 1) {
+                    /* First backoff on this call; report once (cheap,
+                       always-visible) so backpressure is observable. */
+                    log_notice("Stream send backpressure, fd="
+                               STREAM_SOCKET_LOG_FORMAT ": retrying ...",
+                        STREAM_SOCKET_LOG_VALUE(fd));
+                }
+                if (stream_time_ns() - start_ns >= timeout_ns) {
+                    return -ETIME;
+                }
+                STREAM_SLEEP_MS(backoff_ms);
+                if (backoff_ms < 50U) backoff_ms *= 2;
                 continue;
             }
             return -error;
@@ -427,6 +437,7 @@ static int32_t _send_msg(
         } else {
             data += sent;
             remaining -= (size_t)sent;
+            backoff_ms = 1; /* Reset once the peer is draining again. */
         }
     }
 
@@ -493,6 +504,17 @@ int32_t stream_posix_start(Endpoint* endpoint)
         return 0;
     }
 
+    int32_t rc = _client_connect(stream_ep);
+    if (rc < 0) return rc;
+
+    log_info("Client (model) connected");
+    return 0;
+}
+
+
+/* Reconnect the client (model) socket to the server (bus). */
+static int32_t _client_connect(StreamEndpoint* stream_ep)
+{
     int32_t connect_rc = stream_socket_connect_retry(
         &stream_ep->client.model.fd, stream_ep->addr.ss_family,
         (struct sockaddr*)&stream_ep->addr, stream_ep->addr_len);
@@ -511,7 +533,6 @@ int32_t stream_posix_start(Endpoint* endpoint)
         return rc;
     }
 
-    log_info("Client (model) connected");
     return 0;
 }
 
@@ -525,13 +546,15 @@ int32_t stream_posix_send_fbs(Endpoint* endpoint, void* endpoint_channel,
     assert(endpoint->private);
     StreamEndpoint* stream_ep = endpoint->private;
     int32_t         rc = 0;
+    uint64_t        send_timeout_ns = (uint64_t)(stream_ep->recv_timeout * 1e9);
 
     if (endpoint->bus_mode) {
         size_t count = vector_len(&stream_ep->server.models);
         for (size_t i = 0; i < count; i++) {
             StreamInstance* si = vector_at(&stream_ep->server.models, i, NULL);
             if (si) {
-                int32_t send_rc = _send_msg(si->fd, buffer, buffer_length);
+                int32_t send_rc =
+                    _send_msg(si->fd, buffer, buffer_length, send_timeout_ns);
                 if (send_rc < 0) {
                     log_error(
                         "Failed to send to client, fd=" STREAM_SOCKET_LOG_FORMAT
@@ -543,15 +566,55 @@ int32_t stream_posix_send_fbs(Endpoint* endpoint, void* endpoint_channel,
             }
         }
     } else {
-        int32_t send_rc =
-            _send_msg(stream_ep->client.model.fd, buffer, buffer_length);
+        int32_t send_rc = _send_msg(
+            stream_ep->client.model.fd, buffer, buffer_length, send_timeout_ns);
         if (send_rc < 0) {
             log_error("Failed to send to server, fd=" STREAM_SOCKET_LOG_FORMAT
                       ": %s",
                 STREAM_SOCKET_LOG_VALUE(stream_ep->client.model.fd),
                 strerror(-send_rc));
             _stream_instance_disconnect(&stream_ep->client.model);
-            rc = -1;
+
+            /* Retry reconnecting for as long as the configured recv_timeout
+               allows, since the server may simply be slow (under load). */
+            uint64_t reconnect_timeout_ns = send_timeout_ns;
+            uint64_t reconnect_start_ns = stream_time_ns();
+            uint32_t reconnect_attempt = 0;
+            int32_t  reconnect_rc;
+            log_error("Attempting to reconnect to server (timeout=%.0fs) ...",
+                stream_ep->recv_timeout);
+            while (1) {
+                reconnect_attempt++;
+                reconnect_rc = _client_connect(stream_ep);
+                if (reconnect_rc == 0) break;
+
+                uint64_t elapsed_ns = stream_time_ns() - reconnect_start_ns;
+                if (elapsed_ns >= reconnect_timeout_ns) break;
+
+                log_error("Reconnect attempt %u failed (elapsed=%" PRIu64
+                          "ms): %s, retrying ...",
+                    reconnect_attempt, elapsed_ns / 1000000U,
+                    strerror(-reconnect_rc));
+            }
+            if (reconnect_rc < 0) {
+                log_fatal("Failed to reconnect to server after %u attempts: %s",
+                    reconnect_attempt, strerror(-reconnect_rc));
+            }
+            log_info("Reconnected to server, fd=" STREAM_SOCKET_LOG_FORMAT
+                     " attempts=%u",
+                STREAM_SOCKET_LOG_VALUE(stream_ep->client.model.fd),
+                reconnect_attempt);
+
+            send_rc = _send_msg(stream_ep->client.model.fd, buffer,
+                buffer_length, send_timeout_ns);
+            if (send_rc < 0) {
+                log_error("Failed to send to server after reconnect, "
+                          "fd=" STREAM_SOCKET_LOG_FORMAT ": %s",
+                    STREAM_SOCKET_LOG_VALUE(stream_ep->client.model.fd),
+                    strerror(-send_rc));
+                _stream_instance_disconnect(&stream_ep->client.model);
+                log_fatal("Unable to send message after reconnect!");
+            }
         }
     }
 
@@ -702,7 +765,7 @@ int32_t stream_posix_recv_fbs(Endpoint* endpoint, const char** channel_name,
         if (__log_level__ <= LOG_DEBUG) {
             recv_start_ns = stream_time_ns();
         }
-        ssize_t size =
+        int32_t size =
             _recv_message(&stream_ep->client.model, buffer, buffer_length);
 
         if (__log_level__ <= LOG_DEBUG) {
@@ -711,21 +774,18 @@ int32_t stream_posix_recv_fbs(Endpoint* endpoint, const char** channel_name,
 
         log_debug("stream recv_fbs model message: "
                   "fd=" STREAM_SOCKET_LOG_FORMAT
-                  " size=%zd loops=%u recv_total_ns=%" PRIu64
+                  " size=%d loops=%u recv_total_ns=%" PRIu64
                   " function_total_ns=%" PRIu64,
             STREAM_SOCKET_LOG_VALUE(stream_ep->client.model.fd), size,
             loop_count, recv_duration_ns, stream_time_ns() - function_start_ns);
 
         if (size > 0) {
-            return (int32_t)size;
-        } else if (size == 0) {
-            _stream_instance_disconnect(&stream_ep->client.model);
-            errno = ECONNRESET;
-            return -1;
-        } else if (errno == EAGAIN || errno == EWOULDBLOCK || errno == EINTR) {
+            return size;
+        } else if (size == -EAGAIN || size == -EWOULDBLOCK || size == -EINTR) {
             continue;
         } else {
             _stream_instance_disconnect(&stream_ep->client.model);
+            errno = -size;
             return -1;
         }
     }

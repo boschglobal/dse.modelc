@@ -1,0 +1,155 @@
+cd $WORKDIR
+env SIM=sim
+mkdir -p $SIM/lib $SIM/data
+cp $REPODIR/dse/modelc/build/_out/examples/binary/lib/libbinary.so $SIM/lib/libbinary.so
+cp $WORK/simulation.yaml $SIM/data/simulation.yaml
+
+
+# TEST: stream unix, soak test - 2 Models run for ~10000 steps, checking for
+# stability (no leaks/errors/hangs) in the recv buffer and message queue
+# over a long-running connection, not just a handful of steps.
+exec sh -e $WORK/test.sh
+
+stdout 'Server \(bus\) listening'
+stdout 'Client \(model\) connected'
+stdout 'SOAK_OK'
+stdout 'Controller exit ...'
+! stdout 'SOAK_FAIL'
+! stdout 'Failed to send'
+! stdout 'FATAL'
+
+
+-- test.sh --
+SIMER="${SIMER:-ghcr.io/boschglobal/dse-simer:latest}"
+
+docker run --name simbus -i --rm \
+    -v $ENTRYWORKDIR/$SIM:/sim \
+    --entrypoint="" $SIMER \
+    /usr/local/bin/simbus --name simbus --logger 3 \
+        --transport stream --uri unix:///sim/data/stream.sock \
+        --timeout 30 --stepsize 0.001 \
+        data/simulation.yaml \
+    > simbus.log 2>&1 &
+
+# 2 Models, ~10000 steps each - long-running connection, moderate traffic.
+# The SimBus drives step cadence in distributed mode, so --stepsize is set
+# there; --endtime on each Model controls its own local stop condition.
+for i in 1 2; do
+    docker run --name model$i -i --rm \
+        -v $ENTRYWORKDIR/$SIM:/sim \
+        --entrypoint="" $SIMER \
+        /usr/local/bin/modelc --name inst$i --logger 3 \
+            --transport stream --uri unix:///sim/data/stream.sock \
+            --endtime 10.0 \
+            data/simulation.yaml \
+        > model$i.log 2>&1 &
+done
+
+wait
+
+cat simbus.log
+cat model1.log
+cat model2.log
+
+# Check the step count reached is close to the ~10000 expected (allowing
+# for minor floating-point step-boundary variance), not an exact match.
+for i in 1 2; do
+    LAST_COUNT=$(grep -o "count is [0-9]*" model$i.log | tail -1 | awk '{print $3}')
+    if [ -n "$LAST_COUNT" ] && [ "$LAST_COUNT" -ge 9900 ]; then
+        echo "SOAK_OK inst$i count=$LAST_COUNT"
+    else
+        echo "SOAK_FAIL inst$i count=$LAST_COUNT"
+    fi
+done
+
+
+-- simulation.yaml --
+---
+kind: Stack
+metadata:
+  name: unix_soak_stack
+spec:
+  connection:
+    transport:
+      stream:
+        uri: unix:///sim/data/stream.sock
+        timeout: 30
+  models:
+    - name: simbus
+      model:
+        name: simbus
+      channels:
+        - name: scalar_channel
+          expectedModelCount: 2
+        - name: binary_channel
+          expectedModelCount: 2
+    - name: inst1
+      uid: 41
+      model:
+        name: Binary
+      channels:
+        - name: scalar_channel
+          alias: scalar
+        - name: binary_channel
+          alias: binary
+    - name: inst2
+      uid: 42
+      model:
+        name: Binary
+      channels:
+        - name: scalar_channel
+          alias: scalar
+        - name: binary_channel
+          alias: binary
+---
+kind: Model
+metadata:
+  name: simbus
+---
+kind: Model
+metadata:
+  name: Binary
+spec:
+  runtime:
+    dynlib:
+      - os: linux
+        arch: amd64
+        path: lib/libbinary.so
+      - os: linux
+        arch: x86
+        path: lib/libbinary.so
+      - os: windows
+        arch: x64
+        path: lib/libbinary.dll
+      - os: windows
+        arch: x86
+        path: lib/libbinary.dll
+  channels:
+    - alias: scalar
+      selectors:
+        channel: scalar_channel
+    - alias: binary
+      selectors:
+        channel: binary_channel
+---
+kind: SignalGroup
+metadata:
+  name: scalar_channel
+  labels:
+    channel: scalar_channel
+spec:
+  signals:
+    - signal: counter
+---
+kind: SignalGroup
+metadata:
+  name: binary_channel
+  labels:
+    channel: binary_channel
+  annotations:
+    vector_type: binary
+spec:
+  signals:
+    - signal: message
+      annotations:
+        mime_type: 'application/octet-stream'
