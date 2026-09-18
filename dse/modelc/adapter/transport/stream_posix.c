@@ -21,6 +21,11 @@ static int32_t _client_connect(StreamEndpoint* stream_ep);
 
 static int32_t _configure_socket(stream_socket_t fd, sa_family_t family)
 {
+    int32_t rc = stream_configure_socket_buffers(fd);
+    if (rc < 0) {
+        return rc;
+    }
+
     if (family == AF_INET || family == AF_INET6) {
         int enabled = 1;
         if (setsockopt(fd, IPPROTO_TCP, TCP_NODELAY, (const char*)&enabled,
@@ -138,7 +143,7 @@ static int32_t _stream_instance_extract_recv_messages(
 
         uint32_t payload_length = stream_le32toh(size_prefix);
         if (payload_length >
-            (64U * 1024U * 1024U) - (uint32_t)sizeof(size_prefix)) {
+            STREAM_MAX_MESSAGE_LENGTH - (uint32_t)sizeof(size_prefix)) {
             return -EMSGSIZE;
         }
 
@@ -339,7 +344,7 @@ static int32_t _extract_recv_message(
     memcpy(&size_prefix, si->recv_buffer.data, sizeof(size_prefix));
     uint32_t payload_length = stream_le32toh(size_prefix);
     if (payload_length >
-        (64U * 1024U * 1024U) - (uint32_t)sizeof(size_prefix)) {
+        STREAM_MAX_MESSAGE_LENGTH - (uint32_t)sizeof(size_prefix)) {
         return -EMSGSIZE;
     }
 
@@ -420,8 +425,9 @@ static int32_t _send_msg(stream_socket_t fd, const void* buffer,
                 if (backoff_ms == 1) {
                     /* First backoff on this call; report once (cheap,
                        always-visible) so backpressure is observable. */
-                    log_notice("Stream send backpressure, fd="
-                               STREAM_SOCKET_LOG_FORMAT ": retrying ...",
+                    log_notice(
+                        "Stream send backpressure, fd=" STREAM_SOCKET_LOG_FORMAT
+                        ": retrying ...",
                         STREAM_SOCKET_LOG_VALUE(fd));
                 }
                 if (stream_time_ns() - start_ns >= timeout_ns) {
@@ -466,6 +472,15 @@ int32_t stream_posix_start(Endpoint* endpoint)
                    stream_ep->addr.ss_family == AF_INET6) {
             int32_t rc =
                 stream_configure_listener_socket(stream_ep->server.simbus.fd);
+            if (rc < 0) {
+                _stream_instance_disconnect(&stream_ep->server.simbus);
+                return rc;
+            }
+        }
+
+        if (stream_ep->addr.ss_family == AF_UNIX) {
+            int32_t rc =
+                stream_configure_socket_buffers(stream_ep->server.simbus.fd);
             if (rc < 0) {
                 _stream_instance_disconnect(&stream_ep->server.simbus);
                 return rc;
@@ -547,6 +562,8 @@ int32_t stream_posix_send_fbs(Endpoint* endpoint, void* endpoint_channel,
     StreamEndpoint* stream_ep = endpoint->private;
     int32_t         rc = 0;
     uint64_t        send_timeout_ns = (uint64_t)(stream_ep->recv_timeout * 1e9);
+    size_t tx_bucket = stream_message_size_histogram_bucket(buffer_length);
+    stream_ep->message_size_histogram.tx[tx_bucket]++;
 
     if (endpoint->bus_mode) {
         size_t count = vector_len(&stream_ep->server.models);
@@ -670,6 +687,9 @@ int32_t stream_posix_recv_fbs(Endpoint* endpoint, const char** channel_name,
                 errno = -cached_len;
                 return -1;
             } else if (cached_len > 0) {
+                size_t rx_bucket =
+                    stream_message_size_histogram_bucket((uint32_t)cached_len);
+                stream_ep->message_size_histogram.rx[rx_bucket]++;
                 log_debug("stream recv_fbs bus cache hit: "
                           "length=%d loop_total_ns=%" PRIu64,
                     cached_len, stream_time_ns() - loop_start_ns);
@@ -743,6 +763,9 @@ int32_t stream_posix_recv_fbs(Endpoint* endpoint, const char** channel_name,
                     errno = -cached_len;
                     return -1;
                 } else if (cached_len > 0) {
+                    size_t rx_bucket = stream_message_size_histogram_bucket(
+                        (uint32_t)cached_len);
+                    stream_ep->message_size_histogram.rx[rx_bucket]++;
                     log_debug("stream recv_fbs bus drained return: "
                               "length=%d queue_remaining=%zu "
                               "loop_total_ns=%" PRIu64,
@@ -780,6 +803,9 @@ int32_t stream_posix_recv_fbs(Endpoint* endpoint, const char** channel_name,
             loop_count, recv_duration_ns, stream_time_ns() - function_start_ns);
 
         if (size > 0) {
+            size_t rx_bucket =
+                stream_message_size_histogram_bucket((uint32_t)size);
+            stream_ep->message_size_histogram.rx[rx_bucket]++;
             return size;
         } else if (size == -EAGAIN || size == -EWOULDBLOCK || size == -EINTR) {
             continue;

@@ -152,7 +152,8 @@ int model_step(ModelDesc* model, double* model_time, double stop_time)
         /* Inflate the message to stress send/recv buffering and flow
            control (payload content is otherwise not significant). */
         if (msg_size > m->binary.message.buffer_size) {
-            m->binary.message.buffer = realloc(m->binary.message.buffer, msg_size);
+            m->binary.message.buffer =
+                realloc(m->binary.message.buffer, msg_size);
             m->binary.message.buffer_size = msg_size;
         }
         int hdr_len = snprintf((char*)m->binary.message.buffer, msg_size,
@@ -165,14 +166,12 @@ int model_step(ModelDesc* model, double* model_time, double stop_time)
         signal_append(m->binary.message.sv, m->binary.message.index,
             m->binary.message.buffer, msg_size);
     } else {
-        len =
-            _format_message(&(m->binary.message), (int)*(m->scalars.counter));
+        len = _format_message(&(m->binary.message), (int)*(m->scalars.counter));
         if (len >= (m->binary.message.buffer_size - 1)) {
             m->binary.message.buffer =
                 realloc(m->binary.message.buffer, len + 1);
             m->binary.message.buffer_size = len + 1;
-            _format_message(
-                &(m->binary.message), (int)*(m->scalars.counter));
+            _format_message(&(m->binary.message), (int)*(m->scalars.counter));
         }
         signal_reset(m->binary.message.sv, m->binary.message.index);
         signal_append(m->binary.message.sv, m->binary.message.index,

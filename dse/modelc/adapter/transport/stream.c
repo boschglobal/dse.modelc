@@ -28,7 +28,6 @@
 
 #define UNUSED(x)                    ((void)x)
 
-#define STREAM_MAX_MESSAGE_LENGTH    (64U * 1024U * 1024U)
 #define SOCKET_CONNECTION_TIMEOUT_MS 5000U
 #define STREAM_MAX_HOST_LENGTH       255
 #define STREAM_DEFAULT_TCP_PORT      5042
@@ -414,6 +413,42 @@ void stream_endpoint_destroy(Endpoint* endpoint)
 {
     if (endpoint && endpoint->private) {
         StreamEndpoint* stream_ep = endpoint->private;
+
+        // Statistics.
+        uint64_t tx_total = 0;
+        uint64_t rx_total = 0;
+        for (size_t bucket = 0;
+             bucket < STREAM_MESSAGE_SIZE_HISTOGRAM_BUCKETS; bucket++) {
+            tx_total += stream_ep->message_size_histogram.tx[bucket];
+            rx_total += stream_ep->message_size_histogram.rx[bucket];
+        }
+
+        size_t final_bucket = STREAM_MESSAGE_SIZE_HISTOGRAM_BUCKETS - 1;
+        if (stream_ep->message_size_histogram.tx[final_bucket] > 0 ||
+            stream_ep->message_size_histogram.rx[final_bucket] > 0) {
+            log_error("Stream message sizes (OVERFLOW DETECTED):");
+        } else {
+            log_info("Stream message sizes:");
+        }
+        log_info("    %11s %8s %8s", "bucket", "tx(%)", "rx(%)");
+        for (size_t bucket = 0; bucket < STREAM_MESSAGE_SIZE_HISTOGRAM_BUCKETS;
+            bucket++) {
+            uint64_t tx_count = stream_ep->message_size_histogram.tx[bucket];
+            uint64_t rx_count = stream_ep->message_size_histogram.rx[bucket];
+            if (tx_count == 0 && rx_count == 0) continue;
+
+            if (bucket + 1 == STREAM_MESSAGE_SIZE_HISTOGRAM_BUCKETS) {
+                log_error("    %11s %8.3f %8.3f", ">64 MiB",
+                    tx_total ? 100.0 * tx_count / tx_total : 0.0,
+                    rx_total ? 100.0 * rx_count / rx_total : 0.0);
+            } else {
+                uint64_t upper_bound = 1ULL << (10U + bucket);
+                log_info("      %5" PRIu64 " KiB %8.3f %8.3f",
+                    upper_bound / 1024U,
+                    tx_total ? 100.0 * tx_count / tx_total : 0.0,
+                    rx_total ? 100.0 * rx_count / rx_total : 0.0);
+            }
+        }
 
         // vector_clear();
         vector_reset(&stream_ep->server.models);

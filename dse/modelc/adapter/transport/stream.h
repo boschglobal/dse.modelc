@@ -7,6 +7,14 @@
 
 #include <stdint.h>
 #include <stdbool.h>
+#include <stddef.h>
+
+
+#define STREAM_MAX_MESSAGE_LENGTH             (64U * 1024U * 1024U)
+#define STREAM_SOCKET_BUFFER_LENGTH           (STREAM_MAX_MESSAGE_LENGTH / 2U)
+#define STREAM_MESSAGE_SIZE_HISTOGRAM_BUCKETS 18
+
+
 #ifdef _WIN32
 #include <dse/modelc/adapter/transport/stream_win.h>
 #else
@@ -56,6 +64,7 @@ typedef struct StreamEndpoint {
             uint64_t rx_recv_calls;
             uint64_t rx_messages_queued;
         } diagnostics;
+
     } server;
     struct {
         StreamInstance model;
@@ -63,7 +72,28 @@ typedef struct StreamEndpoint {
 
     /* RX properties. */
     double recv_timeout;
+
+    struct {
+        uint64_t tx[STREAM_MESSAGE_SIZE_HISTOGRAM_BUCKETS];
+        uint64_t rx[STREAM_MESSAGE_SIZE_HISTOGRAM_BUCKETS];
+    } message_size_histogram;
 } StreamEndpoint;
+
+
+static inline size_t stream_message_size_histogram_bucket(
+    uint32_t message_length)
+{
+    size_t   bucket = 0;
+    uint64_t upper_bound = 1024U;
+
+    while (message_length > upper_bound &&
+           bucket + 1 < STREAM_MESSAGE_SIZE_HISTOGRAM_BUCKETS) {
+        upper_bound <<= 1U;
+        bucket++;
+    }
+
+    return bucket;
+}
 
 
 /* stream.c */

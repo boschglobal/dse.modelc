@@ -95,6 +95,23 @@ static inline int stream_socket_set_nonblocking(stream_socket_t fd)
     return 0;
 }
 
+static inline int stream_configure_socket_buffers(stream_socket_t fd)
+{
+    int buffer_length = (int)STREAM_SOCKET_BUFFER_LENGTH;
+
+    if (setsockopt(fd, SOL_SOCKET, SO_SNDBUF, &buffer_length,
+            sizeof(buffer_length)) < 0) {
+        return -errno;
+    }
+
+    if (setsockopt(fd, SOL_SOCKET, SO_RCVBUF, &buffer_length,
+            sizeof(buffer_length)) < 0) {
+        return -errno;
+    }
+
+    return 0;
+}
+
 static inline int stream_configure_listener_socket(stream_socket_t fd)
 {
     int enabled = 1;
@@ -103,7 +120,7 @@ static inline int stream_configure_listener_socket(stream_socket_t fd)
         return -errno;
     }
 
-    return 0;
+    return stream_configure_socket_buffers(fd);
 }
 
 static inline int32_t stream_socket_connect_retry(stream_socket_t* fd,
