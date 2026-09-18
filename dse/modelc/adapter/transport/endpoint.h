@@ -66,7 +66,6 @@ typedef struct Endpoint {
 
     /* Private object for endpoint specific data. */
     void* private;
-
 } Endpoint;
 
 

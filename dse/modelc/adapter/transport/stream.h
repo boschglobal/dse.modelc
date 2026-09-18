@@ -64,7 +64,6 @@ typedef struct StreamEndpoint {
             uint64_t rx_recv_calls;
             uint64_t rx_messages_queued;
         } diagnostics;
-
     } server;
     struct {
         StreamInstance model;

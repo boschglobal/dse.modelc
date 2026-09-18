@@ -65,6 +65,4 @@ Mkfile.old
 dkms.conf
 
 # Benchmark output files
-tests/pytest/benchmark/_out/
-tests/pytest/benchmark/_working/
-tests/pytest/benchmark/input.csv
+*.out.*
