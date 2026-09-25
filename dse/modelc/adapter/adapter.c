@@ -38,29 +38,25 @@ SignalMap* adapter_get_signal_map(AdapterModel* am, const char* channel_name,
 }
 
 
-static void _update_channels_keys(AdapterModel* am)
+AdapterModel* adapter_get_model(Adapter* adapter, uint32_t model_uid)
 {
-    if (am->channels_keys) {
-        for (uint32_t _ = 0; _ < am->channels_length; _++)
-            free(am->channels_keys[_]);
-        free(am->channels_keys);
-        am->channels_keys = NULL;
-    }
-    am->channels_keys = hashmap_keys(&am->channels);
-    am->channels_length = hashmap_number_keys(am->channels);
+    AdapterModelIndexItem* idx = vector_find(&adapter->models,
+        &(AdapterModelIndexItem){ .uid = model_uid, .am = NULL }, 0, NULL);
+    return idx ? idx->am : NULL;
 }
 
 static Channel* _create_channel(AdapterModel* am, const char* channel_name)
 {
     assert(am);
 
-    Channel* ch = hashmap_get(&am->channels, channel_name);
-    if (ch) {
-        assert(ch->name == channel_name);
-        return ch;
+    ChannelIndexItem* item = vector_find(&am->channels,
+        &(ChannelIndexItem){ .name = channel_name, .ch = NULL }, 0, NULL);
+    if (item) {
+        assert(item->ch->name == channel_name);
+        return item->ch;
     }
     /* Create a new Channel object. */
-    ch = calloc(1, sizeof(Channel));
+    Channel* ch = calloc(1, sizeof(Channel));
     ch->name = channel_name;
     int rc = hashmap_init(&ch->signal_values);
     if (rc) {
@@ -75,18 +71,18 @@ static Channel* _create_channel(AdapterModel* am, const char* channel_name)
                 am->adapter->endpoint, ch->name);
         }
     }
-    /* Allocate index objects.*/
-    hashmap_init(&ch->index.uid2sv_lookup);
+    /* Allocate index objects. Initialize uid vector for lookups. */
+    ch->index.uid2sv_lookup =
+        vector_make(sizeof(SignalValueIndexItem), 0, adapter_uid2sv_compar);
 
-    /* Add the new Channel to the hashmap. */
-    if (hashmap_set(&am->channels, ch->name, ch)) {
-        _update_channels_keys(am);
-        return ch;
-    }
-    log_error("Adapter _create_channel failed to create new Channel object!");
-    goto error_clean_up;
+    /* Add the new Channel to the lookup vector. */
+    ChannelIndexItem new_item = { .name = ch->name, .ch = ch };
+    vector_push(&am->channels, &new_item);
+    vector_sort(&am->channels);
+    return ch;
 
 error_clean_up:
+    vector_reset(&ch->index.uid2sv_lookup);
     free(ch);
     return NULL;
 }
@@ -100,6 +96,8 @@ Channel* adapter_init_channel(AdapterModel* am, const char* channel_name,
     Channel* ch = _create_channel(am, channel_name);
     assert(ch);
     ch->mfc = mfc;
+    ch->is_binary =
+        mfc && ((ModelFunctionChannel*)mfc)->signal_value_binary != NULL;
 
     /* Initialise the Signal properties. */
     for (uint32_t i = 0; i < signal_count; i++) {
@@ -259,13 +257,12 @@ static void _destroy_signal_value(void* map_item, void* data)
 
 void adapter_destroy_adapter_model(AdapterModel* am)
 {
-    if (am && am->channels_length) {
-        for (uint32_t i = 0; i < am->channels_length; i++) {
+    if (am && vector_len(&am->channels)) {
+        for (uint32_t i = 0; i < vector_len(&am->channels); i++) {
             Channel* ch = _get_channel_byindex(am, i);
             hashmap_destroy_ext(
                 &ch->signal_values, _destroy_signal_value, NULL);
             _destroy_index(ch);
-            hashmap_destroy(&ch->index.uid2sv_lookup);
             if (ch->model_register_set) {
                 set_destroy(ch->model_register_set);
                 free(ch->model_register_set);
@@ -276,13 +273,7 @@ void adapter_destroy_adapter_model(AdapterModel* am)
             }
             free(ch);
         }
-        hashmap_destroy(&am->channels);
-        if (am->channels_keys) {
-            for (uint32_t _ = 0; _ < am->channels_length; _++)
-                free(am->channels_keys[_]);
-        }
-        free(am->channels_keys);
-        am->channels_length = 0;
+        vector_reset(&am->channels);
     }
     free(am);
 }
@@ -291,7 +282,7 @@ void adapter_destroy(Adapter* adapter)
 {
     if (adapter == NULL) return;
 
-    hashmap_destroy(&adapter->models);
+    vector_reset(&adapter->models);
     if (adapter->endpoint) {
         Endpoint* endpoint = adapter->endpoint;
         endpoint->disconnect(endpoint);
@@ -336,11 +327,11 @@ void adapter_model_dump_debug(AdapterModel* am, const char* name)
     log_simbus("model_uid      : %u", am->model_uid);
     log_simbus("model_time     : %f", am->model_time);
     log_simbus("stop_time      : %f", am->stop_time);
-    log_simbus("channel_count  : %u", am->channels_length);
+    log_simbus("channel_count  : %u", vector_len(&am->channels));
     log_simbus("----------------");
     log_simbus("Channel Objects:");
     log_simbus("----------------");
-    for (uint32_t channel_index = 0; channel_index < am->channels_length;
+    for (uint32_t channel_index = 0; channel_index < vector_len(&am->channels);
         channel_index++) {
         Channel* ch = _get_channel_byindex(am, channel_index);
         _refresh_index(ch);
@@ -350,9 +341,21 @@ void adapter_model_dump_debug(AdapterModel* am, const char* name)
         log_simbus("  signal_count : %u", ch->index.count);
         log_simbus("  signal_value :");
         for (uint32_t i = 0; i < ch->index.count; i++) {
-            SignalValue* sv = ch->index.map[i].signal;
+            SignalValue*          sv = ch->index.map[i].signal;
+            double                value = sv->val;
+            double                final_value = sv->final_val;
+            ModelFunctionChannel* mfc = ch->mfc;
+            if (mfc != NULL && mfc->scalar_sync.enabled &&
+                mfc->signal_names != NULL && mfc->signal_value_double != NULL) {
+                for (uint32_t local = 0; local < mfc->signal_count; local++) {
+                    if (strcmp(mfc->signal_names[local], sv->name) == 0) {
+                        value = final_value = mfc->signal_value_double[local];
+                        break;
+                    }
+                }
+            }
             log_simbus("    [%u] uid=%u, val=%f, final_val=%f, name=%s", i,
-                sv->uid, sv->val, sv->final_val, sv->name);
+                sv->uid, value, final_value, sv->name);
         }
     }
 }

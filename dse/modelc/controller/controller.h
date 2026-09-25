@@ -8,12 +8,15 @@
 
 #include <stdint.h>
 #include <stdbool.h>
+#include <string.h>
 #include <dse/modelc/adapter/adapter.h>
 #include <dse/modelc/adapter/transport/endpoint.h>
 #include <dse/clib/collections/hashmap.h>
 #include <dse/modelc/model.h>
 #include <dse/modelc/model/lua.h>
 #include <dse/platform.h>
+
+typedef struct SimbusChannel SimbusChannel;
 
 
 typedef struct SignalTransform {
@@ -39,6 +42,18 @@ typedef struct SignalTransform {
 } SignalTransform;
 
 
+typedef struct FlatSyncMap {
+    bool           enabled;
+    bool           capable;
+    uint32_t       sync_count;
+    uint32_t*      simbus_indices;
+    double*        simbus_scalar;
+    SimbusChannel* simbus_channel;
+    double*        shadow;
+    double*        output_shadow;
+    bool           output_shadow_initialized;
+} FlatSyncMap;
+
 typedef struct ModelFunctionChannel {
     const char*  channel_name;
     const char** signal_names;
@@ -51,10 +66,16 @@ typedef struct ModelFunctionChannel {
     /* Signal Value storage (in Vectors) and will be directly accessed by
        Model Functions. Only the configured type will be allocated. */
     double*   signal_value_double;
+    double*   signal_value_double_shadow;
     void**    signal_value_binary;
     uint32_t* signal_value_binary_size;
     uint32_t* signal_value_binary_buffer_size;
     bool*     signal_value_binary_reset_called;
+
+    /* Flat scalar sync map used to evaluate a dense scatter/gather path.
+       This sits next to the legacy loop-based copy code so the fast path can be
+       enabled/disabled for benchmarking without changing binary handling. */
+    FlatSyncMap scalar_sync;
 
     /* Signal Transform; only allocated if transforms are present. */
     SignalTransform* signal_transform;
@@ -63,15 +84,37 @@ typedef struct ModelFunctionChannel {
     void** signal_annotation;
 } ModelFunctionChannel;
 
+typedef struct ModelFunctionChannelIndexItem {
+    const char*           name;
+    ModelFunctionChannel* mfc;
+} ModelFunctionChannelIndexItem;
+
+static __inline__ int controller_name2mfc_compar(const void* a, const void* b)
+{
+    const ModelFunctionChannelIndexItem* x = a;
+    const ModelFunctionChannelIndexItem* y = b;
+    return strcmp(x->name, y->name);
+}
 
 typedef struct ModelFunction {
     const char* name;
     double      step_size;
 
     /* Collection of ModelFunctionChannel, Key is channel_name. */
-    HashMap channels;
+    Vector channels;  // vector{ModelFunctionChannelIndexItem}
 } ModelFunction;
 
+typedef struct ModelFunctionIndexItem {
+    const char*    name;
+    ModelFunction* mf;
+} ModelFunctionIndexItem;
+
+static __inline__ int controller_name2mf_compar(const void* a, const void* b)
+{
+    const ModelFunctionIndexItem* x = a;
+    const ModelFunctionIndexItem* y = b;
+    return strcmp(x->name, y->name);
+}
 
 typedef struct ControllerModel {
     /* Controller specific objects (placed in Model instance). */
@@ -79,7 +122,7 @@ typedef struct ControllerModel {
     void*       handle;  // Handle for loaded model.
 
     /* Collection of ModelFunction, Key is Model Function name. */
-    HashMap model_functions;
+    Vector model_functions;  // vector{ModelFunctionIndexItem}
 
     /* Model interface vTable. */
     ModelVTable vtable;
@@ -92,7 +135,6 @@ typedef struct Controller {
     Adapter*        adapter;
     /* Model configuration info: specific to a simulation. */
     SimulationSpec* simulation;
-    HashMap         controller_models;  // index by model instance name.
 } Controller;
 
 
@@ -154,6 +196,10 @@ DLL_PUBLIC void model_function_destroy(ModelFunction* model_function);
 
 
 /* transform.c */
+DLL_PRIVATE void model_function_channel_build_flat_sync(
+    ModelFunctionChannel* mfc, SignalMap* sm);
+DLL_PRIVATE void model_function_channel_free_flat_sync(
+    ModelFunctionChannel* mfc);
 DLL_PRIVATE void controller_transform_to_model(
     ModelFunctionChannel* mfc, SignalMap* sm, lua_State* L);
 DLL_PRIVATE void controller_transform_from_model(

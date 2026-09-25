@@ -8,6 +8,12 @@ SPDX-License-Identifier: Apache-2.0
 
 This model is used for benchmark testing.
 
+## Charts
+
+See instructions here:
+
+dse.modelc/dse/modelc/examples/benchmark/charts/README.md
+
 
 ## Operation
 

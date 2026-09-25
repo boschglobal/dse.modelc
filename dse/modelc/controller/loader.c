@@ -84,6 +84,7 @@ int controller_load_models(SimulationSpec* sim)
 
     Adapter* adapter = controller->adapter;
     assert(adapter);
+    adapter->sequential_cosim = sim->sequential_cosim;
 
     ModelInstanceSpec* _instptr = sim->instance_list;
     while (_instptr && _instptr->name) {
@@ -94,9 +95,11 @@ int controller_load_models(SimulationSpec* sim)
         am->adapter = adapter;
         am->model_uid = _instptr->uid;
         /* Set the UID based lookup for Adapter Model. */
-        char hash_key[UID_KEY_LEN];
-        snprintf(hash_key, UID_KEY_LEN - 1, "%d", _instptr->uid);
-        hashmap_set(&adapter->models, hash_key, am);
+        AdapterModelIndexItem idx = { .uid = _instptr->uid, .am = am };
+        if (vector_find(&adapter->models, &idx, 0, NULL) == NULL) {
+            vector_push(&adapter->models, &idx);
+            vector_sort(&adapter->models);
+        }
         /* Load the Model. */
         errno = 0;
         rc = controller_load_model(_instptr, sim);

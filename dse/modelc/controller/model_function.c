@@ -29,16 +29,13 @@ int controller_register_model_function(
         log_error("ModelFunction already registered with Controller!");
         return -1;
     }
-    /* Add the Model Function to the hashmap. */
-    ModelInstancePrivate* mip = model_instance->private;
-    ControllerModel*      cm = mip->controller_model;
-    HashMap*              mf_map = &cm->model_functions;
-    handle = hashmap_set(mf_map, model_function->name, model_function);
-    if (handle == NULL) {
-        if (errno == 0) errno = EINVAL;
-        log_error("ModelFunction failed to register with Controller!");
-        return -1;
-    }
+    /* Add the Model Function to the lookup vector. */
+    ModelInstancePrivate*  mip = model_instance->private;
+    ControllerModel*       cm = mip->controller_model;
+    ModelFunctionIndexItem item = { .name = model_function->name,
+        .mf = model_function };
+    vector_push(&cm->model_functions, &item);
+    vector_sort(&cm->model_functions);
 
     return 0;
 }
@@ -50,10 +47,11 @@ ModelFunction* controller_get_model_function(
     assert(model_instance);
     ModelInstancePrivate* mip = model_instance->private;
     ControllerModel*      cm = mip->controller_model;
-    HashMap*              mf_map = &cm->model_functions;
 
-    ModelFunction* mf = hashmap_get(mf_map, model_function_name);
-    if (mf) return mf;
+    ModelFunctionIndexItem* item = vector_find(&cm->model_functions,
+        &(ModelFunctionIndexItem){ .name = model_function_name, .mf = NULL }, 0,
+        NULL);
+    if (item) return item->mf;
     return NULL;
 }
 

@@ -6,6 +6,35 @@ SPDX-License-Identifier: Apache-2.0
 
 # Benchmark Charts
 
+## WSL
+
+### Setup
+
+Add to file /etc/docker/daemon.json
+```json
+{
+  "cpu-rt-runtime": 950000
+}
+```
+
+Restart docker
+```bash
+sudo systemctl restart docker
+```
+
+Validate:
+```bash
+docker run --rm \
+  --cap-add=SYS_NICE \
+  --ulimit rtprio=99 \
+  --cpu-rt-runtime=950000 \
+  --entrypoint='' simer:test \
+  sh -c 'chrt -f 10 true && echo chrt-ok'
+```
+
+
+### Commands
+
 ```bash
 # Build local artifacts.
 $ make build tools

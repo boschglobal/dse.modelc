@@ -106,7 +106,7 @@ static void resolve_and_notify(
 
     /* SignalVector vector. */
     notify(SignalVector_vec_start(B));
-    for (uint32_t i = 0; i < am->channels_length; i++) {
+    for (uint32_t i = 0; i < vector_len(&am->channels); i++) {
         Channel* ch = _get_channel_byindex(am, i);
         _refresh_index(ch);
         log_simbus("  SignalVector --> [%s]", ch->name);
@@ -170,11 +170,12 @@ static void resolve_and_notify(
     send_notify_message(adapter, 0, message);
 }
 
-static int _ch_iterator(void* value, void* key)
+static void _log_available_channels(AdapterModel* am)
 {
-    UNUSED(value);
-    log_error("  channel: %s", (const char*)key);
-    return 0;
+    for (size_t i = 0; i < vector_len(&am->channels); i++) {
+        ChannelIndexItem* item = vector_at(&am->channels, i, NULL);
+        log_error("  channel: %s", item->name);
+    }
 }
 
 void simbus_handle_notify_message(
@@ -211,11 +212,11 @@ void simbus_handle_notify_message(
             assert(0);
         const char* ch_name =
             notify(NotifyMessage_channel_name(notify_message));
-        Channel* channel = hashmap_get(&am->channels, ch_name);
+        Channel* channel = _get_channel(am, ch_name);
         if (channel == NULL) {
             log_error("Register: channel not found!?! name=%s", ch_name);
             log_error("Available channels are:");
-            hashmap_kv_iterator(&am->channels, _ch_iterator, true);
+            _log_available_channels(am);
         }
         assert(channel);
         flatbuffers_uint32_vec_t vector =
@@ -297,11 +298,11 @@ void simbus_handle_notify_message(
             assert(0);
         const char* ch_name =
             notify(NotifyMessage_channel_name(notify_message));
-        Channel* channel = hashmap_get(&am->channels, ch_name);
+        Channel* channel = _get_channel(am, ch_name);
         if (channel == NULL) {
             log_error("Register: channel not found!?! name=%s", ch_name);
             log_error("Available channels are:");
-            hashmap_kv_iterator(&am->channels, _ch_iterator, true);
+            _log_available_channels(am);
         }
         assert(channel);
         flatbuffers_uint32_vec_t vector =
@@ -392,11 +393,11 @@ void simbus_handle_notify_message(
             assert(0);
         const char* ch_name =
             notify(NotifyMessage_channel_name(notify_message));
-        Channel* channel = hashmap_get(&am->channels, ch_name);
+        Channel* channel = _get_channel(am, ch_name);
         if (channel == NULL) {
             log_error("Register: channel not found!?! name=%s", ch_name);
             log_error("Available channels are:");
-            hashmap_kv_iterator(&am->channels, _ch_iterator, true);
+            _log_available_channels(am);
         }
         assert(channel);
 
@@ -438,7 +439,7 @@ void simbus_handle_notify_message(
         uint32_t    model_uid = notify(SignalVector_model_uid(signal_vector));
         log_simbus("SignalVector <-- [%s:%u]", channel_name, model_uid);
 
-        Channel* channel = hashmap_get(&am->channels, channel_name);
+        Channel* channel = _get_channel(am, channel_name);
         process_notify_signalvector(adapter, channel, model_uid, signal_vector);
         simbus_model_at_ready(am, channel, model_uid);
     }

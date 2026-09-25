@@ -102,7 +102,7 @@ void controller_exit(SimulationSpec* sim)
         _instptr++;
     }
 
-    if (mip->controller) hashmap_destroy(&(mip->controller->adapter->models));
+    if (mip->controller) vector_reset(&(mip->controller->adapter->models));
 }
 
 int controller_init(Endpoint* endpoint, SimulationSpec* sim)
@@ -111,7 +111,8 @@ int controller_init(Endpoint* endpoint, SimulationSpec* sim)
     ModelInstancePrivate* mip = sim->instance_list->private;
     mip->controller = __controller;
 
-    hashmap_init(&(mip->controller->adapter->models));
+    mip->controller->adapter->models =
+        vector_make(sizeof(AdapterModelIndexItem), 0, adapter_uid2am_compar);
 
     return 0;
 }
@@ -150,7 +151,7 @@ Controller* controller_object_ref(SimulationSpec* sim)
 
 void adapter_destroy_adapter_model(AdapterModel* am)
 {
-    hashmap_destroy(&am->channels);
+    vector_reset(&am->channels);
     free(am);
 }
 

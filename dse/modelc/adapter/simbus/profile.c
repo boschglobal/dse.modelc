@@ -5,7 +5,7 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <dse/logger.h>
-#include <dse/clib/collections/hashmap.h>
+#include <dse/clib/collections/vector.h>
 #include <dse/modelc/adapter/timer.h>
 
 
@@ -78,36 +78,64 @@ typedef struct ModelBenchmarkProfile {
 } ModelBenchmarkProfile;
 
 
-static HashMap  __model_data;
+typedef struct ModelBenchmarkProfileIndexItem {
+    uint32_t               uid;
+    ModelBenchmarkProfile* mbp;
+} ModelBenchmarkProfileIndexItem;
+
+static int _mbp_compar(const void* a, const void* b)
+{
+    const ModelBenchmarkProfileIndexItem* x = a;
+    const ModelBenchmarkProfileIndexItem* y = b;
+    if (x->uid < y->uid) return -1;
+    if (x->uid > y->uid) return 1;
+    return 0;
+}
+
+static Vector   __model_data;  // vector{ModelBenchmarkProfileIndexItem}
 static uint32_t __accumulate_sample_count;
 static uint32_t __accumulate_on_sample;
 
 
 void simbus_profile_init(double bus_step_size)
 {
-    hashmap_init_alt(&__model_data, 64, NULL);
+    __model_data =
+        vector_make(sizeof(ModelBenchmarkProfileIndexItem), 64, _mbp_compar);
     __accumulate_on_sample = 1.0 / bus_step_size;
 }
 
 
 void simbus_profile_destroy(void)
 {
-    hashmap_destroy_ext(&__model_data, NULL, NULL);
+    vector_reset(&__model_data);
 }
 
 
 static ModelBenchmarkProfile* _get_mbp(uint32_t model_uid)
 {
-    static char key[UINT32_STR_MAX_LEN];
+    ModelBenchmarkProfileIndexItem* item = vector_find(&__model_data,
+        &(ModelBenchmarkProfileIndexItem){ .uid = model_uid, .mbp = NULL }, 0,
+        NULL);
+    if (item) return item->mbp;
 
-    snprintf(key, UINT32_STR_MAX_LEN, "%u", model_uid);
-    ModelBenchmarkProfile* mbp = hashmap_get(&__model_data, key);
-    if (mbp == NULL) {
-        mbp = calloc(1, sizeof(ModelBenchmarkProfile));
-        mbp->model_uid = model_uid;
-        hashmap_set(&__model_data, key, mbp);
-    }
+    ModelBenchmarkProfile* mbp = calloc(1, sizeof(ModelBenchmarkProfile));
+    mbp->model_uid = model_uid;
+    ModelBenchmarkProfileIndexItem new_item = { .uid = model_uid, .mbp = mbp };
+    vector_push(&__model_data, &new_item);
+    vector_sort(&__model_data);
     return mbp;
+}
+
+
+typedef int (*ModelDataIterateFunc)(void* map_item, void* additional_data);
+
+static void _model_data_foreach(ModelDataIterateFunc func, void* data)
+{
+    for (size_t i = 0; i < vector_len(&__model_data); i++) {
+        ModelBenchmarkProfileIndexItem* item =
+            vector_at(&__model_data, i, NULL);
+        func(item->mbp, data);
+    }
 }
 
 
@@ -235,7 +263,7 @@ void simbus_profile_accumulate_cycle_total(
         .cycle_total_ns = simbus_cycle_total_ns,
         .ref_ts = ref_ts,
     };
-    hashmap_iterator(&__model_data, _acc_simbus_part, false, &data);
+    _model_data_foreach(_acc_simbus_part, &data);
 }
 
 
@@ -295,13 +323,13 @@ void simbus_profile_print_benchmarks(void)
     log_notice(" Normalised: (relative to 1.0 second simulation time)");
     log_notice("  model_uid  ME          MP          NET         SW          "
                "SP       Total");
-    hashmap_iterator(&__model_data, _print_benchmark, false, NULL);
+    _model_data_foreach(_print_benchmark, NULL);
     log_notice(" Accumulators: (raw accumulated sample data)");
     log_notice("  model_uid  ME          MP          NET         SW          "
                "SP       Total");
-    hashmap_iterator(&__model_data, _print_benchmark_acc, false, NULL);
+    _model_data_foreach(_print_benchmark_acc, NULL);
     log_notice(" Samples: (last sample data)");
     log_notice("  model_uid  ME          MP          NET         SW          "
                "SP       Total");
-    hashmap_iterator(&__model_data, _print_benchmark_sam, false, NULL);
+    _model_data_foreach(_print_benchmark_sam, NULL);
 }

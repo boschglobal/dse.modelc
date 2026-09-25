@@ -417,8 +417,8 @@ void stream_endpoint_destroy(Endpoint* endpoint)
         // Statistics.
         uint64_t tx_total = 0;
         uint64_t rx_total = 0;
-        for (size_t bucket = 0;
-             bucket < STREAM_MESSAGE_SIZE_HISTOGRAM_BUCKETS; bucket++) {
+        for (size_t bucket = 0; bucket < STREAM_MESSAGE_SIZE_HISTOGRAM_BUCKETS;
+            bucket++) {
             tx_total += stream_ep->message_size_histogram.tx[bucket];
             rx_total += stream_ep->message_size_histogram.rx[bucket];
         }

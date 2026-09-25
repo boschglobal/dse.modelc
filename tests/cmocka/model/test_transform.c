@@ -147,7 +147,10 @@ void test_transform__parse_no_transform(void** state)
     /* Transform table (internal variable). */
     ModelFunction* mf = controller_get_model_function(mock->mi, "model_step");
     assert_non_null(mf);
-    ModelFunctionChannel* mfc = hashmap_get(&mf->channels, "scalar");
+    ModelFunctionChannelIndexItem* item = vector_find(&mf->channels,
+        &(ModelFunctionChannelIndexItem){ .name = "scalar", .mfc = NULL }, 0,
+        NULL);
+    ModelFunctionChannel*          mfc = item ? item->mfc : NULL;
     assert_non_null(mfc);
     assert_null(mfc->signal_transform);
 }
@@ -180,7 +183,10 @@ void test_transform__parse(void** state)
     /* Transform table (internal variable). */
     ModelFunction* mf = controller_get_model_function(mock->mi, "model_step");
     assert_non_null(mf);
-    ModelFunctionChannel* mfc = hashmap_get(&mf->channels, "scalar");
+    ModelFunctionChannelIndexItem* item = vector_find(&mf->channels,
+        &(ModelFunctionChannelIndexItem){ .name = "scalar", .mfc = NULL }, 0,
+        NULL);
+    ModelFunctionChannel*          mfc = item ? item->mfc : NULL;
     assert_non_null(mfc);
     assert_non_null(mfc->signal_transform);
 
