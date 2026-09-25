@@ -17,7 +17,35 @@
 #include <dse/modelc/controller/model_private.h>
 
 
-#define UNUSED(x) ((void)x)
+#define UNUSED(x)   ((void)x)
+#define LIKELY(x)   __builtin_expect(!!(x), 1)
+#define UNLIKELY(x) __builtin_expect(!!(x), 0)
+
+
+typedef struct ControllerForeachContext {
+    HashMapIterateFunc func;
+    bool               continue_on_error;
+    void*              data;
+} ControllerForeachContext;
+
+
+static int __controller_mfc_foreach(void* item, void* data)
+{
+    ControllerForeachContext*      ctx = data;
+    ModelFunctionChannelIndexItem* mfc_item = item;
+    int                            rc = ctx->func(mfc_item->mfc, ctx->data);
+    if (rc && !ctx->continue_on_error) return rc;
+    return 0;
+}
+
+static int __controller_mf_foreach(void* item, void* data)
+{
+    ControllerForeachContext* ctx = data;
+    ModelFunctionIndexItem*   mf_item = item;
+    int                       rc = ctx->func(mf_item->mf, ctx->data);
+    if (rc && !ctx->continue_on_error) return rc;
+    return 0;
+}
 
 
 DLL_PRIVATE Controller* controller_object_ref(SimulationSpec* sim)
@@ -82,6 +110,13 @@ int controller_init_channel(ModelInstanceSpec* model_instance,
 
     log_notice("Init Controller channel: %s", channel_name);
     adapter_init_channel(am, channel_name, signal_name, signal_count, mfc);
+    if (mip->controller != NULL && mip->controller->simulation != NULL) {
+        am->adapter->sequential_cosim =
+            mip->controller->simulation->sequential_cosim;
+    }
+    mfc->scalar_sync.capable =
+        am->adapter != NULL && am->adapter->vtable != NULL &&
+        am->adapter->vtable->mode.flat_scalar && !am->adapter->sequential_cosim;
 
     return 0;
 }
@@ -94,30 +129,41 @@ static int __marshal__adapter2model(void* _mfc, void* _spec)
     ModelInstancePrivate*  mip = spec->mi->private;
     AdapterModel*          am = mip->adapter_model;
 
-    if (mfc->signal_map == NULL) {
+    const bool flat_scalar = mfc->signal_transform == NULL &&
+                             mfc->signal_value_binary == NULL &&
+                             mfc->scalar_sync.enabled;
+    if ((!flat_scalar || mfc->scalar_sync.simbus_indices == NULL ||
+            mfc->scalar_sync.sync_count != mfc->signal_count) &&
+        mfc->signal_map == NULL) {
         mfc->signal_map = adapter_get_signal_map(
             am, mfc->channel_name, mfc->signal_names, mfc->signal_count);
     }
     SignalMap* sm = mfc->signal_map;
 
     if (mfc->signal_value_double) {
+        if (mfc->scalar_sync.enabled && mfc->signal_map != NULL &&
+            (mfc->scalar_sync.simbus_indices == NULL ||
+                mfc->scalar_sync.sync_count != mfc->signal_count)) {
+            model_function_channel_build_flat_sync(mfc, sm);
+        }
         controller_transform_to_model(mfc, sm, mip->lua_state);
     }
     if (spec->dir == MARSHAL_ADAPTER2MODEL_SCALAR_ONLY) return 0;
+    if (mfc->signal_value_binary == NULL) return 0;
 
-    if (mfc->signal_value_binary) {
-        for (uint32_t si = 0; si < mfc->signal_count; si++) {
-            dse_buffer_append(&mfc->signal_value_binary[si],
-                &mfc->signal_value_binary_size[si],
-                &mfc->signal_value_binary_buffer_size[si], sm[si].signal->bin,
-                sm[si].signal->bin_size);
-            /* Indicate the binary object was consumed. */
-            sm[si].signal->bin_size = 0;
-            /* Set the trigger to detect if the binary object is correctly
-               operated by the Model (i.e. calls reset()).*/
-            mfc->signal_value_binary_reset_called[si] = false;
-        }
+    const uint32_t count = mfc->signal_count;
+    for (uint32_t si = 0; si < count; si++) {
+        dse_buffer_append(&mfc->signal_value_binary[si],
+            &mfc->signal_value_binary_size[si],
+            &mfc->signal_value_binary_buffer_size[si], sm[si].signal->bin,
+            sm[si].signal->bin_size);
+        /* Indicate the binary object was consumed. */
+        sm[si].signal->bin_size = 0;
+        /* Set the trigger to detect if the binary object is correctly
+           operated by the Model (i.e. calls reset()).*/
+        mfc->signal_value_binary_reset_called[si] = false;
     }
+
     return 0;
 }
 static int __marshal__model2adapter(void* _mfc, void* _spec)
@@ -127,71 +173,87 @@ static int __marshal__model2adapter(void* _mfc, void* _spec)
     ModelInstancePrivate*  mip = spec->mi->private;
     AdapterModel*          am = mip->adapter_model;
 
-    if (mfc->signal_map == NULL) {
+    const bool flat_scalar = mfc->signal_transform == NULL &&
+                             mfc->signal_value_binary == NULL &&
+                             mfc->scalar_sync.enabled;
+    SignalMap* sm = mfc->signal_map;
+    if ((!flat_scalar || mfc->scalar_sync.simbus_indices == NULL ||
+            mfc->scalar_sync.sync_count != mfc->signal_count) &&
+        UNLIKELY(sm == NULL)) {
         mfc->signal_map = adapter_get_signal_map(
             am, mfc->channel_name, mfc->signal_names, mfc->signal_count);
+        sm = mfc->signal_map;
     }
-    SignalMap* sm = mfc->signal_map;
 
     if (spec->dir == MARSHAL_MODEL2ADAPTER ||
         spec->dir == MARSHAL_MODEL2ADAPTER_SCALAR_ONLY) {
         if (mfc->signal_value_double) {
+            if (mfc->scalar_sync.enabled && mfc->signal_map != NULL &&
+                (mfc->scalar_sync.simbus_indices == NULL ||
+                    mfc->scalar_sync.sync_count != mfc->signal_count)) {
+                model_function_channel_build_flat_sync(mfc, sm);
+            }
             controller_transform_from_model(mfc, sm, mip->lua_state);
         }
     }
 
     if (spec->dir == MARSHAL_MODEL2ADAPTER ||
-        spec->dir == MARSHAL_MODEL2ADAPTER_BINARY_ONLY) {
-        if (mfc->signal_value_binary) {
-            for (uint32_t si = 0; si < mfc->signal_count; si++) {
-                if (mfc->signal_value_binary_reset_called[si] == false) {
-                    /* Force size to 0.
-                    Expected operation is: read, reset, write (append).
-                    If reset is not called, i.e. the Model does not consume
-                    _this_ signal, then data will be echo'ed back. If more than
-                    one model echoes data back, the SimBus may also echo back
-                    and ever increasing about of data. */
-                    mfc->signal_value_binary_size[si] = 0;
-                }
-                dse_buffer_append(&sm[si].signal->bin, &sm[si].signal->bin_size,
-                    &sm[si].signal->bin_buffer_size,
-                    mfc->signal_value_binary[si],
-                    mfc->signal_value_binary_size[si]);
-                /* Indicate the binary object was consumed. */
-                mfc->signal_value_binary_size[si] = 0;
-            }
+        spec->dir == MARSHAL_MODEL2ADAPTER_BINARY_ONLY)
+        return 0;
+    if (mfc->signal_value_binary == NULL) return 0;
+
+    for (uint32_t si = 0; si < mfc->signal_count; si++) {
+        if (mfc->signal_value_binary_reset_called[si] == false) {
+            /* Force size to 0.
+            Expected operation is: read, reset, write (append).
+            If reset is not called, i.e. the Model does not consume
+            _this_ signal, then data will be echo'ed back. If more than
+            one model echoes data back, the SimBus may also echo back
+            and ever increasing about of data. */
+            mfc->signal_value_binary_size[si] = 0;
         }
+        dse_buffer_append(&sm[si].signal->bin, &sm[si].signal->bin_size,
+            &sm[si].signal->bin_buffer_size, mfc->signal_value_binary[si],
+            mfc->signal_value_binary_size[si]);
+        /* Indicate the binary object was consumed. */
+        mfc->signal_value_binary_size[si] = 0;
     }
     return 0;
 }
 static int __marshal__model_function(void* _mf, void* _spec)
 {
-    ModelFunction*         mf = _mf;
-    ControllerMarshalSpec* spec = _spec;
-    int                    rc = 0;
+    ModelFunction*           mf = _mf;
+    ControllerMarshalSpec*   spec = _spec;
+    int                      rc = 0;
+    ControllerForeachContext ctx = { 0 };
+
     switch (spec->dir) {
     case MARSHAL_ADAPTER2MODEL:
     case MARSHAL_ADAPTER2MODEL_SCALAR_ONLY:
-        rc = hashmap_iterator(
-            &mf->channels, __marshal__adapter2model, false, spec);
+        ctx.func = __marshal__adapter2model;
         break;
     case MARSHAL_MODEL2ADAPTER:
     case MARSHAL_MODEL2ADAPTER_SCALAR_ONLY:
     case MARSHAL_MODEL2ADAPTER_BINARY_ONLY:
-        rc = hashmap_iterator(
-            &mf->channels, __marshal__model2adapter, false, spec);
+        ctx.func = __marshal__model2adapter;
         break;
     default:
-        break;
+        return 0;
     }
+
+    ctx.continue_on_error = false;
+    ctx.data = spec;
+    rc = vector_foreach(&mf->channels, __controller_mfc_foreach, &ctx);
     return rc;
 }
 static int __marshal__model(ControllerModel* cm, void* spec)
 {
-    int rc = 0;
-    rc = hashmap_iterator(
-        &cm->model_functions, __marshal__model_function, false, spec);
-    return rc;
+    ControllerForeachContext ctx = {
+        .func = __marshal__model_function,
+        .continue_on_error = false,
+        .data = spec,
+    };
+    return vector_foreach(&cm->model_functions, __controller_mf_foreach, &ctx);
 }
 
 void marshal_model(ModelInstanceSpec* mi, ControllerMarshalDir dir)
@@ -344,21 +406,24 @@ void controller_run(SimulationSpec* sim)
 {
     assert(sim);
     ModelInstancePrivate* mip = sim->instance_list->private;
-    Controller*           controller = mip->controller;
-    if (controller == NULL) return;
+    Controller* restrict controller = mip->controller;
+    if (UNLIKELY(controller == NULL)) return;
 
     /* ModelRegister (etc). */
     controller_bus_ready(sim);
 
     /* ModelReady, ModelStart, do_step(). */
+    volatile bool* restrict stop_flag = &controller->stop_request;
     while (true) {
         /* Check if stop requested. */
-        if (controller->stop_request == true) {
+        if (UNLIKELY(*stop_flag == true)) {
             errno = ECANCELED;
             break;
         }
-        int rc = controller_step(sim);
-        if (rc != 0) break;
+        /* Step. */
+        if (UNLIKELY(controller_step(sim) != 0)) {
+            break;
+        }
     }
 }
 

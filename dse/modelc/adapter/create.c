@@ -51,7 +51,6 @@ Adapter* adapter_create(Endpoint* endpoint)
 {
     assert(endpoint);
     Adapter* adapter;
-    int      rc;
 
     errno = 0;
     adapter = calloc(1, sizeof(Adapter));
@@ -66,12 +65,8 @@ Adapter* adapter_create(Endpoint* endpoint)
     }
 
     /* Initialise supporting properties of the Adapter. */
-    rc = hashmap_init(&adapter->models);
-    if (rc) {
-        log_error("Hashmap init failed for adapter_create!");
-        if (errno == 0) errno = rc;
-        goto error_clean_up;
-    }
+    adapter->models =
+        vector_make(sizeof(AdapterModelIndexItem), 0, adapter_uid2am_compar);
     adapter->stop_request = false;
     adapter->endpoint = endpoint;
 

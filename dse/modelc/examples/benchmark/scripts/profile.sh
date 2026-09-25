@@ -12,7 +12,7 @@
 #
 #   $ make clean
 #   $ make build tools
-#   $ sudo service redis-server start
+#   $ sudo service redis-server start|stop
 #
 # Run the benchmark with Callgrind (the default):
 #
@@ -155,7 +155,7 @@ fi
 : "${SIGNAL_COUNT:=2000}"
 : "${SIGNAL_CHANGE:=2000}"
 : "${MODEL_STEPSIZE:=0.0005}"
-: "${MODEL_ENDTIME:=1.0}"
+: "${MODEL_ENDTIME:=10.0}"
 
 : "${SIMBUS_EXE:=../../../bin/simbus}"
 : "${MODELC_EXE:=../../bin/modelc}"

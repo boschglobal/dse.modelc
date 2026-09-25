@@ -46,8 +46,10 @@ fi
 if [ ! -z $STREAM ] && [ $STREAM = "1" ]; then
     SIMBUS_TRANSPORT=stream
     SIMBUS_URI=unix:///tmp/simbus.sock
+    FACTORX=-unix
     if [ ! -z $TCP ] && [ $TCP = "1" ]; then
         SIMBUS_URI=tcp://127.0.0.1
+        FACTORX=-tcp
     fi
 fi
 if [ -z $STARTUP_IDX ]; then
@@ -74,7 +76,7 @@ if [ -z $SIMER_IMAGE ]; then
 fi
 TOTAL_SIGNAL_CHANGE=$(( ${SIGNAL_CHANGE} * ${MODEL_COUNT} ))
 STEP_COUNT=$(echo 'scale=0; 1.0/0.0005' | bc)
-: "${TAG:=${SIMBUS_TRANSPORT}${STACKED_OPT}-${STARTUP_IDX}${STARTUP_ANNO}-${IMPORTER}_${SIGNAL_COUNT}_${TOTAL_SIGNAL_CHANGE}_${MODEL_COUNT}}"
+: "${TAG:=${SIMBUS_TRANSPORT}${FACTORX}${STACKED_OPT}-${STARTUP_IDX}${STARTUP_ANNO}-${IMPORTER}_${SIGNAL_COUNT}_${TOTAL_SIGNAL_CHANGE}_${MODEL_COUNT}}"
 
 simer()
 {
@@ -82,7 +84,8 @@ simer()
      && docker run -it --rm \
         --cap-add=sys_nice \
         --ulimit rtprio=99 \
-        -e SIMER_SCHED_FIFO=1 \
+        --cpu-rt-runtime=950000 \
+        -e SIMER_SCHED_FIFO=${SIMER_SCHED_FIFO:-1} \
         -e SIMER_RT_PRIO=10 \
          -v $(pwd):/sim \
          -e SIMBUS_LOGLEVEL=${SIMBUS_LOGLEVEL:-$MODEL_LOGGER} \

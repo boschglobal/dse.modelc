@@ -15,7 +15,7 @@ extern bool __simbus_exit_run_loop__;
 
 bool simbus_network_ready(AdapterModel* am)
 {
-    for (uint32_t i = 0; i < am->channels_length; i++) {
+    for (uint32_t i = 0; i < vector_len(&am->channels); i++) {
         Channel* ch = _get_channel_byindex(am, i);
         if (ch->expected_model_count != set_length(ch->model_register_set))
             return false;
@@ -26,7 +26,7 @@ bool simbus_network_ready(AdapterModel* am)
 
 bool simbus_models_ready(AdapterModel* am)
 {
-    for (uint32_t i = 0; i < am->channels_length; i++) {
+    for (uint32_t i = 0; i < vector_len(&am->channels); i++) {
         Channel* ch = _get_channel_byindex(am, i);
         if (ch->expected_model_count != set_length(ch->model_ready_set))
             return false;
@@ -37,7 +37,7 @@ bool simbus_models_ready(AdapterModel* am)
 
 void simbus_models_to_start(AdapterModel* am)
 {
-    for (uint32_t i = 0; i < am->channels_length; i++) {
+    for (uint32_t i = 0; i < vector_len(&am->channels); i++) {
         Channel* ch = _get_channel_byindex(am, i);
         set_clear(ch->model_ready_set);
     }
@@ -69,7 +69,7 @@ void simbus_model_at_exit(
     set_remove_uint32(channel->model_ready_set, model_uid);
 
     /* Exit the run loop? */
-    for (uint32_t i = 0; i < am->channels_length; i++) {
+    for (uint32_t i = 0; i < vector_len(&am->channels); i++) {
         Channel* ch = _get_channel_byindex(am, i);
         if (set_length(ch->model_register_set)) return; /* Not 0 so no exit. */
     }

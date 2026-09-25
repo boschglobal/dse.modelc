@@ -15,6 +15,10 @@
 #include <dse/logger.h>
 
 
+#define LIKELY(x)   __builtin_expect(!!(x), 1)
+#define UNLIKELY(x) __builtin_expect(!!(x), 0)
+
+
 static struct timespec _get_timespec_now(void)
 {
     struct timespec ts = {};
@@ -120,11 +124,10 @@ ModelDesc* model_create(ModelDesc* model)
     return (ModelDesc*)m;
 }
 
-
 int model_step(ModelDesc* model, double* model_time, double stop_time)
 {
     ExtendedModelDesc* m = (ExtendedModelDesc*)model;
-    if (*model_time == 0) {
+    if (UNLIKELY(*model_time == 0)) {
         m->setup_time = _get_elapsedtime_us(m->start_time);
     }
 
@@ -143,6 +146,17 @@ void model_destroy(ModelDesc* model)
 {
     ExtendedModelDesc* m = (ExtendedModelDesc*)model;
 
+    const char* transport = m->model.sim->transport;
+    // if (strcmp(transport, "stream") == 0) {
+    //     if (strncmp(m->model.sim->uri, "tcp", 3) == 0) {
+    //         transport = "stream_tcp";
+    //     }  else if (strncmp(m->model.sim->uri, "unix", 4) == 0) {
+    //         transport = "stream_unix";
+
+    //     }
+    // }
+
+
     const char* tag = "";
     if (getenv("TAG")) tag = getenv("TAG");
     log_notice(LOG_COLOUR_LBLUE ":::benchmark_key:"
@@ -153,9 +167,8 @@ void model_destroy(ModelDesc* model)
     log_notice(LOG_COLOUR_LBLUE
         ":::benchmark:%s::%s;%s;%.6f;%.6f;%u;%u;%u;%lu;%."
         "3f;%.3f:::" LOG_COLOUR_NONE,
-        tag, m->model.sim->transport, m->model.sim->uri,
-        m->model.sim->step_size, m->model.sim->end_time, m->model_id,
-        m->model.sv->count, m->block.size, m->step_count,
-        m->setup_time / 1000000.0,
+        tag, transport, m->model.sim->uri, m->model.sim->step_size,
+        m->model.sim->end_time, m->model_id, m->model.sv->count, m->block.size,
+        m->step_count, m->setup_time / 1000000.0,
         _get_elapsedtime_us(m->start_time) / 1000000.0);
 }

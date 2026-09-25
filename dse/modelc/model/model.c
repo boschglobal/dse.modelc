@@ -39,13 +39,14 @@ typedef enum ModelChannelType {
 void model_function_destroy(ModelFunction* model_function)
 {
     if (model_function) {
-        char**   _keys = hashmap_keys(&model_function->channels);
-        uint32_t _keys_length = hashmap_number_keys(model_function->channels);
-        for (uint32_t i = 0; i < _keys_length; i++) {
-            ModelFunctionChannel* _mfc =
-                hashmap_get(&model_function->channels, _keys[i]);
+        for (size_t i = 0; i < vector_len(&model_function->channels); i++) {
+            ModelFunctionChannelIndexItem* item =
+                vector_at(&model_function->channels, i, NULL);
+            ModelFunctionChannel* _mfc = item->mfc;
             if (_mfc && _mfc->signal_value_double)
                 free(_mfc->signal_value_double);
+            if (_mfc && _mfc->signal_value_double_shadow)
+                free(_mfc->signal_value_double_shadow);
             if (_mfc && _mfc->signal_value_binary) {
                 for (uint32_t _ = 0; _ < _mfc->signal_count; _++) {
                     if ((void*)_mfc->signal_value_binary[_])
@@ -59,17 +60,16 @@ void model_function_destroy(ModelFunction* model_function)
                 free(_mfc->signal_value_binary_buffer_size);
             if (_mfc && _mfc->signal_value_binary_reset_called)
                 free(_mfc->signal_value_binary_reset_called);
+            model_function_channel_free_flat_sync(_mfc);
             if (_mfc && _mfc->signal_names) {
                 free(_mfc->signal_names);
             }
             if (_mfc && _mfc->signal_map) free(_mfc->signal_map);
             if (_mfc && _mfc->signal_transform) free(_mfc->signal_transform);
             if (_mfc && _mfc->signal_annotation) free(_mfc->signal_annotation);
+            free(_mfc);
         }
-        hashmap_destroy(&model_function->channels);
-        for (uint32_t _ = 0; _ < _keys_length; _++)
-            free(_keys[_]);
-        free(_keys);
+        vector_reset(&model_function->channels);
     }
     free(model_function);
 }
@@ -84,18 +84,23 @@ static ModelFunctionChannel* _get_mfc(ModelInstanceSpec* model_instance,
         log_error("ModelFunction not registered!");
         return NULL;
     }
-    ModelFunctionChannel* mfc = hashmap_get(&mf->channels, channel_name);
-    if (mfc) return mfc; /* Already allocated, return. */
+    ModelFunctionChannelIndexItem* item = vector_find(&mf->channels,
+        &(ModelFunctionChannelIndexItem){ .name = channel_name, .mfc = NULL },
+        0, NULL);
+    if (item) return item->mfc; /* Already allocated, return. */
 
     /* Allocate a new MFC. */
     errno = 0;
-    mfc = calloc(1, sizeof(ModelFunctionChannel));
+    ModelFunctionChannel* mfc = calloc(1, sizeof(ModelFunctionChannel));
     if (mfc == NULL) {
         log_error("ModelFunction malloc failed!");
         return NULL;
     }
     mfc->channel_name = channel_name;
-    hashmap_set_alt(&mf->channels, channel_name, mfc);
+    ModelFunctionChannelIndexItem new_item = { .name = channel_name,
+        .mfc = mfc };
+    vector_push(&mf->channels, &new_item);
+    vector_sort(&mf->channels);
 
     return mfc;
 }
@@ -243,44 +248,54 @@ void _load_signals(ModelInstanceSpec* model_instance, ChannelSpec* channel_spec,
     }
 
     /* Setup the final signal list. */
-    signal_list->length = hashlist_length(&handler_data.signal_list);
-    if (signal_list->length) {
+    const uint32_t total_length = hashlist_length(&handler_data.signal_list);
+    signal_list->length = total_length;
+
+    if (total_length > 0) {
         signal_list->names = calloc(signal_list->length, sizeof(const char*));
-        for (uint32_t i = 0; i < signal_list->length; i++) {
-            signal_list->names[i] = hashlist_at(&handler_data.signal_list, i);
-            log_info("  signal[%u] : %s", i, signal_list->names[i]);
-            SignalTransform* st =
-                hashmap_get(&handler_data.transform_map, signal_list->names[i]);
-            if (st)
-                log_info("    transform[linear] : factor=%f, offset=%f",
-                    st->linear.factor, st->linear.offset);
+
+        const size_t has_transforms =
+            hashmap_number_keys(handler_data.transform_map);
+        if (has_transforms) {
+            signal_list->transform =
+                calloc(total_length, sizeof(SignalTransform));
+        }
+
+        const size_t has_annotations =
+            hashmap_number_keys(handler_data.annotation_map);
+        if (has_annotations) {
+            signal_list->annotation = calloc(total_length, sizeof(YamlNode*));
+        }
+
+        HashMap* restrict tx_map = &handler_data.transform_map;
+        HashMap* restrict anno_map = &handler_data.annotation_map;
+
+        for (uint32_t i = 0; i < total_length; i++) {
+            const char* sig_name = hashlist_at(&handler_data.signal_list, i);
+            signal_list->names[i] = sig_name;
+
+            // Single map lookups executed together
+            if (has_transforms) {
+                SignalTransform* st = hashmap_get(tx_map, sig_name);
+                if (st) {
+                    memcpy(&signal_list->transform[i], st,
+                        sizeof(SignalTransform));
+                    log_info("    transform[linear] : factor=%f, offset=%f",
+                        st->linear.factor, st->linear.offset);
+                }
+            }
+
+            if (has_annotations) {
+                YamlNode* sa = hashmap_get(anno_map, sig_name);
+                if (sa) {
+                    signal_list->annotation[i] = sa;
+                }
+            }
         }
     }
+
     *vector_type = handler_data.signal_vector_type;
-    /* Construct the signal transform list. */
-    if (hashmap_number_keys(handler_data.transform_map)) {
-        signal_list->transform =
-            calloc(signal_list->length, sizeof(SignalTransform));
-        for (size_t i = 0; i < signal_list->length; i++) {
-            SignalTransform* st =
-                hashmap_get(&handler_data.transform_map, signal_list->names[i]);
-            if (st == NULL) continue;
-            /* Copy over the transform object. */
-            memcpy(&signal_list->transform[i], st, sizeof(SignalTransform));
-        }
-    }
-    /* Construct the signal annotation reference list. */
-    if (hashmap_number_keys(handler_data.annotation_map)) {
-        signal_list->annotation =
-            calloc(signal_list->length, sizeof(YamlNode*));
-        for (size_t i = 0; i < signal_list->length; i++) {
-            YamlNode* sa = hashmap_get(
-                &handler_data.annotation_map, signal_list->names[i]);
-            if (sa == NULL) continue;
-            /* Copy the annotation reference object. */
-            signal_list->annotation[i] = sa;
-        }
-    }
+
     /* Clear handler related storage. */
     schema_release_selector(selector);
     hashlist_destroy(&handler_data.signal_list);
@@ -372,6 +387,8 @@ int model_configure_channel(ModelInstanceSpec* model_instance, const char* name,
         signal_list.length);
     if (vector_type == MODEL_VECTOR_DOUBLE) {
         mfc->signal_value_double = calloc(signal_list.length, sizeof(double));
+        mfc->signal_value_double_shadow =
+            calloc(signal_list.length, sizeof(double));
         log_debug("%p", mfc->signal_value_double);
     } else if (vector_type == MODEL_VECTOR_BINARY) {
         /* Allocate the binary vectors. */
@@ -392,6 +409,11 @@ int model_configure_channel(ModelInstanceSpec* model_instance, const char* name,
     mfc->signal_count = signal_list.length;
     mfc->signal_names = signal_list.names;
     mfc->signal_transform = signal_list.transform;
+    mfc->scalar_sync.enabled =
+        mfc->signal_transform == NULL && mfc->scalar_sync.capable;
+    if (mfc->scalar_sync.enabled) {
+        log_notice("  Adapter mode: flat-map");
+    }
     mfc->signal_annotation = (void**)signal_list.annotation;
 
     /* Brutal, eh? */

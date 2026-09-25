@@ -337,6 +337,12 @@ static int _add_sv(void* _mfc, void* _sv_data)
     return 0;
 }
 
+static int __add_sv(void* item, void* data)
+{
+    ModelFunctionChannelIndexItem* mfc_item = item;
+    return _add_sv(mfc_item->mfc, data);
+}
+
 static int _collect_sv(void* _mf, void* _sv_data)
 {
     ModelFunction* mf = _mf;
@@ -344,17 +350,29 @@ static int _collect_sv(void* _mf, void* _sv_data)
 
     data->current_modelfunction_name = mf->name;
 
-    return (hashmap_iterator(&mf->channels, _add_sv, false, data));
+    return vector_foreach(&mf->channels, __add_sv, data);
+}
+
+static int __collect_sv(void* item, void* data)
+{
+    ModelFunctionIndexItem* mf_item = item;
+    return _collect_sv(mf_item->mf, data);
 }
 
 static int _count_sv(void* _mf, void* _number)
 {
     ModelFunction* mf = _mf;
-    uint64_t*      number = _number;
+    uint32_t*      number = _number;
 
-    *number += hashmap_number_keys(mf->channels);
+    *number += vector_len(&mf->channels);
 
     return 0;
+}
+
+static int __count_sv(void* item, void* data)
+{
+    ModelFunctionIndexItem* mf_item = item;
+    return _count_sv(mf_item->mf, data);
 }
 
 
@@ -385,8 +403,8 @@ SignalVector* model_sv_create(ModelInstanceSpec* mi, SimulationSpec* sim)
 
     /* Count the signal vectors (e.g. channels). */
     ModelInstancePrivate* mip = mi->private;
-    HashMap* model_function_map = &mip->controller_model->model_functions;
-    rc = hashmap_iterator(model_function_map, _count_sv, false, &count);
+    Vector* model_function_vec = &mip->controller_model->model_functions;
+    rc = vector_foreach(model_function_vec, __count_sv, &count);
     if (rc) {
         log_error("Iterating data structure failed");
         return NULL;
@@ -396,7 +414,7 @@ SignalVector* model_sv_create(ModelInstanceSpec* mi, SimulationSpec* sim)
     /* Allocate and collect the signal vectors. */
     SignalVector* sv = calloc(count + 1, sizeof(SignalVector));
     sv_data       _sv_data = { sim, mi, sv, count, 0, NULL };
-    rc = hashmap_iterator(model_function_map, _collect_sv, false, &_sv_data);
+    rc = vector_foreach(model_function_vec, __collect_sv, &_sv_data);
     if (rc) {
         log_error("Iterating data structure failed");
         return NULL;

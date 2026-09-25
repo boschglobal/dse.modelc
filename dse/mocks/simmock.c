@@ -388,8 +388,11 @@ void simmock_setup(SimMock* mock, const char* sig_name, const char* net_name)
         if (model->sv_signal) {
             ModelFunction* mf = controller_get_model_function(
                 model->mi, model->sv_signal->function_name);
-            model->mfc_signal =
-                hashmap_get(&mf->channels, model->sv_signal->name);
+            ModelFunctionChannelIndexItem* item = vector_find(&mf->channels,
+                &(ModelFunctionChannelIndexItem){
+                    .name = model->sv_signal->name, .mfc = NULL },
+                0, NULL);
+            model->mfc_signal = item ? item->mfc : NULL;
             model->sm_signal =
                 calloc(model->sv_signal->count, sizeof(SignalMap));
             for (uint32_t i = 0; i < model->sv_signal->count; i++) {
