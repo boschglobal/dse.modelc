@@ -16,7 +16,12 @@
 #
 # Run the benchmark with Callgrind (the default):
 #
-#   $ sh dse/modelc/examples/benchmark/scripts/profile.sh
+#   $ dse/modelc/examples/benchmark/scripts/profile.sh
+#   $ SIGNAL_CHANGE=200 dse/modelc/examples/benchmark/scripts/profile.sh
+#   $ SIMBUS_TRANSPORT=stream SIMBUS_URI=tcp://127.0.0.1 SIGNAL_CHANGE=200 dse/modelc/examples/benchmark/scripts/profile.sh
+#   $ SIMBUS_TRANSPORT=stream SIMBUS_URI=tcp://127.0.0.1 MODEL_ENDTIME=10.0 SIGNAL_CHANGE=200 dse/modelc/examples/benchmark/scripts/profile.sh
+#
+#   $ dse/modelc/examples/benchmark/scripts/profile.sh view
 #
 # Select another profiler with PROFILE:
 #
@@ -225,7 +230,7 @@ generate()
 cleanup()
 {
     pkill -f simbus
-    if [ ! $SIMBUS_TRANSPORT = "loopback" ]; then
+    if [ $SIMBUS_TRANSPORT = "redis*" ]; then
         redis-cli flushall
     fi
 }

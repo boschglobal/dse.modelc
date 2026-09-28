@@ -39,7 +39,7 @@ Endpoint* endpoint_create(const char* transport, const char* uri, uint32_t uid,
     } else {
         /* Unknown transport. */
         if (errno == 0) errno = EINVAL;
-        log_error("ERROR: unknown transport! (%s)", transport);
+        log_fatal("ERROR: unknown transport! (%s)", transport);
         return NULL;
     }
 

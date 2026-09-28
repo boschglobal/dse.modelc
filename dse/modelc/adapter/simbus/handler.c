@@ -111,41 +111,74 @@ static void resolve_and_notify(
         _refresh_index(ch);
         log_simbus("  SignalVector --> [%s]", ch->name);
 
-        /* SignalVector table. */
-        notify(SignalVector_start(B));
-        notify(SignalVector_name_add(
-            B, flatbuffers_string_create_str(B, ch->name)));
-        notify(SignalVector_model_uid_add(B, am->model_uid));
+        uint32_t total_signals = ch->index.count;
+        if (total_signals == 0) {
+            resolve_channel(ch);
+            continue;
+        }
+        size_t scalar_count = 0;
+        size_t binary_count = 0;
 
-        /* Signal vector. */
-        size_t binary_signal_count = 0;
-        notify(SignalVector_signal_start(B));
-        for (uint32_t i = 0; i < ch->index.count; i++) {
-            SignalValue* sv = ch->index.map[i].signal;
-            if ((sv->val != sv->final_val) && sv->uid) {
-                notify(
-                    SignalVector_signal_push_create(B, sv->uid, sv->final_val));
-                log_simbus("    SignalValue: %u = %f [name=%s]", sv->uid,
-                    sv->final_val, sv->name);
-            }
-            if (sv->bin && sv->bin_size && sv->uid) {
-                /* Indicate that binary signals are present. */
-                binary_signal_count++;
+        flatbuffers_string_ref_t ch_name_ref =
+            flatbuffers_string_create_str(B, ch->name);
+
+#define SCALAR_CACHE_SIZE 128
+        /* Setup a cache for writing scalar signals, avoids churn. */
+        notify(Signal_t) scalar_cache[SCALAR_CACHE_SIZE];
+        size_t cache_idx = 0;
+
+        /* Pass 1: Build scalar changes locally and count binary signals. */
+        for (uint32_t idx = 0; idx < total_signals; idx++) {
+            SignalValue* sv = ch->index.map[idx].signal;
+            if (sv->uid) {
+                if (sv->val != sv->final_val) {
+                    if (scalar_count == 0) {
+                        notify(Signal_vec_start(B));
+                    }
+                    log_simbus("    SignalValue: %u = %f [name=%s]", sv->uid,
+                        sv->final_val, sv->name);
+                    notify(Signal_assign_to_pe(
+                        &scalar_cache[cache_idx], sv->uid, sv->final_val));
+                    cache_idx++;
+                    scalar_count++;
+                    if (cache_idx == SCALAR_CACHE_SIZE) {
+                        notify(Signal_vec_append(B, scalar_cache, cache_idx));
+                        cache_idx = 0;
+                    }
+                }
+                if (sv->bin && sv->bin_size) {
+                    binary_count++;
+                }
             }
         }
-        notify(SignalVector_signal_add(B, notify(SignalVector_signal_end(B))));
+        dse_schemas_fbs_notify_Signal_vec_ref_t scalar_vec = 0;
+        if (scalar_count > 0) {
+            if (cache_idx > 0) {
+                notify(Signal_vec_append(B, scalar_cache, cache_idx));
+            }
+            scalar_vec = notify(Signal_vec_end(B));
+        }
 
-        /* Binary Vector. */
-        if (binary_signal_count) {
+        /* SignalVector table initialization. */
+        notify(SignalVector_start(B));
+        notify(SignalVector_name_add(B, ch_name_ref));
+        notify(SignalVector_model_uid_add(B, am->model_uid));
+
+        /* Add the scalar changes as a single block. */
+        if (scalar_count > 0) {
+            notify(SignalVector_signal_add(B, scalar_vec));
+        }
+
+        /* Pass 2: Build binary changes. */
+        if (binary_count > 0) {
             notify(SignalVector_binary_signal_start(B));
-            for (uint32_t i = 0; i < ch->index.count; i++) {
-                SignalValue* sv = ch->index.map[i].signal;
+            for (uint32_t idx = 0; idx < ch->index.count; idx++) {
+                SignalValue* sv = ch->index.map[idx].signal;
                 if (sv->bin && sv->bin_size && sv->uid) {
-                    flatbuffers_uint8_vec_ref_t data =
+                    notify(SignalVector_binary_signal_push_create(B, sv->uid,
                         flatbuffers_uint8_vec_create(
-                            B, (uint8_t*)sv->bin, sv->bin_size);
-                    notify(SignalVector_binary_signal_push_create(
-                        B, sv->uid, data));
+                            B, (uint8_t*)sv->bin, sv->bin_size)));
+
                     log_simbus(
                         "    SignalValue: %u = <binary> (len=%u) [name=%s]",
                         sv->uid, sv->bin_size, sv->name);
@@ -154,9 +187,9 @@ static void resolve_and_notify(
             notify(SignalVector_binary_signal_add(
                 B, notify(SignalVector_binary_signal_end(B))));
         }
-        notify(SignalVector_vec_push(B, notify(SignalVector_end(B))));
 
-        /* Resolve the channel. */
+        /* SignalVector table completion. */
+        notify(SignalVector_vec_push(B, notify(SignalVector_end(B))));
         resolve_channel(ch);
     }
 
