@@ -9,6 +9,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include <stdio.h>
+#include <string.h>
 #include <time.h>
 #ifdef _WIN32
 #include <winsock2.h>
@@ -20,6 +21,7 @@
 #endif
 #include <dse/clib/collections/set.h>
 #include <dse/clib/collections/hashmap.h>
+#include <dse/clib/collections/vector.h>
 #include <dse/modelc/adapter/transport/endpoint.h>
 #include <dse/modelc/model.h>
 #include <dse/platform.h>
@@ -53,6 +55,11 @@ typedef struct AdapterVTable {
     AdapterStart    start;
     AdapterExit     exit;
     AdapterDestroy  destroy;
+
+    /* Mode indicator. */
+    struct {
+        bool flat_scalar;
+    } mode;
 } AdapterVTable;
 
 typedef AdapterVTable* (*AdapterVTableCreate)(void);
@@ -81,11 +88,31 @@ typedef struct SignalMap {
     SignalValue* signal;
 } SignalMap;
 
+typedef struct SignalValueIndexItem {
+    uint32_t     uid;
+    SignalValue* sv;
+} SignalValueIndexItem;
+
+typedef struct AdapterModelIndexItem {
+    uint32_t      uid;
+    AdapterModel* am;
+} AdapterModelIndexItem;
+
+static __inline__ int adapter_uid2am_compar(const void* a, const void* b)
+{
+    const AdapterModelIndexItem* x = a;
+    const AdapterModelIndexItem* y = b;
+    if (x->uid < y->uid) return -1;
+    if (x->uid > y->uid) return 1;
+    return 0;
+}
+
 
 typedef struct Channel {
     const char* name;
     void*       endpoint_channel;  // Reference to an Endpoint object.
     void*       mfc;               // Reference to ModelFunctionChannel object.
+    bool        is_binary;
 
     /* Signal properties. */
     HashMap signal_values;  // map{name:SignalValue}
@@ -96,8 +123,8 @@ typedef struct Channel {
         uint32_t   hash_code;
         /* Map used by _this_ channel (contains all signals). */
         SignalMap* map;
-        /* Hashmap Lookup. */
-        HashMap    uid2sv_lookup;
+        /* Vector Lookup. */
+        Vector     uid2sv_lookup;  // vector{SignalValueIndexItem}
     } index;
 
     /* Bus properties. */
@@ -105,6 +132,18 @@ typedef struct Channel {
     SimpleSet* model_ready_set;
     uint32_t   expected_model_count;
 } Channel;
+
+typedef struct ChannelIndexItem {
+    const char* name;
+    Channel*    ch;
+} ChannelIndexItem;
+
+static __inline__ int adapter_name2ch_compar(const void* a, const void* b)
+{
+    const ChannelIndexItem* x = a;
+    const ChannelIndexItem* y = b;
+    return strcmp(x->name, y->name);
+}
 
 
 typedef struct AdapterModel {
@@ -114,9 +153,7 @@ typedef struct AdapterModel {
     double   stop_time;
 
     /* Channel properties. */
-    HashMap  channels;  // map{name: Channel}.
-    char**   channels_keys;
-    uint32_t channels_length;
+    Vector channels;  // vector{ChannelIndexItem}
 
     /* Reference objects. */
     Adapter* adapter;
@@ -128,8 +165,9 @@ typedef struct AdapterModel {
 
 
 typedef struct Adapter {
-    bool    stop_request;
-    HashMap models;  // map{uid:AdapterModel}
+    bool   stop_request;
+    bool   sequential_cosim;
+    Vector models;  // vector{AdapterModelIndexItem}
 
     /* Adapter vtable, type may be extended. */
     AdapterVTable* vtable;
@@ -191,6 +229,9 @@ DLL_PRIVATE SignalMap* adapter_get_signal_map(AdapterModel* am,
     const char* channel_name, const char** signal_name, uint32_t signal_count);
 DLL_PRIVATE void adapter_dump_debug(Adapter* adapter, SimulationSpec* sim);
 DLL_PRIVATE void adapter_model_dump_debug(AdapterModel* am, const char* name);
+DLL_PRIVATE int  adapter_uid2sv_compar(const void* a, const void* b);
+DLL_PRIVATE AdapterModel* adapter_get_model(
+    Adapter* adapter, uint32_t model_uid);
 
 /* adapter_msg.c */
 DLL_PUBLIC AdapterVTable* adapter_create_msg_vtable(void);

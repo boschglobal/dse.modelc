@@ -48,9 +48,7 @@ static bool process_sbno_message(
             uint32_t model_uid = notify(ModelRegister_model_uid(t));
 
             /* Locate the Adapter Model. */
-            char hash_key[UID_KEY_LEN];
-            snprintf(hash_key, UID_KEY_LEN, "%d", model_uid);
-            AdapterModel* am = hashmap_get(&adapter->models, hash_key);
+            AdapterModel* am = adapter_get_model(adapter, model_uid);
             if (am == NULL) return false; /* Discard, not for this model. */
 
             /* Check. */
@@ -83,9 +81,7 @@ static bool process_sbno_message(
             uint32_t model_uid = flatbuffers_uint32_vec_at(vector, 0);
 
             /* Locate the channel objects. */
-            char hash_key[UID_KEY_LEN];
-            snprintf(hash_key, UID_KEY_LEN, "%d", model_uid);
-            AdapterModel* am = hashmap_get(&adapter->models, hash_key);
+            AdapterModel* am = adapter_get_model(adapter, model_uid);
             if (am == NULL) {
                 log_trace("Discard index, no model.");
                 return false; /* Discard, not for this model. */

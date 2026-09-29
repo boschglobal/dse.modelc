@@ -194,11 +194,8 @@ Adapter* simbus_adapter_create(Endpoint* endpoint, double bus_step_size)
 
     /* Create the Adapter Model object. */
     adapter->bus_adapter_model = calloc(1, sizeof(AdapterModel));
-    int rc = hashmap_init(&adapter->bus_adapter_model->channels);
-    if (rc) {
-        if (errno == 0) errno = ENOMEM;
-        log_fatal("Hashmap init failed for channels!");
-    }
+    adapter->bus_adapter_model->channels =
+        vector_make(sizeof(ChannelIndexItem), 0, adapter_name2ch_compar);
     adapter->bus_adapter_model->adapter = adapter;
     adapter->bus_adapter_model->model_uid = adapter->endpoint->uid;
 

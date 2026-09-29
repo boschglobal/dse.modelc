@@ -46,12 +46,12 @@ extern PduNetwork* model_pdunet_setup(SimulationSpec* sim,
 extern PduNetwork* pdunet_find(ModelInstanceSpec* mi, void* ncodec);
 
 
-static int _destroy_model_function(void* mf, void* additional_data)
+static int _destroy_model_function(void* item, void* additional_data)
 {
     UNUSED(additional_data);
 
-    /* This calls free() on the _mf object, add to hash with hashmap_set(). */
-    model_function_destroy((ModelFunction*)mf);
+    ModelFunctionIndexItem* mf_item = item;
+    model_function_destroy(mf_item->mf);
     return 0;
 }
 
@@ -88,9 +88,8 @@ static void _destroy_model_instances(SimulationSpec* sim)
         /* ControllerModel */
         ControllerModel* cm = mip->controller_model;
         if (cm) {
-            HashMap* mf_map = &cm->model_functions;
-            hashmap_iterator(mf_map, _destroy_model_function, true, NULL);
-            hashmap_destroy(mf_map);
+            vector_foreach(&cm->model_functions, _destroy_model_function, NULL);
+            vector_reset(&cm->model_functions);
             if (cm->handle) dlclose(cm->handle);
             free(cm);
             cm = NULL;
@@ -335,20 +334,13 @@ int modelc_configure(ModelCArguments* args, SimulationSpec* sim)
             modelc_configure_model(args, _instptr);
 
             /* Allocate a Controller Model object. */
-            int rc;
             mip->controller_model = calloc(1, sizeof(ControllerModel));
-            rc = hashmap_init(&mip->controller_model->model_functions);
-            if (rc) {
-                if (errno == 0) errno = ENOMEM;
-                log_fatal("Hashmap init failed for model_functions!");
-            }
+            mip->controller_model->model_functions = vector_make(
+                sizeof(ModelFunctionIndexItem), 0, controller_name2mf_compar);
             /* Allocate a Adapter Model object. */
             mip->adapter_model = calloc(1, sizeof(AdapterModel));
-            rc = hashmap_init(&mip->adapter_model->channels);
-            if (rc) {
-                if (errno == 0) errno = ENOMEM;
-                log_fatal("Hashmap init failed for channels!");
-            }
+            mip->adapter_model->channels = vector_make(
+                sizeof(ChannelIndexItem), 0, adapter_name2ch_compar);
             /* Allocate PDU Net vector. */
             mip->pdunet = vector_make(sizeof(PduNetwork*), 4, NULL);
 
@@ -405,12 +397,8 @@ static int _model_function_register(
     }
     mf->name = name;
     mf->step_size = step_size;
-    rc = hashmap_init(&mf->channels);
-    if (rc) {
-        log_error("Hashmap init failed for channels!");
-        if (errno == 0) errno = rc;
-        goto error_clean_up;
-    }
+    mf->channels = vector_make(
+        sizeof(ModelFunctionChannelIndexItem), 0, controller_name2mfc_compar);
     /* Register the object with the Controller. */
     rc = controller_register_model_function(model_instance, mf);
     if (rc && (errno != EEXIST)) goto error_clean_up;

@@ -38,16 +38,17 @@ static int32_t get_token(void)
 
 static int notify_encode_sv(void* value, void* data)
 {
-    AdapterModel*     am = value;
-    notify_spec_t*    notify_data = data;
-    flatcc_builder_t* B = notify_data->builder;
+    AdapterModelIndexItem* item = value;
+    AdapterModel*          am = item->am;
+    notify_spec_t*         notify_data = data;
+    flatcc_builder_t*      B = notify_data->builder;
     assert(B);
 
     log_simbus("Notify/ModelReady --> [...]");
     log_simbus("    model_time=%f", am->model_time);
 
     /* Process scalar channels directly to FBS vectors. */
-    for (uint32_t ch_idx = 0; ch_idx < am->channels_length; ch_idx++) {
+    for (uint32_t ch_idx = 0; ch_idx < vector_len(&am->channels); ch_idx++) {
         Channel* ch = _get_channel_byindex(am, ch_idx);
         assert(ch);
         _refresh_index(ch);
@@ -135,9 +136,10 @@ static int notify_encode_sv(void* value, void* data)
 
 static int notify_encode_model(void* value, void* data)
 {
-    AdapterModel*     am = value;
-    notify_spec_t*    notify_data = data;
-    flatcc_builder_t* B = notify_data->builder;
+    AdapterModelIndexItem* item = value;
+    AdapterModel*          am = item->am;
+    notify_spec_t*         notify_data = data;
+    flatcc_builder_t*      B = notify_data->builder;
     assert(B);
     flatbuffers_uint32_vec_push(B, &am->model_uid);
     notify_data->last_am = am;
@@ -158,7 +160,7 @@ static int adapter_msg_connect(
     AdapterMsgVTable* v = (AdapterMsgVTable*)adapter->vtable;
     flatcc_builder_t* B = &(v->builder);
 
-    for (uint32_t channel_index = 0; channel_index < am->channels_length;
+    for (uint32_t channel_index = 0; channel_index < vector_len(&am->channels);
         channel_index++) {
         Channel* ch = _get_channel_byindex(am, channel_index);
 
@@ -218,7 +220,7 @@ static int adapter_msg_register(AdapterModel* am)
     flatcc_builder_t* B = &(v->builder);
 
     /* SignalIndex on all channels. */
-    for (uint32_t channel_index = 0; channel_index < am->channels_length;
+    for (uint32_t channel_index = 0; channel_index < vector_len(&am->channels);
         channel_index++) {
         Channel* ch = _get_channel_byindex(am, channel_index);
 
@@ -309,12 +311,12 @@ static int adapter_msg_model_ready(Adapter* adapter)
 
     /* SignalVector vector. */
     notify(SignalVector_vec_start(B));
-    hashmap_iterator(&adapter->models, notify_encode_sv, true, &notify_data);
+    vector_foreach(&adapter->models, notify_encode_sv, &notify_data);
     notify(SignalVector_vec_ref_t) signals = notify(SignalVector_vec_end(B));
 
     /* Notify model_uid vector. */
     flatbuffers_uint32_vec_start(B);
-    hashmap_iterator(&adapter->models, notify_encode_model, true, &notify_data);
+    vector_foreach(&adapter->models, notify_encode_model, &notify_data);
     flatbuffers_uint32_vec_ref_t model_uids = flatbuffers_uint32_vec_end(B);
     AdapterModel*                am = notify_data.last_am;
     if (am == NULL) return 0;
@@ -360,7 +362,7 @@ static int adapter_msg_exit(AdapterModel* am)
     AdapterMsgVTable* v = (AdapterMsgVTable*)adapter->vtable;
     flatcc_builder_t* B = &(v->builder);
 
-    for (uint32_t channel_index = 0; channel_index < am->channels_length;
+    for (uint32_t channel_index = 0; channel_index < vector_len(&am->channels);
         channel_index++) {
         Channel* ch = _get_channel_byindex(am, channel_index);
         log_simbus("ModelExit --> [%s]", ch->name);
@@ -393,8 +395,9 @@ static int adapter_msg_exit(AdapterModel* am)
 
 static int notify_model(void* value, void* data)
 {
-    AdapterModel*  am = value;
-    notify_spec_t* notify_data = data;
+    AdapterModelIndexItem* item = value;
+    AdapterModel*          am = item->am;
+    notify_spec_t*         notify_data = data;
     am->bench_notifyrecv_ts = notify_data->notifyrecv_ts;
     notify(NotifyMessage_table_t) message = notify_data->message;
     log_simbus("Notify/ModelStart <-- [%u]", am->model_uid);
@@ -421,8 +424,10 @@ static int notify_model(void* value, void* data)
             continue;
         }
         const char* channel_name = notify(SignalVector_name(signal_vector));
-        Channel*    channel = hashmap_get(&am->channels, channel_name);
-        if (channel == NULL) continue;
+        ChannelIndexItem* item = vector_find(&am->channels,
+            &(ChannelIndexItem){ .name = channel_name, .ch = NULL }, 0, NULL);
+        if (item == NULL) continue;
+        Channel* channel = item->ch;
         log_simbus("  SignalVector <-- [%s]", channel->name);
 
         /* Process vector encoded binary signal data. */
@@ -489,16 +494,14 @@ static void handle_notify_message(
             notify(NotifyMessage_channel_name(notify_message));
         flatbuffers_uint32_vec_t vector =
             notify(NotifyMessage_model_uid(notify_message));
-        size_t vector_len = flatbuffers_uint32_vec_len(vector);
-        assert(vector_len == 1);
+        size_t _len = flatbuffers_uint32_vec_len(vector);
+        assert(_len == 1);
         uint32_t model_uid = flatbuffers_uint32_vec_at(vector, 0);
 
         /* Locate the channel objects. */
-        char hash_key[UID_KEY_LEN];
-        snprintf(hash_key, UID_KEY_LEN - 1, "%d", model_uid);
-        AdapterModel* am = hashmap_get(&adapter->models, hash_key);
+        AdapterModel* am = adapter_get_model(adapter, model_uid);
         if (am == NULL) return; /* Discard, not for this model. */
-        Channel* channel = hashmap_get(&am->channels, ch_name);
+        Channel* channel = _get_channel(am, ch_name);
         assert(channel);
 
         log_simbus("SignalIndex <-- [%s:%u]", channel->name, model_uid);
@@ -514,6 +517,9 @@ static void handle_notify_message(
         size_t v_len = notify(SignalLookup_vec_len(v));
 
         /* Update the indexes. */
+        Vector uid2sv_working;
+        uid2sv_working =
+            vector_make(sizeof(SignalValueIndexItem), 0, adapter_uid2sv_compar);
         for (uint32_t _vi = 0; _vi < v_len; _vi++) {
             /* Check the Lookup data is complete. */
             notify(SignalLookup_table_t) signal_lookup =
@@ -530,10 +536,27 @@ static void handle_notify_message(
             if (sv) {
                 sv->uid = signal_uid;
                 /* Add to the lookup index. */
-                hashmap_set_by_hash32(
-                    &channel->index.uid2sv_lookup, signal_uid, sv);
+                SignalValueIndexItem idx = { .uid = sv->uid, .sv = sv };
+                if (vector_find(&channel->index.uid2sv_lookup, &idx, 0, NULL) ==
+                    NULL) {
+                    vector_push(&uid2sv_working, &idx);
+                }
             }
         }
+        /* Merge new index items into the lookup vector. */
+        uint32_t last_uid = 0;
+        vector_sort(&uid2sv_working);
+        for (size_t i = 0; i < vector_len(&uid2sv_working); i++) {
+            SignalValueIndexItem idx;
+            if (vector_at(&uid2sv_working, i, &idx)) {
+                if (last_uid == idx.uid) continue;  // Duplicate.
+                vector_push(&channel->index.uid2sv_lookup, &idx);
+                last_uid = idx.uid;
+            }
+        }
+        vector_reset(&uid2sv_working);
+        /* Sort the lookup vector. */
+        vector_sort(&channel->index.uid2sv_lookup);
 
         return;
     }
@@ -550,7 +573,7 @@ static void handle_notify_message(
         .message = notify_message,
         .notifyrecv_ts = get_timespec_now(),
     };
-    hashmap_iterator(&adapter->models, notify_model, true, &notify_data);
+    vector_foreach(&adapter->models, notify_model, &notify_data);
 }
 
 

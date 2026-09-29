@@ -15,13 +15,26 @@
 #include <dse/modelc/adapter/adapter.h>
 #include <dse/modelc/runtime.h>
 
+typedef struct SimbusScalarModelRef {
+    void*    mfc;
+    uint32_t local_index;
+} SimbusScalarModelRef;
 
 typedef struct SimbusVector {
-    HashMap   index;  // map{signal:uint32_t} -> index to vectors
+    // map{signal:uint32_t} -> index to vectors
+    HashMap index;
+
     uint32_t  count;
     char**    signal;
     uint32_t* uid;
     double*   scalar;
+    uint32_t* changed_indices;
+    uint32_t  changed_count;
+    uint32_t  changed_capacity;
+    uint32_t* changed_generation;
+    uint32_t  generation;
+    bool      dense_changes;
+    Vector*   scalar_models;
     void**    binary;
     uint32_t* length;
     uint32_t* buffer_size;
@@ -30,6 +43,7 @@ typedef struct SimbusVector {
 
 typedef struct SimbusChannel {
     const char*  name;
+    bool         is_binary;
     SimpleSet    signals;
     SimbusVector vector;
 

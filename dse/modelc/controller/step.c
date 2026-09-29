@@ -48,6 +48,11 @@ static int _do_step_func(void* _mf, void* _step_data)
     return 0;
 }
 
+static int __model_function_step(void* item, void* data)
+{
+    ModelFunctionIndexItem* mf_item = item;
+    return _do_step_func(mf_item->mf, data);
+}
 
 int step_model(ModelInstanceSpec* mi, double* model_time)
 {
@@ -66,9 +71,10 @@ int step_model(ModelInstanceSpec* mi, double* model_time)
 
     /* Step the Model (i.e. call registered Model Functions). */
     mf_step_data    step_data = { mi, am->model_time, am->stop_time };
-    HashMap*        mf_map = &cm->model_functions;
     struct timespec stepcall_ts = get_timespec_now();
-    int rc = hashmap_iterator(mf_map, _do_step_func, false, &step_data);
+
+    int rc =
+        vector_foreach(&cm->model_functions, __model_function_step, &step_data);
     am->bench_steptime_ns = get_elapsedtime_ns(stepcall_ts);
 
     /* PDU Net - send to network. */
@@ -99,7 +105,9 @@ static Channel* _get_adapter_channel(ModelInstanceSpec* mi, const char* name)
 {
     ModelInstancePrivate* mip = mi->private;
     AdapterModel*         am = mip->adapter_model;
-    return hashmap_get(&am->channels, name);
+    ChannelIndexItem*     item = vector_find(&am->channels,
+            &(ChannelIndexItem){ .name = name, .ch = NULL }, 0, NULL);
+    return item ? item->ch : NULL;
 }
 
 static int _merge_backward_ch(void* _mfc, void* _spec)
@@ -129,11 +137,24 @@ static int _merge_backward_ch(void* _mfc, void* _spec)
 
     return 0;
 }
+static int __merge_backward_channel(void* item, void* data)
+{
+    ModelFunctionChannelIndexItem* mfc_item = item;
+    return _merge_backward_ch(mfc_item->mfc, data);
+}
+
 static int _merge_backward_mf(void* _mf, void* _spec)
 {
     ModelFunction* mf = _mf;
-    return hashmap_iterator(&mf->channels, _merge_backward_ch, false, _spec);
+    return vector_foreach(&mf->channels, __merge_backward_channel, _spec);
 }
+
+static int __merge_backward_model_function(void* item, void* data)
+{
+    ModelFunctionIndexItem* mf_item = item;
+    return _merge_backward_mf(mf_item->mf, data);
+}
+
 static void _merge_scalar_signals_backward(
     SimulationSpec* sim, ModelInstanceSpec* target)
 {
@@ -148,8 +169,8 @@ static void _merge_scalar_signals_backward(
             ModelInstancePrivate* mip = target->private;
             ControllerModel*      cm = mip->controller_model;
             merge_spec            spec = { _instptr, target };
-            hashmap_iterator(
-                &cm->model_functions, _merge_backward_mf, false, &spec);
+            vector_foreach(
+                &cm->model_functions, __merge_backward_model_function, &spec);
         }
     }
 }
@@ -181,11 +202,24 @@ static int _merge_forward_ch(void* _mfc, void* _spec)
 
     return 0;
 }
+static int __merge_forward_channel(void* item, void* data)
+{
+    ModelFunctionChannelIndexItem* mfc_item = item;
+    return _merge_forward_ch(mfc_item->mfc, data);
+}
+
 static int _merge_forward_mf(void* _mf, void* _spec)
 {
     ModelFunction* mf = _mf;
-    return hashmap_iterator(&mf->channels, _merge_forward_ch, false, _spec);
+    return vector_foreach(&mf->channels, __merge_forward_channel, _spec);
 }
+
+static int __merge_forward_model_function(void* item, void* data)
+{
+    ModelFunctionIndexItem* mf_item = item;
+    return _merge_forward_mf(mf_item->mf, data);
+}
+
 static void _merge_scalar_signals_forward(
     SimulationSpec* sim, ModelInstanceSpec* target)
 {
@@ -199,7 +233,8 @@ static void _merge_scalar_signals_forward(
         ModelInstancePrivate* mip = target->private;
         ControllerModel*      cm = mip->controller_model;
         merge_spec            spec = { _instptr, target };
-        hashmap_iterator(&cm->model_functions, _merge_forward_mf, false, &spec);
+        vector_foreach(
+            &cm->model_functions, __merge_forward_model_function, &spec);
     }
 }
 
