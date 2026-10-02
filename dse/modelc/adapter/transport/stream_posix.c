@@ -397,7 +397,7 @@ static int32_t _recv_message(
         if (received == 0) {
             return -ECONNRESET;
         } else if (received < 0) {
-            int error = stream_socket_errno();
+            int error = stream_socket_io_errno();
             if (error == EINTR || error == EAGAIN || error == EWOULDBLOCK) {
                 return -EAGAIN;
             }
@@ -420,7 +420,7 @@ static int32_t _send_msg(stream_socket_t fd, const void* buffer,
         ssize_t sent =
             send(fd, (const char*)data, (int)remaining, MSG_NOSIGNAL);
         if (sent < 0) {
-            int error = stream_socket_errno();
+            int error = stream_socket_io_errno();
             if (error == EINTR || error == EAGAIN || error == EWOULDBLOCK) {
                 if (backoff_ms == 1) {
                     /* First backoff on this call; report once (cheap,
@@ -433,7 +433,7 @@ static int32_t _send_msg(stream_socket_t fd, const void* buffer,
                 if (stream_time_ns() - start_ns >= timeout_ns) {
                     return -ETIME;
                 }
-                STREAM_SLEEP_MS(backoff_ms);
+                STREAM_SEND_BACKOFF(fd, backoff_ms);
                 if (backoff_ms < 50U) backoff_ms *= 2;
                 continue;
             }

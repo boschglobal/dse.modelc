@@ -45,6 +45,7 @@ typedef struct pollfd stream_pollfd_t;
 #define STREAM_POLL(fds, nfds, timeout_ms) poll((fds), (nfds), (timeout_ms))
 
 #define STREAM_SLEEP_MS(ms)                usleep((ms) * 1000U)
+#define STREAM_SEND_BACKOFF(fd, ms)        STREAM_SLEEP_MS(ms)
 #define STREAM_UNLINK(path)                unlink(path)
 
 #define STREAM_SOCKET_LOG_FORMAT           "%d"
@@ -60,6 +61,12 @@ static inline int stream_socket_startup(void)
 
 
 static inline int stream_socket_errno(void)
+{
+    return errno;
+}
+
+
+static inline int stream_socket_io_errno(void)
 {
     return errno;
 }

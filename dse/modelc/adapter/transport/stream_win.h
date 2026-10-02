@@ -22,6 +22,7 @@
 #include <afunix.h>
 #include <io.h>
 #include <windows.h>
+#include <dse/logger.h>
 
 
 typedef SOCKET    stream_socket_t;
@@ -50,6 +51,10 @@ typedef int socklen_t;
 
 #ifndef EMSGSIZE
 #define EMSGSIZE 90
+#endif
+
+#ifndef ENOPROTOOPT
+#define ENOPROTOOPT 92
 #endif
 
 #ifndef ENOTCONN
@@ -113,6 +118,7 @@ typedef int socklen_t;
     WSAPoll((fds), (ULONG)(nfds), (timeout_ms))
 
 #define STREAM_SLEEP_MS(ms)         Sleep(ms)
+#define STREAM_SEND_BACKOFF(fd, ms) stream_socket_wait_writable((fd), (ms))
 #define STREAM_UNLINK(path)         _unlink(path)
 
 #define STREAM_SOCKET_LOG_FORMAT    "%llu"
@@ -143,6 +149,9 @@ static inline void stream_socket_cleanup(void)
 }
 
 
+static inline int stream_socket_error_from_native(int error);
+
+
 static inline int stream_socket_startup(void)
 {
     static int initialized = 0;
@@ -151,7 +160,8 @@ static inline int stream_socket_startup(void)
         WSADATA wsa_data;
         int     rc = WSAStartup(MAKEWORD(2, 2), &wsa_data);
         if (rc != 0) {
-            return -rc;
+            log_error("WSAStartup failed: native error %d", rc);
+            return -stream_socket_error_from_native(rc);
         }
 
         if (atexit(stream_socket_cleanup) != 0) {
@@ -219,6 +229,15 @@ static inline int stream_socket_error_from_native(int error)
     case WSAEMSGSIZE:
         return EMSGSIZE;
 
+    case WSAENOPROTOOPT:
+        return ENOPROTOOPT;
+
+    case WSAEFAULT:
+        return EFAULT;
+
+    case WSAEMFILE:
+        return EMFILE;
+
     case WSAEADDRINUSE:
         return EADDRINUSE;
 
@@ -232,6 +251,7 @@ static inline int stream_socket_error_from_native(int error)
         return EIO;
 
     default:
+        log_error("Unmapped Winsock error %d, reporting as EIO", error);
         return EIO;
     }
 }
@@ -240,6 +260,16 @@ static inline int stream_socket_error_from_native(int error)
 static inline int stream_socket_errno(void)
 {
     return stream_socket_error_from_native(WSAGetLastError());
+}
+
+
+/* Winsock reports SO_RCVTIMEO/SO_SNDTIMEO expiry as WSAETIMEDOUT (POSIX uses
+   EAGAIN), use this variant for send()/recv() errors. */
+static inline int stream_socket_io_errno(void)
+{
+    int error = WSAGetLastError();
+    if (error == WSAETIMEDOUT) return EAGAIN;
+    return stream_socket_error_from_native(error);
 }
 
 
@@ -267,16 +297,33 @@ static inline int stream_socket_set_blocking(stream_socket_t fd)
 
 static inline int stream_configure_socket_buffers(stream_socket_t fd)
 {
-    int buffer_length = (int)STREAM_SOCKET_BUFFER_LENGTH;
+    static int reported = 0;
+    int        buffer_length = (int)STREAM_SOCKET_BUFFER_LENGTH;
 
-    if (setsockopt(fd, SOL_SOCKET, SO_SNDBUF, (const char*)&buffer_length,
-            sizeof(buffer_length)) == SOCKET_ERROR) {
-        return -stream_socket_errno();
-    }
+    /* All stream sockets pass here; keep them out of child processes. */
+    SetHandleInformation((HANDLE)fd, HANDLE_FLAG_INHERIT, 0);
 
-    if (setsockopt(fd, SOL_SOCKET, SO_RCVBUF, (const char*)&buffer_length,
-            sizeof(buffer_length)) == SOCKET_ERROR) {
-        return -stream_socket_errno();
+    /* Best effort: Windows AF_UNIX rejects SO_SNDBUF/SO_RCVBUF. */
+    setsockopt(fd, SOL_SOCKET, SO_SNDBUF, (const char*)&buffer_length,
+        sizeof(buffer_length));
+    setsockopt(fd, SOL_SOCKET, SO_RCVBUF, (const char*)&buffer_length,
+        sizeof(buffer_length));
+
+    if (!reported) {
+        int       snd_length = 0;
+        int       rcv_length = 0;
+        socklen_t option_length = sizeof(snd_length);
+        getsockopt(
+            fd, SOL_SOCKET, SO_SNDBUF, (char*)&snd_length, &option_length);
+        option_length = sizeof(rcv_length);
+        getsockopt(
+            fd, SOL_SOCKET, SO_RCVBUF, (char*)&rcv_length, &option_length);
+        if (snd_length < buffer_length || rcv_length < buffer_length) {
+            log_error("Stream socket buffers below requested size "
+                      "(requested=%d, snd=%d, rcv=%d)",
+                buffer_length, snd_length, rcv_length);
+        }
+        reported = 1;
     }
 
     return 0;
@@ -377,6 +424,18 @@ static inline int stream_listener_poll_error(const stream_pollfd_t* poll_fd)
 }
 
 
+/* Sleep() granularity is ~15ms, so wait on the socket instead. */
+static inline void stream_socket_wait_writable(
+    stream_socket_t fd, uint32_t timeout_ms)
+{
+    stream_pollfd_t poll_fd = {
+        .fd = fd,
+        .events = POLLOUT,
+    };
+    STREAM_POLL(&poll_fd, 1, (INT)timeout_ms);
+}
+
+
 static inline int stream_configure_socket_timeout(stream_socket_t fd)
 {
     DWORD timeout_ms = 1000;
@@ -437,6 +496,32 @@ static inline int32_t stream_getaddrinfo_error(int rc)
         return -EINVAL;
     }
 }
+
+
+/* The Windows CRT strerror() only knows errno values up to EILSEQ. */
+static inline const char* stream_strerror(int error)
+{
+    if (error == EAGAIN || error == EWOULDBLOCK)
+        return "Resource temporarily unavailable";
+    if (error == ETIMEDOUT) return "Connection timed out";
+    if (error == ETIME) return "Timer expired";
+    if (error == ECONNRESET) return "Connection reset by peer";
+    if (error == ECONNABORTED) return "Software caused connection abort";
+    if (error == ECONNREFUSED) return "Connection refused";
+    if (error == ENOTCONN) return "Transport endpoint is not connected";
+    if (error == ENOTSOCK) return "Socket operation on non-socket";
+    if (error == EMSGSIZE) return "Message too long";
+    if (error == ENOPROTOOPT) return "Protocol not available";
+    if (error == ENOBUFS) return "No buffer space available";
+    if (error == EOPNOTSUPP) return "Operation not supported";
+    if (error == EADDRINUSE) return "Address already in use";
+    if (error == EADDRNOTAVAIL) return "Cannot assign requested address";
+    if (error == EAFNOSUPPORT) return "Address family not supported";
+    if (error == EPROTONOSUPPORT) return "Protocol not supported";
+    return strerror(error);
+}
+
+#define strerror(error) stream_strerror(error)
 
 #else
 #error "stream_win.h must only be included on Windows"
