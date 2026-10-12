@@ -343,6 +343,49 @@ This file will be located relative to the simulation path.
 </details>
 
 
+### NCodec
+
+The builtin __NCodec__ (AB-Codec) may be replaced with a custom NCodec
+implementation by specifying a NCodec library path in the
+`runtime:ncodec:lib_path` property of the simulation stack.
+The specified NCodec library will be used by all models in the simulation.
+
+
+##### Example Stack with NCodec Library Path Specified
+
+<details>
+<summary>simulation.yaml</summary>
+
+```yaml
+---
+kind: Stack
+metadata:
+  name: simulation
+spec:
+  runtime:
+    ncodec:
+      lib_path: lib/ncodec/custom-ab-codec.so
+  models:
+    - name: simbus
+      model:
+        name: simbus
+      channels:
+        - name: data_channel
+          expectedModelCount: 1
+    - name: counter
+      uid: 1
+      model:
+        name: Counter
+      runtime:
+        files:
+          - data/signalgroup.yaml
+      channels:
+        - name: data_channel
+          alias: data
+```
+</details>
+
+
 
 ## Simer Tool
 

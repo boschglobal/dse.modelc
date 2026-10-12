@@ -61,13 +61,61 @@ install(TARGETS ncodec_pdu
     COMPONENT
         ncodec
 )
-
 install(
     FILES
         model.yaml
         simulation.yaml
     DESTINATION
         ${MODEL_PATH}/data
+    COMPONENT
+        ncodec
+)
+
+
+set(MODEL_PATH "examples/ncodec_custom")
+add_library(ncodec_custom SHARED
+    custom_codec.c
+)
+target_compile_definitions(ncodec_custom PRIVATE DLL_BUILD)
+target_link_libraries(ncodec_custom
+    PRIVATE
+        ab-codec-impl
+)
+set_target_properties(ncodec_custom
+    PROPERTIES
+        PREFIX ""
+)
+install(TARGETS ncodec_custom
+    LIBRARY DESTINATION
+        ${MODEL_PATH}/lib
+    RUNTIME DESTINATION
+        ${MODEL_PATH}/lib
+    COMPONENT
+        ncodec
+)
+install(TARGETS ncodec_can ncodec_pdu
+    LIBRARY DESTINATION
+        ${MODEL_PATH}/lib
+    RUNTIME DESTINATION
+        ${MODEL_PATH}/lib
+    COMPONENT
+        ncodec
+)
+install(
+    FILES
+        model.yaml
+    DESTINATION
+        ${MODEL_PATH}/data
+    COMPONENT
+        ncodec
+)
+install(
+    FILES
+        custom_simulation.yaml
+    DESTINATION
+        ${MODEL_PATH}/data
+    RENAME
+        simulation.yaml
     COMPONENT
         ncodec
 )

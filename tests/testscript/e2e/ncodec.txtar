@@ -66,6 +66,38 @@ stdout '\(ncodec_can\) 0.001500 \[1:24:3\] RX 3eb 1 29 :'
 ! stdout '\(ncodec_can\) 0.002000 \[1:24:3\] TX 3ed 1 29 :'
 
 
+# TEST: ncodec_load custom ncodec library.
+env SIM=dse/modelc/build/_out/examples/ncodec_custom
+exec sh -e $WORK/test.sh
+
+stderr 'Using Valgrind'
+stdout 'Load YAML File: data/simulation.yaml'
+stdout 'Loading symbol: model_create ... ok'
+stdout 'Loading symbol: model_step ... ok'
+stdout 'Loading symbol: model_destroy ... not found'
+stdout 'Run the Simulation ...'
+stdout 'Controller exit ...'
+
+stdout '\[ncodec_pdu\] NCodec:'
+stdout '\[ncodec_pdu\]   Lib: lib/ncodec_custom.so'
+stdout '\[ncodec_pdu\] Custom DLL: read'
+stdout '\[ncodec_pdu\] Custom DLL: write'
+stdout '\[ncodec_can\] NCodec:'
+stdout '\[ncodec_can\]   Lib: lib/ncodec_custom.so'
+! stdout '\[ncodec_can\] Custom DLL: read'
+! stdout '\[ncodec_can\] Custom DLL: write'
+
+stdout 'RX \(03e9\): Hello World! from node_id=24'
+stdout 'RX \(03ea\): Hello World! from node_id=24'
+stdout 'RX \(03eb\): Hello World! from node_id=24'
+stdout 'RX \(03ec\): Hello World! from node_id=24'
+
+stdout 'RX \(000003e9\): Hello World! from swc_id=47'
+stdout 'RX \(000003ea\): Hello World! from swc_id=47'
+stdout 'RX \(000003eb\): Hello World! from swc_id=47'
+stdout 'RX \(000003ec\): Hello World! from swc_id=47'
+
+
 -- test.sh --
 SIMER="${SIMER:-ghcr.io/boschglobal/dse-simer:latest}"
 docker run --name simer -i --rm -v $ENTRYHOSTDIR/$SIM:/sim \

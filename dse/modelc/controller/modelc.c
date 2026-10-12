@@ -23,6 +23,7 @@
 #include <dse/modelc/controller/model_private.h>
 #include <dse/modelc/model/lua.h>
 #include <dse/modelc/schema.h>
+#include <dse/ncodec/codec.h>
 #include <dse/pdunet/pdunet.h>
 #include <dse/modelc/model.h>
 
@@ -318,6 +319,20 @@ int modelc_configure(ModelCArguments* args, SimulationSpec* sim)
     if (sim->timeout <= 0) sim->timeout = MODEL_TIMEOUT;
     if (sim->step_size > sim->end_time) {
         log_fatal("Step Size is greater than End Time!");
+    }
+
+    /* Load custom NCodec library. */
+    const char* ncodec_lib_path = NULL;
+    dse_yaml_get_string(
+        sim->spec, "spec/runtime/ncodec/lib_path", &ncodec_lib_path);
+    if (ncodec_lib_path != NULL) {
+        if (ncodec_load(ncodec_lib_path, NULL) == 0) {
+            log_notice("NCodec:");
+            log_notice("  Lib: %s", ncodec_lib_path);
+        } else {
+            log_error("Unable to load configured NCodec Lib (path=%s)",
+                ncodec_lib_path);
+        }
     }
 
     /* Configure the Instance objects. */
