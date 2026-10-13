@@ -71,10 +71,6 @@ static Channel* _create_channel(AdapterModel* am, const char* channel_name)
                 am->adapter->endpoint, ch->name);
         }
     }
-    /* Allocate index objects. Initialize uid vector for lookups. */
-    ch->index.uid2sv_lookup =
-        vector_make(sizeof(SignalValueIndexItem), 0, adapter_uid2sv_compar);
-
     /* Add the new Channel to the lookup vector. */
     ChannelIndexItem new_item = { .name = ch->name, .ch = ch };
     vector_push(&am->channels, &new_item);
@@ -82,7 +78,6 @@ static Channel* _create_channel(AdapterModel* am, const char* channel_name)
     return ch;
 
 error_clean_up:
-    vector_reset(&ch->index.uid2sv_lookup);
     free(ch);
     return NULL;
 }

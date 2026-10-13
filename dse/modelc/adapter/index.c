@@ -3,15 +3,14 @@
 // SPDX-License-Identifier: Apache-2.0
 
 #include <assert.h>
+#include <errno.h>
 #include <stdlib.h>
 #include <stdint.h>
 #include <string.h>
 #include <dse/logger.h>
 #include <dse/modelc/adapter/adapter.h>
 #include <dse/modelc/adapter/private.h>
-
-
-#define HASH_UID_KEY_LEN (10 + 1)
+#include <dse/modelc/adapter/uid_index.h>
 
 
 /*
@@ -32,7 +31,8 @@ void _destroy_index(Channel* channel)
         channel->index.map = NULL;
     }
     channel->index.count = 0;
-    vector_reset(&channel->index.uid2sv_lookup);
+    signal_value_uid_index_destroy(channel->index.uid2sv_lookup);
+    channel->index.uid2sv_lookup = NULL;
 }
 
 void _generate_index(Channel* channel)
@@ -58,16 +58,6 @@ void _invalidate_index(Channel* channel)
 void _refresh_index(Channel* channel)
 {
     if (channel->index.names == NULL) _generate_index(channel);
-}
-
-
-int adapter_uid2sv_compar(const void* a, const void* b)
-{
-    const SignalValueIndexItem* x = a;
-    const SignalValueIndexItem* y = b;
-    if (x->uid < y->uid) return -1;
-    if (x->uid > y->uid) return 1;
-    return 0;
 }
 
 
@@ -106,21 +96,18 @@ Signal related internal API
 SignalValue* _find_signal_by_uid(Channel* channel, uint32_t uid)
 {
     if (uid == 0) return NULL;
-    SignalValueIndexItem* idx = vector_find(&channel->index.uid2sv_lookup,
-        &(SignalValueIndexItem){ .uid = uid, .sv = NULL }, 0, NULL);
-    if (idx != NULL) {
-        assert(idx->sv);
-        return idx->sv;
-    }
+    SignalValue* indexed_signal =
+        signal_value_uid_index_find(channel->index.uid2sv_lookup, uid);
+    if (indexed_signal != NULL) return indexed_signal;
 
     /* Fallback, linear search (UID is updated by Simbus messages). */
     SignalValue* sv = NULL;
     for (unsigned int i = 0; i < channel->index.count; i++) {
         sv = channel->index.map[i].signal;
         if (sv->uid == uid) {
-            vector_push(&channel->index.uid2sv_lookup,
-                &(SignalValueIndexItem){ .uid = uid, .sv = sv });
-            vector_sort(&channel->index.uid2sv_lookup);
+            signal_value_uid_index_insert(
+                &channel->index.uid2sv_lookup, uid, sv);
+            errno = 0;
             return sv;
         }
     }
@@ -163,35 +150,16 @@ SignalMap* _get_signal_value_map(
     Channel* channel, const char** signal_name, uint32_t signal_count)
 {
     SignalMap* sm = calloc(signal_count, sizeof(SignalMap));
-    Vector     uid2sv_working;
-    uid2sv_working =
-        vector_make(sizeof(SignalValueIndexItem), 0, adapter_uid2sv_compar);
     for (uint32_t i = 0; i < signal_count; i++) {
         SignalValue* sv = _get_signal_value(channel, signal_name[i]);
         sm[i].name = signal_name[i];
         sm[i].signal = sv;
         /* Add to the lookup index. */
         if (sv->uid) {
-            SignalValueIndexItem idx = { .uid = sv->uid, .sv = sv };
-            if (vector_find(&channel->index.uid2sv_lookup, &idx, 0, NULL) ==
-                NULL) {
-                vector_push(&uid2sv_working, &idx);
-            }
+            signal_value_uid_index_insert(
+                &channel->index.uid2sv_lookup, sv->uid, sv);
         }
     }
-    /* Merge new index items into the lookup vector. */
-    uint32_t last_uid = 0;
-    vector_sort(&uid2sv_working);
-    for (size_t i = 0; i < vector_len(&uid2sv_working); i++) {
-        SignalValueIndexItem idx;
-        if (vector_at(&uid2sv_working, i, &idx)) {
-            if (last_uid == idx.uid) continue;  // Duplicate.
-            vector_push(&channel->index.uid2sv_lookup, &idx);
-            last_uid = idx.uid;
-        }
-    }
-    vector_reset(&uid2sv_working);
-    /* Sort the lookup vector. */
-    vector_sort(&channel->index.uid2sv_lookup);
+    errno = 0;
     return sm;
 }

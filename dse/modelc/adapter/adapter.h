@@ -83,15 +83,12 @@ typedef struct SignalValue {
     uint32_t bin_buffer_size;
 } SignalValue;
 
+typedef struct SignalValueUidIndex SignalValueUidIndex;
+
 typedef struct SignalMap {
     const char*  name;
     SignalValue* signal;
 } SignalMap;
-
-typedef struct SignalValueIndexItem {
-    uint32_t     uid;
-    SignalValue* sv;
-} SignalValueIndexItem;
 
 typedef struct AdapterModelIndexItem {
     uint32_t      uid;
@@ -118,13 +115,13 @@ typedef struct Channel {
     HashMap signal_values;  // map{name:SignalValue}
     struct {
         /* Index supporting the signal_values hash. */
-        char**     names;
-        uint32_t   count;
-        uint32_t   hash_code;
+        char**               names;
+        uint32_t             count;
+        uint32_t             hash_code;
         /* Map used by _this_ channel (contains all signals). */
-        SignalMap* map;
-        /* Vector Lookup. */
-        Vector     uid2sv_lookup;  // vector{SignalValueIndexItem}
+        SignalMap*           map;
+        /* Open-addressed UID lookup index. */
+        SignalValueUidIndex* uid2sv_lookup;
     } index;
 
     /* Bus properties. */
@@ -229,7 +226,6 @@ DLL_PRIVATE SignalMap* adapter_get_signal_map(AdapterModel* am,
     const char* channel_name, const char** signal_name, uint32_t signal_count);
 DLL_PRIVATE void adapter_dump_debug(Adapter* adapter, SimulationSpec* sim);
 DLL_PRIVATE void adapter_model_dump_debug(AdapterModel* am, const char* name);
-DLL_PRIVATE int  adapter_uid2sv_compar(const void* a, const void* b);
 DLL_PRIVATE AdapterModel* adapter_get_model(
     Adapter* adapter, uint32_t model_uid);
 

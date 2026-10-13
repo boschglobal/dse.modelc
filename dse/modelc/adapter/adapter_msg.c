@@ -3,14 +3,17 @@
 // SPDX-License-Identifier: Apache-2.0
 
 #include <assert.h>
+#include <errno.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdbool.h>
 #include <stdint.h>
+#include <string.h>
 #include <dse/logger.h>
 #include <dse/clib/util/strings.h>
 #include <dse/modelc/adapter/adapter.h>
 #include <dse/modelc/adapter/message.h>
+#include <dse/modelc/adapter/uid_index.h>
 #include <dse/modelc/adapter/timer.h>
 #include <dse/modelc/adapter/private.h>
 #include <dse/modelc/controller/model_private.h>
@@ -516,10 +519,7 @@ static void handle_notify_message(
         notify(SignalLookup_vec_t) v = notify(SignalIndex_indexes(t));
         size_t v_len = notify(SignalLookup_vec_len(v));
 
-        /* Update the indexes. */
-        Vector uid2sv_working;
-        uid2sv_working =
-            vector_make(sizeof(SignalValueIndexItem), 0, adapter_uid2sv_compar);
+        /* Update signal UIDs and their lookup index. */
         for (uint32_t _vi = 0; _vi < v_len; _vi++) {
             /* Check the Lookup data is complete. */
             notify(SignalLookup_table_t) signal_lookup =
@@ -533,30 +533,12 @@ static void handle_notify_message(
             if (signal_uid == 0) continue;
             /* Update the Adapter signal_value array. */
             SignalValue* sv = hashmap_get(&channel->signal_values, signal_name);
-            if (sv) {
-                sv->uid = signal_uid;
-                /* Add to the lookup index. */
-                SignalValueIndexItem idx = { .uid = sv->uid, .sv = sv };
-                if (vector_find(&channel->index.uid2sv_lookup, &idx, 0, NULL) ==
-                    NULL) {
-                    vector_push(&uid2sv_working, &idx);
-                }
-            }
+            if (sv == NULL) continue;
+            sv->uid = signal_uid;
+            signal_value_uid_index_insert(
+                &channel->index.uid2sv_lookup, signal_uid, sv);
         }
-        /* Merge new index items into the lookup vector. */
-        uint32_t last_uid = 0;
-        vector_sort(&uid2sv_working);
-        for (size_t i = 0; i < vector_len(&uid2sv_working); i++) {
-            SignalValueIndexItem idx;
-            if (vector_at(&uid2sv_working, i, &idx)) {
-                if (last_uid == idx.uid) continue;  // Duplicate.
-                vector_push(&channel->index.uid2sv_lookup, &idx);
-                last_uid = idx.uid;
-            }
-        }
-        vector_reset(&uid2sv_working);
-        /* Sort the lookup vector. */
-        vector_sort(&channel->index.uid2sv_lookup);
+        errno = 0;
 
         return;
     }

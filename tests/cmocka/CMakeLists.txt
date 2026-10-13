@@ -132,6 +132,7 @@ set(DSE_MODELC_SOURCE_FILES
     ${DSE_MODELC_SOURCE_DIR}/controller/transform.c
 
     ${DSE_MODELC_SOURCE_DIR}/adapter/index.c
+    ${DSE_MODELC_SOURCE_DIR}/adapter/uid_index.c
     ${DSE_MOCKS_SOURCE_DIR}/simmock.c
 )
 
@@ -163,6 +164,7 @@ set(DSE_MODELC_SIMBUS_LOOPBACK_SOURCE_FILES
     ${DSE_MODELC_SOURCE_DIR}/adapter/adapter_loopb.c
     ${DSE_MODELC_SOURCE_DIR}/adapter/create.c
     ${DSE_MODELC_SOURCE_DIR}/adapter/index.c
+    ${DSE_MODELC_SOURCE_DIR}/adapter/uid_index.c
 
     ${DSE_MOCKS_SOURCE_DIR}/adaptermock.c
 )
@@ -298,6 +300,7 @@ add_executable(test_simbus_loopback
     simbus/mock.c
     simbus/test_direct_index.c
     simbus/test_map_index.c
+    simbus/test_uid_index.c
     ${DSE_CLIB_SOURCE_FILES}
     ${DSE_MODELC_SIMBUS_LOOPBACK_SOURCE_FILES}
 )

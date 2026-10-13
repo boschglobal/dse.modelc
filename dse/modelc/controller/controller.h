@@ -81,7 +81,7 @@ typedef struct ModelFunctionChannel {
     SignalTransform* signal_transform;
 
     /* Signal Annotation reference (to YAML nodes). */
-    void** signal_annotation;
+    void**  signal_annotation;
     HashMap signal_annotation_map;
 } ModelFunctionChannel;
 
