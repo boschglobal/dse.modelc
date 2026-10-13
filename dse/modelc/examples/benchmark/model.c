@@ -121,6 +121,7 @@ ModelDesc* model_create(ModelDesc* model)
     }
 
     /* Return the extended object. */
+    errno = 0;
     return (ModelDesc*)m;
 }
 

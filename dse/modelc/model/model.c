@@ -27,6 +27,7 @@ typedef struct __signal_list_t {
     uint32_t         length;
     SignalTransform* transform;
     YamlNode**       annotation;
+    HashMap          annotation_map;
 } __signal_list_t;
 
 
@@ -42,31 +43,26 @@ void model_function_destroy(ModelFunction* model_function)
         for (size_t i = 0; i < vector_len(&model_function->channels); i++) {
             ModelFunctionChannelIndexItem* item =
                 vector_at(&model_function->channels, i, NULL);
+            if (item == NULL || item->mfc == NULL) continue;
+
             ModelFunctionChannel* _mfc = item->mfc;
-            if (_mfc && _mfc->signal_value_double)
-                free(_mfc->signal_value_double);
-            if (_mfc && _mfc->signal_value_double_shadow)
-                free(_mfc->signal_value_double_shadow);
-            if (_mfc && _mfc->signal_value_binary) {
+            free(_mfc->signal_value_double);
+            free(_mfc->signal_value_double_shadow);
+            if (_mfc->signal_value_binary) {
                 for (uint32_t _ = 0; _ < _mfc->signal_count; _++) {
-                    if ((void*)_mfc->signal_value_binary[_])
-                        free((void*)_mfc->signal_value_binary[_]);
+                    free(_mfc->signal_value_binary[_]);
                 }
-                free(_mfc->signal_value_binary);
             }
-            if (_mfc && _mfc->signal_value_binary_size)
-                free(_mfc->signal_value_binary_size);
-            if (_mfc && _mfc->signal_value_binary_buffer_size)
-                free(_mfc->signal_value_binary_buffer_size);
-            if (_mfc && _mfc->signal_value_binary_reset_called)
-                free(_mfc->signal_value_binary_reset_called);
+            free(_mfc->signal_value_binary);
+            free(_mfc->signal_value_binary_size);
+            free(_mfc->signal_value_binary_buffer_size);
+            free(_mfc->signal_value_binary_reset_called);
             model_function_channel_free_flat_sync(_mfc);
-            if (_mfc && _mfc->signal_names) {
-                free(_mfc->signal_names);
-            }
-            if (_mfc && _mfc->signal_map) free(_mfc->signal_map);
-            if (_mfc && _mfc->signal_transform) free(_mfc->signal_transform);
-            if (_mfc && _mfc->signal_annotation) free(_mfc->signal_annotation);
+            free(_mfc->signal_names);
+            free(_mfc->signal_map);
+            free(_mfc->signal_transform);
+            free(_mfc->signal_annotation);
+            hashmap_destroy(&_mfc->signal_annotation_map);
             free(_mfc);
         }
         vector_reset(&model_function->channels);
@@ -296,6 +292,11 @@ void _load_signals(ModelInstanceSpec* model_instance, ChannelSpec* channel_spec,
 
     *vector_type = handler_data.signal_vector_type;
 
+    if (hashmap_number_keys(handler_data.annotation_map) > 0) {
+        signal_list->annotation_map = handler_data.annotation_map;
+        handler_data.annotation_map = (HashMap){ 0 };
+    }
+
     /* Clear handler related storage. */
     schema_release_selector(selector);
     hashlist_destroy(&handler_data.signal_list);
@@ -402,6 +403,7 @@ int model_configure_channel(ModelInstanceSpec* model_instance, const char* name,
     } else {
         log_error("Unsupported signal vector type! No signals available for "
                   "channel!");
+        hashmap_destroy(&signal_list.annotation_map);
         return 1;
     }
 
@@ -409,6 +411,7 @@ int model_configure_channel(ModelInstanceSpec* model_instance, const char* name,
     mfc->signal_count = signal_list.length;
     mfc->signal_names = signal_list.names;
     mfc->signal_transform = signal_list.transform;
+    mfc->signal_annotation_map = signal_list.annotation_map;
     mfc->scalar_sync.enabled =
         mfc->signal_transform == NULL && mfc->scalar_sync.capable;
     if (mfc->scalar_sync.enabled) {

@@ -60,20 +60,11 @@ const char* controller_get_signal_annotation(
     ModelFunctionChannel* mfc, const char* signal_name, const char* name)
 {
     if (mfc == NULL) return NULL;
-    if (mfc->signal_names == NULL) return NULL;
-    if (mfc->signal_annotation == NULL) return NULL;
     assert(signal_name);
     assert(name);
 
-    for (uint32_t i = 0; i < mfc->signal_count; i++) {
-        if (strcmp(mfc->signal_names[i], signal_name) == 0) {
-            const char* value = NULL;
-            if (mfc->signal_annotation[i]) {
-                value = dse_yaml_get_scalar(mfc->signal_annotation[i], name);
-            }
-            return value;
-        }
-    }
-
-    return NULL;
+    if (hashmap_number_keys(mfc->signal_annotation_map) == 0) return NULL;
+    YamlNode* annotation =
+        hashmap_get(&mfc->signal_annotation_map, signal_name);
+    return annotation ? dse_yaml_get_scalar(annotation, name) : NULL;
 }
