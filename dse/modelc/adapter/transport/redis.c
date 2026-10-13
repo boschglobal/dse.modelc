@@ -428,18 +428,8 @@ int32_t redis_send_fbs(Endpoint* endpoint, void* endpoint_channel, void* buffer,
         _check_free_reply(_);
     } else {
         if (endpoint->bus_mode) {
-            HashMap* push_hash;
-            if (model_uid == 0) {
-                push_hash = &redis_ep->notify_push_hash;
-            } else {
-                push_hash = &redis_ep->push_hash;
-            }
-
-            /* Sending a Notify Message to each model. */
-            char**   keys = hashmap_keys(push_hash);
-            uint32_t count = hashmap_number_keys((*push_hash));
-            for (uint32_t i = 0; i < count; i++) {
-                RedisKeyDesc* push_desc = hashmap_get(push_hash, keys[i]);
+            if (model_uid != 0) {
+                RedisKeyDesc* push_desc = _get_push_key(endpoint, model_uid);
                 if (redis_ep->async_ctx) {
                     redisAsyncCommand(redis_ep->async_ctx, NULL, NULL,
                         "LPUSH %s %b", push_desc->endpoint, buffer,
@@ -449,11 +439,29 @@ int32_t redis_send_fbs(Endpoint* endpoint, void* endpoint_channel, void* buffer,
                         push_desc->endpoint, buffer, (size_t)buffer_length);
                     _check_free_reply(_);
                 }
+            } else {
+                /* Broadcast Notify Messages to registered notify endpoints. */
+                char**   keys = hashmap_keys(&redis_ep->notify_push_hash);
+                uint32_t count =
+                    hashmap_number_keys(redis_ep->notify_push_hash);
+                for (uint32_t i = 0; i < count; i++) {
+                    RedisKeyDesc* push_desc =
+                        hashmap_get(&redis_ep->notify_push_hash, keys[i]);
+                    if (redis_ep->async_ctx) {
+                        redisAsyncCommand(redis_ep->async_ctx, NULL, NULL,
+                            "LPUSH %s %b", push_desc->endpoint, buffer,
+                            (size_t)buffer_length);
+                    } else {
+                        redisReply* _ = redisCommand(redis_ep->ctx,
+                            "LPUSH %s %b", push_desc->endpoint, buffer,
+                            (size_t)buffer_length);
+                        _check_free_reply(_);
+                    }
+                }
+                for (uint32_t i = 0; i < count; i++)
+                    free(keys[i]);
+                free(keys);
             }
-            for (uint32_t _ = 0; _ < count; _++)
-                free(keys[_]);
-            free(keys);
-
         } else {
             RedisKeyDesc* push_desc = _get_push_key(endpoint, model_uid);
             if (redis_ep->async_ctx) {
@@ -509,7 +517,9 @@ int32_t redis_recv_fbs(Endpoint* endpoint, const char** channel_name,
     RedisEndpoint* redis_ep = (RedisEndpoint*)endpoint->private;
     assert(redis_ep->ctx);
 
-    int timeout_counter = (int32_t)redis_ep->recv_timeout + 1;
+    double recv_timeout =
+        endpoint->bus_mode ? BUS_TIMEOUT : redis_ep->recv_timeout;
+    int timeout_counter = (int32_t)recv_timeout + 1;
 
 
     *channel_name = NULL; /* Set the default return condition. */

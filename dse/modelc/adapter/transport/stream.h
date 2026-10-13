@@ -35,6 +35,7 @@ typedef struct StreamMessage {
 typedef struct StreamInstance {
     stream_socket_t fd;
     uint32_t        uid;
+    Vector          model_uids; /* Model UIDs registered on this connection. */
 
     /* Incremental receive buffer. */
     struct {
@@ -49,13 +50,14 @@ typedef struct StreamEndpoint {
     const char*             uri;
     struct sockaddr_storage addr;
     socklen_t               addr_len;
+    Vector                  rx_messages; /* Complete framed messages. */
 
     /* Active stream connections. */
     struct {
-        StreamInstance simbus;
-        Vector         models;      /* StreamInstance */
-        Vector         poll_fds;    /* struct stream_pollfd_t */
-        Vector         rx_messages; /* StreamMessage */
+        StreamInstance  simbus;
+        Vector          models;   /* StreamInstance */
+        Vector          poll_fds; /* struct stream_pollfd_t */
+        stream_socket_t current_rx_fd;
 
         /* Diagnostic counters. */
         struct {
@@ -109,6 +111,7 @@ int32_t stream_posix_send_fbs(Endpoint* endpoint, void* endpoint_channel,
 int32_t stream_posix_recv_fbs(Endpoint* endpoint, const char** channel_name,
     uint8_t** buffer, uint32_t* buffer_length);
 void    stream_posix_disconnect(Endpoint* endpoint);
+void    stream_register_model_uid(Endpoint* endpoint, uint32_t model_uid);
 
 
 /* Internal helpers. */

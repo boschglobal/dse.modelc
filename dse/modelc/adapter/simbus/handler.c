@@ -273,6 +273,9 @@ void simbus_handle_notify_message(
         log_simbus("    token=%d", token);
 
         Endpoint* endpoint = adapter->endpoint;
+        if (endpoint && endpoint->register_model_uid) {
+            endpoint->register_model_uid(endpoint, model_uid);
+        }
         if (endpoint && endpoint->register_notify_uid) {
             if (notify_uid) {
                 endpoint->register_notify_uid(endpoint, notify_uid);
@@ -318,7 +321,7 @@ void simbus_handle_notify_message(
             notify(NotifyMessage_model_register_add(B, model_register));
             notify(NotifyMessage_ref_t) message = notify(NotifyMessage_end(B));
 
-            send_notify_message(adapter, 0, message);
+            send_notify_message(adapter, model_uid, message);
         }
 
         return; /* No additional processing. */
@@ -414,7 +417,7 @@ void simbus_handle_notify_message(
         notify(NotifyMessage_signal_index_add(B, signal_index));
         notify(NotifyMessage_ref_t) message = notify(NotifyMessage_end(B));
 
-        send_notify_message(adapter, 0, message);
+        send_notify_message(adapter, model_uid, message);
         free(resp__signal_lookup_list);
 
         return; /* No additional processing. */

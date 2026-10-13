@@ -273,6 +273,19 @@ static inline int stream_socket_io_errno(void)
 }
 
 
+static inline int stream_socket_bytes_available(
+    stream_socket_t fd, uint32_t* available)
+{
+    u_long count = 0;
+    if (ioctlsocket(fd, FIONREAD, &count) == SOCKET_ERROR) {
+        return -stream_socket_errno();
+    }
+
+    *available = (uint32_t)count;
+    return 0;
+}
+
+
 static inline int stream_socket_set_nonblocking(stream_socket_t fd)
 {
     u_long enabled = 1;

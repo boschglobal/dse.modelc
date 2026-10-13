@@ -13,6 +13,7 @@
 
 #define MAX_URI_LEN           2048
 #define URI_SCHEME_DELIM      "://"
+#define BUS_TIMEOUT           1
 
 #define TRANSPORT_REDISPUBSUB "redispubsub"
 #define TRANSPORT_REDIS       "redis"
@@ -35,6 +36,8 @@ typedef void (*EndpointInterruptFunc)(Endpoint* endpoint);
 typedef void (*EndpointDisconnectFunc)(Endpoint* endpoint);
 typedef void (*EndpointRegisterNotifyUid)(
     Endpoint* endpoint, uint32_t notify_uid);
+typedef void (*EndpointRegisterModelUid)(
+    Endpoint* endpoint, uint32_t model_uid);
 
 
 typedef enum EndpointKind {
@@ -60,6 +63,7 @@ typedef struct Endpoint {
     EndpointInterruptFunc     interrupt;
     EndpointDisconnectFunc    disconnect;
     EndpointRegisterNotifyUid register_notify_uid;
+    EndpointRegisterModelUid  register_model_uid;
 
     /* Channel storage container. */
     HashMap endpoint_channels;

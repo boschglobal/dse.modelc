@@ -23,7 +23,6 @@
 #define TRANSPORT           TRANSPORT_REDISPUBSUB
 #define BUS_STEP_SIZE       0.005
 #define BUS_MODEL_UID       8000008
-#define BUS_TIMEOUT         1 /* This is the wait_message timeout. */
 #define MODEL_NAME          "simbus"
 
 
@@ -40,8 +39,6 @@ int main(int argc, char** argv)
     /* Set default arguments and then parse from CLI. */
     modelc_set_default_args(&args, MODEL_NAME, BUS_STEP_SIZE, 0);
     /* Special Bus Mode settings (for SimBus operation). */
-    args.timeout = BUS_TIMEOUT;
-    args.timeout_set_by_cli = 1; /* Ignore any value in the YAML. */
     args.uid = BUS_MODEL_UID;
     modelc_parse_arguments(&args, argc, argv, CLI_DOC);
     if (args.timeout <= 0) args.timeout = BUS_TIMEOUT;

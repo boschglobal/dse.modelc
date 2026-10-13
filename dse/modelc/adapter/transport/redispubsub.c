@@ -464,12 +464,15 @@ int32_t redispubsub_recv_fbs(Endpoint* endpoint, const char** channel_name,
     assert(redis_ep->sub_ctx);
     TimeoutHandlerData* timeout_data =
         (TimeoutHandlerData*)redis_ep->timeout_handler_data;
+    int recv_timeout =
+        endpoint->bus_mode ? BUS_TIMEOUT : (int)redis_ep->recv_timeout;
 
     /* Wait for a message, but only if the queue is empty. */
     if (q_num_elements(redis_ep->recv_msg_queue) == 0) {
         /* Wait for a message. */
-        int event_timeout_counter = 0;
-        while (event_timeout_counter++ < (int32_t)redis_ep->recv_timeout) {
+        bool received_message = false;
+        for (int event_timeout_counter = 0;
+            event_timeout_counter < recv_timeout; event_timeout_counter++) {
             event_base_dispatch(redis_ep->sub_event_base);
             if (event_base_got_break(redis_ep->sub_event_base)) {
                 if (timeout_data && timeout_data->timeout_condition) {
@@ -478,6 +481,7 @@ int32_t redispubsub_recv_fbs(Endpoint* endpoint, const char** channel_name,
                     continue;
                 } else {
                     /* A message arrived. */
+                    received_message = true;
                     break;
                 }
             }
@@ -486,7 +490,7 @@ int32_t redispubsub_recv_fbs(Endpoint* endpoint, const char** channel_name,
             log_error("Unexpected condition; event_base_dispatch() with no "
                       "indicators.");
         }
-        if (event_timeout_counter >= (int32_t)redis_ep->recv_timeout) {
+        if (!received_message) {
             log_trace("redispubsub_recv_fbs: no message (timeout)");
             errno = ETIME;
             return -1; /* Caller must inspect errno to determine cause. */

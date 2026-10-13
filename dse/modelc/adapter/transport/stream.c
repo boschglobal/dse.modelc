@@ -264,10 +264,10 @@ Endpoint* stream_connect(
     }
 
     stream_ep->server.simbus.fd = STREAM_INVALID_SOCKET;
+    stream_ep->server.current_rx_fd = STREAM_INVALID_SOCKET;
     stream_ep->server.models = vector_make(sizeof(StreamInstance), 16, NULL);
     stream_ep->server.poll_fds = vector_make(sizeof(stream_pollfd_t), 16, NULL);
-    stream_ep->server.rx_messages =
-        vector_make(sizeof(StreamMessage), 16, NULL);
+    stream_ep->rx_messages = vector_make(sizeof(StreamMessage), 16, NULL);
     stream_ep->client.model.fd = STREAM_INVALID_SOCKET;
 
     if (endpoint->bus_mode) {
@@ -283,6 +283,9 @@ Endpoint* stream_connect(
 
     /* Return the endpoint*/
     endpoint->private = (void*)stream_ep;
+    if (bus_mode) {
+        endpoint->register_model_uid = stream_register_model_uid;
+    }
     return endpoint;
 }
 
@@ -328,7 +331,7 @@ int32_t stream_queue_rx_message(StreamEndpoint* ep, stream_socket_t fd,
         .length = length,
     };
 
-    vector_push(&ep->server.rx_messages, &msg);
+    vector_push(&ep->rx_messages, &msg);
     ep->server.diagnostics.rx_messages_queued++;
 
     return 0;
@@ -338,18 +341,19 @@ int32_t stream_queue_rx_message(StreamEndpoint* ep, stream_socket_t fd,
 int32_t stream_pop_rx_message(
     StreamEndpoint* ep, uint8_t** buffer, uint32_t* buffer_length)
 {
-    if (vector_len(&ep->server.rx_messages) == 0) {
+    if (vector_len(&ep->rx_messages) == 0) {
         return 0;
     }
 
-    StreamMessage* msg = vector_at(&ep->server.rx_messages, 0, NULL);
+    StreamMessage* msg = vector_at(&ep->rx_messages, 0, NULL);
     if (msg == NULL || msg->data == NULL || msg->length == 0) {
-        vector_delete_at(&ep->server.rx_messages, 0);
+        vector_delete_at(&ep->rx_messages, 0);
         return 0;
     }
 
     uint32_t        msg_length = msg->length;
     stream_socket_t msg_fd = msg->fd;
+    ep->server.current_rx_fd = msg_fd;
 
     if (msg_length > *buffer_length) {
         uint8_t* b = realloc(*buffer, msg_length);
@@ -368,7 +372,7 @@ int32_t stream_pop_rx_message(
     msg->length = 0;
     msg->fd = STREAM_INVALID_SOCKET;
 
-    vector_delete_at(&ep->server.rx_messages, 0);
+    vector_delete_at(&ep->rx_messages, 0);
 
     ep->server.diagnostics.rx_cached_returns++;
 
@@ -454,8 +458,8 @@ void stream_endpoint_destroy(Endpoint* endpoint)
         vector_reset(&stream_ep->server.models);
         vector_reset(&stream_ep->server.poll_fds);
 
-        vector_clear(&stream_ep->server.rx_messages, _free_rx_message, NULL);
-        vector_reset(&stream_ep->server.rx_messages);
+        vector_clear(&stream_ep->rx_messages, _free_rx_message, NULL);
+        vector_reset(&stream_ep->rx_messages);
 
         free(endpoint->private);
         endpoint->private = NULL;

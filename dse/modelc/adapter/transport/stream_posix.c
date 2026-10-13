@@ -17,6 +17,7 @@
 
 
 static int32_t _client_connect(StreamEndpoint* stream_ep);
+static void    _accept_new_clients(StreamEndpoint* ep);
 
 
 static int32_t _configure_socket(stream_socket_t fd, sa_family_t family)
@@ -47,6 +48,7 @@ static void _stream_instance_disconnect(StreamInstance* si)
 
     if (si) {
         stream_instance_free_recv_buffer(si);
+        vector_reset(&si->model_uids);
     }
 }
 
@@ -83,6 +85,19 @@ static void _disconnect(StreamEndpoint* ep, stream_socket_t fd)
 static int32_t _stream_instance_read_recv_buffer(
     StreamEndpoint* ep, StreamInstance* si)
 {
+    stream_pollfd_t poll_fd = {
+        .fd = si->fd,
+        .events = POLLIN,
+    };
+    int activity = STREAM_POLL(&poll_fd, 1, 0);
+    if (activity == 0) return 0;
+    if (activity < 0) {
+        int error = stream_socket_errno();
+        return error == EINTR ? 0 : -error;
+    }
+    if (poll_fd.revents & POLLNVAL) return -EBADF;
+    if (!(poll_fd.revents & (POLLIN | POLLHUP | POLLERR))) return 0;
+
     if (si->recv_buffer.length == si->recv_buffer.capacity) {
         int32_t rc = stream_instance_reserve_recv_buffer(
             si, si->recv_buffer.length + 65536U);
@@ -170,14 +185,14 @@ static int32_t _stream_instance_extract_recv_messages(
                   "fd=" STREAM_SOCKET_LOG_FORMAT
                   " message_len=%u remaining_recv=%u queue_len=%zu",
             STREAM_SOCKET_LOG_VALUE(si->fd), message_len,
-            si->recv_buffer.length, vector_len(&ep->server.rx_messages));
+            si->recv_buffer.length, vector_len(&ep->rx_messages));
     }
 
     return 0;
 }
 
 
-static int32_t _drain_readable_client(StreamEndpoint* ep, StreamInstance* si)
+static int32_t _drain_readable_instance(StreamEndpoint* ep, StreamInstance* si)
 {
     if (si == NULL) {
         return -ENOENT;
@@ -223,6 +238,7 @@ static void _remove_stale_clients(StreamEndpoint* ep)
         if (!STREAM_SOCKET_IS_VALID(si->fd) ||
             !STREAM_SOCKET_IS_VALID(poll_fd->fd)) {
             stream_instance_free_recv_buffer(si);
+            vector_reset(&si->model_uids);
             vector_delete_at(&ep->server.models, index);
             vector_delete_at(&ep->server.poll_fds, index + 1);
         }
@@ -230,7 +246,7 @@ static void _remove_stale_clients(StreamEndpoint* ep)
 }
 
 
-static int32_t _drain_readable_clients(StreamEndpoint* ep)
+static int32_t _drain_readable_clients(StreamEndpoint* ep, bool remove_stale)
 {
     size_t fds_count = vector_len(&ep->server.poll_fds);
 
@@ -255,7 +271,7 @@ static int32_t _drain_readable_clients(StreamEndpoint* ep)
         }
 
         if (poll_fd->revents & (POLLIN | POLLHUP | POLLERR)) {
-            int32_t rc = _drain_readable_client(ep, si);
+            int32_t rc = _drain_readable_instance(ep, si);
 
             if (rc == -ECONNRESET || rc == -EPIPE) {
                 log_info(
@@ -281,10 +297,91 @@ static int32_t _drain_readable_clients(StreamEndpoint* ep)
                 continue;
             }
         }
+        poll_fd->revents = 0;
     }
 
-    _remove_stale_clients(ep);
+    if (remove_stale) _remove_stale_clients(ep);
     return 0;
+}
+
+
+static int32_t _service_server_reads(StreamEndpoint* ep)
+{
+    stream_pollfd_t* poll_fds = vector_at(&ep->server.poll_fds, 0, NULL);
+    size_t           fds_count = vector_len(&ep->server.poll_fds);
+    int              activity = STREAM_POLL(poll_fds, fds_count, 0);
+    if (activity == 0) return 0;
+    if (activity < 0) {
+        int error = stream_socket_errno();
+        return error == EINTR ? 0 : -error;
+    }
+
+    if (poll_fds && (poll_fds->revents & POLLIN)) {
+        _accept_new_clients(ep);
+    }
+
+    /* Defer vector compaction while a broadcast send is in progress. */
+    return _drain_readable_clients(ep, false);
+}
+
+
+static int32_t _service_client_reads(StreamEndpoint* ep)
+{
+    return _drain_readable_instance(ep, &ep->client.model);
+}
+
+
+void stream_register_model_uid(Endpoint* endpoint, uint32_t model_uid)
+{
+    if (endpoint == NULL || endpoint->private == NULL) return;
+
+    StreamEndpoint* ep = endpoint->private;
+    stream_socket_t fd = ep->server.current_rx_fd;
+    ep->server.current_rx_fd = STREAM_INVALID_SOCKET;
+    if (model_uid == 0) return;
+    if (!STREAM_SOCKET_IS_VALID(fd)) {
+        log_error(
+            "Cannot associate model UID %u with a stream client", model_uid);
+        return;
+    }
+
+    for (size_t i = 0; i < vector_len(&ep->server.models); i++) {
+        StreamInstance* si = vector_at(&ep->server.models, i, NULL);
+        if (si == NULL || si->fd != fd) continue;
+
+        for (size_t uid_index = 0; uid_index < vector_len(&si->model_uids);
+            uid_index++) {
+            uint32_t* registered_uid =
+                vector_at(&si->model_uids, uid_index, NULL);
+            if (*registered_uid == model_uid) return;
+        }
+
+        vector_push(&si->model_uids, &model_uid);
+        return;
+    }
+
+    log_error(
+        "No stream client found for model UID %u (fd=" STREAM_SOCKET_LOG_FORMAT
+        ")",
+        model_uid, STREAM_SOCKET_LOG_VALUE(fd));
+}
+
+
+static StreamInstance* _find_model_client(
+    StreamEndpoint* ep, uint32_t model_uid)
+{
+    for (size_t i = 0; i < vector_len(&ep->server.models); i++) {
+        StreamInstance* si = vector_at(&ep->server.models, i, NULL);
+        if (si == NULL || !STREAM_SOCKET_IS_VALID(si->fd)) continue;
+
+        for (size_t uid_index = 0; uid_index < vector_len(&si->model_uids);
+            uid_index++) {
+            uint32_t* registered_uid =
+                vector_at(&si->model_uids, uid_index, NULL);
+            if (*registered_uid == model_uid) return si;
+        }
+    }
+    return NULL;
 }
 
 
@@ -323,6 +420,7 @@ static void _accept_new_clients(StreamEndpoint* ep)
             &(StreamInstance){
                 .fd = client_fd,
                 .uid = 0,
+                .model_uids = vector_make(sizeof(uint32_t), 4, NULL),
                 .recv_buffer = { .data = NULL, .length = 0, .capacity = 0 },
             });
         vector_push(&ep->server.poll_fds,
@@ -408,13 +506,14 @@ static int32_t _recv_message(
 }
 
 
-static int32_t _send_msg(stream_socket_t fd, const void* buffer,
-    uint32_t length, uint64_t timeout_ns)
+static int32_t _send_msg(StreamEndpoint* ep, stream_socket_t fd,
+    const void* buffer, uint32_t length, uint64_t timeout_ns, bool bus_mode)
 {
     const uint8_t* data = buffer;
     size_t         remaining = length;
     uint64_t       start_ns = stream_time_ns();
     uint32_t       backoff_ms = 1;
+    bool           backpressure_reported = false;
 
     while (remaining > 0) {
         ssize_t sent =
@@ -422,15 +521,26 @@ static int32_t _send_msg(stream_socket_t fd, const void* buffer,
         if (sent < 0) {
             int error = stream_socket_io_errno();
             if (error == EINTR || error == EAGAIN || error == EWOULDBLOCK) {
-                if (backoff_ms == 1) {
-                    /* First backoff on this call; report once (cheap,
-                       always-visible) so backpressure is observable. */
+                if (!backpressure_reported) {
                     log_notice(
                         "Stream send backpressure, fd=" STREAM_SOCKET_LOG_FORMAT
                         ": retrying ...",
                         STREAM_SOCKET_LOG_VALUE(fd));
+                    backpressure_reported = true;
                 }
+                int32_t service_rc = bus_mode ? _service_server_reads(ep)
+                                              : _service_client_reads(ep);
+                if (service_rc < 0) return service_rc;
+
                 if (stream_time_ns() - start_ns >= timeout_ns) {
+                    log_error(
+                        "Stream send timeout, fd=" STREAM_SOCKET_LOG_FORMAT
+                        " bytes=%u sent=%zu remaining=%zu elapsed_ms=%" PRIu64
+                        " timeout_ms=%" PRIu64,
+                        STREAM_SOCKET_LOG_VALUE(fd), length,
+                        (size_t)length - remaining, remaining,
+                        (stream_time_ns() - start_ns) / 1000000U,
+                        timeout_ns / 1000000U);
                     return -ETIME;
                 }
                 STREAM_SEND_BACKOFF(fd, backoff_ms);
@@ -555,7 +665,6 @@ static int32_t _client_connect(StreamEndpoint* stream_ep)
 int32_t stream_posix_send_fbs(Endpoint* endpoint, void* endpoint_channel,
     void* buffer, uint32_t buffer_length, uint32_t model_uid)
 {
-    UNUSED(model_uid);
     UNUSED(endpoint_channel);
     assert(endpoint);
     assert(endpoint->private);
@@ -566,25 +675,48 @@ int32_t stream_posix_send_fbs(Endpoint* endpoint, void* endpoint_channel,
     stream_ep->message_size_histogram.tx[tx_bucket]++;
 
     if (endpoint->bus_mode) {
+        if (model_uid != 0) {
+            StreamInstance* si = _find_model_client(stream_ep, model_uid);
+            if (si == NULL) {
+                log_error(
+                    "No stream client registered for model_uid=%u", model_uid);
+                return -ENOENT;
+            }
+
+            stream_socket_t client_fd = si->fd;
+            int32_t         send_rc = _send_msg(stream_ep, client_fd, buffer,
+                        buffer_length, send_timeout_ns, true);
+            if (send_rc < 0) {
+                log_error("Failed to send to model_uid=%u, "
+                          "fd=" STREAM_SOCKET_LOG_FORMAT ": %s",
+                    model_uid, STREAM_SOCKET_LOG_VALUE(client_fd),
+                    strerror(-send_rc));
+                _disconnect(stream_ep, client_fd);
+                return send_rc;
+            }
+            return 0;
+        }
+
         size_t count = vector_len(&stream_ep->server.models);
         for (size_t i = 0; i < count; i++) {
             StreamInstance* si = vector_at(&stream_ep->server.models, i, NULL);
             if (si) {
-                int32_t send_rc =
-                    _send_msg(si->fd, buffer, buffer_length, send_timeout_ns);
+                stream_socket_t client_fd = si->fd;
+                int32_t send_rc = _send_msg(stream_ep, client_fd, buffer,
+                    buffer_length, send_timeout_ns, true);
                 if (send_rc < 0) {
                     log_error(
                         "Failed to send to client, fd=" STREAM_SOCKET_LOG_FORMAT
                         ": %s",
-                        STREAM_SOCKET_LOG_VALUE(si->fd), strerror(-send_rc));
-                    _disconnect(stream_ep, si->fd);
+                        STREAM_SOCKET_LOG_VALUE(client_fd), strerror(-send_rc));
+                    _disconnect(stream_ep, client_fd);
                     rc = -1;
                 }
             }
         }
     } else {
-        int32_t send_rc = _send_msg(
-            stream_ep->client.model.fd, buffer, buffer_length, send_timeout_ns);
+        int32_t send_rc = _send_msg(stream_ep, stream_ep->client.model.fd,
+            buffer, buffer_length, send_timeout_ns, false);
         if (send_rc < 0) {
             log_error("Failed to send to server, fd=" STREAM_SOCKET_LOG_FORMAT
                       ": %s",
@@ -622,8 +754,8 @@ int32_t stream_posix_send_fbs(Endpoint* endpoint, void* endpoint_channel,
                 STREAM_SOCKET_LOG_VALUE(stream_ep->client.model.fd),
                 reconnect_attempt);
 
-            send_rc = _send_msg(stream_ep->client.model.fd, buffer,
-                buffer_length, send_timeout_ns);
+            send_rc = _send_msg(stream_ep, stream_ep->client.model.fd, buffer,
+                buffer_length, send_timeout_ns, false);
             if (send_rc < 0) {
                 log_error("Failed to send to server after reconnect, "
                           "fd=" STREAM_SOCKET_LOG_FORMAT ": %s",
@@ -647,7 +779,9 @@ int32_t stream_posix_recv_fbs(Endpoint* endpoint, const char** channel_name,
     assert(channel_name);
 
     StreamEndpoint* stream_ep = endpoint->private;
-    uint32_t        timeout_counter = (uint32_t)stream_ep->recv_timeout + 1;
+    double          recv_timeout =
+        endpoint->bus_mode ? BUS_TIMEOUT : stream_ep->recv_timeout;
+    uint32_t timeout_counter = (uint32_t)recv_timeout + 1;
 
     *channel_name = NULL;
 
@@ -702,7 +836,8 @@ int32_t stream_posix_recv_fbs(Endpoint* endpoint, const char** channel_name,
                 poll_start_ns = stream_time_ns();
             }
             int activity =
-                STREAM_POLL(stream_ep->server.poll_fds.items, fds_count, 1000);
+                STREAM_POLL(vector_at(&stream_ep->server.poll_fds, 0, NULL),
+                    fds_count, 1000);
 
             if (__log_level__ <= LOG_DEBUG) {
                 poll_duration_ns = stream_time_ns() - poll_start_ns;
@@ -751,7 +886,7 @@ int32_t stream_posix_recv_fbs(Endpoint* endpoint, const char** channel_name,
                     _accept_new_clients(stream_ep);
                 }
 
-                int32_t drain_rc = _drain_readable_clients(stream_ep);
+                int32_t drain_rc = _drain_readable_clients(stream_ep, true);
                 if (drain_rc < 0) {
                     errno = -drain_rc;
                     return -1;
@@ -769,7 +904,7 @@ int32_t stream_posix_recv_fbs(Endpoint* endpoint, const char** channel_name,
                     log_debug("stream recv_fbs bus drained return: "
                               "length=%d queue_remaining=%zu "
                               "loop_total_ns=%" PRIu64,
-                        cached_len, vector_len(&stream_ep->server.rx_messages),
+                        cached_len, vector_len(&stream_ep->rx_messages),
                         stream_time_ns() - loop_start_ns);
                     return cached_len;
                 }
@@ -788,8 +923,11 @@ int32_t stream_posix_recv_fbs(Endpoint* endpoint, const char** channel_name,
         if (__log_level__ <= LOG_DEBUG) {
             recv_start_ns = stream_time_ns();
         }
-        int32_t size =
-            _recv_message(&stream_ep->client.model, buffer, buffer_length);
+        int32_t size = stream_pop_rx_message(stream_ep, buffer, buffer_length);
+        if (size == 0) {
+            size =
+                _recv_message(&stream_ep->client.model, buffer, buffer_length);
+        }
 
         if (__log_level__ <= LOG_DEBUG) {
             recv_duration_ns = stream_time_ns() - recv_start_ns;
