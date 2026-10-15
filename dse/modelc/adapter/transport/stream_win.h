@@ -119,7 +119,10 @@ typedef int socklen_t;
 
 #define STREAM_SLEEP_MS(ms)         Sleep(ms)
 #define STREAM_SEND_BACKOFF(fd, ms) stream_socket_wait_writable((fd), (ms))
+#define STREAM_RECV_WAIT(fd, ms)    stream_socket_wait_readable((fd), (ms))
 #define STREAM_UNLINK(path)         _unlink(path)
+
+#define STREAM_CONNECT_ATTEMPT_MS   500U
 
 #define STREAM_SOCKET_LOG_FORMAT    "%llu"
 #define STREAM_SOCKET_LOG_VALUE(fd) ((uint64_t)(fd))
@@ -263,13 +266,9 @@ static inline int stream_socket_errno(void)
 }
 
 
-/* Winsock reports SO_RCVTIMEO/SO_SNDTIMEO expiry as WSAETIMEDOUT (POSIX uses
-   EAGAIN), use this variant for send()/recv() errors. */
 static inline int stream_socket_io_errno(void)
 {
-    int error = WSAGetLastError();
-    if (error == WSAETIMEDOUT) return EAGAIN;
-    return stream_socket_error_from_native(error);
+    return stream_socket_errno();
 }
 
 
@@ -354,8 +353,8 @@ static inline int stream_configure_listener_socket(stream_socket_t fd)
 }
 
 
-static inline int stream_socket_connect_once(
-    stream_socket_t fd, const struct sockaddr* addr, socklen_t addr_len)
+static inline int stream_socket_connect_once(stream_socket_t fd,
+    const struct sockaddr* addr, socklen_t addr_len, uint32_t timeout_ms)
 {
     int rc = stream_socket_set_nonblocking(fd);
     if (rc < 0) {
@@ -372,7 +371,7 @@ static inline int stream_socket_connect_once(
             .fd = fd,
             .events = POLLOUT,
         };
-        int activity = STREAM_POLL(&poll_fd, 1, 10);
+        int activity = STREAM_POLL(&poll_fd, 1, (INT)timeout_ms);
         if (activity == 0) {
             return -EAGAIN;
         } else if (activity < 0) {
@@ -389,7 +388,8 @@ static inline int stream_socket_connect_once(
         }
     }
 
-    return stream_socket_set_blocking(fd);
+    /* Leave the socket non-blocking. */
+    return 0;
 }
 
 
@@ -397,13 +397,21 @@ static inline int32_t stream_socket_connect_retry(stream_socket_t* fd,
     sa_family_t family, const struct sockaddr* addr, socklen_t addr_len)
 {
     ULONGLONG connect_deadline = GetTickCount64() + 5000U;
-    while (GetTickCount64() < connect_deadline) {
+    ULONGLONG now;
+    while ((now = GetTickCount64()) < connect_deadline) {
+        /* Bounded: WSAPoll before Win10 2004 never reports a failed connect. */
+        ULONGLONG remaining_ms = connect_deadline - now;
+        uint32_t  attempt_ms = remaining_ms < STREAM_CONNECT_ATTEMPT_MS
+                                   ? (uint32_t)remaining_ms
+                                   : STREAM_CONNECT_ATTEMPT_MS;
+
         *fd = socket(family, SOCK_STREAM, 0);
         if (!STREAM_SOCKET_IS_VALID(*fd)) {
             return -stream_socket_errno();
         }
 
-        int32_t rc = stream_socket_connect_once(*fd, addr, addr_len);
+        int32_t rc =
+            stream_socket_connect_once(*fd, addr, addr_len, attempt_ms);
         if (rc == 0) {
             return 0;
         }
@@ -449,21 +457,43 @@ static inline void stream_socket_wait_writable(
 }
 
 
-static inline int stream_configure_socket_timeout(stream_socket_t fd)
+static inline int stream_socket_wait_readable(
+    stream_socket_t fd, uint32_t timeout_ms)
 {
-    DWORD timeout_ms = 1000;
-
-    if (setsockopt(fd, SOL_SOCKET, SO_RCVTIMEO, (const char*)&timeout_ms,
-            sizeof(timeout_ms)) == SOCKET_ERROR) {
+    stream_pollfd_t poll_fd = {
+        .fd = fd,
+        .events = POLLIN,
+    };
+    int activity = STREAM_POLL(&poll_fd, 1, (INT)timeout_ms);
+    if (activity < 0) {
         return -stream_socket_errno();
     }
 
-    if (setsockopt(fd, SOL_SOCKET, SO_SNDTIMEO, (const char*)&timeout_ms,
-            sizeof(timeout_ms)) == SOCKET_ERROR) {
+    /* WSAPoll is documented to miss error/hangup conditions on established
+       connections (not just the connect() case handled above), so a timeout
+       is also verified against SO_ERROR instead of being trusted blindly. */
+    int       native_error = 0;
+    socklen_t error_length = sizeof(native_error);
+    if (getsockopt(fd, SOL_SOCKET, SO_ERROR, (char*)&native_error,
+            &error_length) == SOCKET_ERROR) {
         return -stream_socket_errno();
+    } else if (native_error != 0) {
+        return -stream_socket_error_from_native(native_error);
+    }
+
+    if (activity == 0) {
+        return -EAGAIN;
     }
 
     return 0;
+}
+
+
+/* SO_RCVTIMEO/SO_SNDTIMEO expiry leaves a Winsock socket in an indeterminate
+   state, so use non-blocking I/O with WSAPoll waits instead. */
+static inline int stream_configure_socket_timeout(stream_socket_t fd)
+{
+    return stream_socket_set_nonblocking(fd);
 }
 
 

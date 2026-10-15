@@ -497,6 +497,15 @@ static int32_t _recv_message(
         } else if (received < 0) {
             int error = stream_socket_io_errno();
             if (error == EINTR || error == EAGAIN || error == EWOULDBLOCK) {
+                if (error != EINTR) {
+                    int32_t wait_rc = STREAM_RECV_WAIT(si->fd, 1000U);
+                    if (wait_rc == 0) {
+                        continue;
+                    } else if (wait_rc != -EAGAIN) {
+                        /* Return a real wait failure, if not timeout. */
+                        return wait_rc;
+                    }
+                }
                 return -EAGAIN;
             }
             return -error;

@@ -46,6 +46,8 @@ typedef struct pollfd stream_pollfd_t;
 
 #define STREAM_SLEEP_MS(ms)                usleep((ms) * 1000U)
 #define STREAM_SEND_BACKOFF(fd, ms)        STREAM_SLEEP_MS(ms)
+/* recv() already waited via SO_RCVTIMEO. */
+#define STREAM_RECV_WAIT(fd, ms)           (-EAGAIN)
 #define STREAM_UNLINK(path)                unlink(path)
 
 #define STREAM_SOCKET_LOG_FORMAT           "%d"
