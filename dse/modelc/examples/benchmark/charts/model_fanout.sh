@@ -18,7 +18,7 @@ CHANGE_COUNT=400
 
 rm -f dse/modelc/examples/benchmark/charts/${CHART_NAME}.txt
 
-for TOPOLOGY in runtime redis_stacked redis_distributed unix_stream_distributed tcp_stream_distributed
+for TOPOLOGY in runtime redis_distributed unix_stream_distributed tcp_stream_distributed tcp_stream_stacked
 do
     case $TOPOLOGY in
         runtime)

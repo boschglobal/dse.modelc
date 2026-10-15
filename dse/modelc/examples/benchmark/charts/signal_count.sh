@@ -16,7 +16,7 @@ CHANGE_COUNT=200
 
 rm -f dse/modelc/examples/benchmark/charts/${CHART_NAME}.txt
 
-for TOPOLOGY in runtime redis_distributed unix_stream_distributed tcp_stream_distributed unix_stream_stacked
+for TOPOLOGY in runtime redis_distributed unix_stream_distributed tcp_stream_distributed tcp_stream_stacked
 do
     case $TOPOLOGY in
         runtime)
@@ -43,17 +43,23 @@ do
         STREAM=1
         TCP=0
         ;;
-        tcp_stream_distributed)
-        LOOPBACK=0
-        STACKED=0
-        STREAM=1
-        TCP=1
-        ;;
         unix_stream_distributed)
         LOOPBACK=0
         STACKED=0
         STREAM=1
         TCP=0
+        ;;
+        tcp_stream_stacked)
+        LOOPBACK=0
+        STACKED=1
+        STREAM=1
+        TCP=1
+        ;;
+        tcp_stream_distributed)
+        LOOPBACK=0
+        STACKED=0
+        STREAM=1
+        TCP=1
         ;;
     esac
     for SIGNAL_COUNT in 1000 2000 4000 8000 16000 32000
