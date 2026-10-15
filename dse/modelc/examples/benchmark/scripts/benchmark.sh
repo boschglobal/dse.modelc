@@ -19,6 +19,7 @@
 #   $ sh dse/modelc/examples/benchmark/scripts/benchmark.sh 5 2000 40
 #   $ sh dse/modelc/examples/benchmark/scripts/benchmark.sh 5 2000 40 1 1
 #   $ sh dse/modelc/examples/benchmark/scripts/benchmark.sh 5 2000 40 1 1 1 1
+#   $ SIMER_SCHED_FIFO=1 sh dse/modelc/examples/benchmark/scripts/benchmark.sh 5 2000 40
 
 
 # Input Parameters
@@ -71,6 +72,15 @@ fi
 : "${MODEL_ENDTIME:=1.0}"
 : "${MODEL_LOGGER:=4}"
 : "${SIMER_IMAGE:=$DSE_SIMER_IMAGE}"
+if [ -z "${SIMER_SCHED_FIFO:-}" ]; then
+    SIMER_SCHED_FIFO=0
+    for rt_runtime in /sys/fs/cgroup/cpu*/cpu.rt_runtime_us; do
+        if test -f "$rt_runtime"; then
+            SIMER_SCHED_FIFO=1
+            break
+        fi
+    done
+fi
 if [ -z $SIMER_IMAGE ]; then
     SIMER_IMAGE="simer:test"
 fi
@@ -80,13 +90,14 @@ STEP_COUNT=$(echo 'scale=0; 1.0/0.0005' | bc)
 
 simer()
 {
+    local rt_options=""
+    if [ "${SIMER_SCHED_FIFO:-0}" = "1" ]; then
+        rt_options="--cap-add=sys_nice --ulimit rtprio=99 --cpu-rt-runtime=950000 -e SIMER_RT_PRIO=10"
+    fi
      ( if test -d "$1"; then cd "$1" && shift; fi \
      && docker run -it --rm \
-        --cap-add=sys_nice \
-        --ulimit rtprio=99 \
-        --cpu-rt-runtime=950000 \
-        -e SIMER_SCHED_FIFO=${SIMER_SCHED_FIFO:-1} \
-        -e SIMER_RT_PRIO=10 \
+         $rt_options \
+         -e SIMER_SCHED_FIFO=${SIMER_SCHED_FIFO:-0} \
          -v $(pwd):/sim \
          -e SIMBUS_LOGLEVEL=${SIMBUS_LOGLEVEL:-$MODEL_LOGGER} \
          -e SIMBUS_TRANSPORT=${SIMBUS_TRANSPORT} \
@@ -116,6 +127,7 @@ conditions()
     echo "MODEL_ENDTIME=${MODEL_ENDTIME}"
     echo "MODEL_LOGGER=${MODEL_LOGGER}"
     echo "SIMER_IMAGE=${SIMER_IMAGE}"
+    echo "SIMER_SCHED_FIFO=${SIMER_SCHED_FIFO}"
     echo "IMPORTER=${IMPORTER}"
 }
 

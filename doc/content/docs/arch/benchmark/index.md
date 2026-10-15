@@ -39,6 +39,8 @@ minute (i.e. a total of 2000 simulation steps).
 
 ## Benchmark (Core i7-1370P) October 2026
 
+> Info: Linux RT kernel enabled.
+
 Host system is a ThinkPad T16 G2 (Intel Core i7-1370P, 1900 Mhz, 14 Core, 32 GB Memory)
 with Linux running in WSL2. All binaries are compiled for `amd64` architecture
 with optimization `-03`. Values are presented relative to realtime operation.
