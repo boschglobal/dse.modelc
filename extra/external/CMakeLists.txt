@@ -67,6 +67,19 @@ FetchContent_MakeAvailable(dse_ncodec)
 
 # Lib Event
 # ---------
+# Libevent's own evutil_time.c and event.c trigger several warnings on
+# Windows builds that are unfixed upstream (present on libevent's current
+# main branch too) and harmless, so they are suppressed here only for this
+# vendored project rather than globally:
+#  -Wincompatible-pointer-types : 32-bit time_t vs _gmtime64_s on mingw-x86.
+#  -Wcast-function-type         : GetProcAddress() casts to typed fn ptrs.
+#  -Wformat                     : EV_I64_FMT uses MS "%I64d", which GCC's
+#                                 format checker does not recognise even
+#                                 though mingw's printf() supports it.
+set(EVENT_C_FLAGS "${CMAKE_C_FLAGS}")
+if(CMAKE_SYSTEM_NAME STREQUAL "Windows")
+    set(EVENT_C_FLAGS "${EVENT_C_FLAGS} -Wno-incompatible-pointer-types -Wno-cast-function-type -Wno-format")
+endif()
 ExternalProject_Add(event
     URL                 ${ExternalProject__EVENT__URL}
     HTTP_USERNAME       ${ExternalProject__EVENT__USERNAME}
@@ -74,10 +87,11 @@ ExternalProject_Add(event
     SOURCE_DIR          "$ENV{EXTERNAL_BUILD_DIR}/event"
     BINARY_DIR          "$ENV{EXTERNAL_BUILD_DIR}/event"
     CMAKE_ARGS
-        -DCMAKE_C_FLAGS=${CMAKE_C_FLAGS}
+        -DCMAKE_C_FLAGS=${EVENT_C_FLAGS}
+        -DCMAKE_EXPORT_NO_PACKAGE_REGISTRY=ON
         -DEVENT__DISABLE_OPENSSL=ON
-        -DEVENT__DISABLE_MBEDTLS=ON
         -DEVENT__DISABLE_DEBUG_MODE=ON
+        -DEVENT__DISABLE_BENCHMARK=ON
         -DEVENT__DISABLE_TESTS=ON
         -DEVENT__DISABLE_REGRESS=ON
         -DEVENT__DISABLE_SAMPLES=ON
