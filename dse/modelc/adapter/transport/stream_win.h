@@ -153,6 +153,7 @@ static inline void stream_socket_cleanup(void)
 
 
 static inline int stream_socket_error_from_native(int error);
+static inline const char* stream_strerror(int error);
 
 
 static inline int stream_socket_startup(void)
@@ -398,6 +399,7 @@ static inline int32_t stream_socket_connect_retry(stream_socket_t* fd,
 {
     ULONGLONG connect_deadline = GetTickCount64() + 5000U;
     ULONGLONG now;
+    int32_t   last_error = -EAGAIN;
     while ((now = GetTickCount64()) < connect_deadline) {
         /* Bounded: WSAPoll before Win10 2004 never reports a failed connect. */
         ULONGLONG remaining_ms = connect_deadline - now;
@@ -416,11 +418,23 @@ static inline int32_t stream_socket_connect_retry(stream_socket_t* fd,
             return 0;
         }
 
+        last_error = rc;
+        if (rc == -EAGAIN || rc == -EWOULDBLOCK) {
+            int       native_error = 0;
+            socklen_t error_length = sizeof(native_error);
+            if (getsockopt(*fd, SOL_SOCKET, SO_ERROR, (char*)&native_error,
+                    &error_length) != SOCKET_ERROR && native_error != 0) {
+                last_error = -stream_socket_error_from_native(native_error);
+            }
+        }
         STREAM_SOCKET_CLOSE(*fd);
         *fd = STREAM_INVALID_SOCKET;
         STREAM_SLEEP_MS(1);
     }
 
+    log_error("Client (model) connect retry window exhausted: "
+              "last error: %s (error=%d)",
+        stream_strerror(-last_error), -last_error);
     return -EAGAIN;
 }
 

@@ -653,7 +653,8 @@ static int32_t _client_connect(StreamEndpoint* stream_ep)
         &stream_ep->client.model.fd, stream_ep->addr.ss_family,
         (struct sockaddr*)&stream_ep->addr, stream_ep->addr_len);
     if (connect_rc < 0) {
-        log_error("Client (model) connect timeout");
+        log_error("Client (model) connect failed: %s (error=%d)",
+            strerror(-connect_rc), -connect_rc);
         return connect_rc;
     }
 
@@ -724,13 +725,18 @@ int32_t stream_posix_send_fbs(Endpoint* endpoint, void* endpoint_channel,
             }
         }
     } else {
-        int32_t send_rc = _send_msg(stream_ep, stream_ep->client.model.fd,
-            buffer, buffer_length, send_timeout_ns, false);
+        int32_t send_rc = -ENOTCONN;
+        if (STREAM_SOCKET_IS_VALID(stream_ep->client.model.fd)) {
+            send_rc = _send_msg(stream_ep, stream_ep->client.model.fd,
+                buffer, buffer_length, send_timeout_ns, false);
+            if (send_rc < 0) {
+                log_error("Failed to send to server, fd=" STREAM_SOCKET_LOG_FORMAT
+                          ": %s",
+                    STREAM_SOCKET_LOG_VALUE(stream_ep->client.model.fd),
+                    strerror(-send_rc));
+            }
+        }
         if (send_rc < 0) {
-            log_error("Failed to send to server, fd=" STREAM_SOCKET_LOG_FORMAT
-                      ": %s",
-                STREAM_SOCKET_LOG_VALUE(stream_ep->client.model.fd),
-                strerror(-send_rc));
             _stream_instance_disconnect(&stream_ep->client.model);
 
             /* Retry reconnecting for as long as the configured recv_timeout

@@ -17,8 +17,10 @@
 
 #include <errno.h>
 #include <stdint.h>
+#include <string.h>
 #include <unistd.h>
 #include <fcntl.h>
+#include <dse/logger.h>
 
 #include <endian.h>
 #include <netdb.h>
@@ -135,6 +137,7 @@ static inline int stream_configure_listener_socket(stream_socket_t fd)
 static inline int32_t stream_socket_connect_retry(stream_socket_t* fd,
     sa_family_t family, const struct sockaddr* addr, socklen_t addr_len)
 {
+    int32_t last_error = -EAGAIN;
     for (uint32_t i = 0; i < 5000U; i++) {
         *fd = socket(family, SOCK_STREAM, 0);
         if (!STREAM_SOCKET_IS_VALID(*fd)) {
@@ -145,11 +148,15 @@ static inline int32_t stream_socket_connect_retry(stream_socket_t* fd,
             return 0;
         }
 
+        last_error = -errno;
         STREAM_SOCKET_CLOSE(*fd);
         *fd = STREAM_INVALID_SOCKET;
         STREAM_SLEEP_MS(1);
     }
 
+    log_error("Client (model) connect retry window exhausted: "
+              "last error: %s (error=%d)",
+        strerror(-last_error), -last_error);
     return -EAGAIN;
 }
 
