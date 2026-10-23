@@ -1,4 +1,4 @@
-env NAME=binary_inst
+env NAME=Observer
 env SIM=dse/modelc/build/_out/examples/binary
 
 
@@ -7,16 +7,17 @@ exec sh -e $WORK/test.sh
 
 stderr 'Using Valgrind'
 stdout 'Load YAML File: data/simulation.yaml'
-stdout 'Loading symbol: model_create ... ok'
-stdout 'Loading symbol: model_step ... ok'
-stdout 'Loading symbol: model_destroy ... ok'
-stdout 'Run the Simulation ...'
-stdout 'Controller exit ...'
-
-stdout 'Message \(message\) : count is 43'
-stdout 'Message \(message\) : count is 44'
-stdout 'Message \(message\) : count is 45'
-stdout 'Message \(message\) : count is 46'
+stdout '\[A\] Run the Simulation ...'
+stdout '\[B\] Run the Simulation ...'
+stdout '\[C\] Run the Simulation ...'
+stdout '\[Observer\] Run the Simulation ...'
+stdout '\[A\] Controller exit ...'
+stdout '\[B\] Controller exit ...'
+stdout '\[C\] Controller exit ...'
+stdout '\[Observer\] Controller exit ...'
+stdout '\[Observer@0\.002000\] Message: A count is 14 '
+stdout '\[Observer@0\.002000\] Message: B count is 304 '
+stdout '\[Observer@0\.002000\] Message: C count is 5004 '
 
 -- test.sh --
 SIMER="${SIMER:-ghcr.io/boschglobal/dse-simer:latest}"

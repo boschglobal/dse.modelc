@@ -18,16 +18,41 @@ spec:
         name: simbus
       channels:
         - name: scalar_channel
-          expectedModelCount: 1
+          expectedModelCount: 3
         - name: binary_channel
-          expectedModelCount: 1
-    - name: binary_inst
-      uid: 42
+          expectedModelCount: 4
+    - name: A
+      uid: 1
       model:
-        name: Binary
+        name: Messenger
       channels:
         - name: scalar_channel
           alias: scalar
+        - name: binary_channel
+          alias: binary
+    - name: B
+      uid: 2
+      model:
+        name: Messenger
+      channels:
+        - name: scalar_channel
+          alias: scalar
+        - name: binary_channel
+          alias: binary
+    - name: C
+      uid: 3
+      model:
+        name: Messenger
+      channels:
+        - name: scalar_channel
+          alias: scalar
+        - name: binary_channel
+          alias: binary
+    - name: Observer
+      uid: 42
+      model:
+        name: Observer
+      channels:
         - name: binary_channel
           alias: binary
 ---
@@ -42,7 +67,15 @@ metadata:
     channel: scalar_channel
 spec:
   signals:
-    - signal: counter
+    - signal: A_counter
+      annotations:
+        start: 10
+    - signal: B_counter
+      annotations:
+        start: 300
+    - signal: C_counter
+      annotations:
+        start: 5000
 ---
 kind: SignalGroup
 metadata:

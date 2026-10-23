@@ -134,7 +134,7 @@ void test_model__extended(void** state)
 
 void test_model__binary(void** state)
 {
-    chdir("../../../../dse/modelc/build/_out/examples/binary");
+    chdir("../../../../dse/modelc/build/_out/examples/flowcontrol");
 
     const char* inst_names[] = {
         BINARY_INST_NAME,
@@ -143,7 +143,7 @@ void test_model__binary(void** state)
         (char*)"test_model_interface",
         (char*)"--name=" BINARY_INST_NAME,
         (char*)"--logger=5",  // 1=debug, 5=QUIET (commit with 5!)
-        (char*)"data/simulation.yaml",
+        (char*)"data/simulation_flowcontrol.yaml",
         (char*)"data/model.yaml",
     };
     SimMock* mock = *state = simmock_alloc(inst_names, ARRAY_SIZE(inst_names));

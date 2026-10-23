@@ -152,7 +152,7 @@ static inline void stream_socket_cleanup(void)
 }
 
 
-static inline int stream_socket_error_from_native(int error);
+static inline int         stream_socket_error_from_native(int error);
 static inline const char* stream_strerror(int error);
 
 
@@ -423,7 +423,8 @@ static inline int32_t stream_socket_connect_retry(stream_socket_t* fd,
             int       native_error = 0;
             socklen_t error_length = sizeof(native_error);
             if (getsockopt(*fd, SOL_SOCKET, SO_ERROR, (char*)&native_error,
-                    &error_length) != SOCKET_ERROR && native_error != 0) {
+                    &error_length) != SOCKET_ERROR &&
+                native_error != 0) {
                 last_error = -stream_socket_error_from_native(native_error);
             }
         }

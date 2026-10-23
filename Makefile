@@ -262,7 +262,6 @@ do-test_cmocka-run:
 
 do-test_testscript-e2e:
 # Test debug; add '-v' to Testscript command (e.g. $(TESTSCRIPT_IMAGE) -v \).
-# Test debug; echo "Running E2E Test: $${ENTRYWORKDIR}"
 ifeq ($(PACKAGE_ARCH), linux-amd64)
 	@-docker kill simer 2>/dev/null ; true
 	@-docker kill gateway 2>/dev/null ; true

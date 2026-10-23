@@ -28,3 +28,52 @@ spec:
     - alias: binary
       selectors:
         channel: binary_channel
+---
+kind: Model
+metadata:
+  name: Messenger
+spec:
+  runtime:
+    dynlib:
+      - os: linux
+        arch: amd64
+        path: lib/libmessenger.so
+      - os: linux
+        arch: x86
+        path: lib/libmessenger.so
+      - os: windows
+        arch: x64
+        path: lib/libmessenger.dll
+      - os: windows
+        arch: x86
+        path: lib/libmessenger.dll
+  channels:
+    - alias: scalar
+      selectors:
+        channel: scalar_channel
+    - alias: binary
+      selectors:
+        channel: binary_channel
+---
+kind: Model
+metadata:
+  name: Observer
+spec:
+  runtime:
+    dynlib:
+      - os: linux
+        arch: amd64
+        path: lib/libobserver.so
+      - os: linux
+        arch: x86
+        path: lib/libobserver.so
+      - os: windows
+        arch: x64
+        path: lib/libobserver.dll
+      - os: windows
+        arch: x86
+        path: lib/libobserver.dll
+  channels:
+    - alias: binary
+      selectors:
+        channel: binary_channel

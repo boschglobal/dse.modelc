@@ -1,5 +1,5 @@
 env NAME=binary_inst
-env SIM=dse/modelc/build/_out/examples/binary
+env SIM=dse/modelc/build/_out/examples/flowcontrol
 env TRACEFILE=data/trace/simbus.bin
 
 mkdir /repo/$SIM/data/trace

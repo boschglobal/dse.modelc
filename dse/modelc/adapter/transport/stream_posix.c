@@ -727,11 +727,12 @@ int32_t stream_posix_send_fbs(Endpoint* endpoint, void* endpoint_channel,
     } else {
         int32_t send_rc = -ENOTCONN;
         if (STREAM_SOCKET_IS_VALID(stream_ep->client.model.fd)) {
-            send_rc = _send_msg(stream_ep, stream_ep->client.model.fd,
-                buffer, buffer_length, send_timeout_ns, false);
+            send_rc = _send_msg(stream_ep, stream_ep->client.model.fd, buffer,
+                buffer_length, send_timeout_ns, false);
             if (send_rc < 0) {
-                log_error("Failed to send to server, fd=" STREAM_SOCKET_LOG_FORMAT
-                          ": %s",
+                log_error(
+                    "Failed to send to server, fd=" STREAM_SOCKET_LOG_FORMAT
+                    ": %s",
                     STREAM_SOCKET_LOG_VALUE(stream_ep->client.model.fd),
                     strerror(-send_rc));
             }
