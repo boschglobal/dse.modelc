@@ -34,7 +34,7 @@ jobs:
           ls -l redis-windows
 
       - name: Upload redis-server as artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: redis-server-windows
           path: |
