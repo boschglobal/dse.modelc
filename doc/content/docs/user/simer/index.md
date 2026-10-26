@@ -260,6 +260,13 @@ spec:
 </details>
 
 
+!!! info
+
+    Simer will run any simulation with a `loopback` transport in a stacked ModelC runtime.
+    The transport will be detected from the `-transport` CLI option, the `SIMBUS_TRANSPORT`
+    environment variable, or any `-env` CLI option which defines `SIMBUS_TRANSPORT`.
+
+
 ### Environment & Files
 
 __Environment variables__ may be specified in either the `runtime:env` property

@@ -264,6 +264,7 @@ do-test_testscript-e2e:
 # Test debug; add '-v' to Testscript command (e.g. $(TESTSCRIPT_IMAGE) -v \).
 ifeq ($(PACKAGE_ARCH), linux-amd64)
 	@-docker kill simer 2>/dev/null ; true
+	@-docker rm simer 2>/dev/null ; true
 	@-docker kill gateway 2>/dev/null ; true
 	@set -eu; for t in $(TESTSCRIPT_E2E_FILES) ;\
 	do \

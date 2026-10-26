@@ -94,10 +94,10 @@ docker run --name simer -i --rm -v $ENTRYHOSTDIR/$SIM:/sim \
 -- test-loopback.sh --
 SIMER="${SIMER:-ghcr.io/boschglobal/dse-simer:latest}"
 docker run --name simer -i --rm -v $ENTRYHOSTDIR/$SIM:/sim \
-    $SIMER -valgrind $NAME -simbus="" \
+    $SIMER --logger 1 -valgrind $NAME -simbus="" -redis="" \
         -env SIMBUS_TRANSPORT=$SIMBUS_TRANSPORT \
         -env SIMBUS_URI=$SIMBUS_URI \
-        -env $NAME:SIMBUS_LOGLEVEL=2
+        -env SIMBUS_LOGLEVEL=2
 
 -- test-stream.sh --
 SIMER="${SIMER:-ghcr.io/boschglobal/dse-simer:latest}"

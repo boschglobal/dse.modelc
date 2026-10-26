@@ -25,11 +25,11 @@ Each of these benchmarks are evaluated across a subset of recommended
 simulation topologies. These topologies include:
 
 * __Model Runtime__ - Stacked model instance (single process) / Loopback SimBus
-* __Stacked w. Redis__[^1] - Stacked model instance (single process) / Redis SimBus
+* __Stacked w. Redis__ [^1] - Stacked model instance (single process) / Redis SimBus
 * __Distributed w. Redis__ - Distributed model instances (process per model) / Redis SimBus
-* __Distributed w. Unix Stream__[^2] - Distributed model instances (process per model) / Unix Stream SimBus
-* __Distributed w. TCP Stream__[^2] - Distributed model instances (process per model) / TCP Stream SimBus
-* __Stacked w. TCP Stream__[^2] - Stacked model instance (single process) / TCP Stream SimBus
+* __Distributed w. Unix Stream__ [^2] - Distributed model instances (process per model) / Unix Stream SimBus
+* __Distributed w. TCP Stream__ [^2] - Distributed model instances (process per model) / TCP Stream SimBus
+* __Stacked w. TCP Stream__ [^2] - Stacked model instance (single process) / TCP Stream SimBus
 
 All benchmark simulations are executed using the Simer docker appliance with
 a Co-Simulation step size of 0.5mS. Each simulation runs for 1 "simulation"

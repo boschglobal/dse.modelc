@@ -8,6 +8,7 @@ import (
 	"flag"
 	"fmt"
 	"log/slog"
+	"os"
 	"reflect"
 	"slices"
 	"strings"
@@ -60,8 +61,8 @@ func parseFlags() {
 	flag.Float64Var(&flags.StepSize, "stepsize", 0.0, "simulation step size")
 	flag.Float64Var(&flags.EndTime, "endtime", 0.0, "simulation end time")
 
-	flag.StringVar(&flags.Transport, "transport", "redis", "SimBus transport")
-	flag.StringVar(&flags.Uri, "uri", "redis://localhost:6379", "SimBus connection URI")
+	flag.StringVar(&flags.Transport, "transport", "", "SimBus transport (env: SIMBUS_TRANSPORT)")
+	flag.StringVar(&flags.Uri, "uri", "", "SimBus connection URI (env: SIMBUS_URI)")
 	flag.Float64Var(&flags.Timeout, "timeout", 60.0, "timeout")
 
 	flag.Var(&flags.EnvModifier, "env", "environment modifier, in format '-env MODEL:NAME=VAL'")
@@ -71,11 +72,12 @@ func parseFlags() {
 	flag.StringVar(&flags.Valgrind, "valgrind", "", "run this model instance via Valgrind, use CSL in format '-valgrind simbus,model'")
 
 	flag.Parse()
+
 	if !flagSpecified("transport") {
-		flags.Transport = ""
+		flags.Transport = os.Getenv("SIMBUS_TRANSPORT")
 	}
 	if !flagSpecified("uri") {
-		flags.Uri = ""
+		flags.Uri = os.Getenv("SIMBUS_URI")
 	}
 	if !flagSpecified("timeout") {
 		flags.Timeout = 0.0

@@ -377,6 +377,9 @@ int model_configure_channel(ModelInstanceSpec* model_instance, const char* name,
     _load_signals(model_instance, channel_spec, &signal_list, &vector_type);
     log_notice("  Unique signals identified: %u", signal_list.length);
 
+    /* Indicate that the channel is binary. */
+    mfc->is_binary = vector_type == MODEL_VECTOR_BINARY ? true : false;
+
     /* Init the channel and register signals. */
     controller_init_channel(model_instance, channel_spec->name,
         signal_list.names, signal_list.length, mfc);

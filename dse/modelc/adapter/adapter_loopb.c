@@ -904,6 +904,7 @@ static int ready_update_sv(void* value, void* data)
                 SignalValue* sv = index_map[i].signal;
                 if (sv->val != sv->final_val) {
                     sc->vector.scalar[sv->vector_index] = sv->final_val;
+                    flatmap_mark_changed(&sc->vector, sv->vector_index);
                 }
             }
         }
@@ -1098,12 +1099,11 @@ static int notify_update_sv(void* value, void* data)
 
     /* Pass 2: Execution hot-path. */
     for (uint32_t ch_idx = 0; ch_idx < ch_count; ch_idx++) {
-        ChannelIndexItem* channel_item = VECTOR_AT(&am->channels, ch_idx);
-        Channel*          ch = channel_item->ch;
-        SimbusChannel*    sc =
-            ch->mfc && !ch->is_binary
-                   ? ((ModelFunctionChannel*)ch->mfc)->scalar_sync.simbus_channel
-                   : NULL;
+        ChannelIndexItem*     channel_item = VECTOR_AT(&am->channels, ch_idx);
+        Channel*              ch = channel_item->ch;
+        ModelFunctionChannel* mfc = ch->mfc;
+        SimbusChannel*        sc =
+            mfc && !ch->is_binary ? mfc->scalar_sync.simbus_channel : NULL;
         if (sc == NULL) sc = _get_simbus_channel(v, ch->name);
         _refresh_index(ch);
 
@@ -1127,6 +1127,12 @@ static int notify_update_sv(void* value, void* data)
                 for (uint32_t i = 0; i < index_count; i++) {
                     SignalValue* sv = index_map[i].signal;
                     sv->val = sv->final_val;
+                }
+            } else if (mfc == NULL || !mfc->scalar_sync.enabled) {
+                for (uint32_t i = 0; i < index_count; i++) {
+                    SignalValue* sv = index_map[i].signal;
+                    sv->final_val = sv->val =
+                        sc->vector.scalar[sv->vector_index];
                 }
             }
         }

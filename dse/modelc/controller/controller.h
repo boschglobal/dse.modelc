@@ -58,6 +58,7 @@ typedef struct ModelFunctionChannel {
     const char*  channel_name;
     const char** signal_names;
     uint32_t     signal_count;
+    bool         is_binary;
 
     /* Signal map (to adapter channel). */
     SignalMap* signal_map;

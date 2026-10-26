@@ -91,8 +91,10 @@ Channel* adapter_init_channel(AdapterModel* am, const char* channel_name,
     Channel* ch = _create_channel(am, channel_name);
     assert(ch);
     ch->mfc = mfc;
-    ch->is_binary =
-        mfc && ((ModelFunctionChannel*)mfc)->signal_value_binary != NULL;
+    if (mfc != NULL) {
+        /* MFC is only set from controller (i.e. not from SimBus). */
+        ch->is_binary = ((ModelFunctionChannel*)mfc)->is_binary;
+    }
 
     /* Initialise the Signal properties. */
     for (uint32_t i = 0; i < signal_count; i++) {

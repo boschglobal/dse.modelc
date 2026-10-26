@@ -144,6 +144,29 @@ func findModelDoc(index *index.YamlFileIndex, modelName string) (*kind.KindDoc, 
 	return nil, false
 }
 
+func isRuntimeStacked(stackSpec *schema_kind.StackSpec, flags Flags) bool {
+	stacked := false
+	if stackSpec.Runtime != nil && stackSpec.Runtime.Stacked != nil && *stackSpec.Runtime.Stacked {
+		stacked = true
+	} else if flags.Transport == "loopback" {
+		stacked = true
+	} else {
+		// Search the additional flags for transport.
+		for _, mod := range flags.EnvModifier {
+			m := strings.SplitN(mod, "=", 2)
+			if len(m) != 2 {
+				continue
+			}
+			k := strings.SplitN(m[0], ":", 2)
+			if len(k) == 1 && k[0] == "SIMBUS_TRANSPORT" && m[1] == "loopback" {
+				stacked = true
+				break
+			}
+		}
+	}
+	return stacked
+}
+
 func ModelCommandList(index *index.YamlFileIndex, modelcPath string, modelcX32Path string, modelcI386Path string, flags Flags) []*session.Command {
 	cmds := []*session.Command{}
 
@@ -160,7 +183,7 @@ func ModelCommandList(index *index.YamlFileIndex, modelcPath string, modelcX32Pa
 			}
 			stackSpec := stackDoc.Spec.(*schema_kind.StackSpec)
 			// Stacked is a special case, emit/return the single command.
-			if stackSpec.Runtime != nil && stackSpec.Runtime.Stacked != nil && *stackSpec.Runtime.Stacked {
+			if isRuntimeStacked(stackSpec, flags) {
 				slog.Debug(("Build stacked command"))
 				cmd := stackedModelCmd(&stackDoc, modelcPath, modelcX32Path, modelcI386Path, flags, index)
 				cmds = append(cmds, cmd)
@@ -381,7 +404,7 @@ func calculateEnv(stack *schema_kind.StackSpec, model *schema_kind.ModelInstance
 	}
 	if model != nil && model.Runtime != nil && model.Runtime.Env != nil {
 		for k, v := range *model.Runtime.Env {
-			if stack.Runtime != nil && stack.Runtime.Stacked != nil && *stack.Runtime.Stacked {
+			if isRuntimeStacked(stack, flags) {
 				if model.Name == "simbus" {
 					// For simbus, directly set the var.
 					env[k] = v
@@ -412,7 +435,7 @@ func calculateEnv(stack *schema_kind.StackSpec, model *schema_kind.ModelInstance
 			if model.Name != k[0] {
 				continue
 			}
-			if stack.Runtime != nil && stack.Runtime.Stacked != nil && *stack.Runtime.Stacked {
+			if isRuntimeStacked(stack, flags) {
 				if model.Name == "simbus" {
 					// For simbus, directly set the var.
 					env[k[1]] = m[1]
