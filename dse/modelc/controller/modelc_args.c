@@ -22,6 +22,7 @@
 #define ENV_SIMBUS_URI       "SIMBUS_URI"
 #define ENV_SIMBUS_LOGLEVEL  "SIMBUS_LOGLEVEL"
 #define ENV_SIMBUS_TIMEOUT   "SIMBUS_TIMEOUT"
+#define OPT_STARTUP_TIMEOUT  256
 
 
 /* CLI related defaults. */
@@ -42,6 +43,7 @@ static struct option long_options[] = {
     { "uid", required_argument, NULL, 'u' },
     { "name", required_argument, NULL, 'n' },
     { "timeout", required_argument, NULL, 'T' },
+    { "startup-timeout", required_argument, NULL, OPT_STARTUP_TIMEOUT },
     { "logger", required_argument, NULL, 'l' },
     { "file", required_argument, NULL, 'f' },
     { "path", required_argument, NULL, 'p' },
@@ -61,6 +63,7 @@ static void print_usage(const char* doc_string)
     log_notice("       [--uid <model uid>]");
     log_notice("       [--name <model name>] *** normally required ***");
     log_notice("       [--timeout <double>]");
+    log_notice("       [--startup-timeout <seconds>] *** SimBus only ***");
     log_notice(
         "       [--logger <number>] 0..6 *** 0=more, 6=less, 3=INFO ***");
     log_notice("       [--file <model file>]");
@@ -237,6 +240,7 @@ void modelc_set_default_args(ModelCArguments* args,
 {
     *args = (ModelCArguments){};
     args->timeout = MODEL_TIMEOUT;
+    args->startup_timeout = 0;
     args->log_level = LOG_NOTICE;
     args->step_size = step_size;
     args->end_time = end_time;
@@ -298,6 +302,13 @@ void modelc_parse_arguments(
             if (_cli_timeout > 0) {
                 args->timeout = atof(optarg);
                 args->timeout_set_by_cli = 1;
+            }
+            break;
+        }
+        case OPT_STARTUP_TIMEOUT: {
+            int _cli_timeout = atoi(optarg);
+            if (_cli_timeout >= 0) {
+                args->startup_timeout = _cli_timeout;
             }
             break;
         }

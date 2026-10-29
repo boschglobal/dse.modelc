@@ -29,6 +29,7 @@
 
 #define ADAPTER_FALLBACK_CHANNEL "test"
 #define UID_KEY_LEN              12
+#define BUS_STARTUP_TIMEOUT      300
 
 
 typedef struct Adapter      Adapter;
@@ -174,6 +175,7 @@ typedef struct Adapter {
     double        bus_time;
     double        bus_step_size;
     double        bus_time_correction;
+    int           bus_startup_timeout;
     AdapterModel* bus_adapter_model;
 
     /* Endpoint container. */

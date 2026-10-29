@@ -40,6 +40,7 @@ int main(int argc, char** argv)
     modelc_set_default_args(&args, MODEL_NAME, BUS_STEP_SIZE, 0);
     /* Special Bus Mode settings (for SimBus operation). */
     args.uid = BUS_MODEL_UID;
+    args.startup_timeout = BUS_STARTUP_TIMEOUT;
     modelc_parse_arguments(&args, argc, argv, CLI_DOC);
     if (args.timeout <= 0) args.timeout = BUS_TIMEOUT;
 
@@ -68,6 +69,7 @@ int main(int argc, char** argv)
     }
     log_notice("Create the Bus Adapter object ...");
     Adapter* adapter = simbus_adapter_create(endpoint, args.step_size);
+    adapter->bus_startup_timeout = args.startup_timeout;
     log_notice("  Model UID: %d", adapter->bus_adapter_model->model_uid);
 
 

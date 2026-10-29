@@ -5,6 +5,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdbool.h>
+#include <errno.h>
 #include <dse/logger.h>
 #include <dse/clib/collections/set.h>
 #include <dse/modelc/adapter/transport/endpoint.h>
@@ -190,6 +191,7 @@ Adapter* simbus_adapter_create(Endpoint* endpoint, double bus_step_size)
     adapter->bus_time =
         0.0 - bus_step_size;  // Will be set to 0.0 on first Sync.
     adapter->bus_step_size = bus_step_size;
+    adapter->bus_startup_timeout = BUS_STARTUP_TIMEOUT;
     v->handle_notify_message = simbus_handle_notify_message;
 
     /* Create the Adapter Model object. */
@@ -287,6 +289,7 @@ void simbus_adapter_run(Adapter* adapter)
     }
 
     __simbus_exit_run_loop__ = false;
+    int rc = 0;
 
     while (true) {
         const char* _msg_channel_name = NULL;
@@ -294,6 +297,11 @@ void simbus_adapter_run(Adapter* adapter)
         wait_message(adapter, &_msg_channel_name, 0, &found);
 
         if (__simbus_exit_run_loop__) break;
+        if (errno == ETIME && adapter->bus_startup_timeout > 0 &&
+            --adapter->bus_startup_timeout == 0) {
+            rc = ETIMEDOUT;
+            break;
+        }
     }
 
     log_simbus("exit run loop");
@@ -301,4 +309,8 @@ void simbus_adapter_run(Adapter* adapter)
     /* Benchmarking/Profiling. */
     simbus_profile_print_benchmarks();
     simbus_profile_destroy();
+    if (rc) {
+        errno = rc;
+        log_fatal("SimBus startup timed out waiting for a model to register");
+    }
 }

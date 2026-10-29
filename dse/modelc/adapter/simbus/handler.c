@@ -287,6 +287,7 @@ void simbus_handle_notify_message(
         ModelRegister messages may exceed the number of models.
          */
         simbus_model_at_register(am, channel, model_uid);
+        adapter->bus_startup_timeout = 0;
         if (simbus_network_ready(am)) {
             log_simbus("Bus Network is complete, all Models connected.");
         }

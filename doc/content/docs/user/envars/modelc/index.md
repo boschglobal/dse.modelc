@@ -42,6 +42,7 @@ github_subdir: "doc"
 | `SIMBUS_TRANSPORT`  | `--transport` | `redispubsub` |
 | `SIMBUS_URI`        | `--uri`       | `redis://localhost:6379` |
 | `SIMBUS_TIMEOUT`    | `--timeout`   | `60` (seconds) |
+| _N/A_               | `--startup-timeout` | `300` (seconds; `0` disables) |
 
 
 ## Examples
