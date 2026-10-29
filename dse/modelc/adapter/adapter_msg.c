@@ -58,7 +58,6 @@ static int notify_encode_sv(void* value, void* data)
         log_simbus("  SignalVector --> [%s:%u]", ch->name, am->model_uid);
 
         uint32_t total_signals = ch->index.count;
-        if (total_signals == 0) continue;
         size_t scalar_count = 0;
         size_t binary_count = 0;
 
