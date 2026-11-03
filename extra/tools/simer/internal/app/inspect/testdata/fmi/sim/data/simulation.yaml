@@ -1,0 +1,61 @@
+---
+kind: Stack
+metadata:
+  annotations:
+    simulation:
+      endtime: 0.005
+      stepsize: 0.0005
+  name: default
+spec:
+  connection:
+    transport:
+      redis:
+        timeout: 60
+        uri: redis://localhost:6379
+  models:
+    - channels:
+        - expectedModelCount: 2
+          name: physical
+      model:
+        name: simbus
+      name: simbus
+      uid: 0
+    - annotations: {}
+      channels:
+        - alias: signal_channel
+          name: physical
+          selectors:
+            channel: signal_vector
+            model: input
+      model:
+        name: dse.modelc.csv
+      name: input
+      runtime:
+        env:
+          CSV_FILE: model/input/data/input.csv
+          SIMBUS_LOGLEVEL: "5"
+        paths:
+          - model/input/data
+      uid: 1
+    - annotations: {}
+      channels:
+        - alias: signal_channel
+          name: physical
+          selectors:
+            channel: signal_vector
+            model: linear
+      model:
+        name: linear
+      name: linear
+      runtime:
+        env:
+          MEASUREMENT_FILE: /sim/measurement.mf4
+          SIMBUS_LOGLEVEL: "2"
+        paths:
+          - model/linear/data
+      uid: 2
+---
+kind: Model
+metadata:
+  name: simbus
+spec: {}

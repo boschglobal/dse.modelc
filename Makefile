@@ -8,6 +8,7 @@ GCC_BUILDER_IMAGE ?= ghcr.io/boschglobal/dse-gcc-builder:latest
 DSE_CLANG_FORMAT_IMAGE ?= ghcr.io/boschglobal/dse-clang-format:latest
 TESTSCRIPT_IMAGE ?= ghcr.io/boschglobal/dse-testscript:latest
 SIMER_IMAGE ?= ghcr.io/boschglobal/dse-simer:latest
+INSPECT_IMAGE ?= ghcr.io/boschglobal/dse-inspect:latest
 
 
 ###############
@@ -75,7 +76,8 @@ TESTSCRIPT_E2E_FILES = \
 	$(TESTSCRIPT_E2E_DIR)/sequential.txtar \
 	$(TESTSCRIPT_E2E_DIR)/lua.txtar \
 	$(TESTSCRIPT_E2E_DIR)/pdunet.txtar \
-	$(TESTSCRIPT_E2E_DIR)/benchmark.txtar
+	$(TESTSCRIPT_E2E_DIR)/benchmark.txtar \
+	$(TESTSCRIPT_E2E_DIR)/inspect.txtar
 
 ifneq ($(CI), true)
 #	TESTSCRIPT_E2E_FILES += $(TESTSCRIPT_E2E_DIR)/gateway.txtar
@@ -128,6 +130,7 @@ help:
 	@echo "  super-linter  Run super-linter against the repository."
 	@echo "Local development commands:"
 	@echo "  export SIMER_IMAGE=simer:test"
+	@echo "  export INSPECT_IMAGE=inspect:test"
 	@echo "  make build tools"
 	@echo "  make test_cmocka"
 	@echo "  make test_e2e TEST=tests/testscript/e2e/pdunet.txtar"
@@ -173,17 +176,11 @@ simer: build package
 tools: simer
 	for d in $(TOOL_DIRS) ;\
 	do \
-		if [ -f extra/tools/$$d/build/package/Dockerfile ]; then \
-			if [ "$$d" = "simer" ]; then \
-				docker build -f extra/tools/$$d/build/package/Dockerfile \
-						--target simer-slim \
-						--tag $$d:test-slim extra/tools/$$d ;\
-				docker build -f extra/tools/$$d/build/package/Dockerfile \
-						--tag $$d:test extra/tools/$$d ;\
-			else \
-				docker build -f extra/tools/$$d/build/package/Dockerfile \
-						--tag $$d:test extra/tools/$$d ;\
-			fi \
+		if [ "$$d" = "simer" ]; then \
+			$(MAKE) -C extra/tools/$$d docker ;\
+		elif [ -f extra/tools/$$d/build/package/Dockerfile ]; then \
+			docker build -f extra/tools/$$d/build/package/Dockerfile \
+					--tag $$d:test extra/tools/$$d ;\
 		else \
 			$(MAKE) -C extra/tools/$$d; \
 		fi \
@@ -208,6 +205,7 @@ test_stream:
 			-e WORKDIR=$${WORKDIR} \
 			-e ENTRYWORKDIR=$${WORKDIR} \
 			-e SIMER=$(SIMER_IMAGE) \
+			-e INSPECT=$(INSPECT_IMAGE) \
 			$$t ;\
 	done;
 
@@ -223,6 +221,8 @@ clean:
 		docker images -q */*/$(DOCKER_PREFIX)-$$d | xargs -r docker rmi -f ;\
 	done;
 	docker images -q simer:test | xargs -r docker rmi -f
+	docker images -q simer:test-slim | xargs -r docker rmi -f
+	docker images -q inspect:test | xargs -r docker rmi -f
 	docker images -qf dangling=true | xargs -r docker rmi
 	for d in $(TOOL_DIRS) ;\
 	do \
@@ -265,6 +265,8 @@ do-test_testscript-e2e:
 ifeq ($(PACKAGE_ARCH), linux-amd64)
 	@-docker kill simer 2>/dev/null ; true
 	@-docker rm simer 2>/dev/null ; true
+	@-docker kill inspect 2>/dev/null ; true
+	@-docker rm inspect 2>/dev/null ; true
 	@-docker kill gateway 2>/dev/null ; true
 	@set -eu; for t in $(TESTSCRIPT_E2E_FILES) ;\
 	do \
@@ -282,6 +284,7 @@ ifeq ($(PACKAGE_ARCH), linux-amd64)
 				-e REPODIR=/repo \
 				-e WORKDIR=/workdir \
 				-e SIMER=$(SIMER_IMAGE) \
+				-e INSPECT=$(INSPECT_IMAGE) \
 				$$t ;\
 	done;
 endif

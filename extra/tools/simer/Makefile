@@ -10,6 +10,7 @@ CLI_TOOLS     ?= $(BIN_DIR)/simer
 CLI_TOOLS_WIN := $(addsuffix .exe,$(CLI_TOOLS))
 GOFLAGS       :=
 GOPRIVATE     ?= github.com/boschglobal
+DOCKER_DIR    := build/package
 
 
 .PHONY: all
@@ -39,6 +40,12 @@ win: $(CLI_TOOLS_WIN)
 
 $(CLI_TOOLS_WIN): $(SRC)
 	GOOS=windows GOARCH=amd64 go build $(GOFLAGS) -o $@ ./cmd/$(basename $(subst $(BIN_DIR)/,,$@))
+
+.PHONY: docker
+docker:
+	docker build -f $(DOCKER_DIR)/simer/Dockerfile --target simer-slim --tag simer:test-slim .
+	docker build -f $(DOCKER_DIR)/simer/Dockerfile --tag simer:test .
+	docker build -f $(DOCKER_DIR)/inspect/Dockerfile --tag inspect:test .
 
 .PHONY: test
 test:
