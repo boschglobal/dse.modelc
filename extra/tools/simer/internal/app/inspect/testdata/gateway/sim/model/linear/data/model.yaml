@@ -1,0 +1,26 @@
+kind: Model
+metadata:
+  annotations:
+    fmi_guid: '{71da084a-0998-4418-a29d-01af36a32568}'
+    fmi_model_cosim: "true"
+    fmi_model_version: ""
+    fmi_resource_dir: model/linear/linear_fmu/resources
+    fmi_stepsize: "0.0005"
+    mcl_adapter: fmi
+    mcl_version: "2.0"
+  name: linear
+spec:
+  channels:
+    - alias: signal_channel
+      selectors:
+        channel: signal_vector
+        model: linear
+  runtime:
+    dynlib:
+      - arch: amd64
+        os: linux
+        path: model/linear/lib/libfmimcl.so
+    mcl:
+      - arch: amd64
+        os: linux
+        path: model/linear/linear_fmu/binaries/linux64/fmu2linear.so

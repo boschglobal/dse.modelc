@@ -1,0 +1,92 @@
+---
+kind: Stack
+metadata:
+  annotations:
+    simulation:
+      endtime: 0.005
+      stepsize: 0.0005
+  name: model
+spec:
+  connection:
+    transport:
+      redis:
+        timeout: 60
+        uri: redis://localhost:6379
+  models:
+    - channels:
+        - expectedModelCount: 3
+          name: signal
+      model:
+        name: simbus
+      name: simbus
+      uid: 0
+    - annotations: {}
+      channels:
+        - alias: signal_channel
+          name: signal
+          selectors:
+            channel: signal_vector
+            model: input
+      model:
+        name: dse.modelc.csv
+      name: input
+      runtime:
+        env:
+          CSV_FILE: model/input/data/input.csv
+          SIMBUS_LOGLEVEL: "5"
+        paths:
+          - model/input/data
+      uid: 1
+    - annotations: {}
+      channels:
+        - alias: signal_channel
+          name: signal
+          selectors:
+            channel: signal_vector
+            model: linear
+      model:
+        name: linear
+      name: linear
+      runtime:
+        env:
+          MEASUREMENT_FILE: /sim/measurement.mf4
+          SIMBUS_LOGLEVEL: "4"
+        paths:
+          - model/linear/data
+      uid: 2
+---
+kind: Stack
+metadata:
+  annotations:
+    simulation:
+      endtime: 0.005
+      stepsize: 0.0005
+  name: external
+spec:
+  connection:
+    transport:
+      redis:
+        timeout: 60
+        uri: redis://localhost:6379
+  models:
+    - annotations: {}
+      channels:
+        - alias: data
+          name: signal
+          selectors:
+            channel: data
+            model: gateway
+      model:
+        name: gateway
+      name: gateway
+      runtime:
+        env: {}
+        external: true
+        paths:
+          - model/gateway/data
+      uid: 3
+---
+kind: Model
+metadata:
+  name: simbus
+spec: {}

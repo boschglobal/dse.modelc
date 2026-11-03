@@ -116,7 +116,7 @@ RUN set -eux; \
 
 # Install Valkey
 # ==============
-COPY build/package/valkey.conf /usr/local/etc/valkey/valkey.conf
+COPY build/package/simer/valkey.conf /usr/local/etc/valkey/valkey.conf
 COPY --from=valkey /usr/local/bin/valkey-cli /usr/local/bin/valkey-cli
 COPY --from=valkey /usr/local/bin/valkey-server /usr/local/bin/valkey-server
 RUN mkdir -p /data/valkey \
@@ -156,7 +156,7 @@ COPY build/stage/licenses /licenses
 # ==========================
 # Run docker with --volume parameter to map the simulation folder into /sim.
 WORKDIR /sim
-COPY build/package/entrypoint.sh /entrypoint.sh
+COPY build/package/simer/entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 ENTRYPOINT ["/entrypoint.sh"]
 

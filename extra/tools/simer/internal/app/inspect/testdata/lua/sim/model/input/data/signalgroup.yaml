@@ -1,0 +1,12 @@
+---
+kind: SignalGroup
+metadata:
+  name: signal_vector
+  labels:
+    channel: signal_vector
+    model: input
+spec:
+  signals:
+    - signal: input
+    - signal: factor
+    - signal: offset

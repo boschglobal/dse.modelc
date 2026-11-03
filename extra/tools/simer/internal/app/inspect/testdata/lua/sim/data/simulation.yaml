@@ -1,0 +1,63 @@
+---
+kind: Stack
+metadata:
+  annotations:
+    simulation:
+      endtime: 0.005
+      stepsize: 0.0005
+  name: default
+spec:
+  connection:
+    transport:
+      redis:
+        timeout: 60
+        uri: redis://localhost:6379
+  models:
+    - channels:
+        - expectedModelCount: 2
+          name: physical
+      model:
+        name: simbus
+      name: simbus
+      uid: 0
+    - annotations: {}
+      channels:
+        - alias: signal_channel
+          name: physical
+          selectors:
+            channel: signal_vector
+            model: input
+      model:
+        name: Csv
+      name: input
+      runtime:
+        env:
+          CSV_FILE: model/input/data/input.csv
+        files:
+          - model/input/csv.lua
+          - model/input/data/input.csv
+          - model/input/data/signalgroup.yaml
+        mcl: lua
+      uid: 1
+    - annotations: {}
+      channels:
+        - alias: signal_channel
+          name: physical
+          selectors:
+            channel: signal_vector
+            model: linear
+      model:
+        name: Linear
+      name: linear
+      runtime:
+        env: {}
+        files:
+          - model/linear/linear.lua
+          - model/linear/data/signalgroup.yaml
+        mcl: lua
+      uid: 2
+---
+kind: Model
+metadata:
+  name: simbus
+spec: {}

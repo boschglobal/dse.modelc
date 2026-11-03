@@ -1,0 +1,74 @@
+env NAME=extended_inst
+env SIM=dse/modelc/build/_out/examples/extended
+
+
+# TEST: inspect
+exec sh -e $WORK/test.sh
+cmp stdout expect.inspect
+
+-- test.sh --
+INSPECT="${INSPECT:-ghcr.io/boschglobal/dse-inspect:latest}"
+docker run --name inspect -i --rm -v $ENTRYHOSTDIR/$SIM:/sim $INSPECT
+
+-- expect.inspect --
+# Simulation Inventory
+
+## Stack: extended_stack
+
+File: `data/simulation.yaml`
+
+| Parameter | Value |
+|---|---|
+| name | extended_stack |
+| stacked | false |
+| stepsize | 0.0005 |
+| endtime | 0.002 |
+| external | false |
+
+| Transport | Value |
+|---|---|
+| name | redispubsub |
+| uri | `redis://localhost:6379` |
+| timeout | 60 |
+
+### SimBus
+
+| Parameter | Value |
+|---|---|
+| name | simbus |
+| model | simbus |
+| uid | 0 |
+| operation | started by simer |
+
+| Channel | Expected Models |
+|---|---|
+| data_channel | 1 |
+
+| Files |
+|---|
+| `data/simulation.yaml` |
+
+### Model: extended_inst (Extended)
+
+| Parameter | Value |
+|---|---|
+| name | extended_inst |
+| model | Extended |
+| uid | 42 |
+| operation | started by simer |
+
+| Channel | Alias |
+|---|---|
+| data_channel | data |
+
+| Runtime | Value |
+|---|---|
+| dynlib.linux.amd64 | `lib/libextended.so` |
+| dynlib.linux.x86 | `lib/libextended.so` |
+| dynlib.windows.x64 | `lib/libextended.dll` |
+| dynlib.windows.x86 | `lib/libextended.dll` |
+
+| Files |
+|---|
+| `data/simulation.yaml` |
+| `data/model.yaml` |

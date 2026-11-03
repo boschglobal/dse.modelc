@@ -1,0 +1,30 @@
+# Copyright 2024 Robert Bosch GmbH
+#
+# SPDX-License-Identifier: Apache-2.0
+
+---
+kind: Model
+metadata:
+  name: dse.modelc.csv
+spec:
+  runtime:
+    dynlib:
+      - os: linux
+        arch: amd64
+        path: model/input/lib/libcsv.so
+      - os: linux
+        arch: x86
+        path: model/input/lib/libcsv.so
+      - os: linux
+        arch: i386
+        path: model/input/lib/libcsv.so
+      - os: windows
+        arch: x64
+        path: model/input/lib/libcsv.dll
+      - os: windows
+        arch: x86
+        path: model/input/lib/libcsv.dll
+  channels:
+    - alias: signal_channel
+      selectors:
+        channel: signal_vector
