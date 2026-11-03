@@ -43,8 +43,8 @@ $(CLI_TOOLS_WIN): $(SRC)
 
 .PHONY: docker
 docker:
-#	docker build -f $(DOCKER_DIR)/simer/Dockerfile --target simer-slim --tag simer:test-slim .
-#	docker build -f $(DOCKER_DIR)/simer/Dockerfile --tag simer:test .
+	docker build -f $(DOCKER_DIR)/simer/Dockerfile --target simer-slim --tag simer:test-slim .
+	docker build -f $(DOCKER_DIR)/simer/Dockerfile --tag simer:test .
 	docker build -f $(DOCKER_DIR)/inspect/Dockerfile --tag inspect:test .
 
 .PHONY: test
