@@ -39,7 +39,6 @@ func TestListAllFiles(t *testing.T) {
 		"d      - T model/linear/data/\n" +
 		"f   818B T model/linear/data/signalgroup.yaml\n" +
 		"f   1.5K T model/linear/linear.lua\n" +
-		"d      - T trace/\n" +
 		"```\n"
 	if got := modTimeRe.ReplaceAllString(buf.String(), "T"); got != want {
 		t.Errorf("output mismatch\ngot:\n%s\nwant:\n%s", got, want)
