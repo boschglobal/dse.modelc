@@ -89,7 +89,8 @@ int model_step(ModelDesc* model, double* model_time, double stop_time)
 
     /* Message TX. */
     char msg[100] = "Hello World!";
-    snprintf(msg + strlen(msg), sizeof(msg), " from swc_id=%s", m->swc_id);
+    size_t pos = strlen(msg);
+    snprintf(msg + pos, sizeof(msg) - pos, " from swc_id=%s", m->swc_id);
     struct NCodecPdu tx_msg = {
         .id = ++m->counter + 1000, /* Simple frame_id: 1001, 1002 ... */
         .payload = (uint8_t*)msg,

@@ -88,7 +88,8 @@ int model_step(ModelDesc* model, double* model_time, double stop_time)
 
     /* Message TX. */
     char msg[100] = "Hello World!";
-    snprintf(msg + strlen(msg), sizeof(msg), " from node_id=%s", m->node_id);
+    size_t pos = strlen(msg);
+    snprintf(msg + pos, sizeof(msg) - pos, " from node_id=%s", m->node_id);
     struct NCodecCanMessage tx_msg = {
         .frame_id = ++m->counter + 1000, /* Simple frame_id: 1001, 1002 ... */
         .frame_type = CAN_EXTENDED_FRAME,

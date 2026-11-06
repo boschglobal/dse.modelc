@@ -28,44 +28,12 @@ list(APPEND C_CXX_WARNING_FLAGS
 add_compile_options(${C_CXX_WARNING_FLAGS})
 
 
-# External Project - yaml
-# -----------------------
-set(YAML_SOURCE_DIR "$ENV{EXTERNAL_BUILD_DIR}/yaml")
-set(YAML_BINARY_DIR "$ENV{EXTERNAL_BUILD_DIR}/yaml")
-find_library(YAML_LIB
-    NAMES
-        libyaml.a
-    PATHS
-        ${YAML_BINARY_DIR}
-    REQUIRED
-    NO_DEFAULT_PATH
-)
-add_library(yaml STATIC IMPORTED GLOBAL)
-set_target_properties(yaml
-    PROPERTIES
-        IMPORTED_LOCATION "${YAML_LIB}"
-        INTERFACE_INCLUDE_DIRECTORIES "${YAML_BINARY_DIR}"
-)
-
-
-# External Project - lua
-# ----------------------
-set(LUA_SOURCE_DIR "$ENV{EXTERNAL_BUILD_DIR}/lua")
-set(LUA_BINARY_DIR "$ENV{EXTERNAL_BUILD_DIR}/lua")
-find_library(LUA_LIB
-    NAMES
-        liblua.a
-    PATHS
-        ${LUA_BINARY_DIR}
-    REQUIRED
-    NO_DEFAULT_PATH
-)
-add_library(lua STATIC IMPORTED GLOBAL)
-set_target_properties(lua
-    PROPERTIES
-        IMPORTED_LOCATION "${LUA_LIB}"
-        INTERFACE_INCLUDE_DIRECTORIES "${LUA_BINARY_DIR}"
-)
+# External Projects
+# =================
+set(DSE_MODELC_EXTERNAL_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../../extra/external)
+include(${DSE_MODELC_EXTERNAL_DIR}/yaml.cmake)
+include(${DSE_MODELC_EXTERNAL_DIR}/dlfcnwin32.cmake)
+include(${DSE_MODELC_EXTERNAL_DIR}/lua.cmake)
 
 
 # External Project - DSE C Lib
@@ -206,7 +174,6 @@ target_include_directories(test_model
         ${DSE_CLIB_INCLUDE_DIR}
         ${DSE_MODELC_INCLUDE_DIR}
         ${DSE_NCODEC_INCLUDE_DIR}
-        ${YAML_SOURCE_DIR}/include
         ./
 )
 target_compile_definitions(test_model
@@ -223,9 +190,9 @@ target_link_libraries(test_model
         ab-codec
     PRIVATE
         cmocka
-        lua
-        yaml
-        dl
+        dse_external_lua
+        dse_external_yaml
+        dse_external_dl
         m
         # -Wl,--wrap=strdup # Wrapping strdup does not work with libyaml.
 )
@@ -259,7 +226,6 @@ target_include_directories(test_model_interface
         ${DSE_CLIB_INCLUDE_DIR}
         ${DSE_MODELC_INCLUDE_DIR}
         ${DSE_NCODEC_INCLUDE_DIR}
-        ${YAML_SOURCE_DIR}/include
         ${FLATCC_INCLUDE_DIR}
         ./
 )
@@ -277,9 +243,9 @@ target_link_libraries(test_model_interface
         ab-codec
     PRIVATE
         cmocka
-        lua
-        yaml
-        dl
+        dse_external_lua
+        dse_external_yaml
+        dse_external_dl
         m
         # -Wl,--wrap=strdup # Wrapping strdup does not work with libyaml.
 )
@@ -309,7 +275,6 @@ target_include_directories(test_simbus_loopback
         ${DSE_CLIB_INCLUDE_DIR}
         ${DSE_MODELC_INCLUDE_DIR}
         ${DSE_NCODEC_INCLUDE_DIR}
-        ${YAML_SOURCE_DIR}/include
         ./simbus
 )
 target_compile_definitions(test_simbus_loopback
@@ -326,9 +291,9 @@ target_link_libraries(test_simbus_loopback
         ab-codec
     PRIVATE
         cmocka
-        lua
-        yaml
-        dl
+        dse_external_lua
+        dse_external_yaml
+        dse_external_dl
         m
         # -Wl,--wrap=strdup # Wrapping strdup does not work with libyaml.
 )

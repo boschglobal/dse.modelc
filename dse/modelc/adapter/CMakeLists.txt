@@ -45,20 +45,17 @@ add_library(adapter OBJECT
 )
 target_include_directories(adapter
     PRIVATE
-        ${HIREDIS_INCLUDE_DIR}
-        ${EVENT_SOURCE_DIR}/include
-        ${LUA_SOURCE_DIR}
         ${DSE_CLIB_INCLUDE_DIR}
         ${DSE_SCHEMAS_SOURCE_DIR}
         ${DSE_SCHEMAS_SOURCE_DIR}/dse_schemas/flatcc/include
-        $<$<BOOL:${WIN32}>:${DLFCNWIN32_SOURCE_DIR}>
         ../../..
 )
 target_link_libraries(adapter
     PRIVATE
-        hiredis
-        event
-        dl
+        dse_external_hiredis
+        dse_external_event
+        dse_external_lua
+        dse_external_dl
         m
         $<$<BOOL:${UNIX}>:rt>
         $<$<BOOL:${WIN32}>:ws2_32>

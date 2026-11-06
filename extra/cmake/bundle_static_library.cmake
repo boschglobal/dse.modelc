@@ -31,6 +31,9 @@ function(bundle_static_library tgt_name bundled_tgt_name)
     endif()
     get_target_property(public_dependencies ${input_target} ${_input_link_libraries})
     foreach(dependency IN LISTS public_dependencies)
+      if(dependency MATCHES "^\\$<TARGET_OBJECTS:([^>]+)>$")
+        set(dependency ${CMAKE_MATCH_1})
+      endif()
       if(TARGET ${dependency})
         get_target_property(alias ${dependency} ALIASED_TARGET)
         if (TARGET ${alias})
@@ -39,6 +42,8 @@ function(bundle_static_library tgt_name bundled_tgt_name)
         get_target_property(_type ${dependency} TYPE)
         if (${_type} STREQUAL "STATIC_LIBRARY")
           list(APPEND static_libs ${dependency})
+        elseif (${_type} STREQUAL "OBJECT_LIBRARY")
+          list(APPEND object_libs ${dependency})
         endif()
 
         get_property(library_already_added
@@ -50,10 +55,19 @@ function(bundle_static_library tgt_name bundled_tgt_name)
       endif()
     endforeach()
     set(static_libs ${static_libs} PARENT_SCOPE)
+    set(object_libs ${object_libs} PARENT_SCOPE)
   endfunction()
 
   _recursively_collect_dependencies(${tgt_name})
   list(REMOVE_DUPLICATES static_libs)
+
+  # Objects of directly linked object libraries are already archived in tgt_name,
+  # transitive ones (only propagated as link items) must be added to the bundle.
+  get_target_property(_direct_deps ${tgt_name} LINK_LIBRARIES)
+  if(object_libs)
+    list(REMOVE_DUPLICATES object_libs)
+    list(REMOVE_ITEM object_libs ${_direct_deps})
+  endif()
 
   set(bundled_tgt_full_name
     ${CMAKE_BINARY_DIR}/${CMAKE_STATIC_LIBRARY_PREFIX}${bundled_tgt_name}${CMAKE_STATIC_LIBRARY_SUFFIX})
@@ -65,6 +79,10 @@ function(bundle_static_library tgt_name bundled_tgt_name)
     foreach(tgt IN LISTS static_libs)
       file(APPEND ${CMAKE_BINARY_DIR}/${bundled_tgt_name}.ar.in
         "ADDLIB $<TARGET_FILE:${tgt}>\n")
+    endforeach()
+    foreach(tgt IN LISTS object_libs)
+      file(APPEND ${CMAKE_BINARY_DIR}/${bundled_tgt_name}.ar.in
+        "ADDMOD $<JOIN:$<TARGET_OBJECTS:${tgt}>,\nADDMOD >\n")
     endforeach()
 
     file(APPEND ${CMAKE_BINARY_DIR}/${bundled_tgt_name}.ar.in "SAVE\n")

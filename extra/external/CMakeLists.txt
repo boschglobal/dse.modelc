@@ -19,7 +19,7 @@ add_compile_options(-Wall -W -Wwrite-strings -Wno-missing-field-initializers)
 # Load URLs
 # =========
 include(oss_repos.cmake)
-if($ENV{REPO_MIRRORS})
+if(DEFINED ENV{REPO_MIRRORS})
     include($ENV{REPO_MIRRORS} OPTIONAL)
 endif()
 
@@ -65,130 +65,34 @@ FetchContent_Declare(dse_ncodec
 FetchContent_MakeAvailable(dse_ncodec)
 
 
-# Lib Event
-# ---------
-# Libevent's own evutil_time.c and event.c trigger several warnings on
-# Windows builds that are unfixed upstream (present on libevent's current
-# main branch too) and harmless, so they are suppressed here only for this
-# vendored project rather than globally:
-#  -Wincompatible-pointer-types : 32-bit time_t vs _gmtime64_s on mingw-x86.
-#  -Wcast-function-type         : GetProcAddress() casts to typed fn ptrs.
-#  -Wformat                     : EV_I64_FMT uses MS "%I64d", which GCC's
-#                                 format checker does not recognise even
-#                                 though mingw's printf() supports it.
-set(EVENT_C_FLAGS "${CMAKE_C_FLAGS}")
-if(CMAKE_SYSTEM_NAME STREQUAL "Windows")
-    set(EVENT_C_FLAGS "${EVENT_C_FLAGS} -Wno-incompatible-pointer-types -Wno-cast-function-type -Wno-format")
-endif()
-ExternalProject_Add(event
-    URL                 ${ExternalProject__EVENT__URL}
-    HTTP_USERNAME       ${ExternalProject__EVENT__USERNAME}
-    HTTP_PASSWORD       ${ExternalProject__EVENT__PASSWORD}
-    SOURCE_DIR          "$ENV{EXTERNAL_BUILD_DIR}/event"
-    BINARY_DIR          "$ENV{EXTERNAL_BUILD_DIR}/event"
-    CMAKE_ARGS
-        -DCMAKE_C_FLAGS=${EVENT_C_FLAGS}
-        -DCMAKE_EXPORT_NO_PACKAGE_REGISTRY=ON
-        -DEVENT__DISABLE_OPENSSL=ON
-        -DEVENT__DISABLE_DEBUG_MODE=ON
-        -DEVENT__DISABLE_BENCHMARK=ON
-        -DEVENT__DISABLE_TESTS=ON
-        -DEVENT__DISABLE_REGRESS=ON
-        -DEVENT__DISABLE_SAMPLES=ON
-    INSTALL_COMMAND     ""
-)
-
-# Lib YAML
-# --------
-ExternalProject_Add(yaml
-    URL                 ${ExternalProject__YAML__URL}
-    HTTP_USERNAME       ${ExternalProject__YAML__USERNAME}
-    HTTP_PASSWORD       ${ExternalProject__YAML__PASSWORD}
-    SOURCE_DIR          "$ENV{EXTERNAL_BUILD_DIR}/yaml"
-    BINARY_DIR          "$ENV{EXTERNAL_BUILD_DIR}/yaml"
-    CMAKE_ARGS
-        -DCMAKE_C_FLAGS=${CMAKE_C_FLAGS}
-        -DBUILD_SHARED_LIBS=OFF
-    INSTALL_COMMAND     ""
-)
-
-# HiRedis
-# -------
-# HiRedis depends on LibEvent and needs its include path set correctly to
-# reference the above Lib Event external project (/tmp/dse.modelc/event/include).
-#
-# NOTE: Working with a Mirrored and Patched version of HiRedis.
-ExternalProject_Add(hiredis
-    URL                 ${ExternalProject__HIREDIS__URL}
-    HTTP_USERNAME       ${ExternalProject__HIREDIS__USERNAME}
-    HTTP_PASSWORD       ${ExternalProject__HIREDIS__PASSWORD}
-    SOURCE_DIR          "$ENV{EXTERNAL_BUILD_DIR}/hiredis"
-    BINARY_DIR          "$ENV{EXTERNAL_BUILD_DIR}/hiredis-build"
-    CMAKE_ARGS
-        -DCMAKE_C_FLAGS=${CMAKE_C_FLAGS}
-        -DENABLE_SSL=OFF
-        -DDISABLE_TESTS=ON
-        -DENABLE_SSL_TESTS=OFF
-    BUILD_COMMAND       ${CMAKE_MAKE_PROGRAM} -e CFLAGS=-I$ENV{EXTERNAL_BUILD_DIR}/event/include
-    INSTALL_COMMAND     ""
-)
-
-# dlfcn-win32
-# -----------
-if(NOT WIN32)
-    set(DLFCNWIN32_BUILD_COMMAND "")
-endif()
-ExternalProject_Add(dlfcnwin32
-    URL                 ${ExternalProject__DLFCNWIN32__URL}
-    HTTP_USERNAME       ${ExternalProject__DLFCNWIN32__USERNAME}
-    HTTP_PASSWORD       ${ExternalProject__DLFCNWIN32__PASSWORD}
-    SOURCE_DIR          "$ENV{EXTERNAL_BUILD_DIR}/dlfcnwin32"
-    BINARY_DIR          "$ENV{EXTERNAL_BUILD_DIR}/dlfcnwin32-build"
-    CMAKE_ARGS
-        -DCMAKE_C_FLAGS=${CMAKE_C_FLAGS}
-        -DBUILD_SHARED_LIBS=OFF
-        -DBUILD_TESTS=OFF
-    BUILD_COMMAND       ${DLFCNWIN32_BUILD_COMMAND}
-    INSTALL_COMMAND     ""
-)
-
-# Lua
-# ---
-ExternalProject_Add(lua
-    URL                 ${ExternalProject__LUA__URL}
-    SOURCE_DIR          "$ENV{EXTERNAL_BUILD_DIR}/lua"
-    BINARY_DIR          "$ENV{EXTERNAL_BUILD_DIR}/lua"
-    PATCH_COMMAND       ${CMAKE_COMMAND} -E copy
-                        ${CMAKE_CURRENT_SOURCE_DIR}/lua_makefile
-                        <SOURCE_DIR>/makefile
-    CONFIGURE_COMMAND   ""
-    BUILD_COMMAND       make
-                        CMAKE_C_FLAGS=${CMAKE_C_FLAGS}
-                        CC=${CMAKE_C_COMPILER}
-    INSTALL_COMMAND     ""
-)
+# OSS Sources
+# ===========
+include(event.cmake)
+include(hiredis.cmake)
+include(yaml.cmake)
+include(dlfcnwin32.cmake)
 
 
 # OSS Target
 # ==========
 add_custom_target(oss)
+
 function(oss_copy src dst)
+    if(TARGET ${src})
+        add_dependencies(oss ${src}-download)
+        ExternalProject_Get_Property(${src} SOURCE_DIR)
+        set(src ${SOURCE_DIR})
+    endif()
     add_custom_command(TARGET oss PRE_BUILD
         COMMAND ${CMAKE_COMMAND} -E copy_directory
             "${src}"
             "../../../dse/__oss__/${dst}"
     )
 endfunction()
-add_dependencies(oss
-    dlfcnwin32-download
-    event-download
-    hiredis-download
-    yaml-download
-)
 oss_copy(${dse_clib_SOURCE_DIR}                 boschglobal/dse.clib)
 oss_copy(${dse_schemas_SOURCE_DIR}              boschglobal/dse.schemas)
 oss_copy(${dse_ncodec_SOURCE_DIR}               boschglobal/dse.ncodec)
-oss_copy($ENV{EXTERNAL_BUILD_DIR}/dlfcnwin32    dlfcn-win32/dlfcn-win32)
-oss_copy($ENV{EXTERNAL_BUILD_DIR}/event         libevent/libevent)
-oss_copy($ENV{EXTERNAL_BUILD_DIR}/hiredis       redis/hiredis)
-oss_copy($ENV{EXTERNAL_BUILD_DIR}/yaml          yaml/libyaml)
+oss_copy(dse_external_dl_build                  dlfcn-win32/dlfcn-win32)
+oss_copy(dse_external_event_build               libevent/libevent)
+oss_copy(dse_external_hiredis_build             redis/hiredis)
+oss_copy(dse_external_yaml_build                yaml/libyaml)

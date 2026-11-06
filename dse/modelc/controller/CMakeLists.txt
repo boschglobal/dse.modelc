@@ -35,16 +35,14 @@ target_include_directories(controller
     PRIVATE
         ${DSE_CLIB_INCLUDE_DIR}
         ${DSE_NCODEC_INCLUDE_DIR}
-        ${LUA_SOURCE_DIR}
-        ${YAML_SOURCE_DIR}/include
         ../../..
-        $<$<BOOL:${WIN32}>:${DLFCNWIN32_SOURCE_DIR}>
 )
 target_link_libraries(controller
     PRIVATE
         pdunet
-        yaml
-        dl
+        dse_external_yaml
+        dse_external_lua
+        dse_external_dl
         m
         $<$<BOOL:${UNIX}>:rt>
         $<$<BOOL:${WIN32}>:ws2_32>

@@ -25,8 +25,6 @@ target_include_directories(model_api
     PRIVATE
         ${DSE_CLIB_INCLUDE_DIR}
         ${DSE_NCODEC_INCLUDE_DIR}
-        ${LUA_SOURCE_DIR}
-        ${YAML_SOURCE_DIR}/include
         ../../..
 )
 target_compile_definitions(model_api
@@ -40,8 +38,8 @@ target_link_libraries(model_api
         pdunet
         ab-codec
     PRIVATE
-        yaml
-        lua
+        dse_external_yaml
+        dse_external_lua
         m
         $<$<BOOL:${WIN32}>:ws2_32>
         $<$<BOOL:${WIN32}>:iphlpapi>
