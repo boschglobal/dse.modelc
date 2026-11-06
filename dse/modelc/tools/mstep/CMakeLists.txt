@@ -31,7 +31,6 @@ set_target_properties(mstep
 target_include_directories(mstep
     PRIVATE
         ${DSE_CLIB_INCLUDE_DIR}
-        $<$<BOOL:${WIN32}>:${DLFCNWIN32_SOURCE_DIR}>
         ../../../..
 )
 target_compile_definitions(mstep
@@ -44,6 +43,7 @@ target_link_libraries(mstep
     PRIVATE
         $<$<BOOL:${WIN32}>:ws2_32>
         ${modelc_shared_lib}
+        dse_external_dl
 )
 install(TARGETS mstep
     COMPONENT

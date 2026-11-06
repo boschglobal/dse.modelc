@@ -24,7 +24,6 @@ add_executable(simbus
 target_include_directories(simbus
     PRIVATE
         ${DSE_CLIB_INCLUDE_DIR}
-        ${YAML_SOURCE_DIR}/include
         ../../../..
 )
 target_compile_definitions(simbus
@@ -39,7 +38,8 @@ target_link_libraries(simbus
         ab-codec
         pdunet
         model_api
-        $<$<BOOL:${UNIX}>:lua>
+        dse_external_yaml
+        $<$<BOOL:${UNIX}>:dse_external_lua>
         m
 )
 install(TARGETS simbus

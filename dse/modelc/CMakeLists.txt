@@ -42,6 +42,16 @@ add_compile_definitions(DLL_BUILD)
 
 include(FetchContent)
 
+# External Projects (targets common to sub projects)
+# =================
+set(DSE_MODELC_EXTERNAL_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../../extra/external)
+include(${DSE_MODELC_EXTERNAL_DIR}/event.cmake)
+include(${DSE_MODELC_EXTERNAL_DIR}/hiredis.cmake)
+include(${DSE_MODELC_EXTERNAL_DIR}/yaml.cmake)
+include(${DSE_MODELC_EXTERNAL_DIR}/dlfcnwin32.cmake)
+include(${DSE_MODELC_EXTERNAL_DIR}/lua.cmake)
+
+
 # External Project - DSE C Lib
 # ----------------------------
 FetchContent_Declare(dse_clib
@@ -79,112 +89,6 @@ set(DSE_NCODEC_SOURCE_DIR ${dse_ncodec_SOURCE_DIR}/dse/ncodec)
 set(DSE_NCODEC_INCLUDE_DIR ${dse_ncodec_SOURCE_DIR})
 set(DSE_PDUNET_SOURCE_DIR ${dse_ncodec_SOURCE_DIR}/dse/pdunet)
 set(DSE_PDUNET_INCLUDE_DIR ${dse_ncodec_SOURCE_DIR})
-
-
-# External Projects (targets common to sub projects)
-# =================
-
-# External Project - event
-# ------------------------
-set(EVENT_SOURCE_DIR "$ENV{EXTERNAL_BUILD_DIR}/event")
-set(EVENT_BINARY_DIR "$ENV{EXTERNAL_BUILD_DIR}/event/lib")
-find_library(EVENT_LIB
-    NAMES
-        libevent.a
-    PATHS
-        ${EVENT_BINARY_DIR}
-    REQUIRED
-    NO_DEFAULT_PATH
-)
-add_library(event STATIC IMPORTED GLOBAL)
-set_target_properties(event
-    PROPERTIES
-        IMPORTED_LOCATION "${EVENT_LIB}"
-        INTERFACE_INCLUDE_DIRECTORIES "${EVENT_SOURCE_DIR}"
-)
-
-
-# External Project - hiredis
-# --------------------------
-set(HIREDIS_INCLUDE_DIR "$ENV{EXTERNAL_BUILD_DIR}")
-set(HIREDIS_SOURCE_DIR "$ENV{EXTERNAL_BUILD_DIR}/hiredis")
-set(HIREDIS_BINARY_DIR "$ENV{EXTERNAL_BUILD_DIR}/hiredis-build")
-find_library(HIREDIS_LIB
-    NAMES
-        libhiredis.a
-    PATHS
-        ${HIREDIS_BINARY_DIR}
-    REQUIRED
-    NO_DEFAULT_PATH
-)
-add_library(hiredis STATIC IMPORTED GLOBAL)
-set_target_properties(hiredis
-    PROPERTIES
-        IMPORTED_LOCATION "${HIREDIS_LIB}"
-        INTERFACE_INCLUDE_DIRECTORIES "${HIREDIS_SOURCE_DIR}"
-)
-
-
-# External Project - yaml
-# -----------------------
-set(YAML_SOURCE_DIR "$ENV{EXTERNAL_BUILD_DIR}/yaml")
-set(YAML_BINARY_DIR "$ENV{EXTERNAL_BUILD_DIR}/yaml")
-find_library(YAML_LIB
-    NAMES
-        libyaml.a
-    PATHS
-        ${YAML_BINARY_DIR}
-    REQUIRED
-    NO_DEFAULT_PATH
-)
-add_library(yaml STATIC IMPORTED GLOBAL)
-set_target_properties(yaml
-    PROPERTIES
-        IMPORTED_LOCATION "${YAML_LIB}"
-        INTERFACE_INCLUDE_DIRECTORIES "${YAML_BINARY_DIR}"
-)
-
-
-# External Project - dlfcn-win32
-# ------------------------------
-if(WIN32)
-set(DLFCNWIN32_SOURCE_DIR "$ENV{EXTERNAL_BUILD_DIR}/dlfcnwin32/src")
-set(DLFCNWIN32_BINARY_DIR "$ENV{EXTERNAL_BUILD_DIR}/dlfcnwin32-build/lib")
-find_library(DLFCNWIN32_LIB
-    NAMES
-        libdl.a
-    PATHS
-        ${DLFCNWIN32_BINARY_DIR}
-    REQUIRED
-    NO_DEFAULT_PATH
-)
-add_library(dl STATIC IMPORTED GLOBAL)
-set_target_properties(dl
-    PROPERTIES
-        IMPORTED_LOCATION "${DLFCNWIN32_LIB}"
-        INTERFACE_INCLUDE_DIRECTORIES "${DLFCNWIN32_SOURCE_DIR}"
-)
-endif()
-
-
-# External Project - lua
-# ----------------------
-set(LUA_SOURCE_DIR "$ENV{EXTERNAL_BUILD_DIR}/lua")
-set(LUA_BINARY_DIR "$ENV{EXTERNAL_BUILD_DIR}/lua")
-find_library(LUA_LIB
-    NAMES
-        liblua.a
-    PATHS
-        ${LUA_BINARY_DIR}
-    REQUIRED
-    NO_DEFAULT_PATH
-)
-add_library(lua STATIC IMPORTED GLOBAL)
-set_target_properties(lua
-    PROPERTIES
-        IMPORTED_LOCATION "${LUA_LIB}"
-        INTERFACE_INCLUDE_DIRECTORIES "${LUA_BINARY_DIR}"
-)
 
 
 # Targets
@@ -228,12 +132,11 @@ target_compile_definitions(clib_api
 target_include_directories(clib_api
     PRIVATE
         ${DSE_CLIB_INCLUDE_DIR}
-        ${YAML_SOURCE_DIR}/include
 )
 target_link_libraries(clib_api
     PRIVATE
-        yaml
-        dl
+        dse_external_yaml
+        dse_external_dl
         m
 )
 
@@ -273,7 +176,6 @@ set_target_properties(modelc_shared_lib
 target_include_directories(modelc_shared_lib
     PRIVATE
         ${DSE_CLIB_INCLUDE_DIR}
-        ${YAML_SOURCE_DIR}/include
 )
 target_link_libraries(modelc_shared_lib
     PUBLIC

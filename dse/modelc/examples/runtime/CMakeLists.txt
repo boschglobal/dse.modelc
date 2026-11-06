@@ -33,7 +33,6 @@ set_target_properties(importer
 )
 target_include_directories(importer
     PRIVATE
-        $<$<BOOL:${WIN32}>:${DLFCNWIN32_SOURCE_DIR}>
         ../../../..
 )
 target_compile_definitions(importer
@@ -44,7 +43,7 @@ target_compile_definitions(importer
 )
 target_link_libraries(importer
     PRIVATE
-        dl
+        dse_external_dl
         m
         $<$<BOOL:${UNIX}>:mcheck>
 )

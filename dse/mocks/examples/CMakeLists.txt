@@ -51,8 +51,11 @@ add_library(examples OBJECT
 target_include_directories(examples
     PRIVATE
         ${DSE_CLIB_INCLUDE_DIR}
-        ${LUA_SOURCE_DIR}
         ../../..
+)
+target_link_libraries(examples
+    PRIVATE
+        dse_external_lua
 )
 target_compile_definitions(examples
     PUBLIC
