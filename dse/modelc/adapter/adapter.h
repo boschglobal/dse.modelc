@@ -14,10 +14,12 @@
 #ifdef _WIN32
 #include <winsock2.h>
 #include <ws2tcpip.h>
+#define SOCKET_CLOSE(fd) closesocket(fd)
 #else
 #include <arpa/inet.h>
 #include <sys/socket.h>
 #include <sys/un.h>
+#define SOCKET_CLOSE(fd) close(fd)
 #endif
 #include <dse/clib/collections/set.h>
 #include <dse/clib/collections/hashmap.h>

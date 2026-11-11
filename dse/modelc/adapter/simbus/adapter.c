@@ -34,6 +34,16 @@ static int simbus_open_trace_tcp(Adapter* adapter, const char* port)
 
     log_notice("SimBus Trace: setup on port %s", port);
 
+#ifdef _WIN32
+    /* A loopback simulation has no other socket user to do this. */
+    WSADATA wsa_data;
+    int     wsa_rc = WSAStartup(MAKEWORD(2, 2), &wsa_data);
+    if (wsa_rc != 0) {
+        log_error("WSAStartup failed (%d)", wsa_rc);
+        return -1;
+    }
+#endif
+
     /* Parse/create the socket address object. */
     int port_num = atoi(port);
     if (port_num <= 0) {
@@ -57,14 +67,14 @@ static int simbus_open_trace_tcp(Adapter* adapter, const char* port)
     /* Bind to server addr/port. */
     if (bind(sockfd, (struct sockaddr*)addr, sizeof(*addr)) < 0) {
         log_error("Call to bind() failed");
-        close(sockfd);
+        SOCKET_CLOSE(sockfd);
         return -1;
     }
 
     /* Listen for connections. */
     if (listen(sockfd, 1) < 0) {
         log_error("Call to listen() failed");
-        close(sockfd);
+        SOCKET_CLOSE(sockfd);
         return -1;
     }
     adapter->trace.server_fd = sockfd;
@@ -85,7 +95,7 @@ static int simbus_open_trace_tcp(Adapter* adapter, const char* port)
             (struct sockaddr*)&adapter->trace.tcp.client_addr, &client_len);
         if (sockfd < 0) {
             log_error("Call to accept() failed");
-            close(adapter->trace.server_fd);
+            SOCKET_CLOSE(adapter->trace.server_fd);
             adapter->trace.server_fd = 0;
             return -1;
         } else {
@@ -96,7 +106,7 @@ static int simbus_open_trace_tcp(Adapter* adapter, const char* port)
         log_notice("SimBus Trace: no client connection established");
     }
 
-    close(adapter->trace.server_fd);
+    SOCKET_CLOSE(adapter->trace.server_fd);
     adapter->trace.server_fd = 0;
     return 0;
 }

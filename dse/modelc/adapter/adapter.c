@@ -299,11 +299,11 @@ void adapter_destroy(Adapter* adapter)
         adapter->trace.file = NULL;
     }
     if (adapter->trace.client_fd) {
-        close(adapter->trace.client_fd);
+        SOCKET_CLOSE(adapter->trace.client_fd);
         adapter->trace.client_fd = 0;
     }
     if (adapter->trace.server_fd) {
-        close(adapter->trace.server_fd);
+        SOCKET_CLOSE(adapter->trace.server_fd);
         adapter->trace.server_fd = 0;
     }
 #ifdef _WIN32
