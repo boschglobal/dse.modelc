@@ -7,6 +7,7 @@ on:  # yamllint disable-line rule:truthy
     - cron: '17 6,14,22 * * *'
 
 permissions:
+  actions: write
   contents: write
   pull-requests: write
 
@@ -14,5 +15,6 @@ jobs:
   bump:
     uses: boschglobal/dse.clib/.github/workflows/dse-version-bump.yml@main
     permissions:
+      actions: write
       contents: write
       pull-requests: write
