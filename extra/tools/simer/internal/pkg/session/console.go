@@ -138,6 +138,8 @@ func isExpectedCancelErr(err error) bool {
 	return false
 }
 
+var consoleOutputMu sync.Mutex
+
 type PassThroughWriter struct {
 	w      io.Writer
 	mu     sync.Mutex
@@ -163,9 +165,18 @@ func (w *PassThroughWriter) Write(d []byte) (int, error) {
 			// Partial line (i.e. no \n).
 			break
 		}
-		w.w.Write(w.prefix)
-		w.w.Write(w.buf[:i])
-		w.w.Write([]byte("\n"))
+		line := make([]byte, 0, len(w.prefix)+i+1)
+		line = append(line, w.prefix...)
+		line = append(line, w.buf[:i+1]...)
+		consoleOutputMu.Lock()
+		written, err := w.w.Write(line)
+		consoleOutputMu.Unlock()
+		if err != nil {
+			return len(d), err
+		}
+		if written != len(line) {
+			return len(d), io.ErrShortWrite
+		}
 
 		w.buf = w.buf[i+1:]
 	}
