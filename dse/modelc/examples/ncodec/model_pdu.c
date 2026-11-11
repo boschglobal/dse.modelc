@@ -88,7 +88,7 @@ int model_step(ModelDesc* model, double* model_time, double stop_time)
     }
 
     /* Message TX. */
-    char msg[100] = "Hello World!";
+    char   msg[100] = "Hello World!";
     size_t pos = strlen(msg);
     snprintf(msg + pos, sizeof(msg) - pos, " from swc_id=%s", m->swc_id);
     struct NCodecPdu tx_msg = {

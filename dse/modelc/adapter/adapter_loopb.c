@@ -115,6 +115,45 @@ static void flatmap_add_model(SimbusChannel* sc, ModelFunctionChannel* mfc,
 }
 
 
+static void _refresh_signal_value_cached_indexes(AdapterModel* am)
+{
+    Adapter*            adapter = am->adapter;
+    AdapterLoopbVTable* v = (AdapterLoopbVTable*)adapter->vtable;
+
+    const uint32_t channel_count = vector_len(&am->channels);
+
+    for (uint32_t ch_idx = 0; ch_idx < channel_count; ch_idx++) {
+        Channel* restrict ch = _get_channel_byindex(am, ch_idx);
+        SimbusChannel* restrict sc = _get_simbus_channel(v, ch->name);
+        assert(sc);
+
+        if (UNLIKELY(sc->vector.index.hash_function == NULL)) {
+            log_fatal("SimBus Channel not initialised, index missing, mismatch "
+                      "with Channel");
+        }
+
+        _refresh_index(ch);
+
+        const uint32_t signal_count = ch->index.count;
+        HashMap* restrict index_map = &sc->vector.index;
+        uint32_t* restrict uid_vector = sc->vector.uid;
+        for (uint32_t i = 0; i < signal_count; i++) {
+            SignalValue* restrict sv = _get_signal_value_byindex(ch, i);
+            if (sv == NULL || sv->name == NULL) continue;
+
+            uint32_t* sc_index = hashmap_get(index_map, sv->name);
+            if (sc_index == NULL) continue;
+
+            // Cache these values make the main loops faster by avoiding
+            // additional hash_get() calls.
+            const uint32_t resolved_idx = *sc_index;
+            sv->vector_index = resolved_idx;
+            sv->uid = uid_vector[resolved_idx];
+        }
+    }
+}
+
+
 static int _model_signal_local_index(
     ModelFunctionChannel* mfc, const char* signal_name, uint32_t* local_index)
 {
@@ -146,9 +185,7 @@ static void flatmap_build_models(AdapterLoopbVTable* v, Adapter* adapter)
             SimbusChannel* sc = _get_simbus_channel(v, channel->name);
             _refresh_index(channel);
             ModelFunctionChannel* mfc = channel->mfc;
-            if (mfc->scalar_sync.capable &&
-                (mfc->scalar_sync.simbus_indices == NULL ||
-                    mfc->scalar_sync.sync_count != mfc->signal_count)) {
+            if (mfc->scalar_sync.capable) {
                 SignalMap* signal_map = adapter_get_signal_map(model,
                     mfc->channel_name, mfc->signal_names, mfc->signal_count);
                 model_function_channel_build_flat_sync(mfc, signal_map);
@@ -757,45 +794,18 @@ static int adapter_loopb_register(AdapterModel* am)
 
     simbus_register_channels(am);
     v->scalar_models_initialized = false;
+    _refresh_signal_value_cached_indexes(am);
 
+    /* Print the SignalLookup details. */
     const uint32_t channel_count = vector_len(&am->channels);
-
     for (uint32_t ch_idx = 0; ch_idx < channel_count; ch_idx++) {
         Channel* restrict ch = _get_channel_byindex(am, ch_idx);
         SimbusChannel* restrict sc = _get_simbus_channel(v, ch->name);
         assert(sc);
-
-        if (UNLIKELY(__log_level__ <= LOG_SIMBUS)) {
-            log_simbus("SignalIndex <-- [%s]", ch->name);
-        }
-        if (UNLIKELY(sc->vector.index.hash_function == NULL)) {
-            log_fatal("SimBus Channel not initialised, index missing, mismatch "
-                      "with Channel");
-        }
-
-        _refresh_index(ch);
-
-        if (!ch->is_binary && ch->mfc != NULL) {
-            ModelFunctionChannel* mfc = ch->mfc;
-            mfc->scalar_sync.simbus_channel = sc;
-            mfc->scalar_sync.simbus_scalar = sc->vector.scalar;
-        }
-
         const uint32_t signal_count = ch->index.count;
-        HashMap* restrict index_map = &sc->vector.index;
-        uint32_t* restrict uid_vector = sc->vector.uid;
         for (uint32_t i = 0; i < signal_count; i++) {
             SignalValue* restrict sv = _get_signal_value_byindex(ch, i);
             if (sv == NULL || sv->name == NULL) continue;
-
-            uint32_t* sc_index = hashmap_get(index_map, sv->name);
-            if (sc_index == NULL) continue;
-
-            // Cache these values make the main loops faster by avoiding
-            // additional hash_get() calls.
-            const uint32_t resolved_idx = *sc_index;
-            sv->vector_index = resolved_idx;
-            sv->uid = uid_vector[resolved_idx];
             if (UNLIKELY(__log_level__ <= LOG_SIMBUS)) {
                 log_simbus("    SignalLookup: %s [UID=%u]", sv->name, sv->uid);
             }
@@ -913,6 +923,15 @@ static int ready_update_sv(void* value, void* data)
     return 0;
 }
 
+static int refresh_signal_value(void* value, void* data)
+{
+    UNUSED(data);
+    AdapterModelIndexItem* item = value;
+    AdapterModel*          am = item->am;
+    _refresh_signal_value_cached_indexes(am);
+    return 0;
+}
+
 
 /**
 adapter_loopb_model_ready
@@ -940,6 +959,8 @@ static int adapter_loopb_model_ready(Adapter* adapter)
     AdapterLoopbVTable* v = (AdapterLoopbVTable*)adapter->vtable;
 
     if (!v->scalar_models_initialized) {
+        /* This runs _once_ only, first call/model triggers. */
+        vector_foreach(&adapter->models, refresh_signal_value, NULL);
         flatmap_build_models(v, adapter);
         v->scalar_models_initialized = true;
         v->scalar_initial_push_done = false;

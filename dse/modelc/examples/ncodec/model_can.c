@@ -87,7 +87,7 @@ int model_step(ModelDesc* model, double* model_time, double stop_time)
     _adjust_node_id(m->nc, m->node_id);
 
     /* Message TX. */
-    char msg[100] = "Hello World!";
+    char   msg[100] = "Hello World!";
     size_t pos = strlen(msg);
     snprintf(msg + pos, sizeof(msg) - pos, " from node_id=%s", m->node_id);
     struct NCodecCanMessage tx_msg = {

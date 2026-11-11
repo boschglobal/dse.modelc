@@ -31,9 +31,13 @@ spec:
           MODEL_ID: 1
         files:
           - data/signal_group.yaml
+          - data/signal_group_1.yaml
       channels:
         - name: data_channel
           alias: data
+          selectors:
+            model: block_inst_1
+            channel: data
         - name: checksum_channel
           alias: checksum
     - name: block_inst_2
@@ -46,9 +50,13 @@ spec:
           MODEL_ID: 2
         files:
           - data/signal_group.yaml
+          - data/signal_group_2.yaml
       channels:
         - name: data_channel
           alias: data
+          selectors:
+            model: block_inst_2
+            channel: data
         - name: checksum_channel
           alias: checksum
     - name: block_inst_3
@@ -61,9 +69,13 @@ spec:
           MODEL_ID: 3
         files:
           - data/signal_group.yaml
+          - data/signal_group_3.yaml
       channels:
         - name: data_channel
           alias: data
+          selectors:
+            model: block_inst_3
+            channel: data
         - name: checksum_channel
           alias: checksum
     - name: block_inst_4
@@ -76,9 +88,13 @@ spec:
           MODEL_ID: 4
         files:
           - data/signal_group.yaml
+          - data/signal_group_4.yaml
       channels:
         - name: data_channel
           alias: data
+          selectors:
+            model: block_inst_4
+            channel: data
         - name: checksum_channel
           alias: checksum
   runtime:

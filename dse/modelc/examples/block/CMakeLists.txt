@@ -42,6 +42,10 @@ install(
         model.yaml
         simulation.yaml
         signal_group.yaml
+        signal_group_1.yaml
+        signal_group_2.yaml
+        signal_group_3.yaml
+        signal_group_4.yaml
     DESTINATION
         ${MODEL_PATH}/data
     COMPONENT

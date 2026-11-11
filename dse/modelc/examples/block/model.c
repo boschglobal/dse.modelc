@@ -5,6 +5,7 @@
 
 #include <stddef.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <stdint.h>
 #include <ctype.h>
@@ -16,7 +17,8 @@
 #include <dse/logger.h>
 
 
-#define UNUSED(x) ((void)x)
+#define UNUSED(x)         ((void)x)
+#define DATA_SIGNAL_COUNT 100
 
 
 typedef struct {
@@ -32,6 +34,7 @@ typedef struct {
         SignalVector* sv;
         uint32_t      offset;
         uint32_t      size;
+        uint32_t      signal_indices[DATA_SIGNAL_COUNT];
     } block;
 
     /* Checksum Signals. */
@@ -40,6 +43,30 @@ typedef struct {
         ModelSignalIndex block_only;
     } checksum;
 } BlockModelDesc;
+
+
+typedef struct SortedSignalIndex {
+    const char* name;
+    uint32_t    index;
+} SortedSignalIndex;
+
+
+static int _compare_sorted_signal_value(const void* left, const void* right)
+{
+    const SortedSignalIndex* left_value = left;
+    const SortedSignalIndex* right_value = right;
+    return strcmp(left_value->name, right_value->name);
+}
+
+
+static uint32_t _checksum_sorted_signals(BlockModelDesc* model)
+{
+    double values[DATA_SIGNAL_COUNT];
+    for (uint32_t i = 0; i < DATA_SIGNAL_COUNT; i++) {
+        values[i] = model->block.sv->scalar[model->block.signal_indices[i]];
+    }
+    return XXH32(values, sizeof(values), 0);
+}
 
 
 static inline ModelSignalIndex _index_scalar(
@@ -88,8 +115,26 @@ ModelDesc* model_create(ModelDesc* model)
     ModelSignalIndex idx = signal_index((ModelDesc*)m, "data", NULL);
     assert(idx.sv);
     m->block.sv = idx.sv;
-    m->block.size = m->block.sv->count / m->model_count;
+    assert(m->block.sv->count >= DATA_SIGNAL_COUNT);
+    m->block.size = DATA_SIGNAL_COUNT / m->model_count;
     m->block.offset = m->block.size * (m->model_id - 1);
+
+    SortedSignalIndex sorted[DATA_SIGNAL_COUNT];
+    uint32_t          data_signal_count = 0;
+    for (uint32_t i = 0; i < m->block.sv->count; i++) {
+        if (strncmp(m->block.sv->signal[i], "counter-", 8) != 0) continue;
+        assert(data_signal_count < DATA_SIGNAL_COUNT);
+        sorted[data_signal_count++] = (SortedSignalIndex){
+            .name = m->block.sv->signal[i],
+            .index = i,
+        };
+    }
+    assert(data_signal_count == DATA_SIGNAL_COUNT);
+    qsort(sorted, data_signal_count, sizeof(sorted[0]),
+        _compare_sorted_signal_value);
+    for (uint32_t i = 0; i < data_signal_count; i++) {
+        m->block.signal_indices[i] = sorted[i].index;
+    }
 
     /* Setup checksum indexs. */
     char name[50];
@@ -109,11 +154,12 @@ ModelDesc* model_create(ModelDesc* model)
 
     /* Set the initial values. */
     for (size_t i = 0; i < m->block.size; i++) {
-        size_t idx = m->block.offset + i;
-        m->block.sv->scalar[idx] =
+        size_t logical_index = m->block.offset + i;
+        size_t signal_index = m->block.signal_indices[logical_index];
+        m->block.sv->scalar[signal_index] =
             (m->model_id * 10000) + m->block.offset + i + 1;
-        log_trace("  %u:[%u] = %u", m->model_id, idx + 1,
-            (uint32_t)m->block.sv->scalar[idx]);
+        log_trace("  %u:[%u] = %u", m->model_id, logical_index + 1,
+            (uint32_t)m->block.sv->scalar[signal_index]);
     }
 
     /* Return the extended object. */
@@ -126,19 +172,23 @@ int model_step(ModelDesc* model, double* model_time, double stop_time)
     BlockModelDesc* m = (BlockModelDesc*)model;
 
     /* Calculate the checksum based on the entry state. */
-    *m->checksum.sv_complete.scalar = XXH32(
-        (void*)m->block.sv->scalar, m->block.sv->count * sizeof(double), 0);
+    *m->checksum.sv_complete.scalar = _checksum_sorted_signals(m);
 
     /* Increment this blocks signals. */
     for (size_t i = 0; i < m->block.size; i++) {
-        size_t idx = m->block.offset + i;
-        m->block.sv->scalar[idx] += 1;
-        log_trace("  %u:[%u] = %u", m->model_id, idx + 1,
-            (uint32_t)m->block.sv->scalar[idx]);
+        size_t logical_index = m->block.offset + i;
+        size_t signal_index = m->block.signal_indices[logical_index];
+        m->block.sv->scalar[signal_index] += 1;
+        log_trace("  %u:[%u] = %u", m->model_id, logical_index + 1,
+            (uint32_t)m->block.sv->scalar[signal_index]);
+    }
+    double block_values[DATA_SIGNAL_COUNT];
+    for (uint32_t i = 0; i < m->block.size; i++) {
+        block_values[i] =
+            m->block.sv->scalar[m->block.signal_indices[m->block.offset + i]];
     }
     *m->checksum.block_only.scalar =
-        XXH32((void*)&m->block.sv->scalar[m->block.offset],
-            m->block.size * sizeof(double), 0);
+        XXH32(block_values, m->block.size * sizeof(block_values[0]), 0);
 
     m->step_count += 1;
     *model_time = stop_time;
@@ -158,9 +208,9 @@ void model_destroy(ModelDesc* model)
         m->checksum.block_only.sv->signal[m->checksum.block_only.signal],
         (uint32_t)*m->checksum.block_only.scalar);
 
-    for (size_t i = 0; i < m->block.sv->count; i++) {
-        size_t idx = i;
-        log_trace("  %u:[%u] = %u", m->model_id, idx + 1,
-            (uint32_t)m->block.sv->scalar[idx]);
+    for (size_t i = 0; i < DATA_SIGNAL_COUNT; i++) {
+        size_t signal_index = m->block.signal_indices[i];
+        log_trace("  %u:[%u] = %u", m->model_id, i + 1,
+            (uint32_t)m->block.sv->scalar[signal_index]);
     }
 }

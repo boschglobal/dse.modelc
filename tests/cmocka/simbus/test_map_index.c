@@ -228,6 +228,130 @@ static void test_simbus__transformed_scalar_sync(void** state)
 }
 
 
+static void check_late_registration_reindexes_scalars(void** state, bool legacy)
+{
+    ModelCMock*           m = *state;
+    ModelInstancePrivate* mip = m->mi->private;
+    AdapterModel*         publisher = mip->adapter_model;
+    Adapter*              adapter = publisher->adapter;
+    Channel* publisher_channel = adapter_get_channel(publisher, "one");
+    assert_non_null(publisher_channel);
+    ModelFunctionChannel* publisher_mfc = publisher_channel->mfc;
+    assert_non_null(publisher_mfc);
+    if (legacy) {
+        model_function_channel_free_flat_sync(publisher_mfc);
+        publisher_mfc->scalar_sync.capable = false;
+    }
+
+    SignalValue* publisher_c =
+        hashmap_get(&publisher_channel->signal_values, "c");
+    assert_non_null(publisher_c);
+    assert_int_equal(publisher_c->vector_index, 2);
+
+    const char* subscriber_names[] = { "index-shift", "c", "b", "a" };
+    double      subscriber_values[ARRAY_SIZE(subscriber_names)] = { 0 };
+    ModelFunctionChannel subscriber_mfc = {
+        .channel_name = "one",
+        .signal_names = subscriber_names,
+        .signal_count = ARRAY_SIZE(subscriber_names),
+        .signal_value_double = subscriber_values,
+        .scalar_sync = { .capable = !legacy, .enabled = !legacy },
+    };
+    AdapterModel* subscriber = calloc(1, sizeof(*subscriber));
+    assert_non_null(subscriber);
+    subscriber->adapter = adapter;
+    subscriber->model_uid = publisher->model_uid + 1;
+    subscriber->channels =
+        vector_make(sizeof(ChannelIndexItem), 0, adapter_name2ch_compar);
+    Channel* subscriber_channel = adapter_init_channel(subscriber, "one",
+        subscriber_names, ARRAY_SIZE(subscriber_names), &subscriber_mfc);
+    assert_non_null(subscriber_channel);
+
+    AdapterModelIndexItem publisher_item = { .uid = publisher->model_uid,
+        .am = publisher };
+    AdapterModelIndexItem subscriber_item = { .uid = subscriber->model_uid,
+        .am = subscriber };
+    vector_push(&adapter->models, &subscriber_item);
+    vector_sort(&adapter->models);
+
+    assert_int_equal(adapter->vtable->register_(subscriber), 0);
+    SimbusVectorIndex c_index = simbus_vector_lookup(&m->sim, "one", "c");
+    assert_non_null(c_index.sbv);
+    assert_int_equal(c_index.sbv->count, ARRAY_SIZE(subscriber_names));
+    assert_int_equal(c_index.vi, 3);
+    assert_int_equal(publisher_c->vector_index, 2);
+
+    assert_int_equal(adapter_ready(adapter, &m->sim), 0);
+    assert_int_equal(publisher_c->vector_index, c_index.vi);
+
+    uint32_t publisher_a_local = 0;
+    uint32_t publisher_c_local = 0;
+    for (uint32_t i = 0; i < publisher_mfc->signal_count; i++) {
+        if (strcmp(publisher_mfc->signal_names[i], "a") == 0)
+            publisher_a_local = i;
+        if (strcmp(publisher_mfc->signal_names[i], "c") == 0)
+            publisher_c_local = i;
+    }
+    publisher_mfc->signal_value_double[publisher_a_local] = 11.0;
+    publisher_mfc->signal_value_double[publisher_c_local] = 33.0;
+    if (legacy) marshal_model(m->mi, MARSHAL_MODEL2ADAPTER_SCALAR_ONLY);
+
+    assert_int_equal(adapter_ready(adapter, &m->sim), 0);
+    assert_double_equal(c_index.sbv->scalar[c_index.vi], 33.0, 0);
+    assert_int_equal(adapter_model_start(adapter, &m->sim), 0);
+
+    uint32_t subscriber_a_local = 0;
+    uint32_t subscriber_c_local = 0;
+    uint32_t subscriber_probe_local = 0;
+    for (uint32_t i = 0; i < subscriber_mfc.signal_count; i++) {
+        if (strcmp(subscriber_mfc.signal_names[i], "a") == 0)
+            subscriber_a_local = i;
+        if (strcmp(subscriber_mfc.signal_names[i], "c") == 0)
+            subscriber_c_local = i;
+        if (strcmp(subscriber_mfc.signal_names[i], "index-shift") == 0)
+            subscriber_probe_local = i;
+    }
+    if (legacy) {
+        SignalValue* subscriber_a =
+            hashmap_get(&subscriber_channel->signal_values, "a");
+        SignalValue* subscriber_c =
+            hashmap_get(&subscriber_channel->signal_values, "c");
+        SignalValue* subscriber_probe =
+            hashmap_get(&subscriber_channel->signal_values, "index-shift");
+        assert_non_null(subscriber_a);
+        assert_non_null(subscriber_c);
+        assert_non_null(subscriber_probe);
+        assert_double_equal(subscriber_a->val, 11.0, 0);
+        assert_double_equal(subscriber_c->val, 33.0, 0);
+        assert_double_equal(subscriber_probe->val, 0.0, 0);
+    } else {
+        assert_double_equal(subscriber_values[subscriber_a_local], 11.0, 0);
+        assert_double_equal(subscriber_values[subscriber_c_local], 33.0, 0);
+        assert_double_equal(subscriber_values[subscriber_probe_local], 0.0, 0);
+    }
+
+    vector_reset(&adapter->models);
+    vector_push(&adapter->models, &publisher_item);
+    publisher_channel->mfc = NULL;
+    subscriber_channel->mfc = NULL;
+    adapter_destroy_adapter_model(subscriber);
+    model_function_channel_free_flat_sync(&subscriber_mfc);
+}
+
+
+static void test_simbus__late_registration_reindexes_flat_scalars(void** state)
+{
+    check_late_registration_reindexes_scalars(state, false);
+}
+
+
+static void test_simbus__late_registration_reindexes_legacy_scalars(
+    void** state)
+{
+    check_late_registration_reindexes_scalars(state, true);
+}
+
+
 static void check_scalar_propagation_modes(void** state, bool legacy_publisher)
 {
     ModelCMock*           m = *state;
@@ -388,6 +512,10 @@ int run_map_index_tests(void)
             test_simbus__legacy_publish_to_flat_scalar, s, t),
         cmocka_unit_test_setup_teardown(
             test_simbus__transformed_scalar_sync, s, t),
+        cmocka_unit_test_setup_teardown(
+            test_simbus__late_registration_reindexes_flat_scalars, s, t),
+        cmocka_unit_test_setup_teardown(
+            test_simbus__late_registration_reindexes_legacy_scalars, s, t),
         cmocka_unit_test_setup_teardown(
             test_simbus__flat_scalar_propagation_modes, s, t),
         cmocka_unit_test_setup_teardown(
