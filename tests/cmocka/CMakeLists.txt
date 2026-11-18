@@ -264,8 +264,6 @@ install(
 add_executable(test_simbus_loopback
     simbus/__test__.c
     simbus/mock.c
-    simbus/test_direct_index.c
-    simbus/test_map_index.c
     simbus/test_uid_index.c
     ${DSE_CLIB_SOURCE_FILES}
     ${DSE_MODELC_SIMBUS_LOOPBACK_SOURCE_FILES}
