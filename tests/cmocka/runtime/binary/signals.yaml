@@ -1,0 +1,36 @@
+---
+kind: SignalGroup
+metadata:
+  name: scalar_vector
+  labels:
+    channel: scalar_vector
+spec:
+  signals:
+    - signal: target_received
+    - signal: virtual_received
+---
+kind: SignalGroup
+metadata:
+  name: binary_vector
+  labels:
+    channel: binary_vector
+  annotations:
+    vector_type: binary
+spec:
+  signals:
+    - signal: message
+      annotations:
+        mime_type: application/octet-stream
+---
+kind: SignalGroup
+metadata:
+  name: binary_vector
+  labels:
+    virtual_model: __virtual_model__
+  annotations:
+    vector_type: binary
+spec:
+  signals:
+    - signal: message
+      annotations:
+        mime_type: application/octet-stream

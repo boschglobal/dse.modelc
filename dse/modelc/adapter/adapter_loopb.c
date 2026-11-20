@@ -421,7 +421,7 @@ static SimbusChannel* _get_simbus_channel(
 static int _destroy_vector(void* _sc, void* data)
 {
     UNUSED(data);
-    SimbusChannel*      sc = *(SimbusChannel**)_sc;
+    SimbusChannel* sc = *(SimbusChannel**)_sc;
 
     for (uint32_t i = 0; i < sc->vector.count; i++) {
         free(sc->vector.signal[i]);
@@ -465,7 +465,7 @@ static int _destroy_vector(void* _sc, void* data)
 static int _destroy_channel(void* map_item, void* data)
 {
     UNUSED(data);
-    SimbusChannel*      sc = *(SimbusChannel**)map_item;
+    SimbusChannel* sc = *(SimbusChannel**)map_item;
     if (sc) {
         _destroy_vector(&sc, NULL);
         set_destroy(&sc->signals);
@@ -486,7 +486,7 @@ static void _destroy_vectors(AdapterLoopbVTable* v)
 static int _generate_vector(void* _sc, void* data)
 {
     UNUSED(data);
-    SimbusChannel*      sc = *(SimbusChannel**)_sc;
+    SimbusChannel* sc = *(SimbusChannel**)_sc;
 
     /* Allocate vector storage. */
     uint64_t size;

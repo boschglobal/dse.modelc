@@ -1,0 +1,26 @@
+---
+kind: Model
+metadata:
+  name: RuntimeBinaryTestModel
+spec:
+  runtime:
+    dynlib:
+      - os: linux
+        arch: amd64
+        path: binary/lib/libruntime_binary.so
+      - os: linux
+        arch: x86
+        path: binary/lib/libruntime_binary.so
+      - os: windows
+        arch: x64
+        path: binary/lib/runtime_binary.dll
+      - os: windows
+        arch: x86
+        path: binary/lib/runtime_binary.dll
+  channels:
+    - alias: scalar_vector
+      selectors:
+        channel: scalar_vector
+    - alias: binary_vector
+      selectors:
+        channel: binary_vector

@@ -16,6 +16,8 @@
 #include <dse/logger.h>
 
 
+#define UNUSED(x)          ((void)x)
+
 #define GENERAL_BUFFER_LEN 255
 #define STEP_SIZE          MODEL_DEFAULT_STEP_SIZE
 #define END_TIME           3600
@@ -148,6 +150,14 @@ RuntimeModelDesc* model_runtime_create(RuntimeModelDesc* rm)
     /* Configure the Model (takes config from parsed YAML docs). */
     int rc = modelc_configure(&args, rm->model.sim);
     if (rc) exit(rc);
+
+    /* Inject Virtual Model. */
+    rc = modelc_virtual_model(rm->model.sim, rm->runtime.virtual_model_name);
+    if (rc < 0) exit(rc);
+    if (rm->runtime.virtual_model_name != NULL) {
+        __log("Virtual Model: %s", rm->runtime.virtual_model_name);
+    }
+
 
     /* Set the transport to Loop-back. */
     rm->model.sim->transport = TRANSPORT_LOOPBACK;

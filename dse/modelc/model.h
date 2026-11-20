@@ -153,7 +153,7 @@ typedef struct ModelDesc {
     ModelIndex         index;
     SimulationSpec*    sim;
     ModelInstanceSpec* mi;
-    SignalVector*      sv;  /* NTL */
+    SignalVector*      sv; /* NTL */
 
     /* Model Function Table. */
     ModelVTable vtable;

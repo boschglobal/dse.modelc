@@ -15,6 +15,7 @@ add_library(model_api OBJECT
     luamodel.c
     mcl.c
     model.c
+    runtime.c
     ncodec.c
     pdunet.c
     schema.c

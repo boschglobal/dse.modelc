@@ -1,0 +1,26 @@
+---
+kind: Model
+metadata:
+  name: RuntimeNCodecTestModel
+spec:
+  runtime:
+    dynlib:
+      - os: linux
+        arch: amd64
+        path: ncodec/lib/libruntime_ncodec.so
+      - os: linux
+        arch: x86
+        path: ncodec/lib/libruntime_ncodec.so
+      - os: windows
+        arch: x64
+        path: ncodec/lib/runtime_ncodec.dll
+      - os: windows
+        arch: x86
+        path: ncodec/lib/runtime_ncodec.dll
+  channels:
+    - alias: scalar_vector
+      selectors:
+        channel: scalar_vector
+    - alias: ncodec_vector
+      selectors:
+        channel: ncodec_vector

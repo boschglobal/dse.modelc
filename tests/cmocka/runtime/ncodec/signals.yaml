@@ -1,0 +1,36 @@
+---
+kind: SignalGroup
+metadata:
+  name: scalar_vector
+  labels:
+    channel: scalar_vector
+spec:
+  signals:
+    - signal: received_mask
+    - signal: received_count
+---
+kind: SignalGroup
+metadata:
+  name: ncodec_vector
+  labels:
+    channel: ncodec_vector
+  annotations:
+    vector_type: binary
+spec:
+  signals:
+    - signal: pdu
+      annotations:
+        mime_type: 'application/x-automotive-bus; interface=stream; type=pdu; schema=fbs; ecu_id=1; swc_id=2'
+---
+kind: SignalGroup
+metadata:
+  name: ncodec_vector
+  labels:
+    virtual_model: __virtual_model__
+  annotations:
+    vector_type: binary
+spec:
+  signals:
+    - signal: pdu
+      annotations:
+        mime_type: 'application/x-automotive-bus; interface=stream; type=pdu; schema=fbs; ecu_id=3; swc_id=4'

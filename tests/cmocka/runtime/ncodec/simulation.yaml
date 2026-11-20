@@ -1,0 +1,24 @@
+---
+kind: Stack
+metadata:
+  name: runtime_ncodec_stack
+  annotations:
+    simulation:
+      stepsize: 0.001
+      endtime: 0.003
+    model_runtime__model_inst: target_inst
+    model_runtime__yaml_files:
+      - ncodec/simulation.yaml
+      - ncodec/model.yaml
+      - ncodec/signals.yaml
+spec:
+  models:
+    - name: target_inst
+      uid: 42
+      model:
+        name: RuntimeNCodecTestModel
+      channels:
+        - name: scalar_vector
+          alias: scalar_vector
+        - name: ncodec_vector
+          alias: ncodec_vector

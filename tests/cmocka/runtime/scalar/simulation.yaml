@@ -1,0 +1,22 @@
+---
+kind: Stack
+metadata:
+  name: runtime_scalar_stack
+  annotations:
+    simulation:
+      stepsize: 0.0005
+      endtime: 0.01
+    model_runtime__model_inst: target_inst
+    model_runtime__yaml_files:
+      - scalar/simulation.yaml
+      - scalar/model.yaml
+      - scalar/signals.yaml
+spec:
+  models:
+    - name: target_inst
+      uid: 42
+      model:
+        name: RuntimeScalarTestModel
+      channels:
+        - name: scalar_vector
+          alias: scalar_vector

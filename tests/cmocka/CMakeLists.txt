@@ -83,6 +83,7 @@ set(DSE_MODELC_SOURCE_FILES
     ${DSE_MODELC_SOURCE_DIR}/model/luamodel.c
     ${DSE_MODELC_SOURCE_DIR}/model/mcl.c
     ${DSE_MODELC_SOURCE_DIR}/model/model.c
+    ${DSE_MODELC_SOURCE_DIR}/model/runtime.c
     ${DSE_MODELC_SOURCE_DIR}/model/ncodec.c
     ${DSE_MODELC_SOURCE_DIR}/model/pdunet.c
     ${DSE_MODELC_SOURCE_DIR}/model/schema.c
@@ -112,6 +113,7 @@ set(DSE_MODELC_SIMBUS_LOOPBACK_SOURCE_FILES
     ${DSE_MODELC_SOURCE_DIR}/model/luamodel.c
     ${DSE_MODELC_SOURCE_DIR}/model/mcl.c
     ${DSE_MODELC_SOURCE_DIR}/model/model.c
+    ${DSE_MODELC_SOURCE_DIR}/model/runtime.c
     ${DSE_MODELC_SOURCE_DIR}/model/ncodec.c
     ${DSE_MODELC_SOURCE_DIR}/model/pdunet.c
     ${DSE_MODELC_SOURCE_DIR}/model/schema.c
@@ -302,4 +304,112 @@ install(
         simbus/map_index.yaml
     DESTINATION
         resources/simbus
+)
+
+
+# Target - Model Runtime
+# ----------------------
+add_library(cmocka_runtime_model SHARED
+    runtime/scalar/model.c
+)
+set_target_properties(cmocka_runtime_model
+    PROPERTIES
+        OUTPUT_NAME runtime_scalar
+)
+target_include_directories(cmocka_runtime_model
+    PRIVATE
+        ${DSE_MODELC_INCLUDE_DIR}
+)
+install(TARGETS cmocka_runtime_model
+    LIBRARY DESTINATION resources/runtime/scalar/lib
+    RUNTIME DESTINATION resources/runtime/scalar/lib
+)
+
+add_library(cmocka_runtime_binary_model SHARED
+    runtime/binary/model.c
+)
+set_target_properties(cmocka_runtime_binary_model
+    PROPERTIES
+        OUTPUT_NAME runtime_binary
+)
+target_include_directories(cmocka_runtime_binary_model
+    PRIVATE
+        ${DSE_MODELC_INCLUDE_DIR}
+)
+install(TARGETS cmocka_runtime_binary_model
+    LIBRARY DESTINATION resources/runtime/binary/lib
+    RUNTIME DESTINATION resources/runtime/binary/lib
+)
+
+add_library(cmocka_runtime_ncodec_model SHARED
+    runtime/ncodec/model.c
+)
+set_target_properties(cmocka_runtime_ncodec_model
+    PROPERTIES
+        OUTPUT_NAME runtime_ncodec
+)
+target_include_directories(cmocka_runtime_ncodec_model
+    PRIVATE
+        ${DSE_MODELC_INCLUDE_DIR}
+        ${DSE_NCODEC_INCLUDE_DIR}
+)
+install(TARGETS cmocka_runtime_ncodec_model
+    LIBRARY DESTINATION resources/runtime/ncodec/lib
+    RUNTIME DESTINATION resources/runtime/ncodec/lib
+)
+
+add_executable(test_runtime
+    runtime/__test__.c
+    runtime/test_runtime.c
+    ${DSE_CLIB_SOURCE_FILES}
+    ${DSE_MODELC_SIMBUS_LOOPBACK_SOURCE_FILES}
+    ${DSE_MODELC_SOURCE_DIR}/controller/model_runtime.c
+)
+target_include_directories(test_runtime
+    PRIVATE
+        ${DSE_CLIB_INCLUDE_DIR}
+        ${DSE_MODELC_INCLUDE_DIR}
+        ${DSE_NCODEC_INCLUDE_DIR}
+        ./
+)
+target_compile_definitions(test_runtime
+    PUBLIC
+        CMOCKA_TESTING
+    PRIVATE
+        PLATFORM_OS="${CDEF_PLATFORM_OS}"
+        PLATFORM_ARCH="${CDEF_PLATFORM_ARCH}"
+        MODELC_VERSION="${VERSION}"
+)
+target_link_libraries(test_runtime
+    PUBLIC
+        pdunet
+        ab-codec
+    PRIVATE
+        cmocka
+        dse_external_lua
+        dse_external_yaml
+        dse_external_dl
+        m
+)
+install(TARGETS test_runtime)
+install(
+    FILES
+        runtime/scalar/simulation.yaml
+        runtime/scalar/model.yaml
+        runtime/scalar/signals.yaml
+    DESTINATION resources/runtime/scalar
+)
+install(
+    FILES
+        runtime/binary/simulation.yaml
+        runtime/binary/model.yaml
+        runtime/binary/signals.yaml
+    DESTINATION resources/runtime/binary
+)
+install(
+    FILES
+        runtime/ncodec/simulation.yaml
+        runtime/ncodec/model.yaml
+        runtime/ncodec/signals.yaml
+    DESTINATION resources/runtime/ncodec
 )
