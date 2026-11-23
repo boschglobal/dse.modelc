@@ -1,0 +1,44 @@
+---
+kind: Stack
+metadata:
+  name: runtime_stack
+  annotations:
+    simulation:
+      stepsize: 0.0005
+      endtime: 0.002
+    model_runtime__model_inst: input,linear,observer
+    model_runtime__yaml_files:
+      - data/simulation.yaml
+      - model/input/data/model.yaml
+      - model/input/data/signalgroup.yaml
+      - model/linear/data/model.yaml
+      - model/linear/data/signalgroup.yaml
+      - model/observer/data/model.yaml
+      - model/observer/data/signalgroup.yaml
+spec:
+  runtime:
+    sequential: true
+  models:
+    - name: input
+      uid: 42
+      model:
+        name: RuntimeCsvInput
+      channels:
+        - name: scalar
+          alias: input_vector
+    - name: linear
+      uid: 43
+      model:
+        name: RuntimeLinear
+      channels:
+        - name: scalar
+          alias: linear_vector
+    - name: observer
+      uid: 44
+      model:
+        name: RuntimeObserver
+      channels:
+        - name: scalar
+          alias: observer_vector
+        - name: pdu
+          alias: pdu_vector

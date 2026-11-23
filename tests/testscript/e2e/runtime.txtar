@@ -1,4 +1,4 @@
-env NAME=target_inst
+env NAME=input,linear,observer
 env SIM=dse/modelc/build/_out/examples/runtime
 
 
@@ -8,23 +8,18 @@ exec sh -e $WORK/test.sh
 stdout 'Importer: Runtime: lib/libruntime.so'
 stdout 'Importer: Simulation Path: sim'
 stdout 'Importer: Simulation YAML: data/simulation.yaml'
-stdout 'Importer: Model: target_inst'
-stdout 'Importer: Step Size: 0.001000'
-stdout 'Importer: End Time: 3600.000000'
+stdout 'Importer: Model: input,linear,observer'
 stdout 'Runtime: Simulation YAML: sim/data/simulation.yaml'
-stdout 'ENVAR:MSG=Hello from importer runtime!'
+stdout 'Runtime: Virtual Model: runtime'
 stdout 'Load YAML File: sim/data/simulation.yaml'
-stdout 'Load YAML File: sim/data/model.yaml'
-stdout 'Channel Name: scalar'
-stdout 'Channel Name: network'
-stdout 'mime_type  : application/x-automotive-bus; interface=stream; type=frame; bus=can; schema=fbs; node_id=24; bus_id=1; interface_id=3'
-stdout 'Importer: Calling vtable.step\(\): model_time=0.004500, stop_time=0.005000'
-stdout 'Model: RX\[03f1\] Hello World!'
-stdout 'name       : can'
-stdout 'length     : 0'
-stdout 'buffer len : 126'
-stdout 'name : counter'
-stdout 'value: 10'
+stdout 'Load YAML File: sim/model/input/data/model.yaml'
+stdout 'Load YAML File: sim/model/linear/data/model.yaml'
+stdout 'Load YAML File: sim/model/observer/data/model.yaml'
+stdout 'Importer: Runtime Model runtime @ 0.000500'
+stdout '      - name : output'
+stdout '        value: 5'
+stdout 'Importer: PDU id=1001 ecu_id=2 swc_id=5 \[0.000500\]output=5.000000'
+stdout 'Importer: PDU id=1002 ecu_id=2 swc_id=5 \[0.001000\]output=0.790000'
 stdout 'Importer: Calling vtable.destroy\(\)'
 
 
@@ -37,4 +32,4 @@ docker run --name simer -i --rm \
         --leak-check=yes \
         --gen-suppressions=yes \
         --error-exitcode=808 \
-    bin/importer lib/libruntime.so sim data/simulation.yaml target_inst
+    bin/importer lib/libruntime.so sim data/simulation.yaml input,linear,observer

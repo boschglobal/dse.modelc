@@ -1,0 +1,18 @@
+---
+kind: Model
+metadata:
+  name: RuntimeCsvInput
+spec:
+  runtime:
+    dynlib:
+      - os: linux
+        arch: amd64
+        path: model/input/lib/libcsv_input.so
+      - os: windows
+        arch: x64
+        path: model/input/lib/csv_input.dll
+  channels:
+    - alias: input_vector
+      selectors:
+        model: input
+        channel: scalar

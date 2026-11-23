@@ -6,31 +6,51 @@ SPDX-License-Identifier: Apache-2.0
 
 # Model Runtime Example
 
-The example implementation of a Model Runtime includes:
+## Introduction
 
-* __Importer__ - implements a simple importer for the ModelC (model.h) interface.
-* __Runtime__ - an implementation of the importer interface which calls the
-  ModelC Model Runtime (runtime.h).
-* __Simulation__ - single model simulation (Simer style layout).
+This example implementation of a Model Runtime includes:
 
+* **Importer** - implements a simple importer for the ModelC (`model.h`) interface.
+* **Runtime** - implements the importer interface and calls the ModelC Model Runtime
+  (`runtime.h`).
+* **Simulation** - provides CSV input, a ModelC linear model, and a ModelC PDU
+  observer.
 
-## Project Structure
+### Project Structure
 
 ```text
-L- dse/modelc           Model C Library source code.
-  L- model.h            Model interface.
-  L- runtime.h          Runtime interface.
-  L- controller
-    L- model_runtime.c  Model Runtime implementation.
-  L- examples/runtime
-    L- importer.c       Example importer (implements model.h).
-    L- runtime.c        Example importer/runtime model.
-    L- sim              Example simulation with Simer style layout.
-      L- model.c        Example ModelC model.
+dse/modelc/examples/runtime
+├── sim
+│   ├── data
+│   │   └── simulation.yaml          Simulation definition.
+│   ├── model
+│   │   ├── input/data
+│   │   │   ├── input.csv            CSV input data.
+│   │   │   ├── model.yaml           Input model definition.
+│   │   │   └── signalgroup.yaml     Input signal group definition.
+│   │   ├── linear/data
+│   │   │   ├── model.yaml           Linear model definition.
+│   │   │   └── signalgroup.yaml     Linear signal group definition.
+│   │   └── observer/data
+│   │       ├── model.yaml           Observer model definition.
+│   │       └── signalgroup.yaml     Observer signal group definition.
+│   ├── csv_input.c                  Reads CSV inputs.
+│   ├── linear_model.c               Calculates output = input * factor + offset.
+│   └── observer_model.c             Publishes output as an NCodec PDU.
+├── CMakeLists.txt                   Builds and installs the example.
+├── importer.c                       Example importer (implements model.h).
+├── runtime.c                        Example importer/runtime model.
+└── README.md                        This document.
 ```
 
+The model definitions and input data are included in this example. The packaged
+simulation uses `sim/data/simulation.yaml` and the model-specific `sim/model`
+directories.
 
-## Run the Example
+
+## Usage
+
+### Run the Example
 
 ```bash
 # Clone and build the project:
@@ -39,33 +59,26 @@ $ cd dse.modelc
 $ make
 
 # Run the example:
-$ dse/modelc/build/_out/examples/runtime/bin/importer \
-    dse/modelc/build/_out/examples/runtime/lib/libruntime.so \
-    dse/modelc/build/_out/examples/runtime/sim \
-    data/simulation.yaml \
-    target_inst
+$ cd dse/modelc/build/_out
+$ examples/runtime/bin/importer \
+  examples/runtime/lib/libruntime.so \
+  examples/runtime/sim \
+  data/simulation.yaml \
+  input,linear,observer
 Importer: Cwd: /mnt/c/Users/rut6abt/Desktop/git/working/dse.modelc
 Importer: Runtime: dse/modelc/build/_out/examples/runtime/lib/libruntime.so
 Importer: Simulation Path: dse/modelc/build/_out/examples/runtime/sim
 Importer: Simulation YAML: data/simulation.yaml
-Importer: Model: target_inst
-Importer: Loading runtime model: dse/modelc/build/_out/examples/runtime/lib/libruntime.so ...
-Importer: vtable.create: 0x7f270f14fc10
-Importer: vtable.step: 0x7f270f14fc30
-Importer: vtable.destroy: 0x7f270f14fc40
-Importer: Calling vtable.create() ...
-Runtime: Version: 0.0.1
-Runtime: Platform: linux-amd64
-Runtime: Time: 2024-06-10 12:36:11 (UTC)
-Runtime: Host: ABTZ0NKR
-Runtime: CWD: /mnt/c/Users/rut6abt/Desktop/git/working/dse.modelc
-Runtime: Simulation Path: dse/modelc/build/_out/examples/runtime/sim
-Runtime: Simulation YAML: dse/modelc/build/_out/examples/runtime/sim/data/simulation.yaml
-Runtime: Model: target_inst
-Load YAML File: dse/modelc/build/_out/examples/runtime/sim/data/simulation.yaml
-Load YAML File: dse/modelc/build/_out/examples/runtime/sim/data/model.yaml
-...
+Importer: Model: input,linear,observer
+Importer: Runtime Model runtime @ 0.000500
+Importer:   Name: scalar
+Importer:       - name : output
+Importer:         value: 5
+Importer: PDU id=1001 ecu_id=2 swc_id=5 [0.000500]output=5.000000
 ```
+
+Each importer step prints the linear model's signal values and any PDU messages
+received by the virtual model.
 
 
 ## Linking Strategy
@@ -91,7 +104,7 @@ $ gdb -q -ex='set confirm on' -ex=run -ex=quit --args \
     dse/modelc/build/_out/examples/runtime/lib/libruntime.so \
     dse/modelc/build/_out/examples/runtime/sim \
     data/simulation.yaml \
-    target_inst
+    input,linear,observer
 
 # Use Valgrind:
 $ valgrind -q --leak-check=yes \
@@ -99,16 +112,16 @@ $ valgrind -q --leak-check=yes \
     dse/modelc/build/_out/examples/runtime/lib/libruntime.so \
     dse/modelc/build/_out/examples/runtime/sim \
     data/simulation.yaml \
-    target_inst
+    input,linear,observer
 
 # Inspect Runtime linking.
-$ readelf -d lib/libruntime.so
+$ readelf -d dse/modelc/build/_out/examples/runtime/lib/libruntime.so
 
 Dynamic section at offset 0x2df0 contains 27 entries:
   Tag        Type                         Name/Value
  0x0000000000000001 (NEEDED)             Shared library: [libmodelc.so]
  0x0000000000000001 (NEEDED)             Shared library: [libc.so.6]
  0x000000000000000e (SONAME)             Library soname: [libruntime.so]
- 0x000000000000001d (RUNPATH)            Library runpath: [lib]
+ 0x000000000000001d (RUNPATH)            Library runpath: [$ORIGIN]
  ....
 ```

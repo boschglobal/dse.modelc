@@ -1,0 +1,22 @@
+---
+kind: Model
+metadata:
+  name: RuntimeObserver
+spec:
+  runtime:
+    dynlib:
+      - os: linux
+        arch: amd64
+        path: model/observer/lib/libobserver_model.so
+      - os: windows
+        arch: x64
+        path: model/observer/lib/observer_model.dll
+  channels:
+    - alias: observer_vector
+      selectors:
+        model: observer
+        channel: scalar
+    - alias: pdu_vector
+      selectors:
+        model: observer
+        channel: pdu

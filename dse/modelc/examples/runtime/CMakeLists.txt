@@ -30,10 +30,12 @@ add_executable(importer
 set_target_properties(importer
     PROPERTIES
         OUTPUT_NAME importer
+        INSTALL_RPATH "$ORIGIN/../lib"
 )
 target_include_directories(importer
     PRIVATE
         ../../../..
+        ${DSE_NCODEC_INCLUDE_DIR}
 )
 target_compile_definitions(importer
     PRIVATE
@@ -44,66 +46,100 @@ target_compile_definitions(importer
 target_link_libraries(importer
     PRIVATE
         dse_external_dl
+        ${modelc_shared_lib}
         m
         $<$<BOOL:${UNIX}>:mcheck>
 )
+if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+    target_link_options(importer PRIVATE "LINKER:--no-as-needed")
+endif()
 install(TARGETS importer RUNTIME
     DESTINATION
         ${EX_PATH}/bin
 )
 
 
-# Simulation (target Model)
-# ----------
-# Dynamically linked to the Model Runtime. Can also be statically linked.
-# Set envars to support operation:
-#   LD_PRELOAD=<path>/libmodelc.so
-# or
-#   LD_LIBRARY_PATH=<path>
-add_library(target SHARED
-    sim/model.c
+# Simulation Models
+# ------------------
+add_library(csv_input SHARED
+    sim/csv_input.c
+    ${DSE_CLIB_SOURCE_DIR}/clib/csv/csv.c
 )
-target_include_directories(target
-    PRIVATE
-        ${DSE_CLIB_INCLUDE_DIR}
-        ${DSE_NCODEC_INCLUDE_DIR}
-        ../../../..
+add_library(linear_model SHARED
+    sim/linear_model.c
 )
-target_link_libraries(target
-    PRIVATE
-        ${modelc_shared_lib}
+add_library(observer_model SHARED
+    sim/observer_model.c
 )
+foreach(model csv_input linear_model observer_model)
+    target_include_directories(${model}
+        PRIVATE
+            ${DSE_CLIB_INCLUDE_DIR}
+            ${DSE_NCODEC_INCLUDE_DIR}
+            ../../../..
+    )
+    target_link_libraries(${model}
+        PRIVATE
+            ${modelc_shared_lib}
+    )
+    set_target_properties(${model}
+        PROPERTIES
+            INSTALL_RPATH "$ORIGIN/../../../../lib"
+    )
+endforeach()
 install(
     TARGETS
-        target
-        ${modelc_shared_lib}
-    LIBRARY DESTINATION
-        ${SIM_PATH}/lib
-    RUNTIME DESTINATION
-        ${SIM_PATH}/lib
+        csv_input
+    LIBRARY DESTINATION ${SIM_PATH}/model/input/lib
+    RUNTIME DESTINATION ${SIM_PATH}/model/input/lib
 )
 install(
     FILES
-        sim/model.yaml
-        sim/simulation.yaml
-    DESTINATION
-        ${SIM_PATH}/data
+        sim/model/input/data/model.yaml
+        sim/model/input/data/signalgroup.yaml
+        sim/model/input/data/input.csv
+    DESTINATION ${SIM_PATH}/model/input/data
+)
+install(
+    TARGETS linear_model
+    LIBRARY DESTINATION ${SIM_PATH}/model/linear/lib
+    RUNTIME DESTINATION ${SIM_PATH}/model/linear/lib
+)
+install(
+    FILES
+        sim/model/linear/data/model.yaml
+        sim/model/linear/data/signalgroup.yaml
+    DESTINATION ${SIM_PATH}/model/linear/data
+)
+install(
+    TARGETS observer_model
+    LIBRARY DESTINATION ${SIM_PATH}/model/observer/lib
+    RUNTIME DESTINATION ${SIM_PATH}/model/observer/lib
+)
+install(
+    FILES
+        sim/model/observer/data/model.yaml
+        sim/model/observer/data/signalgroup.yaml
+    DESTINATION ${SIM_PATH}/model/observer/data
+)
+install(
+    FILES sim/data/simulation.yaml
+    DESTINATION ${SIM_PATH}/data
 )
 
 
 # Runtime (implements importer interface, runs the simulation)
 # -------
-# Statically linked to the Model Runtime for demonstration purposes. Can also
-# be dynamically linked.
 add_library(runtime SHARED
     runtime.c
 )
 set_target_properties(runtime PROPERTIES
-    INSTALL_RPATH "lib"
+    INSTALL_RPATH "$ORIGIN"
 )
 target_include_directories(runtime
     PRIVATE
         ${DSE_CLIB_INCLUDE_DIR}
+        ${DSE_NCODEC_INCLUDE_DIR}
         ../../../..
 )
 target_link_libraries(runtime
@@ -114,8 +150,6 @@ install(
     TARGETS
         runtime
         ${modelc_shared_lib}
-    LIBRARY DESTINATION
-        ${EX_PATH}/lib
-    RUNTIME DESTINATION
-        ${EX_PATH}/lib
+    LIBRARY DESTINATION ${EX_PATH}/lib
+    RUNTIME DESTINATION ${EX_PATH}/lib
 )

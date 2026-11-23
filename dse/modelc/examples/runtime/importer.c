@@ -6,6 +6,7 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <errno.h>
 #include <dlfcn.h>
 #include <unistd.h>
@@ -24,8 +25,8 @@ libraries, the Runtime is expected to provide all necessary objects/symbols.
 
 #define RUNTIME_STEP_SIZE  MODEL_DEFAULT_STEP_SIZE
 #define IMPORTER_STEP_SIZE MODEL_DEFAULT_STEP_SIZE
-#define END_TIME           600
-#define STEPS              20
+#define END_TIME           0.002
+#define STEPS              3
 
 
 static void __log(const char* format, ...)
@@ -81,15 +82,21 @@ static void __print_sv(SignalVector* sv)
 }
 
 
-static void __dump_sim(RuntimeModelDesc* rm)
+static ModelInstanceSpec* __find_model_instance(
+    SimulationSpec* sim, const char* name)
 {
-    SimulationSpec* sim = rm->model.sim;
-    __log("Step Size: %f", rm->runtime.step_size);
-    __log("End Time: %f", rm->runtime.end_time);
     for (ModelInstanceSpec* mi = sim->instance_list; mi && mi->name; mi++) {
-        __log("Model Instance: %s", mi->name);
-        __print_sv(mi->model_desc->sv);
+        if (strcmp(mi->name, name) == 0) return mi;
     }
+    return NULL;
+}
+
+
+static void __print_runtime_model(
+    RuntimeModelDesc* rm, ModelDesc* linear, double model_time)
+{
+    __log("Runtime Model %s @ %0.6f", rm->model.mi->name, model_time);
+    __print_sv(linear->sv);
 }
 
 
@@ -108,6 +115,7 @@ int main(int argc, char** argv)
             .sim_path = argv[2],
             .simulation_yaml = argv[3],
             .model_name = argc == 5 ? argv[4] : NULL,
+            .virtual_model_name = "runtime",
             /* The following may be overriden by items contained in
             the Stack:metadata/annotations/simulation. */
             .step_size = RUNTIME_STEP_SIZE,
@@ -148,7 +156,9 @@ int main(int argc, char** argv)
         __log("Calling vtable.create() ...");
         m = vtable.create(m);
     }
-    __dump_sim(&rm);
+    if (m == NULL) return EINVAL;
+    ModelInstanceSpec* linear = __find_model_instance(rm.model.sim, "linear");
+    if (linear == NULL || linear->model_desc == NULL) return EINVAL;
 
     /* Step the model with calls to model_step(). The importer step size may
     be different than the runtime step size (rm.runtime.step_size). */
@@ -160,8 +170,8 @@ int main(int argc, char** argv)
         if (rc != 0) {
             __log("step() returned error code: %d", rc);
         }
+        __print_runtime_model(&rm, linear->model_desc, model_time);
     }
-    __dump_sim(&rm);
 
     /* Call model_destroy(). */
     if (vtable.destroy) {

@@ -327,6 +327,7 @@ format:
 
 .PHONY: super-linter
 super-linter:
+	git ls-files '*.yaml' '*.yml' '*.c' '*.h' | xargs -r sed -i -e '$$a\'
 	docker run --rm --volume $$(pwd):/tmp/lint \
 		--env RUN_LOCAL=true \
 		--env DEFAULT_BRANCH=main \

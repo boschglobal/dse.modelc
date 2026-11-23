@@ -1,0 +1,37 @@
+---
+kind: SignalGroup
+metadata:
+  name: observer_vector
+  labels:
+    model: observer
+    channel: scalar
+spec:
+  signals:
+    - signal: output
+---
+kind: SignalGroup
+metadata:
+  name: pdu_vector
+  labels:
+    model: observer
+    channel: pdu
+  annotations:
+    vector_type: binary
+spec:
+  signals:
+    - signal: message
+      annotations:
+        mime_type: 'application/x-automotive-bus; interface=stream; type=pdu; schema=fbs; ecu_id=2; swc_id=5'
+---
+kind: SignalGroup
+metadata:
+  name: pdu
+  labels:
+    virtual_model: runtime
+  annotations:
+    vector_type: binary
+spec:
+  signals:
+    - signal: message
+      annotations:
+        mime_type: 'application/x-automotive-bus; interface=stream; type=pdu; schema=fbs; ecu_id=3; swc_id=6'
