@@ -1,0 +1,23 @@
+---
+kind: Model
+metadata:
+  name: RuntimeScalarTestModel
+spec:
+  runtime:
+    dynlib:
+      - os: linux
+        arch: amd64
+        path: scalar/lib/libruntime_scalar.so
+      - os: linux
+        arch: x86
+        path: scalar/lib/libruntime_scalar.so
+      - os: windows
+        arch: x64
+        path: scalar/lib/runtime_scalar.dll
+      - os: windows
+        arch: x86
+        path: scalar/lib/runtime_scalar.dll
+  channels:
+    - alias: scalar_vector
+      selectors:
+        channel: scalar_vector

@@ -28,10 +28,12 @@
 #include <dse/modelc/model.h>
 
 
-#define UNUSED(x)     ((void)x)
+#define UNUSED(x)         ((void)x)
+#define ARRAY_SIZE(x)     (sizeof(x) / sizeof(x[0]))
+#define VIRTUAL_MODEL_UID 9000009
 
 /* CLI related defaults. */
-#define MODEL_TIMEOUT 60
+#define MODEL_TIMEOUT     60
 
 
 static double __stop_request = 0; /* Very private, indicate stop request. */
@@ -153,11 +155,10 @@ static int _configure_mcl(ModelInstanceSpec* mi)
     }
 }
 
-int modelc_configure_model(
-    ModelCArguments* args, ModelInstanceSpec* model_instance)
+int modelc_configure_model(ModelCArguments* args, ModelInstanceSpec* mi)
 {
     assert(args);
-    assert(model_instance);
+    assert(mi);
     errno = 0;
 
     YamlNode*   mi_node;
@@ -165,28 +166,27 @@ int modelc_configure_model(
     YamlNode*   node;
     const char* model_name = NULL;
 
-    /* Set a reference ot the parsed YAML Doc List.  */
-    model_instance->yaml_doc_list = args->yaml_doc_list;
+    /* Set a reference to the parsed YAML Doc List.  */
+    mi->yaml_doc_list = args->yaml_doc_list;
 
     /* Model Instance: locate in stack. */
-    mi_node = dse_yaml_find_node_in_seq_in_doclist(args->yaml_doc_list, "Stack",
-        "spec/models", "name", model_instance->name);
+    mi_node = dse_yaml_find_node_in_seq_in_doclist(
+        args->yaml_doc_list, "Stack", "spec/models", "name", mi->name);
     if (mi_node == NULL) {
         if (errno == 0) errno = EINVAL;
-        log_error(
-            "Model Instance (%s) not found in Stack!", model_instance->name);
+        log_error("Model Instance (%s) not found in Stack!", mi->name);
         return errno;
     }
-    model_instance->spec = mi_node;
+    mi->spec = mi_node;
     /* UID, if not set (0) will be assigned by SimBus. */
-    if (model_instance->uid == 0) {
+    if (mi->uid == 0) {
         node = dse_yaml_find_node(mi_node, "uid");
-        if (node) model_instance->uid = strtoul(node->scalar, NULL, 10);
+        if (node) mi->uid = strtoul(node->scalar, NULL, 10);
     }
 
     /* Check if this Model Instance uses a built-in MCL. */
     if (dse_yaml_find_node(mi_node, MI_RUNTIME_MCL_PATH) != NULL) {
-        return _configure_mcl(model_instance);
+        return _configure_mcl(mi);
     }
 
     /* Name. */
@@ -198,14 +198,13 @@ int modelc_configure_model(
         log_error("Model Definition not found!");
         return errno;
     }
-    model_instance->model_definition.name = model_name;
+    mi->model_definition.name = model_name;
     /* Path. */
     node = dse_yaml_find_node(mi_node, "model/metadata/annotations/path");
     if (node && node->scalar) {
-        model_instance->model_definition.path = node->scalar;
+        mi->model_definition.path = node->scalar;
         /* Load and add the Model Definition to the doc list. */
-        char* md_file =
-            _dse_path_cat(model_instance->model_definition.path, "model.yaml");
+        char* md_file = _dse_path_cat(mi->model_definition.path, "model.yaml");
         log_notice("Load YAML File: %s", md_file);
         args->yaml_doc_list =
             dse_yaml_load_file(NULL, md_file, args->yaml_doc_list);
@@ -217,7 +216,7 @@ int modelc_configure_model(
     md_doc = dse_yaml_find_doc_in_doclist(
         args->yaml_doc_list, "Model", selector, value, 1);
     if (md_doc) {
-        model_instance->model_definition.doc = md_doc;
+        mi->model_definition.doc = md_doc;
         /* Filename (of the dynlib) */
         const char* selectors[] = { "os", "arch" };
         const char* values[] = { PLATFORM_OS, PLATFORM_ARCH };
@@ -228,7 +227,7 @@ int modelc_configure_model(
         if (dl_node) {
             node = dse_yaml_find_node(dl_node, "path");
             if (node && node->scalar) {
-                model_instance->model_definition.file = node->scalar;
+                mi->model_definition.file = node->scalar;
             } else {
                 log_fatal("Model path not found in Model Definition!");
             }
@@ -236,27 +235,45 @@ int modelc_configure_model(
     }
 
     /* CLI overrides, development use case (normally take from stack). */
-    if (args->file) model_instance->model_definition.file = args->file;
-    if (args->path) model_instance->model_definition.path = args->path;
+    if (args->file) mi->model_definition.file = args->file;
+    if (args->path) mi->model_definition.path = args->path;
 
     /* Final adjustments. */
-    if (model_instance->model_definition.file) {
-        model_instance->model_definition.full_path =
-            _dse_path_cat(model_instance->model_definition.path,
-                model_instance->model_definition.file);
+    if (mi->model_definition.file) {
+        mi->model_definition.full_path =
+            _dse_path_cat(mi->model_definition.path, mi->model_definition.file);
     }
 
 
     log_notice("Model Instance:");
-    log_notice("  Name: %s", model_instance->name);
-    log_notice("  UID: %u", model_instance->uid);
-    log_notice("  Model Name: %s", model_instance->model_definition.name);
-    log_notice("  Model Path: %s", model_instance->model_definition.path);
-    log_notice("  Model File: %s", model_instance->model_definition.file);
-    log_notice(
-        "  Model Location: %s", model_instance->model_definition.full_path);
+    log_notice("  Name: %s", mi->name);
+    log_notice("  UID: %u", mi->uid);
+    log_notice("  Model Name: %s", mi->model_definition.name);
+    log_notice("  Model Path: %s", mi->model_definition.path);
+    log_notice("  Model File: %s", mi->model_definition.file);
+    log_notice("  Model Location: %s", mi->model_definition.full_path);
 
     return 0;
+}
+
+
+static void _allocate_mi_objects(ModelInstanceSpec* inst, const char* name)
+{
+    inst->private = calloc(1, sizeof(ModelInstancePrivate));
+    assert(inst->private);
+    inst->name = strdup(name);
+    ModelInstancePrivate* mip = inst->private;
+
+    /* Allocate a Controller Model object. */
+    mip->controller_model = calloc(1, sizeof(ControllerModel));
+    mip->controller_model->model_functions = vector_make(
+        sizeof(ModelFunctionIndexItem), 0, controller_name2mf_compar);
+    /* Allocate a Adapter Model object. */
+    mip->adapter_model = calloc(1, sizeof(AdapterModel));
+    mip->adapter_model->channels =
+        vector_make(sizeof(ChannelIndexItem), 0, adapter_name2ch_compar);
+    /* Allocate PDU Net vector. */
+    mip->pdunet = vector_make(sizeof(PduNetwork*), 4, NULL);
 }
 
 
@@ -342,22 +359,8 @@ int modelc_configure(ModelCArguments* args, SimulationSpec* sim)
         char* _saveptr = NULL;
         char* _nameptr = strtok_r(model_names, MODEL_NAME_SEP, &_saveptr);
         while (_nameptr) {
-            _instptr->private = calloc(1, sizeof(ModelInstancePrivate));
-            ModelInstancePrivate* mip = _instptr->private;
-            assert(_instptr->private);
-            _instptr->name = strdup(_nameptr);
+            _allocate_mi_objects(_instptr, _nameptr);
             modelc_configure_model(args, _instptr);
-
-            /* Allocate a Controller Model object. */
-            mip->controller_model = calloc(1, sizeof(ControllerModel));
-            mip->controller_model->model_functions = vector_make(
-                sizeof(ModelFunctionIndexItem), 0, controller_name2mf_compar);
-            /* Allocate a Adapter Model object. */
-            mip->adapter_model = calloc(1, sizeof(AdapterModel));
-            mip->adapter_model->channels = vector_make(
-                sizeof(ChannelIndexItem), 0, adapter_name2ch_compar);
-            /* Allocate PDU Net vector. */
-            mip->pdunet = vector_make(sizeof(PduNetwork*), 4, NULL);
 
             /* Next instance? */
             _nameptr = strtok_r(NULL, MODEL_NAME_SEP, &_saveptr);
@@ -367,6 +370,74 @@ int modelc_configure(ModelCArguments* args, SimulationSpec* sim)
     }
 
     return 0;
+}
+
+
+int modelc_virtual_model(SimulationSpec* sim, const char* name)
+{
+    if (sim == NULL) return -EINVAL;
+    if (name == NULL) return EINVAL; /* Not an error condition. */
+
+    /* Reallocate the instance_list. */
+    int                model_count = 0;
+    ModelInstanceSpec* _instptr = sim->instance_list;
+    while (_instptr && _instptr->name) {
+        model_count++;
+        _instptr++;
+    }
+    sim->instance_list = realloc(
+        sim->instance_list, (model_count + 2) * sizeof(ModelInstanceSpec));
+    memset(sim->instance_list + model_count, 0, 2 * sizeof(ModelInstanceSpec));
+    _instptr = sim->instance_list + model_count; /* Now the new entry. */
+
+    /* Allocate associated objects. */
+    _allocate_mi_objects(_instptr, name);
+    _instptr->yaml_doc_list = sim->instance_list->yaml_doc_list;
+    _instptr->spec = NULL;
+    _instptr->uid = VIRTUAL_MODEL_UID;
+    _instptr->virtual_model = true;
+
+    log_notice("Model Instance:");
+    log_notice("  Name: %s", _instptr->name);
+    log_notice("  UID: %u", _instptr->uid);
+
+    return 0;
+}
+
+
+static int _configure_virtual_model_channel(
+    ModelInstanceSpec* mi, SchemaObject* o)
+{
+    const char* name = NULL;
+    if (dse_yaml_get_string(o->doc, "metadata/name", &name)) {
+        log_error("Virtual Model SignalGroup metadata missing: metadata/name");
+        return 0;
+    }
+
+    /* Configure the channel. */
+    int rc = model_configure_channel(mi, name, MODEL_STEP_FUNC_NAME);
+    if (rc != 0) {
+        if (errno == 0) errno = rc;
+        log_error("Channel could not be configured!.");
+        return -EINVAL;
+    }
+
+    return 0;
+}
+
+
+static int _configure_virtual_model_channels(ModelInstanceSpec* mi)
+{
+    SchemaLabel vm_labels[] = {
+        { .name = "virtual_model", .value = mi->name },
+    };
+    SchemaObjectSelector vm_sel = {
+        .kind = "SignalGroup",
+        .labels = vm_labels,
+        .labels_len = ARRAY_SIZE(vm_labels),
+        .data = mi,
+    };
+    return schema_object_search(mi, &vm_sel, _configure_virtual_model_channel);
 }
 
 
@@ -399,7 +470,7 @@ static int _configure_model_channel(YamlNode* ch_node, ModelInstanceSpec* mi)
 
 
 static int _model_function_register(
-    ModelInstanceSpec* model_instance, const char* name, double step_size)
+    ModelInstanceSpec* mi, const char* name, double step_size)
 {
     int rc;
     errno = 0;
@@ -415,7 +486,7 @@ static int _model_function_register(
     mf->channels = vector_make(
         sizeof(ModelFunctionChannelIndexItem), 0, controller_name2mfc_compar);
     /* Register the object with the Controller. */
-    rc = controller_register_model_function(model_instance, mf);
+    rc = controller_register_model_function(mi, mf);
     if (rc && (errno != EEXIST)) goto error_clean_up;
     return 0;
 
@@ -443,25 +514,37 @@ int modelc_model_create(
     }
 
     /* Setup the channels and signal vector. */
-    YamlNode* c_node;
-    if (dse_yaml_find_node(mi->model_definition.doc, "spec/runtime/gateway")) {
-        log_debug("Select channels based on Model Instance (Gateway)");
-        c_node = dse_yaml_find_node(mi->spec, "channels");
-    } else if (mip && mip->mcl_create_func) {
-        log_debug("Select channels based on Model Instance (MCL)");
-        c_node = dse_yaml_find_node(mi->spec, "channels");
+    if (mi->virtual_model == true) {
+        int rc = _configure_virtual_model_channels(mi);
+        if (rc) {
+            if (errno == 0) errno = EINVAL;
+            log_error("Model has no " MODEL_STEP_FUNC_NAME "() function");
+            return -errno;
+        }
     } else {
-        log_debug("Select channels based on Model Definition");
-        c_node = dse_yaml_find_node(mi->model_definition.doc, "spec/channels");
-    }
-    if (c_node) {
-        for (uint32_t i = 0; i < hashlist_length(&c_node->sequence); i++) {
-            YamlNode* ch_node = hashlist_at(&c_node->sequence, i);
-            int       rc = _configure_model_channel(ch_node, mi);
-            if (rc) {
-                if (errno == 0) errno = EINVAL;
-                log_error("Model has no " MODEL_STEP_FUNC_NAME "() function");
-                return -errno;
+        YamlNode* c_node;
+        if (dse_yaml_find_node(
+                mi->model_definition.doc, "spec/runtime/gateway")) {
+            log_debug("Select channels based on Model Instance (Gateway)");
+            c_node = dse_yaml_find_node(mi->spec, "channels");
+        } else if (mip && mip->mcl_create_func) {
+            log_debug("Select channels based on Model Instance (MCL)");
+            c_node = dse_yaml_find_node(mi->spec, "channels");
+        } else {
+            log_debug("Select channels based on Model Definition");
+            c_node =
+                dse_yaml_find_node(mi->model_definition.doc, "spec/channels");
+        }
+        if (c_node) {
+            for (uint32_t i = 0; i < hashlist_length(&c_node->sequence); i++) {
+                YamlNode* ch_node = hashlist_at(&c_node->sequence, i);
+                int       rc = _configure_model_channel(ch_node, mi);
+                if (rc) {
+                    if (errno == 0) errno = EINVAL;
+                    log_error(
+                        "Model has no " MODEL_STEP_FUNC_NAME "() function");
+                    return -errno;
+                }
             }
         }
     }

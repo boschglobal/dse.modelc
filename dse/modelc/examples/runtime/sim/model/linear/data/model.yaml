@@ -1,0 +1,27 @@
+---
+kind: Model
+metadata:
+  name: RuntimeLinear
+spec:
+  runtime:
+    dynlib:
+      - os: linux
+        arch: amd64
+        path: model/linear/lib/liblinear.so
+      - os: linux
+        arch: x86
+        path: model/linear/lib/liblinear.so
+      - os: linux
+        arch: i386
+        path: model/linear/lib/liblinear.so
+      - os: windows
+        arch: x64
+        path: model/linear/lib/liblinear.dll
+      - os: windows
+        arch: x86
+        path: model/linear/lib/liblinear.dll
+  channels:
+    - alias: linear_vector
+      selectors:
+        model: linear
+        channel: scalar

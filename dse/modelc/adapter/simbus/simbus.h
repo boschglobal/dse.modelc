@@ -46,24 +46,7 @@ typedef struct SimbusChannel {
     bool         is_binary;
     SimpleSet    signals;
     SimbusVector vector;
-
-    /* Direct Index: supporting data, parsed from SignalGroups with the
-    following indicator: 'metadata:labels:index: direct'. */
-    Vector   signal_list;
-    uint32_t offset; /* metadata/annotations/direct_index/length */
-    uint32_t length; /* metadata/annotations/direct_index/offset */
 } SimbusChannel;
-
-
-typedef struct SimbusVectorIndex {
-    SimbusVector* sbv;
-    uint32_t      vi;
-    struct {
-        void*  map;
-        size_t offset; /* Offset of _this_ vector in the map. */
-        size_t size;   /* Upper bound of map. */
-    } direct_index;
-} SimbusVectorIndex;
 
 
 /* adapter.c */
@@ -72,11 +55,6 @@ DLL_PUBLIC Adapter* simbus_adapter_create(
 DLL_PUBLIC void simbus_adapter_init_channel(
     AdapterModel* am, const char* channel_name, uint32_t expected_model_count);
 DLL_PUBLIC void simbus_adapter_run(Adapter* adapter);
-
-/* adapter_loopb.c (in parent directory) */
-DLL_PUBLIC SimbusVectorIndex simbus_vector_lookup(
-    SimulationSpec* sim, const char* vname, const char* sname);
-DLL_PUBLIC void simbus_vector_binary_reset(SimulationSpec* sim);
 
 
 #endif  // DSE_MODELC_ADAPTER_SIMBUS_SIMBUS_H_

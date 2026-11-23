@@ -21,6 +21,11 @@ extern int        __model_gw_step__(
            ModelDesc* m, double* model_time, double stop_time);
 extern void __model_gw_destroy__(ModelDesc* m);
 
+extern ModelDesc* __model_vm_create__(ModelDesc* m);
+extern int        __model_vm_step__(
+           ModelDesc* m, double* model_time, double stop_time);
+extern void __model_vm_destroy__(ModelDesc* m);
+
 
 static int controller_load_model(ModelInstanceSpec* mi, SimulationSpec* sim)
 {
@@ -32,7 +37,12 @@ static int controller_load_model(ModelInstanceSpec* mi, SimulationSpec* sim)
 
     errno = 0;
 
-    if (dynlib_filename) {
+    if (mi->virtual_model == true) {
+        log_notice("Using virtual model symbols: ...");
+        cm->vtable.create = __model_vm_create__;
+        cm->vtable.step = __model_vm_step__;
+        cm->vtable.destroy = __model_vm_destroy__;
+    } else if (dynlib_filename) {
         char* model_path = dse_path_cat(sim->sim_path, dynlib_filename);
         log_notice("Loading dynamic model: %s ...", model_path);
         cm->handle = dlopen(model_path, RTLD_NOW | RTLD_LOCAL);

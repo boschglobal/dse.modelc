@@ -36,6 +36,7 @@ run:
 	@cd build/_out; $(GDB_CMD) bin/test_model
 	@cd build/_out; $(GDB_CMD) bin/test_model_interface
 	@cd build/_out; $(GDB_CMD) bin/test_simbus_loopback
+	@cd build/_out; $(GDB_CMD) bin/test_runtime
 	@echo "[----------]"
 	@echo "[ GDB_CMD  ] $(GDB_CMD)"
 

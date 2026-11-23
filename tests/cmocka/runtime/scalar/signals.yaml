@@ -1,0 +1,20 @@
+---
+kind: SignalGroup
+metadata:
+  name: scalar_vector
+  labels:
+    channel: scalar_vector
+spec:
+  signals:
+    - signal: counter
+    - signal: check
+---
+kind: SignalGroup
+metadata:
+  name: scalar_vector
+  labels:
+    virtual_model: __virtual_model__
+spec:
+  signals:
+    - signal: counter
+    - signal: check

@@ -1,0 +1,24 @@
+---
+kind: Stack
+metadata:
+  name: runtime_binary_stack
+  annotations:
+    simulation:
+      stepsize: 0.001
+      endtime: 0.003
+    model_runtime__model_inst: target_inst
+    model_runtime__yaml_files:
+      - binary/simulation.yaml
+      - binary/model.yaml
+      - binary/signals.yaml
+spec:
+  models:
+    - name: target_inst
+      uid: 42
+      model:
+        name: RuntimeBinaryTestModel
+      channels:
+        - name: scalar_vector
+          alias: scalar_vector
+        - name: binary_vector
+          alias: binary_vector

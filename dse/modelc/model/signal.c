@@ -422,6 +422,10 @@ SignalVector* model_sv_create(ModelInstanceSpec* mi, SimulationSpec* sim)
 
     /* Lookup channel aliases on the Model Instance. */
     for (SignalVector* sv_p = sv; sv_p->name; sv_p++) {
+        if (mi->virtual_model) {
+            sv_p->alias = sv_p->name;
+            continue;
+        }
         const char* selector[] = { "name" };
         const char* value[] = { sv_p->name };
         YamlNode*   ch_node =

@@ -5,6 +5,7 @@
 #ifndef DSE_MODELC_RUNTIME_H_
 #define DSE_MODELC_RUNTIME_H_
 
+#include <stdbool.h>
 #include <limits.h>
 #include <dse/modelc/model.h>
 
@@ -57,17 +58,19 @@ typedef struct ModelInstanceSpec {
         void*   function;
     } log;
 
+    bool virtual_model;
+
     /* Reserved. */
 #if defined(__x86_64__)
 #if __SIZEOF_POINTER__ == 8
-    uint64_t __reserved__[6];
+    uint64_t __reserved__[5];
 #else
-    // uint32_t __reserved_4__;
-    uint64_t __reserved__[7];
+    uint32_t __reserved_4__;
+    uint64_t __reserved__[6];
 #endif
 #elif defined(__i386__)
-    // uint32_t __reserved_4__;
-    uint64_t __reserved__[7];
+    uint32_t __reserved_4__;
+    uint64_t __reserved__[6];
 #endif
 } ModelInstanceSpec;
 
@@ -152,6 +155,7 @@ typedef struct ModelCArguments {
 
 /* modelc.c - Runtime Interface (i.e. ModelC.exe). */
 DLL_PUBLIC int modelc_configure(ModelCArguments* args, SimulationSpec* sim);
+DLL_PUBLIC int modelc_virtual_model(SimulationSpec* sim, const char* name);
 DLL_PUBLIC ModelInstanceSpec* modelc_get_model_instance(
     SimulationSpec* sim, const char* name);
 DLL_PUBLIC int  modelc_run(SimulationSpec* sim, bool run_async);
@@ -239,19 +243,22 @@ typedef struct RuntimeModelDesc {
         /* Tracks the internal runtime model time. */
         /* Located here to maintain struct version compatibility. */
         double model_time;
+
+        /* Virtual Model - Provides SignalVector interface for Importer. */
+        const char* virtual_model_name;
     } runtime;
 
 
     /* Reserved. */
 #if defined(__x86_64__)
 #if __SIZEOF_POINTER__ == 8
-    uint64_t __reserved__[4];
+    uint64_t __reserved__[3];
 #else
-    uint32_t __reserved_4__[3];
+    uint32_t __reserved_4__[2];
     uint64_t __reserved__[4];
 #endif
 #elif defined(__i386__)
-    uint32_t __reserved_4__[3];
+    uint32_t __reserved_4__[2];
     uint64_t __reserved__[4];
 #endif
 } RuntimeModelDesc;

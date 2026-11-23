@@ -71,11 +71,10 @@ void model_function_destroy(ModelFunction* model_function)
 }
 
 
-static ModelFunctionChannel* _get_mfc(ModelInstanceSpec* model_instance,
+static ModelFunctionChannel* _get_mfc(ModelInstanceSpec* mi,
     const char* model_function_name, const char* channel_name)
 {
-    ModelFunction* mf =
-        controller_get_model_function(model_instance, model_function_name);
+    ModelFunction* mf = controller_get_model_function(mi, model_function_name);
     if (mf == NULL) {
         log_error("ModelFunction not registered!");
         return NULL;
@@ -135,7 +134,7 @@ static SignalTransform* _parse_signal_transform(SchemaSignalObject* so)
 
 
 static int _signal_group_match_handler(
-    ModelInstanceSpec* model_instance, SchemaObject* object)
+    ModelInstanceSpec* mi, SchemaObject* object)
 {
     uint32_t           index = 0;
     SignalHandlerData* handler_data = object->data;
@@ -146,8 +145,8 @@ static int _signal_group_match_handler(
     /* Enumerate over the signals. */
     SchemaSignalObject* so;
     do {
-        so = schema_object_enumerator(model_instance, object, "spec/signals",
-            &index, schema_signal_object_generator);
+        so = schema_object_enumerator(
+            mi, object, "spec/signals", &index, schema_signal_object_generator);
         if (so == NULL) break;
         if (so->signal) {
             /* Internal signals are skipped. */
@@ -187,28 +186,28 @@ static int _signal_group_match_handler(
 
 
 ChannelSpec* model_build_channel_spec(
-    ModelInstanceSpec* model_instance, const char* channel_name)
+    ModelInstanceSpec* mi, const char* channel_name)
 {
-    log_debug("Search for channel on MI (%s) by name/alias=%s",
-        model_instance->name, channel_name);
+    log_debug("Search for channel on MI (%s) by name/alias=%s", mi->name,
+        channel_name);
     const char* selectors[] = { "name" };
     const char* values[] = { channel_name };
-    YamlNode*   c_node = dse_yaml_find_node_in_seq(
-        model_instance->spec, "channels", selectors, values, 1);
+    YamlNode*   c_node =
+        dse_yaml_find_node_in_seq(mi->spec, "channels", selectors, values, 1);
     if (c_node) {
         log_debug(" channel found by name");
     } else {
         const char* selectors[] = { "alias" };
         const char* values[] = { channel_name };
         c_node = dse_yaml_find_node_in_seq(
-            model_instance->spec, "channels", selectors, values, 1);
+            mi->spec, "channels", selectors, values, 1);
         if (c_node) {
             log_debug("  channel found by alias");
         }
     }
     if (c_node == NULL) {
-        log_error("Channel node (%s) not found on MI (%s)!", channel_name,
-            model_instance->name);
+        log_error(
+            "Channel node (%s) not found on MI (%s)!", channel_name, mi->name);
         return NULL;
     }
 
@@ -224,7 +223,7 @@ ChannelSpec* model_build_channel_spec(
 }
 
 
-void _load_signals(ModelInstanceSpec* model_instance, ChannelSpec* channel_spec,
+void _load_signals(ModelInstanceSpec* mi, ChannelSpec* channel_spec,
     __signal_list_t* signal_list, ModelChannelType* vector_type)
 {
     /* Setup handler related storage. */
@@ -235,12 +234,29 @@ void _load_signals(ModelInstanceSpec* model_instance, ChannelSpec* channel_spec,
     handler_data.signal_vector_type = *vector_type;
 
     /* Select and handle the schema objects (default name to provided name). */
-    SchemaObjectSelector* selector = schema_build_channel_selector(
-        model_instance, channel_spec, "SignalGroup");
+    SchemaObjectSelector* selector = NULL;
+    if (mi->virtual_model == true) {
+        /* Virtual Models select based on a fixed label only. */
+        SchemaLabel* labels = calloc(1, sizeof(SchemaLabel));
+        *labels = (SchemaLabel){
+            .name = "virtual_model",
+            .value = mi->name,
+        };
+        selector = calloc(1, sizeof(SchemaObjectSelector));
+        *selector = (SchemaObjectSelector){
+            .kind = "SignalGroup",
+            .name = channel_spec->name,
+            .labels = labels,
+            .labels_len = 1,
+            .data = mi,
+        };
+    } else {
+        selector =
+            schema_build_channel_selector(mi, channel_spec, "SignalGroup");
+    }
     if (selector) {
         selector->data = &handler_data;
-        schema_object_search(
-            model_instance, selector, _signal_group_match_handler);
+        schema_object_search(mi, selector, _signal_group_match_handler);
     }
 
     /* Setup the final signal list. */
@@ -315,7 +331,7 @@ Signals and their configuration (annotations) easy.
 
 Parameters
 ----------
-model_instance (ModelInstanceSpec*)
+mi (ModelInstanceSpec*)
 : The Model Instance object (provided via the `model_setup()` function of the
   Model API).
 
@@ -334,21 +350,28 @@ Returns
 : An error occurred during the registration of the Channel.
 
 */
-int model_configure_channel(ModelInstanceSpec* model_instance, const char* name,
-    const char* function_name)
+int model_configure_channel(
+    ModelInstanceSpec* mi, const char* name, const char* function_name)
 {
-    assert(model_instance);
+    assert(mi);
 
     /* Determine the channel configuration. */
+    ChannelSpec* channel_spec = NULL;
     log_notice("Configure Channel: %s", name);
-    ChannelSpec* channel_spec = model_build_channel_spec(model_instance, name);
+    if (mi->virtual_model == true) {
+        /* Virtual Model will have no channel configuration. */
+        channel_spec = calloc(1, sizeof(ChannelSpec));
+        channel_spec->name = name;
+        channel_spec->alias = name;
+    } else {
+        channel_spec = model_build_channel_spec(mi, name);
+    }
     if (channel_spec == NULL) return 1;
     log_notice("  Channel Name: %s", channel_spec->name);
     log_notice("  Channel Alias: %s", channel_spec->alias);
 
     /* Get an MFC object. */
-    ModelFunctionChannel* mfc =
-        _get_mfc(model_instance, function_name, channel_spec->name);
+    ModelFunctionChannel* mfc = _get_mfc(mi, function_name, channel_spec->name);
     if (mfc == NULL) {
         free(channel_spec);
         return 1;
@@ -373,16 +396,16 @@ int model_configure_channel(ModelInstanceSpec* model_instance, const char* name,
     /* Load signals via SignalGroups. */
     __signal_list_t  signal_list = { 0 };
     ModelChannelType vector_type = MODEL_VECTOR_DOUBLE;
-    assert(model_instance->spec);
-    _load_signals(model_instance, channel_spec, &signal_list, &vector_type);
+    assert(mi->spec || mi->virtual_model);
+    _load_signals(mi, channel_spec, &signal_list, &vector_type);
     log_notice("  Unique signals identified: %u", signal_list.length);
 
     /* Indicate that the channel is binary. */
     mfc->is_binary = vector_type == MODEL_VECTOR_BINARY ? true : false;
 
     /* Init the channel and register signals. */
-    controller_init_channel(model_instance, channel_spec->name,
-        signal_list.names, signal_list.length, mfc);
+    controller_init_channel(
+        mi, channel_spec->name, signal_list.names, signal_list.length, mfc);
 
     free(channel_spec);
 
