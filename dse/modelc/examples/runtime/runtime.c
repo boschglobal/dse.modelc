@@ -26,6 +26,7 @@ and then runs the simulation via calls to the Model Runtime API.
 
 static void runtime_set_env(RuntimeModelDesc* m)
 {
+#define MSG "Hello from importer runtime!"
     char* csv_file =
         dse_path_cat(m->runtime.sim_path, "model/input/data/input.csv");
 
@@ -34,12 +35,19 @@ static void runtime_set_env(RuntimeModelDesc* m)
         fprintf(stderr, "Unable to set CSV_FILE environment variable\n");
         fflush(stderr);
     }
-
-#define MSG "Hello from importer runtime!"
     printf("Importer: Runtime: set_env(MSG=%s)\n", MSG);
     fflush(stdout);
     setenv("MSG", MSG, true);
+#elif defined(_WIN32)
+    if (_putenv_s("CSV_FILE", csv_file) != 0) {
+        fprintf(stderr, "Unable to set CSV_FILE environment variable\n");
+        fflush(stderr);
+    }
+    printf("Importer: Runtime: set_env(MSG=%s)\n", MSG);
+    fflush(stdout);
+    _putenv_s("MSG", MSG);
 #endif
+
 
     free(csv_file);
 }

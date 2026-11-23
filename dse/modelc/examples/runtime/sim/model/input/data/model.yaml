@@ -7,10 +7,19 @@ spec:
     dynlib:
       - os: linux
         arch: amd64
-        path: model/input/lib/libcsv_input.so
+        path: model/input/lib/libcsv.so
+      - os: linux
+        arch: x86
+        path: model/input/lib/libcsv.so
+      - os: linux
+        arch: i386
+        path: model/input/lib/libcsv.so
       - os: windows
         arch: x64
-        path: model/input/lib/csv_input.dll
+        path: model/input/lib/libcsv.dll
+      - os: windows
+        arch: x86
+        path: model/input/lib/libcsv.dll
   channels:
     - alias: input_vector
       selectors:

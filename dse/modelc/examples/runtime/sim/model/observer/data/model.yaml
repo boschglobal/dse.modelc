@@ -7,10 +7,19 @@ spec:
     dynlib:
       - os: linux
         arch: amd64
-        path: model/observer/lib/libobserver_model.so
+        path: model/observer/lib/libobserver.so
+      - os: linux
+        arch: x86
+        path: model/observer/lib/libobserver.so
+      - os: linux
+        arch: i386
+        path: model/observer/lib/libobserver.so
       - os: windows
         arch: x64
-        path: model/observer/lib/observer_model.dll
+        path: model/observer/lib/libobserver.dll
+      - os: windows
+        arch: x86
+        path: model/observer/lib/libobserver.dll
   channels:
     - alias: observer_vector
       selectors:

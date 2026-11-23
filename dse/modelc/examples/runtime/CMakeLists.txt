@@ -61,17 +61,20 @@ install(TARGETS importer RUNTIME
 
 # Simulation Models
 # ------------------
-add_library(csv_input SHARED
+add_library(csv_rm SHARED
     sim/csv_input.c
     ${DSE_CLIB_SOURCE_DIR}/clib/csv/csv.c
 )
-add_library(linear_model SHARED
-    sim/linear_model.c
+add_library(linear_rm SHARED
+sim/linear_model.c
 )
-add_library(observer_model SHARED
-    sim/observer_model.c
+add_library(observer_rm SHARED
+sim/observer_model.c
 )
-foreach(model csv_input linear_model observer_model)
+set_target_properties(csv_rm PROPERTIES OUTPUT_NAME "csv")
+set_target_properties(linear_rm PROPERTIES OUTPUT_NAME "linear")
+set_target_properties(observer_rm PROPERTIES OUTPUT_NAME "observer")
+foreach(model csv_rm linear_rm observer_rm)
     target_include_directories(${model}
         PRIVATE
             ${DSE_CLIB_INCLUDE_DIR}
@@ -89,7 +92,7 @@ foreach(model csv_input linear_model observer_model)
 endforeach()
 install(
     TARGETS
-        csv_input
+        csv_rm
     LIBRARY DESTINATION ${SIM_PATH}/model/input/lib
     RUNTIME DESTINATION ${SIM_PATH}/model/input/lib
 )
@@ -101,7 +104,7 @@ install(
     DESTINATION ${SIM_PATH}/model/input/data
 )
 install(
-    TARGETS linear_model
+    TARGETS linear_rm
     LIBRARY DESTINATION ${SIM_PATH}/model/linear/lib
     RUNTIME DESTINATION ${SIM_PATH}/model/linear/lib
 )
@@ -112,7 +115,7 @@ install(
     DESTINATION ${SIM_PATH}/model/linear/data
 )
 install(
-    TARGETS observer_model
+    TARGETS observer_rm
     LIBRARY DESTINATION ${SIM_PATH}/model/observer/lib
     RUNTIME DESTINATION ${SIM_PATH}/model/observer/lib
 )

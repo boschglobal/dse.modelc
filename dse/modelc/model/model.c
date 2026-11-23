@@ -245,6 +245,7 @@ void _load_signals(ModelInstanceSpec* mi, ChannelSpec* channel_spec,
         selector = calloc(1, sizeof(SchemaObjectSelector));
         *selector = (SchemaObjectSelector){
             .kind = "SignalGroup",
+            .name = channel_spec->name,
             .labels = labels,
             .labels_len = 1,
             .data = mi,
