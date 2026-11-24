@@ -58,7 +58,7 @@ simer dse/modelc/build/_out/examples/minimal
 
 > Hint: Replace `v2.0.7` with the latest version from the [releases page](https://github.com/boschglobal/dse.modelc/releases).
 
-> Hint: Find more information about the Simer [command options here](https://boschglobal.github.io/dse.doc/docs/user/simer/#options).
+> Hint: Find more information about the Simer [command options here](https://boschglobal.github.io/dse.doc/user/simer/#options).
 
 ## Build
 
