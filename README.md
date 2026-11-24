@@ -16,7 +16,7 @@ Model C Library of the Dynamic Simulation Environment (DSE) Core Platform.
 
 ### User Guide
 
-* [Simer - Simulation Runner](https://boschglobal.github.io/dse.doc/docs/user/simer/)
+* [Simer - Simulation Runner](https://boschglobal.github.io/dse.doc/user/simer/)
 
 ### Project Structure
 
